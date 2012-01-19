@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_MESH_HH
-#define POLYTOPE_MESH_HH
+#ifndef POLYTOPE_TESSELLATION_HH
+#define POLYTOPE_TESSELLATION_HH
 
 #include <vector>
 
@@ -8,7 +8,7 @@ namespace polytope
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
 //! arbitrary poly(gonal/hedral) mesh.
-class Mesh
+class Tessellation
 {
   public:
 
@@ -26,6 +26,12 @@ class Mesh
   //! mesh. A face has an arbitrary number of nodes in 3D and 2 nodes in 2D. 
   //! faces[i][j] gives the index of the jth node of the ith face.
   std::vector<std::vector<int> > faces;
+
+  private:
+
+  // Disallowed.
+  Tessellation(const Tessellation&);
+  Tessellation& operator=(const Tessellation&);
 };
 
 }
