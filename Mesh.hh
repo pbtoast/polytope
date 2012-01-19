@@ -1,5 +1,5 @@
-#ifndef MESH_HH
-#define MESH_HH
+#ifndef POLYTOPE_MESH_HH
+#define POLYTOPE_MESH_HH
 
 #include <vector>
 
