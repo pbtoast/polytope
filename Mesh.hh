@@ -2,7 +2,9 @@
 #define MESH_HH
 
 #include <vector>
-typedef double Real;
+
+namespace polytope
+{
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
 //! arbitrary poly(gonal/hedral) mesh.
@@ -26,5 +28,6 @@ class Mesh
   std::vector<std::vector<int> > faces;
 };
 
+}
 
 #endif

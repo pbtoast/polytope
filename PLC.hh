@@ -1,8 +1,10 @@
-#ifndef PLC_HH
-#define PLC_HH
+#ifndef POLYTOPE_PLC_HH
+#define POLYTOPE_PLC_HH
 
 #include <vector>
-typedef double Real;
+
+namespace polytope
+{
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
@@ -30,5 +32,6 @@ class PLC
   std::vector<Real> holes;
 };
 
+}
 
 #endif
