@@ -11,6 +11,7 @@ namespace polytope
 //! \class Tessellator - An abstract base class for objects that generate 
 //! Voronoi and Voronoi-like tessellations for sets of points and/or 
 //! geometries.
+template<typename Real>
 class Tessellator
 {
   public:
