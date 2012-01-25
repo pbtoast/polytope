@@ -34,4 +34,5 @@
 
 // Classes within the library.
 #include "VoroPP_2d.hh"
+#include "SiloWriter.hh"
 
