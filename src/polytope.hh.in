@@ -4,8 +4,12 @@
 #define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
 #define POLYTOPE_VERSION_MINOR @POLYTOPE_VERSION_MINOR@
 
-// Some macros.
+// An ASSERT macro, if one isn't already defined.
+#ifndef ASSERT
+
 #ifdef HAVE_MPI
+
+// Parallel ASSERT -- calls MPI_Abort if NDEBUG is defined.
 #include <mpi.h>
 #include <iostream>
 #ifndef NDEBUG
@@ -17,9 +21,17 @@
   }
 #else
 #define ASSERT(x) 
+#endif
 
 #else
+
+// Serial ASSERT -- forwarded to C assert.
 #include <cassert>
 #define ASSERT(x) assert(x)
 #endif
+
+#endif
+
+// Classes within the library.
+#include "VoroPP_2d.hh"
 

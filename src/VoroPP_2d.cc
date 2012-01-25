@@ -5,15 +5,8 @@
 #include <algorithm>
 #include <map>
 
-#include "VoroPP_2d.hh"
+#include "polytope.hh" // Pulls in ASSERT and VoroPP_2d.hh.
 #include "container_2d.hh"
-
-#ifdef NDEBUG
-#define ASSERT(x)
-#else
-#include <cassert>
-#define ASSERT(x) assert(x)
-#endif
 
 namespace polytope {
 
