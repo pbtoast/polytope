@@ -8,6 +8,7 @@ namespace polytope
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
+template<typename Real>
 class PLC
 {
   public:

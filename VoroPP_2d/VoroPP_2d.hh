@@ -21,21 +21,21 @@ class VoroPP_2d: public Tessellator<Real> {
 public:
 
   // Constructors, destructor.
-  VoroPP(const Real xmin, const Real ymin,
-         const Real xmax, const Real ymax,
-         const unsigned nx = 20,
-         const unsigned ny = 20,
-         const double degeneracy = 1.0e-14);
-  ~VoroPP();
+  VoroPP_2d(const Real xmin, const Real ymin,
+            const Real xmax, const Real ymax,
+            const unsigned nx = 20,
+            const unsigned ny = 20,
+            const Real degeneracy = 1.0e-14);
+  ~VoroPP_2d();
 
   // Tessellate the given generators.
   virtual void tessellate(const std::vector<Real>& points,
-                          Tessellation& mesh) const;
+                          Tessellation<Real>& mesh) const;
 
   // Tessellate obeying the given boundaries.
   virtual void tessellate(const std::vector<Real>& points,
-                          const PLC& geometry,
-                          Tessellation& mesh) const;
+                          const PLC<Real>& geometry,
+                          Tessellation<Real>& mesh) const;
 
   // Compute which sub-region the given position is in.
   void subRegion(const Real px, const Real py, 
@@ -56,9 +56,9 @@ private:
   Real mxmin, mymin, mxmax, mymax, mDegeneracy2, mScale;
 
   // Forbidden methods.
-  VoroPP();
-  VoroPP(const VoroPP&);
-  VoroPP& operator=(const VoroPP&);
+  VoroPP_2d();
+  VoroPP_2d(const VoroPP_2d&);
+  VoroPP_2d& operator=(const VoroPP_2d&);
 };
 
 }
