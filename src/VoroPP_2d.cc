@@ -6,6 +6,7 @@
 #include <map>
 
 #include "VoroPP_2d.hh"
+#include "container_2d.hh"
 
 #ifdef NDEBUG
 #define ASSERT(x)
@@ -17,9 +18,12 @@
 namespace polytope {
 
 using namespace std;
+using namespace voro;
 using std::min;
 using std::max;
 using std::abs;
+
+namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
 // Helper method to update our face info.
@@ -47,7 +51,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     mesh.faces.back().push_back(inode);
     mesh.faces.back().push_back(jnode);
     mesh.faceCells.push_back(vector<unsigned>());
-    mesh.faceCells().push_back(icell);
+    mesh.faceCells.back().push_back(icell);
     ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
     ASSERT(mesh.faces.size() == iface + 1);
     ASSERT(mesh.faceCells.size() == iface + 1);
@@ -78,6 +82,18 @@ distance2(const Real& x1, const Real& y1,
 }
 
 //------------------------------------------------------------------------------
+// FIXME: This is a placeholder that allows this to compile.
+//------------------------------------------------------------------------------
+pair<int, int> 
+hashFace(int i, int j)
+{
+  // FIXME FIXME FIXME
+  return pair<int, int>(i, j);
+}
+
+} // end anonymous namespace
+
+//------------------------------------------------------------------------------
 // Constructor.
 //------------------------------------------------------------------------------
 template<typename Real>
@@ -86,13 +102,13 @@ VoroPP_2d(const Real xmin, const Real ymin,
           const Real xmax, const Real ymax,
           const unsigned nx,
           const unsigned ny,
-          const double degeneracy):
+          const Real degeneracy):
+  mNx(nx),
+  mNy(ny),
   mxmin(xmin),
   mymin(ymin),
   mxmax(xmax),
   mymax(ymax),
-  mNx(nx),
-  mNy(ny),
   mDegeneracy2(degeneracy*degeneracy),
   mScale(max(xmax - xmin, ymax - ymin)) {
   ASSERT(mxmin < mxmax);
@@ -116,13 +132,13 @@ template<typename Real>
 void
 VoroPP_2d<Real>::
 tessellate(const vector<Real>& points,
-           Tessellation& mesh) const {
+           Tessellation<Real>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
 
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
-  for (i = 0; i != points.size(); ++i) {
+  for (int i = 0; i != points.size(); ++i) {
     ASSERT(points[2*i]     >= mxmin and points[2*i]     <= mxmax);
     ASSERT(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax);
   }
@@ -196,7 +212,7 @@ tessellate(const vector<Real>& points,
             // Has this vertex already been created by one of our neighbors?
             newNode = true;
             vector<unsigned>::const_iterator neighborItr = cellNeighbors[icell].begin();
-            while (newNode and neighborItr != cellNeighbors.end()) {
+            while (newNode and neighborItr != cellNeighbors[icell].end()) {
               jcell = *neighborItr++;
               ASSERT(jcell < ncells);
               vector<unsigned>::const_iterator nodeItr = cellNodes[jcell].begin();
@@ -222,9 +238,9 @@ tessellate(const vector<Real>& points,
             // Figure out what "face" this node and previous one in the cell represent.
             n = cellNodes[icell].size();
             if (n > 1) {
-              i = cellNodes[icell][n - 2];
-              j = cellNodes[icell][n - 1];
-              insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2D, mesh);
+              int i = cellNodes[icell][n - 2];
+              int j = cellNodes[icell][n - 1];
+              insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
             }
           }
           xv_last = xv;
@@ -233,15 +249,15 @@ tessellate(const vector<Real>& points,
         ASSERT(cellNodes[icell].size() >= 3);
 
         // We have to tie together the first and last cell vertices in a final face.
-        i = cellNodes[icell].back();
-        j = cellNodes[icell].front();
-        insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2D, mesh);
+        int i = cellNodes[icell].back();
+        int j = cellNodes[icell].front();
+        insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
       }
-    }
+    } while (1);
   }
         
   // De-normalize the vertex coordinates back to the input frame.
-  for (i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = mxmin + mScale*mesh.nodes[i];
+  for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = mxmin + mScale*mesh.nodes[i];
 }
 
 //------------------------------------------------------------------------------
