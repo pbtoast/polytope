@@ -6,6 +6,6 @@ using namespace std;
 
 int main()
 {
-  cout << "PASSED" << endl;
+  cout << "PASS" << endl;
   return 0;
 }
