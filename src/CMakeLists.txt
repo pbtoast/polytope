@@ -3,5 +3,5 @@ if (SILO_FOUND)
   set(IO_SOURCES SiloWriter_2d.cc;SiloWriter_3d.cc)
 endif()
 
-add_library(polytope VoroPP_2d.cc ${IO_SOURCES})
+add_library(polytope VoroPP_2d.cc Triangle.cc ${IO_SOURCES})
 
