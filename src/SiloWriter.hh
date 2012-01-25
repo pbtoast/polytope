@@ -1,3 +1,4 @@
+
 #ifndef POLYTOPE_SILO_WRITER_HH
 #define POLYTOPE_SILO_WRITER_HH
 
@@ -27,7 +28,7 @@ class SiloWriter<2, Real>
 {
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file. 
-  static void write(const Tessellation<Dimension>& mesh, 
+  static void write(const Tessellation<Real>& mesh, 
                     const std::map<std::string, Real*>& fields,
                     const std::string& filePrefix,
                     int cycle,
@@ -37,16 +38,44 @@ class SiloWriter<2, Real>
                     int mpiTag = 0);
 
   //! This version of write omits the cycle and time arguments.
-  static void writeSiloPlot(const Mesh<Dimension>& mesh, 
-                            const std::map<std::string, Real*>& scalarFields,
-                            const std::map<std::string, Vector<Dimension>*>& vectorFields,
-                            const std::string& filePrefix,
-                            MPI_Comm comm = MPI_COMM_WORLD,
-                            int numFiles = 1,
-                            int mpiTag = 0)
+  static void write(const Tessellation<Real>& mesh, 
+                    const std::map<std::string, Real*>& fields,
+                    const std::string& filePrefix,
+                    MPI_Comm comm = MPI_COMM_WORLD,
+                    int numFiles = 1,
+                    int mpiTag = 0)
   {
-    writeSiloPlot(mesh, scalarFields, vectorFields, filePrefix, -1, -FLT_MAX,
-                  comm, numFiles, mpiTag);
+    write(mesh, fields, filePrefix, -1, -FLT_MAX,
+          comm, numFiles, mpiTag);
+  }
+
+};
+
+//! Partial specialization for 3D tessellations.
+template <typename Real>
+class SiloWriter<3, Real>
+{
+  //! Write an arbitrary polyhedral mesh and an associated set of 
+  //! cell-centered fields to a SILO file. 
+  static void write(const Tessellation<Real>& mesh, 
+                    const std::map<std::string, Real*>& fields,
+                    const std::string& filePrefix,
+                    int cycle,
+                    Real time,
+                    MPI_Comm comm = MPI_COMM_WORLD,
+                    int numFiles = 1,
+                    int mpiTag = 0);
+
+  //! This version of write omits the cycle and time arguments.
+  static void write(const Tessellation<Real>& mesh, 
+                    const std::map<std::string, Real*>& fields,
+                    const std::string& filePrefix,
+                    MPI_Comm comm = MPI_COMM_WORLD,
+                    int numFiles = 1,
+                    int mpiTag = 0)
+  {
+    write(mesh, fields, filePrefix, -1, -FLT_MAX,
+          comm, numFiles, mpiTag);
   }
 
 };
@@ -54,4 +83,5 @@ class SiloWriter<2, Real>
 } // end namespace
 
 #endif
+
 #endif

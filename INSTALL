@@ -1,0 +1,20 @@
+------------------------------------------------------------------------------
+Building polytope requires CMake 2.8, found at http://www.cmake.org/, as
+well as GNU make. To build polytope on a UNIX-like system, use the following
+commands:
+
+     $ make config
+     $ make
+
+Other make commands
+-------------------
+   $ make test 
+          Runs all tests provided with the polytope library.
+   
+   $ make clean 
+          Removes all object files but retains the configuration options.
+   
+   $ make distclean 
+          Performs clean and completely removes the build directory.
+
+------------------------------------------------------------------------------

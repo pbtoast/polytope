@@ -1,9 +1,7 @@
-#include "SiloWriter.hh"
-#include "polygons.hh"
+#ifdef HAVE_SILO
+#include "polytope.hh"
 #include <fstream>
 #include <set>
-
-#ifdef HAVE_SILO
 #include "silo.h"
 
 #ifdef HAVE_MPI
@@ -11,17 +9,99 @@
 #include "pmpio.h"
 #endif
 
-#endif
-
 namespace polytope
 {
 
-#ifdef HAVE_SILO
 using namespace std;
 
-#ifdef HAVE_MPI
 namespace 
 {
+
+//-------------------------------------------------------------------
+// Traverse the nodes of cell i within the given tessellation in 
+// order, writing their indices to nodes.
+//-------------------------------------------------------------------
+template <typename Real>
+void 
+traverseNodes(const Tessellation<Real>& mesh,
+              int i,
+              vector<int>& nodes)
+{
+  const vector<int>& cellFaces = mesh.cells[i];
+
+  // Start with the first face, entering both nodes.
+  {
+    const vector<unsigned>& faceNodes = mesh.faces[cellFaces[0]];
+    nodes.push_back(faceNodes[0]);
+    nodes.push_back(faceNodes[1]);
+  }
+
+  // Proceed through the other faces till we're done.
+  set<int> facesUsed;
+  while (facesUsed.size() < cellFaces.size()-1)
+  {
+    int numFacesUsed = facesUsed.size();
+    for (int f = 1; f < cellFaces.size(); ++f)
+    {
+      if (facesUsed.find(f) == facesUsed.end())
+      {
+        const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
+
+        // Does it go on the back?
+        if (faceNodes[0] == nodes.back())
+        {
+          nodes.push_back(faceNodes[1]);
+          facesUsed.insert(f);
+        }
+        else if (faceNodes[1] == nodes.back())
+        {
+          nodes.push_back(faceNodes[0]);
+          facesUsed.insert(f);
+        }
+
+        // How about the front?
+        else if (faceNodes[0] == nodes.front())
+        {
+          nodes.insert(nodes.begin(), faceNodes[1]);
+          facesUsed.insert(f);
+        }
+        else if (faceNodes[1] == nodes.front())
+        {
+          nodes.insert(nodes.begin(), faceNodes[0]);
+          facesUsed.insert(f);
+        }
+      }
+    }
+
+    // If we're here and haven't processed any more 
+    // faces, we have a face remaining that doesn't 
+    // connect to the end of the chain. What about 
+    // the beginning?
+    if (numFacesUsed == facesUsed.size())
+    {
+      for (int f = 1; f < cellFaces.size(); ++f)
+      {
+        if (facesUsed.find(f) == facesUsed.end())
+        {
+          const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
+          if (faceNodes[0] == nodes.front())
+          {
+            nodes.push_back(faceNodes[0]);
+            facesUsed.insert(f);
+          }
+          else if (faceNodes[1] == nodes.front())
+          {
+            nodes.push_back(faceNodes[1]);
+            facesUsed.insert(f);
+          }
+        }
+      }
+    }
+  }
+}
+//-------------------------------------------------------------------
+
+#ifdef HAVE_MPI
 
 //-------------------------------------------------------------------
 PMPIO_createFile(const char* filename,
@@ -71,15 +151,15 @@ PMPIO_closeFile(void* file,
 }
 //-------------------------------------------------------------------
 
-}
 #endif
+}
 
 //-------------------------------------------------------------------
 template <typename Real>
 void 
 SiloWriter<2, Real>::
-write(const Mesh<2>& mesh, 
-      const map<string, Real*>& scalarFields,
+write(const Tessellation<Real>& mesh, 
+      const map<string, Real*>& fields,
       const string& filePrefix,
       int cycle,
       Real time,
@@ -87,8 +167,9 @@ write(const Mesh<2>& mesh,
       int numFiles,
       int mpiTag)
 {
-  int nproc;
+  int nproc, rank;
   MPI_Comm_size(comm, &nproc);
+  MPI_Comm_rank(comm, &rank);
   ASSERT(numFiles <= nproc);
 
   // Strip .silo off of the prefix if it's there.
@@ -97,21 +178,36 @@ write(const Mesh<2>& mesh,
   if (index >= 0)
     prefix.erase(index);
 
-  char filename[1024];
-  if (cycle >= 0)
-    snprintf(filename, 1024, "%s-%d.silo", prefix.c_str(), cycle);
-  else
-    snprintf(filename, 1024, "%s.silo", prefix.c_str());
-
   // Open a file in Silo/HDF5 format for writing.
+  char filename[1024];
 #ifdef HAVE_MPI
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
                                     &PMPIO_createFile, 
                                     &PMPIO_openFile, 
                                     &PMPIO_closeFile,
                                     0);
-  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename, "/");
+  int groupRank = PMPIO_GroupRank(baton, rank);
+  int rankInGroup = PMPIO_RankInGroup(baton, rank);
+  if (cycle >= 0)
+  {
+    snprintf(filename, 1024, "%s-chunk-%d-%d.silo", prefix.c_str(), 
+             groupRank, cycle);
+  }
+  else
+  {
+    snprintf(filename, 1024, "%s-chunk-%d.silo", prefix.c_str(),
+             groupRank);
+  }
+
+  char dirname[1024];
+  snprintf(dirname, 1024, "domain_%d", rankInGroup);
+  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename, dirname);
 #else
+  if (cycle >= 0)
+    snprintf(filename, 1024, "%s-%d.silo", prefix.c_str(), cycle);
+  else
+    snprintf(filename, 1024, "%s.silo", prefix.c_str());
+
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, prefix.c_str(), 
                           driver);
@@ -132,30 +228,28 @@ write(const Mesh<2>& mesh,
   coordnames[1] = (char*)"ycoords";
 
   // Node coordinates.
-  int N = mesh.numNodes();
-  vector<double> x(N), y(N);
-  for (int i = 0; i < N; ++i)
+  int numNodes = mesh.nodes.size() / 2;
+  vector<double> x(numNodes), y(numNodes);
+  for (int i = 0; i < numNodes; ++i)
   {
-    const Point<2>& node = mesh.node(i);
-    x[i] = node[0];
-    y[i] = node[1];
+    x[i] = mesh.nodes[2*i];
+    y[i] = mesh.nodes[2*i+1];
   }
   double* coords[2];
   coords[0] = &(x[0]);
   coords[1] = &(y[0]);
 
   // All zones are polygonal.
-  vector<int> shapesize(mesh.numCells(), 0),
-              shapetype(mesh.numCells(), DB_ZONETYPE_POLYGON),
-              shapecount(mesh.numCells(), 1),
+  int numCells = mesh.cells.size();
+  vector<int> shapesize(numCells, 0),
+              shapetype(numCells, DB_ZONETYPE_POLYGON),
+              shapecount(numCells, 1),
               nodeList;
-  for (int i = 0; i < mesh.numCells(); ++i)
+  for (int i = 0; i < numCells; ++i)
   {
-    const Cell<2>& cell = *mesh.cell(i);
-    vector<int> cellNodes;
-
     // Gather the nodes from this cell in traversal order.
-    polygons::traverseNodes(mesh, cell, cellNodes);
+    vector<int> cellNodes;
+    traverseNodes(mesh, i, cellNodes);
 
     // Insert the cell's node connectivity into the node list.
     nodeList.push_back(cellNodes.size());
@@ -164,31 +258,32 @@ write(const Mesh<2>& mesh,
 
   // Write out the 2D polygonal mesh.
   DBPutUcdmesh(file, (char*)"mesh", 2, coordnames, coords,
-               mesh.numNodes(), mesh.numCells(), 
+               numNodes, numCells, 
                (char *)"mesh_zonelist", 0, DB_DOUBLE, optlist); 
-  DBPutZonelist2(file, (char*)"mesh_zonelist", mesh.numCells(),
+  DBPutZonelist2(file, (char*)"mesh_zonelist", numCells,
                  2, &nodeList[0], nodeList.size(), 0, 0, 0,
                  &shapetype[0], &shapesize[0], &shapecount[0],
-                 mesh.numCells(), optlist);
+                 numCells, optlist);
 
   // Write out the cell-centered mesh data.
 
   // Scalar fields.
-  for (map<string, Real*>::const_iterator iter = scalarFields.begin();
-       iter != scalarFields.end(); ++iter)
+  for (typename map<string, Real*>::const_iterator iter = fields.begin();
+       iter != fields.end(); ++iter)
   {
     DBPutUcdvar1(file, (char*)iter->first.c_str(), (char*)"mesh",
-                 (void*)iter->second, mesh.numCells(), 0, 0,
+                 (void*)iter->second, numCells, 0, 0,
                  DB_DOUBLE, DB_ZONECENT, optlist);
   }
 
+#if 0
   // Vector fields.
   {
     vector<Real> xdata(mesh.numCells()), ydata(mesh.numCells());
     char* compNames[2];
     compNames[0] = new char[1024];
     compNames[1] = new char[1024];
-    for (map<string, Vector<2>*>::const_iterator iter = vectorFields.begin();
+    for (typename map<string, Vector<2>*>::const_iterator iter = vectorFields.begin();
          iter != vectorFields.end(); ++iter)
     {
       snprintf(compNames[0], 1024, "%s_x" , iter->first.c_str());
@@ -209,6 +304,7 @@ write(const Mesh<2>& mesh,
     delete [] compNames[0];
     delete [] compNames[1];
   }
+#endif
 
   // Clean up.
   DBFreeOptlist(optlist);
@@ -218,7 +314,32 @@ write(const Mesh<2>& mesh,
   PMPIO_finish(baton);
 
   // Write the multi-block objects to the file.
-  // FIXME
+  if (rankInGroup == 0)
+  {
+    vector<char*> meshNames(numFiles);
+    vector<int> meshTypes(numFiles);
+    for (int i = 0; i < numFiles; ++i)
+    {
+      char meshName[1024];
+      if (cycle >= 0)
+        snprintf(meshName, 1024, "%s-chunk-%d-%d.silo", prefix.c_str(), i, cycle);
+      else
+        snprintf(meshName, 1024, "%s-chunk-%d.silo", prefix.c_str(), i);
+      meshNames[i] = strdup(meshName);
+      meshTypes[i] = DB_UCDMESH;
+    }
+
+    DBoptlist* optlist = DBMakeOptlist(10);
+    double dtime = static_cast<double>(time);
+    if (cycle >= 0)
+      DBAddOption(optlist, DBOPT_CYCLE, &cycle);
+    if (dtime != -FLT_MAX)
+      DBAddOption(optlist, DBOPT_DTIME, &dtime);
+
+    DBPutMultimesh(file, "mesh", numChunks, &meshNames[0], 
+                   &meshTypes[0], optlist);
+    DBFreeOptlist(optlist);
+  }
 #else
   // Write the file.
   DBClose(file);
@@ -226,5 +347,11 @@ write(const Mesh<2>& mesh,
 }
 //-------------------------------------------------------------------
 
+// Explicit instantiation.
+template class SiloWriter<2, double>;
+
+
 } // end namespace
+
+#endif
 
