@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------//
 #include <iostream>
 #include <algorithm>
+#include <map>
 
 #include "VoroPP_2d.hh"
 
@@ -27,8 +28,11 @@ template<typename Real>
 inline
 void
 insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
+               const unsigned icell,
+               const unsigned inode,
+               const unsigned jnode,
                map<pair<unsigned, unsigned>, unsigned>& faceHash2ID,
-               tessellation<Real>& mesh) {
+               Tessellation<Real>& mesh) {
   typedef pair<unsigned, unsigned> FaceHash;
 
   // Is this a new face?
@@ -38,13 +42,13 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     // Yep, it's a new face.
     const unsigned iface = mesh.faces.size();
     faceHash2ID[fhashi] = iface;
-    mesh.cells[igen].push_back(iface);
+    mesh.cells[icell].push_back(iface);
     mesh.faces.push_back(vector<unsigned>());
-    mesh.faces.back().push_back(i);
-    mesh.faces.back().push_back(j);
+    mesh.faces.back().push_back(inode);
+    mesh.faces.back().push_back(jnode);
     mesh.faceCells.push_back(vector<unsigned>());
     mesh.faceCells().push_back(icell);
-    ASSERT(count(mesh.cells[igen].begin(), mesh.cells[igen].end(), iface) == 1);
+    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
     ASSERT(mesh.faces.size() == iface + 1);
     ASSERT(mesh.faceCells.size() == iface + 1);
     ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
@@ -55,9 +59,9 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     // cell list as the 1's complement.
     const unsigned iface = faceItr->second;
     ASSERT(iface < mesh.faces.size());
-    mesh.cells[igen].push_back(~iface);
-    mesh.faceCells[igen].push_back(icell);
-    ASSERT(count(mesh.cells[igen].begin(), mesh.cells[igen].end(), ~iface) == 1);
+    mesh.cells[icell].push_back(~iface);
+    mesh.faceCells[icell].push_back(icell);
+    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
     ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == icell);
   }
 }
@@ -217,7 +221,11 @@ tessellate(const vector<Real>& points,
 
             // Figure out what "face" this node and previous one in the cell represent.
             n = cellNodes[icell].size();
-            if (n > 1) insertFaceInfo(hashFace(cellNodes[icell][n - 2], cellNodes[icell][n - 1]), faceHash2D, mesh);
+            if (n > 1) {
+              i = cellNodes[icell][n - 2];
+              j = cellNodes[icell][n - 1];
+              insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2D, mesh);
+            }
           }
           xv_last = xv;
           yv_last = yv;
@@ -226,7 +234,8 @@ tessellate(const vector<Real>& points,
 
         // We have to tie together the first and last cell vertices in a final face.
         i = cellNodes[icell].back();
-        insertFace(hashFace(cellNodes[icell].back(), cellNodes[icell].front), faceHash2D, mesh);
+        j = cellNodes[icell].front();
+        insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2D, mesh);
       }
     }
   }
