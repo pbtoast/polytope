@@ -1,0 +1,25 @@
+// Generator file for polytope.hh. Modify this file, not polytope.hh.
+
+// Version numbers
+#define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
+#define POLYTOPE_VERSION_MINOR @POLYTOPE_VERSION_MINOR@
+
+// Some macros.
+#ifdef HAVE_MPI
+#include <mpi.h>
+#include <iostream>
+#ifndef NDEBUG
+#define ASSERT(x) \
+  if (!(x)) \
+  { \
+    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
+    MPI_Abort(MPI_COMM_WORLD, -1); \
+  }
+#else
+#define ASSERT(x) 
+
+#else
+#include <cassert>
+#define ASSERT(x) assert(x)
+#endif
+

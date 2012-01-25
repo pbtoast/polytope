@@ -8,9 +8,9 @@
 #define __Polytope_VoroPP_2d__
 
 #include <vector>
+#include <cmath>
 
 #include "Tessellator.hh"
-#include "container_2d.hh"
 
 namespace polytope {
 
