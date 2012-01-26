@@ -37,10 +37,6 @@ public:
                           const PLC<Real>& geometry,
                           Tessellation<Real>& mesh) const;
 
-  // Compute which sub-region the given position is in.
-  void subRegion(const Real px, const Real py, 
-                 unsigned& i, unsigned& j, unsigned& k) const;
-
   // Access our attributes.
   unsigned nx() const { return mNx; }
   unsigned ny() const { return mNy; }

@@ -75,13 +75,13 @@ distance2(const Real& x1, const Real& y1,
 }
 
 //------------------------------------------------------------------------------
-// FIXME: This is a placeholder that allows this to compile.
+// A unique hash for a face as an ordered collection of node indices.
 //------------------------------------------------------------------------------
-pair<int, int> 
-hashFace(int i, int j)
+pair<unsigned, unsigned> 
+hashFace(const unsigned i, const unsigned j)
 {
-  // FIXME FIXME FIXME
-  return pair<int, int>(i, j);
+  ASSERT(i != j);
+  return (i < j ? make_pair(i, j) : make_pair(j, i));
 }
 
 } // end anonymous namespace
@@ -143,7 +143,8 @@ tessellate(const vector<Real>& points,
   bool newNode;
   const unsigned ncells = points.size()/2;
   unsigned i, n, icell, jcell;
-  double xc, yc, xv, yv, xv_last, yv_last;
+  double xc, yc;
+  Real xv, yv, xv_last, yv_last;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -254,8 +255,21 @@ tessellate(const vector<Real>& points,
 }
 
 //------------------------------------------------------------------------------
+// Compute the tessellation in the box.
+//------------------------------------------------------------------------------
+template<typename Real>
+void
+VoroPP_2d<Real>::
+tessellate(const vector<Real>& points,
+           const PLC<Real>& geometry,
+           Tessellation<Real>& mesh) const {
+  ASSERT(false); // Implemenet me!
+}
+
+//------------------------------------------------------------------------------
 // Explicit instantiation.
 //------------------------------------------------------------------------------
 template class VoroPP_2d<double>;
+template class VoroPP_2d<float>;
 
 }

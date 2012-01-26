@@ -39,6 +39,14 @@ class Tessellation
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<unsigned> > faceCells;
 
+  // This constructor should be provided automatically, but for some reason
+  // clang++ on Darwin isn't doing it?
+  Tessellation():
+    nodes(),
+    cells(),
+    faces(),
+    faceCells() {}
+
   private:
 
   // Disallowed.
