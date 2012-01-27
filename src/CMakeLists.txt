@@ -4,4 +4,4 @@ if (SILO_FOUND)
 endif()
 
 add_library(polytope VoroPP_2d.cc Triangle.cc ${IO_SOURCES})
-
+target_link_libraries(polytope voro_2d)
