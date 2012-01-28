@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------
-// Triangle
+// TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
 #include <algorithm>
 #include <map>
 
-#include "polytope.hh" // Pulls in ASSERT and Triangle.hh.
-//#include "triangle.h" 
+#include "polytope.hh" // Pulls in ASSERT and TriangleTessellator.hh.
+#include "triangle.h" 
 
 namespace polytope {
 
@@ -14,8 +14,8 @@ using namespace std;
 
 //------------------------------------------------------------------------------
 template<typename Real>
-Triangle<Real>::
-Triangle():
+TriangleTessellator<Real>::
+TriangleTessellator():
   Tessellator<Real>()
 {
 }
@@ -23,15 +23,15 @@ Triangle():
 
 //------------------------------------------------------------------------------
 template<typename Real>
-Triangle<Real>::
-~Triangle() {
+TriangleTessellator<Real>::
+~TriangleTessellator() {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 template<typename Real>
 void
-Triangle<Real>::
+TriangleTessellator<Real>::
 tessellate(const vector<Real>& points,
            Tessellation<Real>& mesh) const 
 {
@@ -41,7 +41,7 @@ tessellate(const vector<Real>& points,
 //------------------------------------------------------------------------------
 template<typename Real>
 void
-Triangle<Real>::
+TriangleTessellator<Real>::
 tessellate(const vector<Real>& points,
            const PLC<Real>& geometry,
            Tessellation<Real>& mesh) const 
@@ -52,6 +52,6 @@ tessellate(const vector<Real>& points,
 //------------------------------------------------------------------------------
 // Explicit instantiation.
 //------------------------------------------------------------------------------
-template class Triangle<double>;
+template class TriangleTessellator<double>;
 
 }

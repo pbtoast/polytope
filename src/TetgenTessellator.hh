@@ -1,11 +1,13 @@
 //---------------------------------Spheral++----------------------------------//
-// Triangle
+// TetgenTessellator
 // 
-// An implemenation of the Tessellator interface that uses the Triangle
-// library by Jonathan Shewchuk.
+// An implemenation of the Tessellator interface that uses the Tetgen
+// library by Hang Si.
 //----------------------------------------------------------------------------//
-#ifndef __Polytope_Triangle__
-#define __Polytope_Triangle__
+#ifndef __Polytope_TetgenTessellator__
+#define __Polytope_TetgenTessellator__
+
+#ifdef HAVE_TETGEN
 
 #include <vector>
 #include <cmath>
@@ -15,13 +17,13 @@
 namespace polytope {
 
 template<typename Real>
-class Triangle: public Tessellator<Real> 
+class TetgenTessellator: public Tessellator<Real> 
 {
   public:
 
   // Constructor, destructor.
-  Triangle();
-  ~Triangle();
+  TetgenTessellator();
+  ~TetgenTessellator();
 
   // Tessellate the given generators.
   void tessellate(const std::vector<Real>& points,
@@ -36,4 +38,5 @@ class Triangle: public Tessellator<Real>
 
 }
 
+#endif
 #endif
