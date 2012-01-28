@@ -34,6 +34,7 @@
 
 // Classes within the library.
 #include "VoroPP_2d.hh"
-#include "Triangle.hh"
+#include "TriangleTessellator.hh"
+#include "TetgenTessellator.hh"
 #include "SiloWriter.hh"
 
