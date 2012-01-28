@@ -167,11 +167,6 @@ write(const Tessellation<Real>& mesh,
       int numFiles,
       int mpiTag)
 {
-  int nproc, rank;
-  MPI_Comm_size(comm, &nproc);
-  MPI_Comm_rank(comm, &rank);
-  ASSERT(numFiles <= nproc);
-
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   size_t index = prefix.find(".silo");
@@ -181,6 +176,11 @@ write(const Tessellation<Real>& mesh,
   // Open a file in Silo/HDF5 format for writing.
   char filename[1024];
 #ifdef HAVE_MPI
+  int nproc = 1, rank = 0;
+  MPI_Comm_size(comm, &nproc);
+  MPI_Comm_rank(comm, &rank);
+  ASSERT(numFiles <= nproc);
+
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
                                     &PMPIO_createFile, 
                                     &PMPIO_openFile, 
