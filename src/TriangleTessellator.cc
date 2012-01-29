@@ -112,9 +112,30 @@ tessellate(const vector<Real>& points,
   in.pointattributelist = 0; 
   in.pointmarkerlist = 0; // No point markers.
 
-  // No segments or holes.
-  in.numberofsegments = 0;
-  in.numberofholes = 0;
+  // Segments and/or holes.
+  if (geometry.empty())
+  {
+    in.numberofsegments = 0;
+    in.segmentlist = 0;
+    in.segmentmarkerlist = 0;
+    in.numberofholes = 0;
+    in.holelist = 0;
+  }
+  else
+  {
+    in.numberofsegments = geometry.facets.size();
+    in.segmentlist = new int[2*in.numberofsegments];
+    int s = 0;
+    for (int f = 0; f < geometry.facets.size(); ++f)
+    {
+      in.segmentlist[s++] = geometry.facets[f][0];
+      in.segmentlist[s++] = geometry.facets[f][1];
+    }
+    in.segmentmarkerlist = 0;
+    in.numberofholes = geometry.holes.size();
+    in.holelist = new double[2*in.numberofholes];
+    copy(geometry.holes.begin(), geometry.holes.end(), in.holelist);
+  }
 
   // No regions.
   in.numberofregions = 0;
@@ -127,17 +148,31 @@ tessellate(const vector<Real>& points,
   delaunay.trianglelist = 0;
   delaunay.triangleattributelist = 0;
   delaunay.neighborlist = 0;
-  delaunay.segmentlist = 0;
-  delaunay.segmentmarkerlist = 0;
+  if (geometry.empty())
+  {
+    delaunay.segmentlist = 0;
+    delaunay.segmentmarkerlist = 0;
+  }
+  else
+  {
+    delaunay.numberofsegments = geometry.facets.size();
+    delaunay.segmentlist = new int[2*delaunay.numberofsegments];
+    delaunay.segmentmarkerlist = new int[delaunay.numberofsegments];
+  }
   delaunay.edgelist = 0;
   delaunay.edgemarkerlist = 0;
+  delaunay.holelist = 0;
 
   // Do the triangulation. Switches pass to triangle are:
   // -Q : Quiet (shaddap!), no output on the terminal except errors.
   // -z : Indices are all numbered from zero.
   // -e : Generates edges and places them in out.edgelist.
   // -c : Generates convex hull and places it in out.segmentlist.
-  triangulate((char*)"Qzec", &in, &delaunay, 0);
+  // -p : Uses the given PLC information.
+  if (geometry.empty())
+    triangulate((char*)"Qzec", &in, &delaunay, 0);
+  else
+    triangulate((char*)"Qzep", &in, &delaunay, 0);
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
@@ -269,6 +304,40 @@ tessellate(const vector<Real>& points,
     copy(faceNodes.begin(), faceNodes.end(), mesh.faces.back().begin());
   }
 
+  // If no boundary was specified, compute the convex hull and leave.
+  if (geometry.empty()) 
+  {
+    set<unsigned> convexHull;
+    for (int i = 0; i < delaunay.numberofsegments; ++i)
+    {
+      int cell1 = delaunay.segmentlist[2*i];
+      int cell2 = delaunay.segmentlist[2*i+1];
+      convexHull.insert(cell1);
+      convexHull.insert(cell2);
+    }
+    mesh.convexHull.resize(convexHull.size());
+    copy(convexHull.begin(), convexHull.end(), mesh.convexHull.begin());
+
+    // Clean up.
+    delete [] in.pointlist;
+    trifree((VOID*)delaunay.pointlist);
+    trifree((VOID*)delaunay.trianglelist);
+    trifree((VOID*)delaunay.edgelist);
+    if (geometry.empty())
+    {
+      trifree((VOID*)delaunay.segmentlist);
+      trifree((VOID*)delaunay.segmentmarkerlist);
+    }
+    else
+    {
+      delete [] in.segmentlist;
+      delete [] in.holelist;
+      delete [] delaunay.segmentlist;
+      delete [] delaunay.segmentmarkerlist;
+    }
+    return;
+  }
+
   // At this point, all of the interior cells are set up properly, and all 
   // nodes exist. However, we still have to finish constructing the 
   // Voronoi cells that sit at the boundary, since they don't have "back" 
@@ -328,8 +397,9 @@ tessellate(const vector<Real>& points,
   for (size_t i = 0; i < mesh.convexHull.size(); ++i)
   {
     unsigned pindex = mesh.convexHull[i];
-    mesh.nodes[2*oldNumNodes+i]   = points[2*pindex];
-    mesh.nodes[2*oldNumNodes+i+1] = points[2*pindex+1];
+    mesh.nodes[2*(oldNumNodes+i)]   = points[2*pindex];
+    mesh.nodes[2*(oldNumNodes+i)+1] = points[2*pindex+1];
+//cout << "Adding node (" << points[2*pindex] << ", " << points[2*pindex+1] << ")\n";
   }
 
   // Now we construct the remaining faces for the boundary cells.
@@ -391,8 +461,18 @@ tessellate(const vector<Real>& points,
   trifree((VOID*)delaunay.pointlist);
   trifree((VOID*)delaunay.trianglelist);
   trifree((VOID*)delaunay.edgelist);
-  trifree((VOID*)delaunay.segmentlist);
-  trifree((VOID*)delaunay.segmentmarkerlist);
+  if (geometry.empty())
+  {
+    trifree((VOID*)delaunay.segmentlist);
+    trifree((VOID*)delaunay.segmentmarkerlist);
+  }
+  else
+  {
+    delete [] in.segmentlist;
+    delete [] in.holelist;
+    delete [] delaunay.segmentlist;
+    delete [] delaunay.segmentmarkerlist;
+  }
 }
 //------------------------------------------------------------------------------
 

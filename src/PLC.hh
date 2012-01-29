@@ -13,16 +13,12 @@ class PLC
 {
   public:
 
-  //! An array of (Dimension*numNodes) values containing components of 
-  //! node positions. The components are stored in node-major order and 
-  //! the 0th component of the ith node appears in nodes[Dimension*i].
-  std::vector<Real> nodes;
-
-  //! This two-dimensional array defines the topology of the faces of the 
-  //! piecewise linear complex. A face has an arbitrary number of nodes 
-  //! in 3D and 2 nodes in 2D. faces[i][j] gives the index of the jth 
-  //! node of the ith face.
-  std::vector<std::vector<int> > faces;
+  //! This two-dimensional array defines the topology of the facets of the 
+  //! piecewise linear complex in terms of connections to generating points. 
+  //! A facet has an arbitrary number of points in 3D and 2 points in 2D. 
+  //! facets[i][j] gives the index of the jth generating point of the ith 
+  //! facet.
+  std::vector<std::vector<int> > facets;
 
   //! This array of size (Dimension*numHoles) contains components of 
   //! points identifying holes to be subtracted from the volume enclosed by 
@@ -31,6 +27,12 @@ class PLC
   //! point-major order and the 0th component of the ith point appears in 
   //! holes[Dimension*i].
   std::vector<Real> holes;
+
+  //! Returns true if this PLC is empty, false otherwise.
+  bool empty() const
+  {
+    return (facets.empty() and holes.empty());
+  }
 };
 
 }
