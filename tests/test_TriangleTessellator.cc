@@ -88,7 +88,7 @@ testCircle()
   for (int i = 0; i < N; ++i)
   {
     double x = FLT_MAX, y = FLT_MAX;
-    while (x*x + y*y > 1.0)
+    while (x*x + y*y >= 1.0)
     {
       x = 2.0 * double(::random())/RAND_MAX - 1.0;
       y = 2.0 * double(::random())/RAND_MAX - 1.0;
@@ -128,14 +128,18 @@ testCircle()
   circle.facets[f][0] = generators.size()/2-Nb+f;
   circle.facets[f][1] = generators.size()/2-Nb;
 
-  cout << circle << endl;
-
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, circle, mesh);
   CHECK(mesh.cells.size() == (N + Nb));
-  cout << mesh << endl;
+
+  // Make sure that the nodes all fall within the circle.
+  for (int n = 0; n < mesh.nodes.size()/2; ++n)
+  {
+    double x = mesh.nodes[2*n], y = mesh.nodes[2*n+1];
+    CHECK(x*x + y*y < 1);
+  }
 
 //  for (unsigned i = 0; i != nx*nx; ++i) 
 //  {
