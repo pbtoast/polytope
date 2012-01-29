@@ -11,7 +11,7 @@ namespace polytope
 //! \class Tessellator - An abstract base class for objects that generate 
 //! Voronoi and Voronoi-like tessellations for sets of points and/or 
 //! geometries.
-template<typename Real>
+template<int Dimension, typename Real>
 class Tessellator
 {
   public:
@@ -28,7 +28,7 @@ class Tessellator
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<Real>& points,
-                          Tessellation<Real>& mesh) const = 0;
+                          Tessellation<Dimension, Real>& mesh) const = 0;
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -38,8 +38,8 @@ class Tessellator
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<Real>& points,
-                          const PLC<Real>& geometry,
-                          Tessellation<Real>& mesh) const = 0;
+                          const PLC<Dimension, Real>& geometry,
+                          Tessellation<Dimension, Real>& mesh) const = 0;
 
   private:
 

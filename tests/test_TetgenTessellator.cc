@@ -40,7 +40,7 @@ int main() {
   // Create the piecewise linear complex representing the box. Note that 
   // the box consists of facets that are defined by their connections to 
   // generating points.
-  PLC<double> box;
+  PLC<3, double> box;
 
   // 6 facets
   box.facets.resize(6);
@@ -88,7 +88,7 @@ int main() {
   box.facets[5][3] = box.facets[1][3];
 
   // Create the tessellation.
-  Tessellation<double> mesh;
+  Tessellation<3, double> mesh;
   TetgenTessellator<double> Tetgen;
   Tetgen.tessellate(generators, box, mesh);
   CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));

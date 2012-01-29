@@ -11,8 +11,10 @@
 using namespace std;
 using namespace polytope;
 
-int main() {
-
+//------------------------------------------------------------------------
+void
+test2x2Box()
+{
   // Create the generators.
   vector<double> generators;
   const int nx = 2;
@@ -33,7 +35,7 @@ int main() {
   // Create the piecewise linear complex representing the box. Note that 
   // the box consists of facets that are defined by their connections to 
   // generating points.
-  PLC<double> box;
+  PLC<2, double> box;
 
   // 4 facets
   box.facets.resize(4);
@@ -55,7 +57,7 @@ int main() {
   box.facets[3][0] = nx*(nx-1); box.facets[3][1] = 0;
 
   // Create the tessellation.
-  Tessellation<double> mesh;
+  Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, box, mesh);
   CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
@@ -71,9 +73,96 @@ int main() {
   vector<double> r2(nx*nx, 1.0);
   map<string, double*> fields;
   fields["data"] = &r2[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator");
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_2x2");
 #endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
+void
+testCircle()
+{
+  // Generate a bunch of random points within a circle of radius 1.
+  vector<double> generators;
+  int N = 100;
+  for (int i = 0; i < N; ++i)
+  {
+    double x = FLT_MAX, y = FLT_MAX;
+    while (x*x + y*y > 1.0)
+    {
+      x = 2.0 * double(::random())/RAND_MAX - 1.0;
+      y = 2.0 * double(::random())/RAND_MAX - 1.0;
+    }
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Create a piecewise linear complex representing the circle. Note that 
+  // the PLC consists of facets that are defined by their connections to 
+  // generating points, which means we need generators along the circle 
+  // itself.
+
+  // Boundary generators.
+  int Nb = 90; // 4-degree resolution.
+  for (int b = 0; b < Nb; ++b)
+  {
+    double theta = 2.0*M_PI*b/(Nb+1);
+    double x = cos(theta), y = sin(theta);
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Facets.
+  PLC<2, double> circle;
+  circle.facets.resize(Nb); 
+  for (int f = 0; f < Nb - 1; ++f)
+  {
+    circle.facets[f].resize(2);
+    circle.facets[f][0] = generators.size()/2-Nb+f;
+    circle.facets[f][1] = generators.size()/2-Nb+f+1;
+  }
+
+  // Last facet completes the circle.
+  int f = Nb-1;
+  circle.facets[f].resize(2);
+  circle.facets[f][0] = generators.size()/2-Nb+f;
+  circle.facets[f][1] = generators.size()/2-Nb;
+
+  cout << circle << endl;
+
+  // Create the tessellation.
+  Tessellation<2, double> mesh;
+  TriangleTessellator<double> triangle;
+  triangle.tessellate(generators, circle, mesh);
+  CHECK(mesh.cells.size() == (N + Nb));
+  cout << mesh << endl;
+
+//  for (unsigned i = 0; i != nx*nx; ++i) 
+//  {
+//    CHECK(mesh.cells[i].size() == 4);
+//  }
+//  CHECK(mesh.faces.size() == 2*nx*(nx + 1));
+
+  // Write out the file if we can.
+#ifdef HAVE_SILO
+  vector<double> r2(N+Nb);
+  for (int i = 0; i < N+Nb; ++i)
+    r2[i] = double(::random())/RAND_MAX;
+  map<string, double*> fields;
+  fields["data"] = &r2[0];
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_circle");
+#endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
+int 
+main() 
+{
+  test2x2Box();
+  testCircle();
 
   cout << "PASS" << endl;
   return 0;
 }
+//------------------------------------------------------------------------

@@ -23,7 +23,7 @@ namespace
 //-------------------------------------------------------------------
 template <typename Real>
 void 
-traverseNodes(const Tessellation<Real>& mesh,
+traverseNodes(const Tessellation<2, Real>& mesh,
               int i,
               vector<int>& nodes)
 {
@@ -158,7 +158,7 @@ PMPIO_closeFile(void* file,
 template <typename Real>
 void 
 SiloWriter<2, Real>::
-write(const Tessellation<Real>& mesh, 
+write(const Tessellation<2, Real>& mesh, 
       const map<string, Real*>& fields,
       const string& filePrefix,
       int cycle,

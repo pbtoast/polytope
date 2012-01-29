@@ -15,7 +15,7 @@
 namespace polytope {
 
 template<typename Real>
-class VoroPP_2d: public Tessellator<Real> {
+class VoroPP_2d: public Tessellator<2, Real> {
 
   //--------------------------- Public Interface ---------------------------//
 public:
@@ -30,12 +30,12 @@ public:
 
   // Tessellate the given generators.
   virtual void tessellate(const std::vector<Real>& points,
-                          Tessellation<Real>& mesh) const;
+                          Tessellation<2, Real>& mesh) const;
 
   // Tessellate obeying the given boundaries.
   virtual void tessellate(const std::vector<Real>& points,
-                          const PLC<Real>& geometry,
-                          Tessellation<Real>& mesh) const;
+                          const PLC<2, Real>& geometry,
+                          Tessellation<2, Real>& mesh) const;
 
   // Access our attributes.
   unsigned nx() const { return mNx; }

@@ -42,7 +42,7 @@ namespace {
 //------------------------------------------------------------------------
 // This function computes the circumcenter of a triangle with vertices
 // A = (Ax, Ay), B = (Bx, By), and C = (Cx, Cy), and places the result 
-// in X, Y.
+// in X.
 //------------------------------------------------------------------------
 void 
 computeCircumcenter(double* A, double* B, double* C, double* X)
@@ -63,7 +63,7 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
 template<typename Real>
 TriangleTessellator<Real>::
 TriangleTessellator():
-  Tessellator<Real>()
+  Tessellator<2, Real>()
 {
 }
 //------------------------------------------------------------------------------
@@ -81,10 +81,10 @@ template<typename Real>
 void
 TriangleTessellator<Real>::
 tessellate(const vector<Real>& points,
-           Tessellation<Real>& mesh) const 
+           Tessellation<2, Real>& mesh) const 
 {
   // Create an empty PLC and go for it.
-  PLC<Real> noBoundary;
+  PLC<2, Real> noBoundary;
   tessellate(points, noBoundary, mesh);
 }
 //------------------------------------------------------------------------------
@@ -94,9 +94,11 @@ template<typename Real>
 void
 TriangleTessellator<Real>::
 tessellate(const vector<Real>& points,
-           const PLC<Real>& geometry,
-           Tessellation<Real>& mesh) const 
+           const PLC<2, Real>& geometry,
+           Tessellation<2, Real>& mesh) const 
 {
+  ASSERT(!points.empty());
+
   // Make sure we're not modifying an existing tessellation.
   ASSERT(mesh.empty());
 
@@ -173,6 +175,9 @@ tessellate(const vector<Real>& points,
     triangulate((char*)"Qzec", &in, &delaunay, 0);
   else
     triangulate((char*)"Qzep", &in, &delaunay, 0);
+
+  // Make sure we got something.
+  ASSERT(delaunay.numberoftriangles > 0);
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
