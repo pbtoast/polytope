@@ -2,13 +2,14 @@
 #define POLYTOPE_TESSELLATION_HH
 
 #include <vector>
+#include <iostream>
 
 namespace polytope
 {
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
 //! arbitrary poly(gonal/hedral) mesh.
-template<typename Real>
+template<int Dimension, typename Real>
 class Tessellation
 {
   public:
@@ -70,6 +71,55 @@ class Tessellation
   //! so this may be empty, in which case you must compute the convex hull
   //! yourself.
   std::vector<unsigned> convexHull;
+
+  //! output operator.
+  friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
+  {
+    s << "Tessellation (" << Dimension << "D):" << std::endl;
+    s << mesh.nodes.size() << " nodes:" << std::endl;
+    for (int n = 0; n < mesh.nodes.size()/Dimension; ++n)
+    {
+      s << " " << n << ": "; 
+      if (Dimension == 2)
+        s << "(" << mesh.nodes[2*n] << ", " << mesh.nodes[2*n+1] << ")" << std::endl;
+      else
+      {
+        ASSERT(Dimension == 3);
+        s << "(" << mesh.nodes[3*n] << ", " << mesh.nodes[3*n+1] << ", " << mesh.nodes[3*n+2] << ")" << std::endl;
+      }
+    }
+    s << std::endl;
+
+    s << mesh.faces.size() << " faces:" << std::endl;
+    for (int f = 0; f < mesh.faces.size(); ++f)
+    {
+      s << " " << f << ": (";
+      for (int p = 0; p < mesh.faces[f].size(); ++p)
+      {
+        if (p < mesh.faces[f].size()-1)
+          s << mesh.faces[f][p] << ", ";
+        else
+          s << mesh.faces[f][p];
+      }
+      s << ")" << std::endl;
+    }
+    s << std::endl;
+
+    s << mesh.cells.size() << " cells:" << std::endl;
+    for (int c = 0; c < mesh.cells.size(); ++c)
+    {
+      s << " " << c << ": (";
+      for (int f = 0; f < mesh.cells[c].size(); ++f)
+      {
+        if (f < mesh.cells[c].size()-1)
+          s << mesh.cells[c][f] << ", ";
+        else
+          s << mesh.cells[c][f];
+      }
+      s << ")" << std::endl;
+    }
+    return s;
+  }
 
   private:
 

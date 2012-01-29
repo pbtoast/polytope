@@ -137,7 +137,7 @@ PMPIO_closeFile(void* file,
 template <typename Real>
 void 
 SiloWriter<3, Real>::
-write(const Tessellation<Real>& mesh, 
+write(const Tessellation<3, Real>& mesh, 
       const map<string, Real*>& fields,
       const string& filePrefix,
       int cycle,

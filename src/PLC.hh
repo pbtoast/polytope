@@ -2,13 +2,14 @@
 #define POLYTOPE_PLC_HH
 
 #include <vector>
+#include <iostream>
 
 namespace polytope
 {
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
-template<typename Real>
+template<int Dimension, typename Real>
 class PLC
 {
   public:
@@ -33,6 +34,66 @@ class PLC
   {
     return (facets.empty() and holes.empty());
   }
+
+  //! Returns true if this PLC is valid (at first glance), false if it 
+  //! is obviously invalid. This is not a rigorous check!
+  bool valid() const
+  {
+    if (Dimension == 2)
+    {
+      // In 2D all facets must have at least 2 points.
+      for (int f = 0; f < facets.size(); ++f)
+      {
+        if (facets[f].size() < 2)
+          return false;
+      }
+    }
+    else if (Dimension == 3)
+    {
+      // In 3D all facets must have at least 3 points.
+      for (int f = 0; f < facets.size(); ++f)
+      {
+        if (facets[f].size() < 3)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  //! output operator.
+  friend std::ostream& operator<<(std::ostream& s, const PLC& plc)
+  {
+    s << "PLC (" << Dimension << "D):" << std::endl;
+    s << plc.facets.size() << " facets:" << std::endl;
+    for (int f = 0; f < plc.facets.size(); ++f)
+    {
+      s << " " << f << ": (";
+      for (int p = 0; p < plc.facets[f].size(); ++p)
+      {
+        if (p < plc.facets[f].size()-1)
+          s << plc.facets[f][p] << ", ";
+        else
+          s << plc.facets[f][p];
+      }
+      s << ")" << std::endl;
+    }
+    s << std::endl;
+    s << plc.holes.size() << " holes:" << std::endl;
+    for (int h = 0; h < plc.holes.size()/Dimension; ++h)
+    {
+      s << " " << h << ": "; 
+      if (Dimension == 2)
+        s << "(" << plc.holes[2*h] << ", " << plc.holes[2*h+1] << ")" << std::endl;
+      else
+      {
+        ASSERT(Dimension == 3);
+        s << "(" << plc.holes[3*h] << ", " << plc.holes[3*h+1] << ", " << plc.holes[3*h+2] << ")" << std::endl;
+      }
+    }
+
+    return s;
+  }
+
 };
 
 }

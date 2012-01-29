@@ -94,7 +94,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
                const unsigned inode,
                const unsigned jnode,
                map<pair<unsigned, unsigned>, unsigned>& faceHash2ID,
-               Tessellation<Real>& mesh) {
+               Tessellation<2, Real>& mesh) {
   typedef pair<unsigned, unsigned> FaceHash;
 
   // cerr << "Looking for face hash (" << fhashi.first << " " << fhashi.second << ") in {";
@@ -197,7 +197,7 @@ template<typename Real>
 void
 VoroPP_2d<Real>::
 tessellate(const vector<Real>& points,
-           Tessellation<Real>& mesh) const {
+           Tessellation<2, Real>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
 
@@ -349,8 +349,8 @@ template<typename Real>
 void
 VoroPP_2d<Real>::
 tessellate(const vector<Real>& points,
-           const PLC<Real>& geometry,
-           Tessellation<Real>& mesh) const {
+           const PLC<2, Real>& geometry,
+           Tessellation<2, Real>& mesh) const {
   ASSERT(false); // Implemenet me!
 }
 

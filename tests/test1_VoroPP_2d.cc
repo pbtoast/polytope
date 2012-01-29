@@ -32,7 +32,7 @@ int main() {
     }
 
     // Create the tessellation.
-    polytope::Tessellation<double> mesh;
+    polytope::Tessellation<2, double> mesh;
     polytope::VoroPP_2d<double> voro(x1, y1, x2, y2);
     voro.tessellate(generators, mesh);
 
