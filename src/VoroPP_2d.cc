@@ -25,24 +25,63 @@ namespace { // We hide internal functions in an anonymous namespace.
 template<typename Real>
 struct Point2 {
   Real x, y;
+  Point2(): x(0.0), y(0.0) {}
   Point2(const Real& xi, const Real& yi): x(xi), y(yi) {}
-};
-
-//------------------------------------------------------------------------------
-// Functor to compare points relative to an origin to define a 
-// counter-clockwise ordering.
-//------------------------------------------------------------------------------
-template<typename Real>
-struct CounterClockwiseComparator {
-  Point2<Real> mOrigin;
-  CounterClockwiseComparator(const Point2<Real>& origin): mOrigin(origin) {}
-  bool operator()(const Point2<Real>& p1,
-                  const Point2<Real>& p2) {
-    const Point2<Real> dp1(p1.x - mOrigin.x, p1.y - mOrigin.y);
-    const Point2<Real> dp2(p2.x - mOrigin.x, p2.y - mOrigin.y);
-    return (dp1.x*dp2.y - dp1.y*dp2.x > 0.0);
+  Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; return *this; }
+  bool operator<(const Point2<Real>& rhs) const {
+    return ((x < rhs.x) or (x == rhs.x and y < rhs.y));
   }
 };
+
+// It's nice being able to print these things.
+template<typename Real>
+std::ostream&
+operator<<(std::ostream& os, const Point2<Real>& p) {
+  os << "(" << p.x << " " << p.y << ")";
+  return os;
+}
+
+//------------------------------------------------------------------------------
+// Z coordinate of cross product : (p2 - p1)x(p3 - p1).
+//------------------------------------------------------------------------------
+template<typename Real>
+double zcross(const Point2<Real>& p1, const Point2<Real>& p2, const Point2<Real>& p3) {
+  return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
+}
+
+//------------------------------------------------------------------------------
+// Sort a set of Point2 points in counter-clockwise order using Andrews 
+// monotone chain algorithm.
+// Based on an example at http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull.cpp
+//------------------------------------------------------------------------------
+template<typename Real>
+vector<Point2<Real> >
+sortCounterClockwise(vector<Point2<Real> >& points) {
+  const unsigned n = points.size();
+  int i, k, t;
+  
+  // Sort the input points by x coordinate.
+  sort(points.begin(), points.end());
+
+  // Prepare the result.
+  vector<Point2<Real> > result(2*n);
+
+  // Build the lower hull.
+  for (i = 0, k = 0; i < n; i++) {
+    while (k >= 2 and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
+    result[k++] = points[i];
+  }
+
+  // Build the upper hull.
+  for (i = n - 2, t = k + 1; i >= 0; i--) {
+    while (k >= t and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
+    result[k++] = points[i];
+  }
+
+  // Size the result and we're done.
+  result.resize(n);
+  return result;
+}
 
 //------------------------------------------------------------------------------
 // Helper method to update our face info.
@@ -165,6 +204,8 @@ tessellate(const vector<Real>& points,
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
   for (int i = 0; i != points.size(); ++i) {
+    if (!(points[2*i]     >= mxmin and points[2*i]     <= mxmax)) cerr << "Blago : " << points[2*i] << " " << mxmin << " " << mxmax << endl;
+    if (!(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax)) cerr << "Blago : " << points[2*i+1] << " " << mymin << " " << mymax << endl;
     ASSERT(points[2*i]     >= mxmin and points[2*i]     <= mxmax);
     ASSERT(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax);
   }
@@ -218,7 +259,6 @@ tessellate(const vector<Real>& points,
         cell.centroid(xc, yc);
         xc += pp[0];
         yc += pp[1];
-        cout << "Centroid for " << icell << " (" << xc << " " << yc << ")" << endl;
 
         // Read the neighbor cell IDs.  Any negative IDs indicate a boundary
         // surface, so just throw them away.
@@ -227,22 +267,19 @@ tessellate(const vector<Real>& points,
         remove_copy_if(tmpNeighbors.begin(), tmpNeighbors.end(), 
                        back_inserter(cellNeighbors[icell]),
                        bind2nd(less<int>(), 0));
-        cout << "Neighbors for generator " << icell << " : ";
-        copy(cellNeighbors[icell].begin(), cellNeighbors[icell].end(), std::ostream_iterator<int>(cout, " "));
-        cout << endl;
 
         // Read out the vertices into a temporary array.
         vector<Point2<Real> > vertices;
         for (unsigned k = 0; k != cell.p; ++k) vertices.push_back(Point2<Real>(xc + 0.5*cell.pts[2*k],
                                                                                yc + 0.5*cell.pts[2*k + 1]));
+        ASSERT(vertices.size() >= 3);
 
         // Sort the vertices counter-clockwise.
-        sort(vertices.begin(), vertices.end(), CounterClockwiseComparator<Real>(Point2<Real>(xc, yc)));
+        vertices = sortCounterClockwise(vertices);
 
         // Assign the global nodes based on the cell vertices.
         xv_last = 10.0;
         yv_last = 10.0;
-        cout << "Vertices:  ";
         for (unsigned k = 0; k != vertices.size(); ++k) {
 
           // Vertex position.
@@ -253,14 +290,12 @@ tessellate(const vector<Real>& points,
 
           // Is this node distinct from the last one we visited?
           if (distance2(xv, yv, xv_last, yv_last) > mDegeneracy2) {
-            cout << "(" << xv << " " << yv << ") ";
 
             // Has this vertex already been created by one of our neighbors?
             newNode = true;
             vector<unsigned>::const_iterator neighborItr = cellNeighbors[icell].begin();
             while (newNode and neighborItr != cellNeighbors[icell].end()) {
               jcell = *neighborItr++;
-              if (!(jcell < ncells)) cout << "Blago!  " << jcell << " " << ncells << endl;
               ASSERT(jcell < ncells);
               vector<unsigned>::const_iterator nodeItr = cellNodes[jcell].begin();
               while (newNode and nodeItr != cellNodes[jcell].end()) {
@@ -294,7 +329,6 @@ tessellate(const vector<Real>& points,
           yv_last = yv;
         }
         ASSERT(cellNodes[icell].size() >= 3);
-        cout << endl;
 
         // We have to tie together the first and last cell vertices in a final face.
         int i = cellNodes[icell].back();
