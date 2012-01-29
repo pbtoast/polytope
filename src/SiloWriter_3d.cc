@@ -226,6 +226,7 @@ write(const Tessellation<Real>& mesh,
   // from which node orderings can be determining using a convex hull 
   // determination algorithm (gift wrapping).
   int numCells = mesh.cells.size();
+  int numFaces = mesh.faces.size();
   vector<Real> cellCenters(numCells);
   for (int c = 0; c < numCells; ++c)
   {
@@ -236,9 +237,9 @@ write(const Tessellation<Real>& mesh,
       const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
       for (int n = 0; n < faceNodes.size(); ++n)
       {
-        cellCenters[c][0] += mesh.nodes[3*faceNodes[n]];
-        cellCenters[c][1] += mesh.nodes[3*faceNodes[n]+1];
-        cellCenters[c][2] += mesh.nodes[3*faceNodes[n]+2];
+        cellCenters[3*c]   += mesh.nodes[3*faceNodes[n]];
+        cellCenters[3*c+1] += mesh.nodes[3*faceNodes[n]+1];
+        cellCenters[3*c+2] += mesh.nodes[3*faceNodes[n]+2];
         ++numNodes;
       }
     }
@@ -246,7 +247,7 @@ write(const Tessellation<Real>& mesh,
     cellCenters[3*c+1] /= numNodes;
     cellCenters[3*c+2] /= numNodes;
   }
-  vector<int> faceNodeCounts(mesh.numFaces()), 
+  vector<int> faceNodeCounts(numFaces), 
               allFaceNodes;
   for (int f = 0; f < mesh.faces.size(); ++f)
   {
@@ -277,7 +278,7 @@ write(const Tessellation<Real>& mesh,
     for (int n = 1; n < faceNodes.size(); ++n)
     {
       for (int d = 0; d < 3; ++d)
-        v2[d] = mesh.nodea[3*faceNodes[n]+d] - faceCenter[d];
+        v2[d] = mesh.nodes[3*faceNodes[n]+d] - faceCenter[d];
 
       // normal = v1 x v2.
       normal[0] = v1[1]*v2[2] - v1[2]*v2[1];
@@ -340,11 +341,11 @@ write(const Tessellation<Real>& mesh,
   }
 
   // Figure out cell-face connectivity.
-  vector<int> cellFaceCounts(mesh.numCells()), 
+  vector<int> cellFaceCounts(numCells), 
               allCellFaces;
-  for (int c = 0; c < mesh.numCells(); ++c)
+  for (int c = 0; c < numCells; ++c)
   {
-    const vector<int>& cellFaces = mesh.cells(c);
+    const vector<int>& cellFaces = mesh.cells[c];
     cellFaceCounts[c] = cellFaces.size();
     allCellFaces.insert(allCellFaces.end(), 
                         cellFaces.begin(), cellFaces.end());
@@ -453,6 +454,9 @@ write(const Tessellation<Real>& mesh,
 #endif
 }
 //-------------------------------------------------------------------
+
+// Explicit instantiation.
+template class SiloWriter<3, double>;
 
 } // end namespace
 

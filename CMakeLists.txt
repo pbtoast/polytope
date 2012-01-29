@@ -87,8 +87,7 @@ endif()
 
 # Enable Tetgen if the proper files are found.
 if (EXISTS ${CWD}/src/tetgen.h AND 
-    EXISTS ${CWD}/src/tetgen.cxx AND 
-    EXISTS ${CWD}/src/predicates.cxx)
+    EXISTS ${CWD}/src/tetgen.cxx)
   set(TETGEN_FOUND TRUE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_TETGEN")
 else()

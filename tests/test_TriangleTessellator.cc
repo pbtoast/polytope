@@ -22,7 +22,7 @@ int main() {
   unsigned ix, iy;
   double xi, yi;
   for (iy = 0; iy != nx; ++iy) {
-    yi = y1 + (iy + 0.5)*dx;
+    yi = y1 + (iy + 0.5)*dy;
     for (ix = 0; ix != nx; ++ix) {
       xi = x1 + (ix + 0.5)*dx;
       generators.push_back(xi);
@@ -58,13 +58,13 @@ int main() {
   Tessellation<double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, box, mesh);
-//  CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
-//  CHECK(mesh.cells.size() == nx*nx);
+  CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
+  CHECK(mesh.cells.size() == nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
   {
-//    CHECK(mesh.cells[i].size() == 4);
+    CHECK(mesh.cells[i].size() == 4);
   }
-//  CHECK(mesh.faces.size() == 2*nx*(nx + 1));
+  CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
