@@ -1,10 +1,15 @@
-
 #ifndef POLYTOPE_SILO_WRITER_HH
 #define POLYTOPE_SILO_WRITER_HH
 
 #ifdef HAVE_SILO
 
+#ifdef HAVE_MPI
 #include <mpi.h>
+#else
+#define MPI_Comm int
+#define MPI_COMM_WORLD 0
+#endif 
+
 #include "Tessellation.hh"
 #include <string>
 #include <float.h>
