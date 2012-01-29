@@ -3,6 +3,8 @@
 # Options set on command line.
 debug      = not-set
 MPI        = not-set
+CC         = not-set
+CXX        = not-set
 
 # This proxies everything to the builddir cmake.
 
@@ -14,15 +16,32 @@ CONFIG_FLAGS = -DCMAKE_VERBOSE_MAKEFILE=1 -DUNIX=1
 
 # Process configuration options.
 
+# Did the user specify compilers?
+ifneq ($(CC), not-set)
+  CC = $(CC)
+else
+  ifeq ($(MPI), 1)
+    CC = mpicc
+  else
+    CC = cc
+  endif
+endif
+
+ifneq ($(CXX), not-set)
+  CXX = $(CXX)
+else
+  ifeq ($(MPI), 1)
+    CXX = mpic++
+  else
+    CXX = cxx
+  endif
+endif
+
 # MPI
 ifeq ($(MPI), 1)
   BUILDDIR := ${BUILDDIR}-MPI
-  CC = mpicc
-  CXX = mpic++
   CONFIG_FLAGS += -DUSE_MPI=1
 else
-  CC = cc
-  CXX = c++
   CONFIG_FLAGS += -DUSE_MPI=0
 endif
 
