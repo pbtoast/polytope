@@ -18,3 +18,20 @@ Other make commands
           Performs clean and completely removes the build directory.
 
 ------------------------------------------------------------------------------
+                      O T H E R   C O N S I D E R A T I O N S
+------------------------------------------------------------------------------
+Polytope provides interfaces for a number of tools:
+
+- Voro++ by Chris Rycroft at LBL
+- Triangle by Jonathan Shewchuck at Berkeley
+- Tetgen by Hang Si
+
+Support for Triangle and Tetgen is available with minimal effort, but you 
+must respect the licenses of their authors and make arrangements with them 
+if you want to use them in a commercial application. As a result, we do not 
+distribute the source for either of these tools. If you want to build in 
+support for Triangle and/or Tetgen, you will need to do the following: 
+
+- For triangle, copy triangle.h and triangle.c to src/.
+- For tetgen, copy tetgen.h and tetgen.cxx to src/.
+
