@@ -10,11 +10,7 @@ set_tests_properties(test1_VoroPP_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
 # Triangle (2D) tessellator.
 if (TRIANGLE_FOUND)
   add_test(test_TriangleTessellator test_TriangleTessellator)
-  if (SILO_FOUND)
-    target_link_libraries(test_TriangleTessellator polytope siloh5 hdf5)
-  else()
-    target_link_libraries(test_TriangleTessellator polytope)
-  endif()
+  target_link_libraries(test_TriangleTessellator polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
   set_tests_properties(test_TriangleTessellator PROPERTIES PASS_REGULAR_EXPRESSION PASS
                        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endif()

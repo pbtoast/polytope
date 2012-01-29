@@ -17,4 +17,4 @@ if (TETGEN_FOUND)
 endif ()
 
 add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES})
-target_link_libraries(polytope voro_2d)
+target_link_libraries(polytope voro_2d ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
