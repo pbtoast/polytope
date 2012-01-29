@@ -6,7 +6,8 @@
 #include <map>
 
 #include "polytope.hh" // Pulls in ASSERT and TetgenTessellator.hh.
-#include "Tetgen.h" 
+
+#include "tetgen.h" 
 
 namespace polytope {
 

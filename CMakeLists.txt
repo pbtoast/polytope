@@ -78,6 +78,26 @@ else ()
   set(SILO_FOUND FALSE)
 endif ()
 
+# Enable Triangle if triangle.h and triangle.c are found.
+set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
+if (EXISTS ${CWD}/src/triangle.h AND 
+    EXISTS ${CWD}/src/triangle.c)
+  set(TRIANGLE_FOUND TRUE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_TRIANGLE")
+else()
+  set(TRIANGLE_FOUND FALSE)
+endif()
+
+# Enable Tetgen if the proper files are found.
+if (EXISTS ${CWD}/src/tetgen.h AND 
+    EXISTS ${CWD}/src/tetgen.cxx AND 
+    EXISTS ${CWD}/src/predicates.cxx)
+  set(TETGEN_FOUND TRUE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_TETGEN")
+else()
+  set(TETGEN_FOUND FALSE)
+endif()
+
 # Build a configuration header file from our options.
 configure_file(
   "${PROJECT_SOURCE_DIR}/src/polytope.hh.in"

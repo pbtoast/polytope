@@ -21,6 +21,24 @@ class Tessellation
     faceCells(),
     convexHull() {}
 
+  //! Clears the tessellation, emptying it of all data.
+  void clear()
+  {
+    nodes.clear();
+    cells.clear();
+    faces.clear();
+    faceCells.clear();
+    convexHull.clear();
+  }
+
+  //! Returns true if the tessellation is empty (not defined), 
+  //! false otherwise.
+  bool empty() const
+  {
+    return nodes.empty() and cells.empty() and faces.empty() and 
+           faceCells.empty() and convexHull.empty();
+  }
+
   //! An array of (Dimension*numNodes) values containing components of 
   //! node positions. The components are stored in node-major order and 
   //! the 0th component of the ith node appears in nodes[Dimension*i].
