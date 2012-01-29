@@ -76,7 +76,7 @@ class Tessellation
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
   {
     s << "Tessellation (" << Dimension << "D):" << std::endl;
-    s << mesh.nodes.size() << " nodes:" << std::endl;
+    s << mesh.nodes.size()/Dimension << " nodes:" << std::endl;
     for (int n = 0; n < mesh.nodes.size()/Dimension; ++n)
     {
       s << " " << n << ": "; 

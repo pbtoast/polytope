@@ -257,6 +257,9 @@ tessellate(const vector<Real>& points,
     }
 
     // Assign the node coordinate.
+//cout << "Computed node " << mesh.nodes.size()/2 << " at (" << X[0] << ", " << X[1] << ")" << endl;
+//cout << " for cells at (" << p[0] << ", " << p[1] << "), (" << q[0] << ", " << q[1] << "), (" << r[0] << ", " << r[1] << ")\n";
+//cout << " for cells " << pindex << ", " << qindex << ", " << rindex << endl;
     mesh.nodes.push_back(Real(X[0]));
     mesh.nodes.push_back(Real(X[1]));
 

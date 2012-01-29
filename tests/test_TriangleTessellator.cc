@@ -88,7 +88,8 @@ testCircle()
   for (int i = 0; i < N; ++i)
   {
     double x = FLT_MAX, y = FLT_MAX;
-    while (x*x + y*y >= 1.0)
+    double safetyBuffer = 0.05; // Important!!
+    while (x*x + y*y >= 1.0 - safetyBuffer)
     {
       x = 2.0 * double(::random())/RAND_MAX - 1.0;
       y = 2.0 * double(::random())/RAND_MAX - 1.0;
@@ -138,22 +139,16 @@ testCircle()
   for (int n = 0; n < mesh.nodes.size()/2; ++n)
   {
     double x = mesh.nodes[2*n], y = mesh.nodes[2*n+1];
-    CHECK(x*x + y*y < 1);
+    CHECK(x*x + y*y < 1+1e-14);
   }
-
-//  for (unsigned i = 0; i != nx*nx; ++i) 
-//  {
-//    CHECK(mesh.cells[i].size() == 4);
-//  }
-//  CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> r2(N+Nb);
+  vector<double> index(N+Nb);
   for (int i = 0; i < N+Nb; ++i)
-    r2[i] = double(::random())/RAND_MAX;
+    index[i] = double(i);
   map<string, double*> fields;
-  fields["data"] = &r2[0];
+  fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_circle");
 #endif
 }
