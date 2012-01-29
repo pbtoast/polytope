@@ -660,7 +660,7 @@ float uniformfloatrand()
 /*                                                                           */
 /*****************************************************************************/
 
-REAL tetgen_exactinit()
+REAL exactinit()
 {
   REAL half;
   REAL check, lastcheck;

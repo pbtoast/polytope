@@ -7,7 +7,9 @@
 
 #include "polytope.hh" // Pulls in ASSERT and TetgenTessellator.hh.
 
-#include "tetgen.h" 
+// Pull in tetgen stuff.
+#define TETLIBRARY
+#include "tetgen.cxx" 
 
 namespace polytope {
 

@@ -350,7 +350,6 @@ write(const Tessellation<Real>& mesh,
 // Explicit instantiation.
 template class SiloWriter<2, double>;
 
-
 } // end namespace
 
 #endif
