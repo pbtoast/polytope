@@ -13,6 +13,14 @@ class Tessellation
 {
   public:
 
+  // Default constructor.
+  Tessellation():
+    nodes(),
+    cells(),
+    faces(),
+    faceCells(),
+    convexHull() {}
+
   //! An array of (Dimension*numNodes) values containing components of 
   //! node positions. The components are stored in node-major order and 
   //! the 0th component of the ith node appears in nodes[Dimension*i].
@@ -39,13 +47,11 @@ class Tessellation
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<unsigned> > faceCells;
 
-  // This constructor should be provided automatically, but for some reason
-  // clang++ on Darwin isn't doing it?
-  Tessellation():
-    nodes(),
-    cells(),
-    faces(),
-    faceCells() {}
+  //! An array of generating points belonging to the convex hull of the 
+  //! point distribution. Not all Tessellators hand back the convex hull, 
+  //! so this may be empty, in which case you must compute the convex hull
+  //! yourself.
+  std::vector<unsigned> convexHull;
 
   private:
 
