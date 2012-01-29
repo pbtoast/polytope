@@ -31,6 +31,8 @@ class SiloWriter
 template <typename Real>
 class SiloWriter<2, Real>
 {
+  public:
+
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file. 
   static void write(const Tessellation<Real>& mesh, 
@@ -60,6 +62,8 @@ class SiloWriter<2, Real>
 template <typename Real>
 class SiloWriter<3, Real>
 {
+  public:
+
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file. 
   static void write(const Tessellation<Real>& mesh, 

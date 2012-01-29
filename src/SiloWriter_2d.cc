@@ -169,7 +169,7 @@ write(const Tessellation<Real>& mesh,
 {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
-  size_t index = prefix.find(".silo");
+  int index = prefix.find(".silo");
   if (index >= 0)
     prefix.erase(index);
 
