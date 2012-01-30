@@ -155,11 +155,119 @@ testCircle()
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
+void
+testDonut()
+{
+  // Generate a bunch of random points within a circle of radius 1.
+  vector<double> generators;
+  int N = 100;
+  for (int i = 0; i < N; ++i)
+  {
+    double x = FLT_MAX, y = FLT_MAX;
+    double outerBuffer = 0.05, innerBuffer = 0.01; // Important!!
+    while ((x*x + y*y >= (1.0 - outerBuffer)*(1.0 - outerBuffer)) or
+           (x*x + y*y <= (0.25 + innerBuffer)*(0.25 + innerBuffer)))
+    {
+      x = 2.0 * double(::random())/RAND_MAX - 1.0;
+      y = 2.0 * double(::random())/RAND_MAX - 1.0;
+    }
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Create a piecewise linear complex representing the circle. Note that 
+  // the PLC consists of facets that are defined by their connections to 
+  // generating points, which means we need generators along the circle 
+  // itself.
+
+  // Boundary generators.
+  int Nb = 90; // 4-degree resolution.
+
+  // Outer circle.
+  for (int b = 0; b < Nb; ++b)
+  {
+    double theta = 2.0*M_PI*b/(Nb+1);
+    double x = cos(theta), y = sin(theta);
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Facets on the outer circle.
+  PLC<2, double> donut;
+  donut.facets.resize(2*Nb); 
+  for (int f = 0; f < Nb - 1; ++f)
+  {
+    donut.facets[f].resize(2);
+    donut.facets[f][0] = generators.size()/2-Nb+f;
+    donut.facets[f][1] = generators.size()/2-Nb+f+1;
+  }
+
+  // Last facet completes the outer circle.
+  int f = Nb-1;
+  donut.facets[f].resize(2);
+  donut.facets[f][0] = generators.size()/2-Nb+f;
+  donut.facets[f][1] = generators.size()/2-Nb;
+
+  // Inner circle.
+  for (int b = 0; b < Nb; ++b)
+  {
+    double theta = 2.0*M_PI*b/(Nb+1);
+    double x = 0.25*cos(theta), y = 0.25*sin(theta);
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Facets on the inner circle.
+  for (int f = 0; f < Nb - 1; ++f)
+  {
+    donut.facets[Nb+f].resize(2);
+    donut.facets[Nb+f][0] = generators.size()/2-Nb+f;
+    donut.facets[Nb+f][1] = generators.size()/2-Nb+f+1;
+  }
+
+  // Last facet completes the inner circle.
+  f = Nb-1;
+  donut.facets[Nb+f].resize(2);
+  donut.facets[Nb+f][0] = generators.size()/2-Nb+f;
+  donut.facets[Nb+f][1] = generators.size()/2-Nb;
+
+  // Now bore a hole in the center of the donut.
+  donut.holes.resize(2);
+  donut.holes[0] = 0.0;
+  donut.holes[1] = 0.0;
+
+  // Create the tessellation.
+  Tessellation<2, double> mesh;
+  TriangleTessellator<double> triangle;
+  triangle.tessellate(generators, donut, mesh);
+
+  // Make sure that the nodes all fall within the donut.
+  for (int n = 0; n < mesh.nodes.size()/2; ++n)
+  {
+    double x = mesh.nodes[2*n], y = mesh.nodes[2*n+1];
+    CHECK(x*x + y*y < 1+1e-14);
+//    CHECK(x*x + y*y > 0.25*0.25-1e-14);
+  }
+
+  // Write out the file if we can.
+#ifdef HAVE_SILO
+  vector<double> index(N+Nb);
+  for (int i = 0; i < N+Nb; ++i)
+    index[i] = double(i);
+  map<string, double*> fields;
+  fields["cell_index"] = &index[0];
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_donut");
+#endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
 int 
 main() 
 {
   test2x2Box();
   testCircle();
+  testDonut();
 
   cout << "PASS" << endl;
   return 0;
