@@ -5,6 +5,7 @@ debug      = not-set
 MPI        = not-set
 CC         = not-set
 CXX        = not-set
+install    = not-set
 
 # This proxies everything to the builddir cmake.
 
@@ -54,6 +55,13 @@ ifneq ($(debug), not-set)
 else
   BUILDDIR := ${BUILDDIR}-Release
   CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Release
+endif
+
+# Install path
+ifneq ($(install), not-set)
+  CONFIG_FLAGS += -DCMAKE_INSTALL_PREFIX=$(install)
+else
+  CONFIG_FLAGS += -DCMAKE_INSTALL_PREFIX=/usr/local
 endif
 
 # Special considerations for specific systems.
