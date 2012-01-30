@@ -37,6 +37,9 @@ public:
                           const PLC<2, Real>& geometry,
                           Tessellation<2, Real>& mesh) const;
 
+  // This Tessellator does not handle PLCs... yet.
+  bool handlesPLCs() const { return false; }
+
   // Access our attributes.
   unsigned nx() const { return mNx; }
   unsigned ny() const { return mNy; }

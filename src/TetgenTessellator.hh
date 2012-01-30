@@ -34,6 +34,9 @@ class TetgenTessellator: public Tessellator<3, Real>
                   const PLC<3, Real>& geometry,
                   Tessellation<3, Real>& mesh) const;
 
+  // This Tessellator handles PLCs!
+  bool handlesPLCs() const { return true; }
+
 };
 
 }
