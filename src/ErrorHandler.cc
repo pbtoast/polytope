@@ -1,6 +1,7 @@
 #include "polytope.hh"
 
 #include <iostream>
+#include <cstdlib>
 
 namespace polytope
 {
