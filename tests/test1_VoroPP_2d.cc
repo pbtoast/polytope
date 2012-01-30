@@ -23,7 +23,7 @@ int main() {
     unsigned ix, iy;
     double xi, yi;
     for (iy = 0; iy != nx; ++iy) {
-      yi = std::max(y1, std::min(y2, y1 + (iy + 0.5)*dx));
+      yi = std::max(y1, std::min(y2, y1 + (iy + 0.5)*dy));
       for (ix = 0; ix != nx; ++ix) {
         xi = std::max(x1, std::min(x2, x1 + (ix + 0.5)*dx));
         generators.push_back(xi);

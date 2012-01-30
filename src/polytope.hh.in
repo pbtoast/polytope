@@ -33,6 +33,7 @@
 #endif
 
 // Classes within the library.
+#include "ErrorHandler.hh"
 #include "VoroPP_2d.hh"
 #include "TriangleTessellator.hh"
 #include "TetgenTessellator.hh"

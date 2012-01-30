@@ -14,7 +14,8 @@
 
 #include "Tessellator.hh"
 
-namespace polytope {
+namespace polytope 
+{
 
 template<typename Real>
 class TriangleTessellator: public Tessellator<2, Real> 
@@ -33,6 +34,9 @@ class TriangleTessellator: public Tessellator<2, Real>
   void tessellate(const std::vector<Real>& points,
                   const PLC<2, Real>& geometry,
                   Tessellation<2, Real>& mesh) const;
+
+  // This Tessellator handles PLCs!
+  bool handlesPLCs() const { return true; }
 
 };
 

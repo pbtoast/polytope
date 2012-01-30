@@ -15,5 +15,5 @@ if (TETGEN_FOUND)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
 endif ()
 
-add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES})
+add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc)
 target_link_libraries(polytope voro_2d ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
