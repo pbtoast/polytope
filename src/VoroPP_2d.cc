@@ -203,7 +203,7 @@ tessellate(const vector<Real>& points,
 
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
-  for (int i = 0; i != points.size(); ++i) {
+  for (int i = 0; i != points.size()/2; ++i) {
     if (!(points[2*i]     >= mxmin and points[2*i]     <= mxmax)) cerr << "Blago : " << points[2*i] << " " << mxmin << " " << mxmax << endl;
     if (!(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax)) cerr << "Blago : " << points[2*i+1] << " " << mymin << " " << mymax << endl;
     ASSERT(points[2*i]     >= mxmin and points[2*i]     <= mxmax);
