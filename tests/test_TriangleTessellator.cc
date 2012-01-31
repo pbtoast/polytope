@@ -304,7 +304,7 @@ testBounded()
 void
 testUnbounded()
 {
-  // Generate a bunch of random points within a square.
+  // Generate a bunch of random points.
   vector<double> generators;
   int N = 100;
   double L = 10.0;
@@ -320,7 +320,8 @@ testUnbounded()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, mesh);
-  CHECK(mesh.cells.size() == N + 4);
+  CHECK(mesh.cells.size() == N);
+cout << mesh << endl;
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
@@ -342,7 +343,7 @@ main()
   testCircle();
   testDonut();
   testBounded(); 
-//  testUnbounded(); <-- don't work yet.
+  testUnbounded();
 
   cout << "PASS" << endl;
   return 0;

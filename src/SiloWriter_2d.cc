@@ -31,7 +31,10 @@ traverseNodes(const Tessellation<2, Real>& mesh,
 
   // Start with the first face, entering both nodes.
   {
+    ASSERT(cellFaces[0] >= 0);
+    ASSERT(cellFaces[0] < mesh.faces.size());
     const vector<unsigned>& faceNodes = mesh.faces[cellFaces[0]];
+    ASSERT(faceNodes.size() == 2);
     nodes.push_back(faceNodes[0]);
     nodes.push_back(faceNodes[1]);
   }
@@ -98,6 +101,15 @@ traverseNodes(const Tessellation<2, Real>& mesh,
       }
     }
   }
+
+#ifndef NDEBUG
+  // Make sure we don't have any garbage in our list of nodes.
+  for (int n = 0; n < nodes.size(); ++n)
+  {
+    ASSERT(nodes[n] >= 0);
+    ASSERT(nodes[n] < mesh.nodes.size()/2);
+  }
+#endif
 }
 //-------------------------------------------------------------------
 
@@ -250,7 +262,10 @@ write(const Tessellation<2, Real>& mesh,
     // Gather the nodes from this cell in traversal order.
     vector<int> cellNodes;
     traverseNodes(mesh, i, cellNodes);
-
+cout << "cell " << i << ": ";
+for (int j = 0; j < cellNodes.size(); ++j)
+cout << cellNodes[j] << " ";
+cout << endl;
     // Insert the cell's node connectivity into the node list.
     nodeList.push_back(cellNodes.size());
     nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
