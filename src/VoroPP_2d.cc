@@ -1,5 +1,5 @@
 //---------------------------------Spheral++----------------------------------//
-// VoroPP
+// VoroPP_2d
 //----------------------------------------------------------------------------//
 #include <iostream>
 #include <iterator>
@@ -163,23 +163,13 @@ hashFace(const unsigned i, const unsigned j)
 //------------------------------------------------------------------------------
 template<typename Real>
 VoroPP_2d<Real>::
-VoroPP_2d(const Real xmin, const Real ymin,
-          const Real xmax, const Real ymax,
-          const unsigned nx,
+VoroPP_2d(const unsigned nx,
           const unsigned ny,
           const Real degeneracy):
   mNx(nx),
   mNy(ny),
-  mxmin(xmin),
-  mymin(ymin),
-  mxmax(xmax),
-  mymax(ymax),
-  mDegeneracy2(degeneracy*degeneracy),
-  mScale(max(xmax - xmin, ymax - ymin)) {
-  ASSERT(mxmin < mxmax);
-  ASSERT(mymin < mymax);
+  mDegeneracy2(degeneracy*degeneracy) {
   ASSERT(mDegeneracy2 > 0.0);
-  ASSERT(mScale > 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -197,25 +187,34 @@ template<typename Real>
 void
 VoroPP_2d<Real>::
 tessellate(vector<Real>& points,
+           Real* low,
+           Real* high,
            Tessellation<2, Real>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
 
+  const unsigned ncells = points.size()/2;
+  const Real xmin = low[0], ymin = low[1];
+  const Real xmax = high[0], ymax = high[1];
+  const Real scale = max(xmax - xmin, ymax - ymin);
+
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
-  for (int i = 0; i != points.size()/2; ++i) {
-    if (!(points[2*i]     >= mxmin and points[2*i]     <= mxmax)) cerr << "Blago : " << points[2*i] << " " << mxmin << " " << mxmax << endl;
-    if (!(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax)) cerr << "Blago : " << points[2*i+1] << " " << mymin << " " << mymax << endl;
-    ASSERT(points[2*i]     >= mxmin and points[2*i]     <= mxmax);
-    ASSERT(points[2*i + 1] >= mymin and points[2*i + 1] <= mymax);
+  for (int i = 0; i != ncells; ++i) {
+    if (!(points[2*i]     >= xmin and points[2*i]     <= xmax)) cerr << "Blago : " << points[2*i] << " " << xmin << " " << xmax << endl;
+    if (!(points[2*i + 1] >= ymin and points[2*i + 1] <= ymax)) cerr << "Blago : " << points[2*i+1] << " " << ymin << " " << ymax << endl;
+    ASSERT(points[2*i]     >= xmin and points[2*i]     <= xmax);
+    ASSERT(points[2*i + 1] >= ymin and points[2*i + 1] <= ymax);
   }
   ASSERT(mesh.nodes.size() == 0);
   ASSERT(mesh.cells.size() == 0);
   ASSERT(mesh.faces.size() == 0);
   ASSERT(mesh.faceCells.size() == 0);
+  ASSERT(xmin < xmax);
+  ASSERT(ymin < ymax);
+  ASSERT(scale > 0.0);
 
   bool newNode;
-  const unsigned ncells = points.size()/2;
   unsigned i, n, icell, jcell;
   double xc, yc;
   Real xv, yv, xv_last, yv_last;
@@ -228,8 +227,8 @@ tessellate(vector<Real>& points,
   vector<Real> generators;
   generators.reserve(2*ncells);
   for (i = 0; i != ncells; ++i) {
-    generators.push_back((points[2*i]     - mxmin)/mScale);
-    generators.push_back((points[2*i + 1] - mymin)/mScale);
+    generators.push_back((points[2*i]     - xmin)/scale);
+    generators.push_back((points[2*i + 1] - ymin)/scale);
     ASSERT(generators[2*i]     >= 0.0 and generators[2*i]     <= 1.0);
     ASSERT(generators[2*i + 1] >= 0.0 and generators[2*i + 1] <= 1.0);
   }
@@ -339,19 +338,7 @@ tessellate(vector<Real>& points,
   }
         
   // De-normalize the vertex coordinates back to the input frame.
-  for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = mxmin + mScale*mesh.nodes[i];
-}
-
-//------------------------------------------------------------------------------
-// Compute the tessellation in the box.
-//------------------------------------------------------------------------------
-template<typename Real>
-void
-VoroPP_2d<Real>::
-tessellate(vector<Real>& points,
-           const PLC<2, Real>& geometry,
-           Tessellation<2, Real>& mesh) const {
-  ASSERT(false); // Implemenet me!
+  for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = xmin + scale*mesh.nodes[i];
 }
 
 //------------------------------------------------------------------------------

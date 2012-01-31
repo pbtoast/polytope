@@ -1,5 +1,5 @@
 //---------------------------------Spheral++----------------------------------//
-// VoroPP2d
+// VoroPP_2d
 // 
 // An implemenation of the Tessellator interface that uses the 2D Voro++
 // library.
@@ -20,22 +20,35 @@ class VoroPP_2d: public Tessellator<2, Real> {
   //--------------------------- Public Interface ---------------------------//
 public:
 
-  // Constructors, destructor.
-  VoroPP_2d(const Real xmin, const Real ymin,
-            const Real xmax, const Real ymax,
-            const unsigned nx = 20,
+  //! Constructor.
+  //! The parameters (nx, ny) are used internally to Voro++ in order to make
+  //! the selection of generators that can influence any particular generator
+  //! more efficient.  The results of the tessellation should be independent of
+  //! of these choices -- they only affect computational expense.
+  //! \param nx The number of boxes to carve the volume into in the x direction.
+  //! \param ny The number of boxes to carve the volume into in the y direction.
+  //! \param degeneracy The tolerance for merging nodes in a cell.
+  VoroPP_2d(const unsigned nx = 20,
             const unsigned ny = 20,
             const Real degeneracy = 1.0e-14);
   ~VoroPP_2d();
 
-  // Tessellate the given generators.
+  //! Generate a Voronoi tessellation for the given set of generator points
+  //! with a bounding box specified by \a low and \a high. Here, low[i]
+  //! contains the ith coordinate for the "lower-left-near" corner of the 
+  //! bounding box in 2D or 3D, and high[i] contains the corresponding 
+  //! opposite corner. The coordinates of these points are stored in 
+  //! point-major order and the 0th component of the ith point appears in 
+  //! points[Dimension*i].
+  //! \param points A (Dimension*numPoints) array containing point coordinates.
+  //! \param low The coordinates of the "lower-left-near" bounding box corner.
+  //! \param high The coordinates of the "upper-right-far" bounding box corner.
+  //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(std::vector<Real>& points,
+                          Real* low,
+                          Real* high,
                           Tessellation<2, Real>& mesh) const;
 
-  // Tessellate obeying the given boundaries.
-  virtual void tessellate(std::vector<Real>& points,
-                          const PLC<2, Real>& geometry,
-                          Tessellation<2, Real>& mesh) const;
 
   // This Tessellator does not handle PLCs... yet.
   bool handlesPLCs() const { return false; }
@@ -43,19 +56,13 @@ public:
   // Access our attributes.
   unsigned nx() const { return mNx; }
   unsigned ny() const { return mNy; }
-  Real xmin() const { return mxmin; }
-  Real ymin() const { return mymin; }
-  Real xmax() const { return mxmax; }
-  Real ymax() const { return mymax; }
   Real degeneracy() const { return std::sqrt(mDegeneracy2); }
-  Real scale() const { return mScale; }
 
 private:
   unsigned mNx, mNy;
-  Real mxmin, mymin, mxmax, mymax, mDegeneracy2, mScale;
+  Real mDegeneracy2;
 
   // Forbidden methods.
-  VoroPP_2d();
   VoroPP_2d(const VoroPP_2d&);
   VoroPP_2d& operator=(const VoroPP_2d&);
 };

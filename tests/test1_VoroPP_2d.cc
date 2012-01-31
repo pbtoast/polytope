@@ -32,9 +32,11 @@ int main() {
     }
 
     // Create the tessellation.
+    double xmin[2] = { x1, y1 };
+    double xmax[2] = { x2, y2 };
     polytope::Tessellation<2, double> mesh;
-    polytope::VoroPP_2d<double> voro(x1, y1, x2, y2);
-    voro.tessellate(generators, mesh);
+    polytope::VoroPP_2d<double> voro;
+    voro.tessellate(generators, xmin, xmax, mesh);
 
     // // Spew the mesh statistics.
     // cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
