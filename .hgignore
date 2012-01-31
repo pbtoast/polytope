@@ -5,6 +5,9 @@ syntax: glob
 *.dylib
 *.a
 
+# Ignore our build output
+build
+
 # Executables we make
 tests/test1
 tests/test1_VoroPP_2d
