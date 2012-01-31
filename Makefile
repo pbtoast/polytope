@@ -34,7 +34,7 @@ else
   ifeq ($(MPI), 1)
     CXX = mpic++
   else
-    CXX = cxx
+    CXX = c++
   endif
 endif
 

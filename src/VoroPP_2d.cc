@@ -196,7 +196,7 @@ VoroPP_2d<Real>::
 template<typename Real>
 void
 VoroPP_2d<Real>::
-tessellate(const vector<Real>& points,
+tessellate(vector<Real>& points,
            Tessellation<2, Real>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
@@ -348,7 +348,7 @@ tessellate(const vector<Real>& points,
 template<typename Real>
 void
 VoroPP_2d<Real>::
-tessellate(const vector<Real>& points,
+tessellate(vector<Real>& points,
            const PLC<2, Real>& geometry,
            Tessellation<2, Real>& mesh) const {
   ASSERT(false); // Implemenet me!
