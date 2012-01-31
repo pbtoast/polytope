@@ -96,7 +96,7 @@ class Tessellator
       Min[d] = FLT_MAX; 
       Max[d] = -FLT_MAX;
     }
-    for (size_t i = 0; i < points.size(); ++i)
+    for (size_t i = 0; i < points.size()/Dimension; ++i)
     {
       for (int d = 0; d < Dimension; ++d)
       {
@@ -104,7 +104,6 @@ class Tessellator
         Max[d] = std::max(Max[d], points[Dimension*i+d]);
       }
     }
-
     // Now create the PLC and add the new generators for the corners.
     return boundingBox(Min, Max, points);
   }
