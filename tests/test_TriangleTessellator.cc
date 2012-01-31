@@ -263,6 +263,45 @@ testDonut()
 
 //------------------------------------------------------------------------
 void
+testBounded()
+{
+  // Generate a bunch of random points within a square of length L.
+  double L = 10.0;
+  vector<double> generators;
+  int N = 100;
+  for (int i = 0; i < N; ++i)
+  {
+    double x = L * double(::random())/RAND_MAX - 0.5*L;
+    double y = L * double(::random())/RAND_MAX - 0.5*L;
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Create a bounding box for the square.
+  double low[2], high[2];
+  low[0] = low[1] = -0.55*L;
+  high[0] = high[1] = 0.55*L;
+
+  // Create the tessellation.
+  Tessellation<2, double> mesh;
+  TriangleTessellator<double> triangle;
+  triangle.tessellate(generators, low, high, mesh);
+  CHECK(mesh.cells.size() == N + 4);
+
+  // Write out the file if we can.
+#ifdef HAVE_SILO
+  vector<double> index(N+4);
+  for (int i = 0; i < N+4; ++i)
+    index[i] = double(i);
+  map<string, double*> fields;
+  fields["cell_index"] = &index[0];
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_bounded");
+#endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
+void
 testUnbounded()
 {
   // Generate a bunch of random points within a square.
@@ -271,8 +310,8 @@ testUnbounded()
   double L = 10.0;
   for (int i = 0; i < N; ++i)
   {
-    double x = 2.0*L * double(::random())/RAND_MAX - L;
-    double y = 2.0*L * double(::random())/RAND_MAX - L;
+    double x = L * double(::random())/RAND_MAX - 0.5*L;
+    double y = L * double(::random())/RAND_MAX - 0.5*L;
     generators.push_back(x);
     generators.push_back(y);
   }
@@ -302,7 +341,8 @@ main()
   test2x2Box();
   testCircle();
   testDonut();
-  //testUnbounded(); <-- don't work yet.
+  testBounded(); 
+//  testUnbounded(); <-- don't work yet.
 
   cout << "PASS" << endl;
   return 0;
