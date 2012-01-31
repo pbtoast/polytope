@@ -26,7 +26,14 @@ class TriangleTessellator: public Tessellator<2, Real>
   TriangleTessellator();
   ~TriangleTessellator();
 
-  // Tessellate the given generators.
+  // Tessellate the given generators within the given bounding box.
+  void tessellate(std::vector<Real>& points,
+                  Real* low, Real* high,
+                  Tessellation<2, Real>& mesh) const;
+
+  // Tessellate the given generators. A bounding box is constructed about
+  // the generators, and the corners of the bounding box are added as 
+  // additional generators if they are not present in the list.
   void tessellate(std::vector<Real>& points,
                   Tessellation<2, Real>& mesh) const;
 
