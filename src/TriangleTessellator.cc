@@ -97,9 +97,10 @@ TriangleTessellator<Real>::
 tessellate(vector<Real>& points,
            Tessellation<2, Real>& mesh) const 
 {
-  // Create a PLC for the bounding box about these points.
-  PLC<2, Real> box = boundingBox(points);
-  tessellate(points, box, mesh);
+//  // Create a PLC for the bounding box about these points.
+//  PLC<2, Real> box = boundingBox(points);
+  PLC<2, Real> noBoundary;
+  tessellate(points, noBoundary, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -191,7 +192,8 @@ tessellate(vector<Real>& points,
     triangulate((char*)"Qzep", &in, &delaunay, 0);
 
   // Make sure we got something.
-  ASSERT(delaunay.numberoftriangles > 0);
+  if (delaunay.numberoftriangles == 0)
+    error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
