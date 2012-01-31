@@ -262,12 +262,47 @@ testDonut()
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
+void
+testUnbounded()
+{
+  // Generate a bunch of random points within a square.
+  vector<double> generators;
+  int N = 100;
+  double L = 10.0;
+  for (int i = 0; i < N; ++i)
+  {
+    double x = 2.0*L * double(::random())/RAND_MAX - L;
+    double y = 2.0*L * double(::random())/RAND_MAX - L;
+    generators.push_back(x);
+    generators.push_back(y);
+  }
+
+  // Create the tessellation.
+  Tessellation<2, double> mesh;
+  TriangleTessellator<double> triangle;
+  triangle.tessellate(generators, mesh);
+  CHECK(mesh.cells.size() == N + 4);
+
+  // Write out the file if we can.
+#ifdef HAVE_SILO
+  vector<double> index(N+4);
+  for (int i = 0; i < N+4; ++i)
+    index[i] = double(i);
+  map<string, double*> fields;
+  fields["cell_index"] = &index[0];
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_unbounded");
+#endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
 int 
 main() 
 {
   test2x2Box();
   testCircle();
   testDonut();
+  //testUnbounded(); <-- don't work yet.
 
   cout << "PASS" << endl;
   return 0;
