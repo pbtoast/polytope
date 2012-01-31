@@ -29,11 +29,11 @@ public:
   ~VoroPP_2d();
 
   // Tessellate the given generators.
-  virtual void tessellate(const std::vector<Real>& points,
+  virtual void tessellate(std::vector<Real>& points,
                           Tessellation<2, Real>& mesh) const;
 
   // Tessellate obeying the given boundaries.
-  virtual void tessellate(const std::vector<Real>& points,
+  virtual void tessellate(std::vector<Real>& points,
                           const PLC<2, Real>& geometry,
                           Tessellation<2, Real>& mesh) const;
 

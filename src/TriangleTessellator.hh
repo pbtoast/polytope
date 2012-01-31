@@ -27,11 +27,11 @@ class TriangleTessellator: public Tessellator<2, Real>
   ~TriangleTessellator();
 
   // Tessellate the given generators.
-  void tessellate(const std::vector<Real>& points,
+  void tessellate(std::vector<Real>& points,
                   Tessellation<2, Real>& mesh) const;
 
   // Tessellate obeying the given boundaries.
-  void tessellate(const std::vector<Real>& points,
+  void tessellate(std::vector<Real>& points,
                   const PLC<2, Real>& geometry,
                   Tessellation<2, Real>& mesh) const;
 

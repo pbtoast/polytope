@@ -80,12 +80,12 @@ TriangleTessellator<Real>::
 template<typename Real>
 void
 TriangleTessellator<Real>::
-tessellate(const vector<Real>& points,
+tessellate(vector<Real>& points,
            Tessellation<2, Real>& mesh) const 
 {
-  // Create an empty PLC and go for it.
-  PLC<2, Real> noBoundary;
-  tessellate(points, noBoundary, mesh);
+  // Create a PLC for the bounding box about these points.
+  PLC<2, Real> box = boundingBox(points);
+  tessellate(points, box, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ tessellate(const vector<Real>& points,
 template<typename Real>
 void
 TriangleTessellator<Real>::
-tessellate(const vector<Real>& points,
+tessellate(vector<Real>& points,
            const PLC<2, Real>& geometry,
            Tessellation<2, Real>& mesh) const 
 {
