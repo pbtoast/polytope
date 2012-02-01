@@ -331,16 +331,13 @@ tessellate(vector<Real>& points,
   // If no boundary was specified, compute the convex hull and leave.
   if (geometry.empty()) 
   {
-    set<unsigned> convexHull;
+    mesh.convexHull.facets.resize(delaunay.numberofsegments);
     for (int i = 0; i < delaunay.numberofsegments; ++i)
     {
-      int cell1 = delaunay.segmentlist[2*i];
-      int cell2 = delaunay.segmentlist[2*i+1];
-      convexHull.insert(cell1);
-      convexHull.insert(cell2);
+      mesh.convexHull.facets[i].resize(2);
+      mesh.convexHull.facets[i][0] = delaunay.segmentlist[2*i];
+      mesh.convexHull.facets[i][1] = delaunay.segmentlist[2*i+1];
     }
-    mesh.convexHull.resize(convexHull.size());
-    copy(convexHull.begin(), convexHull.end(), mesh.convexHull.begin());
 
     // Clean up.
     delete [] in.pointlist;
@@ -371,14 +368,15 @@ tessellate(vector<Real>& points,
   
   // Extract the convex hull here, and make sure each existing face 
   // has two nodes.
-  set<unsigned> convexHull;
   set<pair<int, int> > patchedFaces;
+  mesh.convexHull.facets.resize(delaunay.numberofsegments);
   for (int i = 0; i < delaunay.numberofsegments; ++i)
   {
     int cell1 = delaunay.segmentlist[2*i];
     int cell2 = delaunay.segmentlist[2*i+1];
-    convexHull.insert(cell1);
-    convexHull.insert(cell2);
+    mesh.convexHull.facets[i].resize(2);
+    mesh.convexHull.facets[i][0] = cell1;
+    mesh.convexHull.facets[i][1] = cell2;
 //cout << "Inspecting segment for " << cell1 << ", " << cell2 << endl;
 
     // Add nodes to all faces attached to these cell with only 
@@ -410,26 +408,24 @@ tessellate(vector<Real>& points,
       }
     }
   }
-  mesh.convexHull.resize(convexHull.size());
-  copy(convexHull.begin(), convexHull.end(), mesh.convexHull.begin());
 
   // Create extra nodes for the boundary faces. These nodes coincide with 
   // the Voronoi generater points.
   size_t oldNumNodes = mesh.nodes.size() / 2;
 //cout << "Mesh had " << oldNumNodes << ", now adding " << mesh.convexHull.size() << endl;
-  mesh.nodes.resize(2*(oldNumNodes + mesh.convexHull.size()));
-  for (size_t i = 0; i < mesh.convexHull.size(); ++i)
+  mesh.nodes.resize(2*(oldNumNodes + mesh.convexHull.facets.size()));
+  for (size_t i = 0; i < mesh.convexHull.facets.size(); ++i)
   {
-    unsigned pindex = mesh.convexHull[i];
+    unsigned pindex = mesh.convexHull.facets[i][0];
     mesh.nodes[2*(oldNumNodes+i)]   = points[2*pindex];
     mesh.nodes[2*(oldNumNodes+i)+1] = points[2*pindex+1];
 //cout << "Adding node (" << points[2*pindex] << ", " << points[2*pindex+1] << ")\n";
   }
 
   // Now we construct the remaining faces for the boundary cells.
-  for (int i = 0; i < mesh.convexHull.size(); ++i)
+  for (int i = 0; i < mesh.convexHull.facets.size(); ++i)
   {
-    int cell = mesh.convexHull[i]; // The boundary cell.
+    int cell = mesh.convexHull.facets[i][0]; // The boundary cell.
 
     // Add two new faces for this cell.
     mesh.faces.resize(mesh.faces.size()+2);

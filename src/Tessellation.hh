@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include "PLC.hh"
 
 namespace polytope
 {
@@ -66,11 +67,11 @@ class Tessellation
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<unsigned> > faceCells;
 
-  //! An array of generating points belonging to the convex hull of the 
-  //! point distribution. Not all Tessellators hand back the convex hull, 
-  //! so this may be empty, in which case you must compute the convex hull
-  //! yourself.
-  std::vector<unsigned> convexHull;
+  //! A PLC connecting the generating points belonging to the convex hull 
+  //! of the point distribution. Not all Tessellators hand back the convex 
+  //! hull, so this may be empty, in which case you must compute the convex 
+  //! hull yourself.
+  PLC<Dimension, Real> convexHull;
 
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
