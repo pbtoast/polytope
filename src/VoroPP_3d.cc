@@ -5,6 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+#include <set>
 
 #include "polytope.hh" // Pulls in ASSERT and VoroPP_3d.hh.
 #include "container.hh"
@@ -20,70 +21,6 @@ using std::abs;
 namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
-// A simple 3D point.
-//------------------------------------------------------------------------------
-template<typename Real>
-struct Point3 {
-  Real x, y, z;
-  Point3(): x(0.0), y(0.0) {}
-  Point3(const Real& xi, const Real& yi): x(xi), y(yi) {}
-  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; return *this; }
-  bool operator<(const Point3<Real>& rhs) const {
-    return ((x < rhs.x) or (x == rhs.x and y < rhs.y));
-  }
-};
-
-// It's nice being able to print these things.
-template<typename Real>
-std::ostream&
-operator<<(std::ostream& os, const Point3<Real>& p) {
-  os << "(" << p.x << " " << p.y << ")";
-  return os;
-}
-
-//------------------------------------------------------------------------------
-// Z coordinate of cross product : (p2 - p1)x(p3 - p1).
-//------------------------------------------------------------------------------
-template<typename Real>
-double zcross(const Point3<Real>& p1, const Point3<Real>& p2, const Point3<Real>& p3) {
-  return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
-}
-
-//------------------------------------------------------------------------------
-// Sort a set of Point2 points in counter-clockwise order using Andrews 
-// monotone chain algorithm.
-// Based on an example at http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull.cpp
-//------------------------------------------------------------------------------
-template<typename Real>
-vector<Point2<Real> >
-sortCounterClockwise(vector<Point2<Real> >& points) {
-  const unsigned n = points.size();
-  int i, k, t;
-  
-  // Sort the input points by x coordinate.
-  sort(points.begin(), points.end());
-
-  // Prepare the result.
-  vector<Point2<Real> > result(2*n);
-
-  // Build the lower hull.
-  for (i = 0, k = 0; i < n; i++) {
-    while (k >= 2 and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
-    result[k++] = points[i];
-  }
-
-  // Build the upper hull.
-  for (i = n - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
-    result[k++] = points[i];
-  }
-
-  // Size the result and we're done.
-  result.resize(n);
-  return result;
-}
-
-//------------------------------------------------------------------------------
 // Helper method to update our face info.
 //------------------------------------------------------------------------------
 template<typename Real>
@@ -93,7 +30,7 @@ insertFaceInfo(const set<unsigned>& fhashi,
                const unsigned icell,
                const vector<unsigned>& faceNodeIDs,
                map<set<unsigned>, unsigned>& faceHash2ID,
-               Tessellation<2, Real>& mesh) {
+               Tessellation<3, Real>& mesh) {
   typedef set<unsigned> FaceHash;
 
   // Is this a new face?
@@ -131,19 +68,67 @@ insertFaceInfo(const set<unsigned>& fhashi,
 template<typename Real>
 inline
 Real
-distance2(const Real& x1, const Real& y1,
-          const Real& x2, const Real& y2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1);
+distance2(const Real& x1, const Real& y1, const Real& z1,
+          const Real& x2, const Real& y2, const Real& z2) {
+  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1) + (z2 - z1)*(z2 - z1);
 }
 
 //------------------------------------------------------------------------------
-// A unique hash for a face as an ordered collection of node indices.
+// A simple 3D point.
 //------------------------------------------------------------------------------
-pair<unsigned, unsigned> 
-hashFace(const unsigned i, const unsigned j)
-{
-  ASSERT(i != j);
-  return (i < j ? make_pair(i, j) : make_pair(j, i));
+template<typename Real>
+struct Point3 {
+  Real x, y, z;
+  Point3(): x(0.0), y(0.0), z(0.0) {}
+  Point3(const Real& xi, const Real& yi, const Real& zi): x(xi), y(yi), z(zi) {}
+  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
+  bool operator==(const Point3<Real>& rhs) const { return distance2(x, y, z, rhs.x, rhs.y, rhs.z) < 1.0e-14; }
+  bool operator<(const Point3<Real>& rhs) const {
+    return (x < rhs.x                               ? true :
+            x == rhs.x and y < rhs.y                ? true :
+            x == rhs.x and y == rhs.y and z < rhs.z ? true :
+            false);
+  }
+};
+
+// It's nice being able to print these things.
+template<typename Real>
+std::ostream&
+operator<<(std::ostream& os, const Point3<Real>& p) {
+  os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
+  return os;
+}
+
+template<typename Real>
+inline
+Real
+distance2(const Point3<Real>& p1, const Point3<Real>& p2) {
+  return (p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y -p1.y) + (p2.z - p1.z)*(p2.z - p1.z);
+}
+
+//------------------------------------------------------------------------------
+// Reduce to the unique points and compute the mapping from the input position
+// ordering to the reduced set.
+//------------------------------------------------------------------------------
+template<typename Real>
+map<unsigned, unsigned>
+uniquePoints(vector<Point3<Real> >& points,
+             const Real& degeneracy2) {
+  const unsigned n0 = points.size();
+  map<unsigned, unsigned> result;
+  unsigned i, j, n1 = 0;
+  for (i = 0; i != n0; ++i) {
+    j = 0;
+    while (j != i and distance2(points[i], points[j]) > degeneracy2) ++j;
+    result[i] = j;
+    n1 = max(n1, j);
+    points[i] = points[j];
+  }
+  ++n1;
+  ASSERT(n1 <= n0);
+  points.resize(n1);
+  ASSERT(result.size() == n0);
+  return result;
 }
 
 } // end anonymous namespace
@@ -155,9 +140,11 @@ template<typename Real>
 VoroPP_3d<Real>::
 VoroPP_3d(const unsigned nx,
           const unsigned ny,
+          const unsigned nz,
           const Real degeneracy):
   mNx(nx),
   mNy(ny),
+  mNz(nz),
   mDegeneracy2(degeneracy*degeneracy) {
   ASSERT(mDegeneracy2 > 0.0);
 }
@@ -185,7 +172,7 @@ tessellate(vector<Real>& points,
 
   const unsigned ncells = points.size()/3;
   const Real xmin = low[0], ymin = low[1], zmin = low[2];
-  const Real xmax = high[0], ymax = high[1], zmax = high[3];
+  const Real xmax = high[0], ymax = high[1], zmax = high[2];
   const Real scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
 
   // Pre-conditions.
@@ -205,9 +192,10 @@ tessellate(vector<Real>& points,
   ASSERT(mesh.faceCells.size() == 0);
 
   bool newNode;
-  unsigned i, j, k, n, icell, jcell;
+  unsigned i, j, k, iv, iface, nf, nvf, icell, jcell;
   double xc, yc, zc;
-  Real xv, yv, xv_last, yv_last;
+  Real xv, yv, xv_last, yv_last, zv_last;
+  FaceHash fhashi;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -268,6 +256,16 @@ tessellate(vector<Real>& points,
                                                                       zc + 0.5*cell.pts[3*k + 2]));
         ASSERT(vertices.size() >= 4);
 
+        // Reduce to the unique set of vertices for this cell.
+        map<unsigned, unsigned> vertexMap = uniquePoints(vertices, mDegeneracy2);
+        ASSERT(vertices.size() >= 4);
+
+        // // Blago!
+        // std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<Real> >(std::cout, " "));
+        // cout << endl;
+        // ASSERT(vertices.size() == 8);
+        // // Blago!
+
         // Read the face vertex indices to a temporary array as well.
         vector<int> voroFaceVertexIndices;
         cell.face_vertices(voroFaceVertexIndices);
@@ -277,23 +275,21 @@ tessellate(vector<Real>& points,
         nf = cell.number_of_faces();
         ASSERT(nf >= 4);
         k = 0;
-        for (if = 0; if != nf; ++if) {
+        for (iface = 0; iface != nf; ++iface) {
           ASSERT(k < voroFaceVertexIndices.size());
           fhashi = FaceHash();
 
           // Read the vertices for this face.  We assume they are listed in the
           // proper counter-clockwise order (viewed from outside) here!
           nvf = voroFaceVertexIndices[k++];
-          xv_last = 10.0;
-          yv_last = 10.0;
-          zv_last = 10.0;
+          ASSERT(nvf >= 3);
           for (iv = 0; iv != nvf; ++iv) {
             ASSERT(k < voroFaceVertexIndices.size());
-            j = voroFaceVertexIndices[k++];
-
-            // Is this node distinct from the last one we visited?
-            if (distance2(vertices[j].x, vertices[j].y, vertices[j].z,
-                          xv_last, yv_last, zv_last) > mDegneracy2) {
+            ASSERT(vertexMap.find(voroFaceVertexIndices[k]) != vertexMap.end());
+            j = vertexMap[voroFaceVertexIndices[k++]];
+            
+            // Is this vertex new to the face?
+            if (fhashi.find(j) == fhashi.end()) {
 
               // Has this vertex already been created by one of our neighbors?
               newNode = true;
@@ -327,11 +323,11 @@ tessellate(vector<Real>& points,
                 mesh.nodes.push_back(vertices[j].z);
               }
             }
-            ASSERT(faceNodeIDs.size() >= 3);
-
-            // Add this face to the cell.
-            insertFaceInfo(fhashi, icell, faceNodeIDs, faceHash2ID, mesh);
           }
+          ASSERT(faceNodeIDs.size() >= 3);
+
+          // Add this face to the cell.
+          insertFaceInfo(fhashi, icell, faceNodeIDs, faceHash2ID, mesh);
         }
         ASSERT(cellNodes[icell].size() >= 3);
       }
@@ -346,5 +342,6 @@ tessellate(vector<Real>& points,
 // Explicit instantiation.
 //------------------------------------------------------------------------------
 template class VoroPP_3d<double>;
+template class VoroPP_3d<float>;
 
 }
