@@ -22,48 +22,6 @@ using std::abs;
 namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
-// Helper method to update our face info.
-//------------------------------------------------------------------------------
-template<typename Real>
-inline
-void
-insertFaceInfo(const set<unsigned>& fhashi,
-               const unsigned icell,
-               const vector<unsigned>& faceNodeIDs,
-               map<set<unsigned>, unsigned>& faceHash2ID,
-               Tessellation<3, Real>& mesh) {
-  typedef set<unsigned> FaceHash;
-
-  // Is this a new face?
-  map<FaceHash, unsigned>::const_iterator faceItr = faceHash2ID.find(fhashi);
-  if (faceItr == faceHash2ID.end()) {
-
-    // Yep, it's a new face.
-    const unsigned iface = mesh.faces.size();
-    faceHash2ID[fhashi] = iface;
-    mesh.cells[icell].push_back(iface);
-    mesh.faces.push_back(faceNodeIDs);
-    mesh.faceCells.push_back(vector<unsigned>());
-    mesh.faceCells.back().push_back(icell);
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
-    ASSERT(mesh.faces.size() == iface + 1);
-    ASSERT(mesh.faceCells.size() == iface + 1);
-    ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
-
-  } else {
-
-    // Nope, this is an existing face, so we record it in the 
-    // cell list as the 1's complement.
-    const unsigned iface = faceItr->second;
-    ASSERT(iface < mesh.faces.size());
-    mesh.cells[icell].push_back(~iface);
-    mesh.faceCells[iface].push_back(icell);
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
-    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == icell);
-  }
-}
-
-//------------------------------------------------------------------------------
 // Compute the distance^2 between points.
 //------------------------------------------------------------------------------
 template<typename Real>
@@ -100,13 +58,6 @@ operator<<(std::ostream& os, const Point3<Real>& p) {
   return os;
 }
 
-template<typename Real>
-inline
-Real
-distance2(const Point3<Real>& p1, const Point3<Real>& p2) {
-  return (p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y -p1.y) + (p2.z - p1.z)*(p2.z - p1.z);
-}
-
 //------------------------------------------------------------------------------
 // A integer version of the simple 3D point.
 //------------------------------------------------------------------------------
@@ -138,55 +89,10 @@ operator<<(std::ostream& os, const iPoint3<Uint>& p) {
   return os;
 }
 
-// //------------------------------------------------------------------------------
-// // Reduce to the unique points and compute the mapping from the input position
-// // ordering to the reduced set.
-// //------------------------------------------------------------------------------
-// template<typename Real>
-// map<unsigned, unsigned>
-// uniquePoints(vector<Point3<Real> >& points,
-//              const Real& degeneracy2) {
-//   const unsigned n0 = points.size();
-//   map<unsigned, unsigned> result;
-//   unsigned i, j, n1 = 0;
-//   for (i = 0; i != n0; ++i) {
-//     j = 0;
-//     while (j != i and distance2(points[i], points[j]) > degeneracy2) ++j;
-//     result[i] = j;
-//     n1 = max(n1, j);
-//     points[i] = points[j];
-//   }
-//   ++n1;
-//   ASSERT(n1 <= n0);
-//   points.resize(n1);
-//   ASSERT(result.size() == n0);
-//   return result;
-// }
-
 //------------------------------------------------------------------------------
 // Take the given set of vertex positions, and either find them in the known
 // mesh nodes or add them to the known set.
 //------------------------------------------------------------------------------
-// template<typename Real> 
-// inline
-// uint64_t 
-// hashx(const Real& x, const double dx) {
-//   ASSERT(x >= 0.0 and x < 1.0);
-//   return uint64_t(x/dx);
-// }
-
-// template<typename Real>
-// inline
-// VERTEXHASH
-// hashPoint3(const Point3<Real>& p, const double dx) {
-//   VERTEXHASH result(hashx(p.z, dx));
-//   result <<= 64;
-//   result |= hashx(p.y, dx);
-//   result <<= 64;
-//   result |= hashx(p.x, dx);
-//   return result;
-// }
-
 template<typename Real, typename Uint>
 map<unsigned, unsigned>
 updateMeshVertices(vector<Point3<Real> >& vertices,
@@ -236,6 +142,48 @@ updateMeshVertices(vector<Point3<Real> >& vertices,
   }
   ASSERT(result.size() == vertices.size());
   return result;
+}
+
+//------------------------------------------------------------------------------
+// Helper method to update our face info.
+//------------------------------------------------------------------------------
+template<typename Real>
+inline
+void
+insertFaceInfo(const set<unsigned>& fhashi,
+               const unsigned icell,
+               const vector<unsigned>& faceNodeIDs,
+               map<set<unsigned>, unsigned>& faceHash2ID,
+               Tessellation<3, Real>& mesh) {
+  typedef set<unsigned> FaceHash;
+
+  // Is this a new face?
+  map<FaceHash, unsigned>::const_iterator faceItr = faceHash2ID.find(fhashi);
+  if (faceItr == faceHash2ID.end()) {
+
+    // Yep, it's a new face.
+    const unsigned iface = mesh.faces.size();
+    faceHash2ID[fhashi] = iface;
+    mesh.cells[icell].push_back(iface);
+    mesh.faces.push_back(faceNodeIDs);
+    mesh.faceCells.push_back(vector<unsigned>());
+    mesh.faceCells.back().push_back(icell);
+    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
+    ASSERT(mesh.faces.size() == iface + 1);
+    ASSERT(mesh.faceCells.size() == iface + 1);
+    ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
+
+  } else {
+
+    // Nope, this is an existing face, so we record it in the 
+    // cell list as the 1's complement.
+    const unsigned iface = faceItr->second;
+    ASSERT(iface < mesh.faces.size());
+    mesh.cells[icell].push_back(~iface);
+    mesh.faceCells[iface].push_back(icell);
+    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
+    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == icell);
+  }
 }
 
 } // end anonymous namespace
@@ -302,7 +250,6 @@ tessellate(vector<Real>& points,
 
   unsigned i, j, k, iv, iface, nf, nvf, icell;
   double xc, yc, zc;
-  FaceHash fhashi;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);

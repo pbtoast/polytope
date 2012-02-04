@@ -20,6 +20,17 @@ using std::abs;
 namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
+// Compute the distance^2 between points.
+//------------------------------------------------------------------------------
+template<typename Real>
+inline
+Real
+distance2(const Real& x1, const Real& y1,
+          const Real& x2, const Real& y2) {
+  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1);
+}
+
+//------------------------------------------------------------------------------
 // A simple 2D point.
 //------------------------------------------------------------------------------
 template<typename Real>
@@ -28,8 +39,11 @@ struct Point2 {
   Point2(): x(0.0), y(0.0) {}
   Point2(const Real& xi, const Real& yi): x(xi), y(yi) {}
   Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; return *this; }
-  bool operator<(const Point2<Real>& rhs) const {
-    return ((x < rhs.x) or (x == rhs.x and y < rhs.y));
+  bool operator==(const Point2& rhs) const { return distance2(x, y, rhs.x, rhs.y) < 1.0e-14; }
+  bool operator<(const Point2& rhs) const {
+    return (x < rhs.x                               ? true :
+            x == rhs.x and y < rhs.y                ? true :
+            false);
   }
 };
 
@@ -37,6 +51,35 @@ struct Point2 {
 template<typename Real>
 std::ostream&
 operator<<(std::ostream& os, const Point2<Real>& p) {
+  os << "(" << p.x << " " << p.y << ")";
+  return os;
+}
+
+//------------------------------------------------------------------------------
+// A integer version of the simple 2D point.
+//------------------------------------------------------------------------------
+template<typename Uint>
+struct iPoint2 {
+  Uint x, y;
+  iPoint2(): x(0), y(0) {}
+  iPoint2(const Uint& xi, const Uint& yi): x(xi), y(yi) {}
+  iPoint2& operator=(const iPoint2& rhs) { x = rhs.x; y = rhs.y; return *this; }
+  bool operator==(const iPoint2& rhs) const { return (x == rhs.x and y == rhs.y); }
+  bool operator<(const iPoint2& rhs) const {
+    return (x < rhs.x                               ? true :
+            x == rhs.x and y < rhs.y                ? true :
+            false);
+  }
+  template<typename Real>
+  iPoint2(const Point2<Real>& p, const Real& dx): 
+    x(static_cast<Uint>(p.x/dx + 0.5)),
+    y(static_cast<Uint>(p.y/dx + 0.5)) {}
+};
+
+// It's nice being able to print these things.
+template<typename Uint>
+std::ostream&
+operator<<(std::ostream& os, const iPoint2<Uint>& p) {
   os << "(" << p.x << " " << p.y << ")";
   return os;
 }
@@ -80,6 +123,54 @@ sortCounterClockwise(vector<Point2<Real> >& points) {
 
   // Size the result and we're done.
   result.resize(n);
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Take the given set of vertex positions, and either find them in the known
+// mesh nodes or add them to the known set.
+//------------------------------------------------------------------------------
+template<typename Real, typename Uint>
+map<unsigned, unsigned>
+updateMeshVertices(vector<Point2<Real> >& vertices,
+                   map<iPoint2<Uint>, unsigned>& vertexHash2ID,
+                   Tessellation<2, Real>& mesh,
+                   const Real& degeneracy) {
+  const unsigned n = vertices.size();
+  bool newVertex;
+  unsigned i, j;
+  Uint ix, iy, ix0, iy0, ix1, iy1;
+  iPoint2<Uint> ipt, ipt1;
+  map<unsigned, unsigned> result;
+  for (i = 0; i !=n; ++i) {
+    ipt = iPoint2<Uint>(vertices[i], degeneracy);
+    ix0 = ipt.x > 0 ? ipt.x - 1 : ipt.x;
+    iy0 = ipt.y > 0 ? ipt.y - 1 : ipt.y;
+    ix1 = ipt.x + 1;
+    iy1 = ipt.y + 1;
+    newVertex = true;
+    iy = iy0;
+    while (newVertex and iy != iy1) {
+      ix = ix0;
+      while (newVertex and ix != ix1) {
+        ipt1 = iPoint2<Uint>(ix, iy);
+        newVertex = (vertexHash2ID.find(ipt1) == vertexHash2ID.end());
+        ++ix;
+      }
+      ++iy;
+    }
+    if (newVertex) {
+      j = vertexHash2ID.size();
+      vertexHash2ID[ipt] = j;
+      mesh.nodes.push_back(vertices[i].x);
+      mesh.nodes.push_back(vertices[i].y);
+      ASSERT(mesh.nodes.size()/2 == j + 1);
+      result[i] = j;
+    } else {
+      result[i] = vertexHash2ID[ipt1];
+    }
+  }
+  ASSERT(result.size() == vertices.size());
   return result;
 }
 
@@ -136,22 +227,10 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
 }
 
 //------------------------------------------------------------------------------
-// Compute the distance^2 between points.
-//------------------------------------------------------------------------------
-template<typename Real>
-inline
-Real
-distance2(const Real& x1, const Real& y1,
-          const Real& x2, const Real& y2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1);
-}
-
-//------------------------------------------------------------------------------
 // A unique hash for a face as an ordered collection of node indices.
 //------------------------------------------------------------------------------
 pair<unsigned, unsigned> 
-hashFace(const unsigned i, const unsigned j)
-{
+hashFace(const unsigned i, const unsigned j) {
   ASSERT(i != j);
   return (i < j ? make_pair(i, j) : make_pair(j, i));
 }
@@ -192,6 +271,7 @@ tessellate(vector<Real>& points,
            Tessellation<2, Real>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
+  typedef iPoint2<unsigned> VertexHash;
 
   const unsigned ncells = points.size()/2;
   const Real xmin = low[0], ymin = low[1];
@@ -214,10 +294,9 @@ tessellate(vector<Real>& points,
   ASSERT(ymin < ymax);
   ASSERT(scale > 0.0);
 
-  bool newNode;
-  unsigned i, n, icell, jcell;
+  unsigned i, j, k, nv, icell;
   double xc, yc;
-  Real xv, yv, xv_last, yv_last;
+  const Real dx = this->degeneracy();
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -244,9 +323,8 @@ tessellate(vector<Real>& points,
 
   // Build the tessellation cell by cell.
   voronoicell_neighbor_2d cell;                    // Use cells with neighbor tracking.
-  vector<vector<unsigned> > cellNeighbors(ncells); // Keep track of neighbor cells.
-  vector<vector<unsigned> > cellNodes(ncells);     // Keep track of the cell nodes.
   map<FaceHash, unsigned> faceHash2ID;             // map from face hash to ID.
+  map<VertexHash, unsigned> vertexHash2ID;         // map from vertex hash to ID.
   c_loop_all_2d loop(con); // Loop over all cells.
   if (loop.start()) {
     do {
@@ -259,80 +337,30 @@ tessellate(vector<Real>& points,
         xc += pp[0];
         yc += pp[1];
 
-        // Read the neighbor cell IDs.  Any negative IDs indicate a boundary
-        // surface, so just throw them away.
-        vector<int> tmpNeighbors;
-        cell.neighbors(tmpNeighbors);
-        remove_copy_if(tmpNeighbors.begin(), tmpNeighbors.end(), 
-                       back_inserter(cellNeighbors[icell]),
-                       bind2nd(less<int>(), 0));
-
         // Read out the vertices into a temporary array.
         vector<Point2<Real> > vertices;
-        for (unsigned k = 0; k != cell.p; ++k) vertices.push_back(Point2<Real>(xc + 0.5*cell.pts[2*k],
-                                                                               yc + 0.5*cell.pts[2*k + 1]));
+        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<Real>(xc + 0.5*cell.pts[2*k],
+                                                                      yc + 0.5*cell.pts[2*k + 1]));
         ASSERT(vertices.size() >= 3);
 
         // Sort the vertices counter-clockwise.
         vertices = sortCounterClockwise(vertices);
 
-        // Assign the global nodes based on the cell vertices.
-        xv_last = 10.0;
-        yv_last = 10.0;
-        for (unsigned k = 0; k != vertices.size(); ++k) {
+        // Add any new vertices from this cell to the global set, and update the vertexMap
+        // to point to the global (mesh) node IDs.
+        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, dx);
 
-          // Vertex position.
-          xv = vertices[k].x;
-          yv = vertices[k].y;
-          // xv = xc + 0.5*cell.pts[2*k];
-          // yv = yc + 0.5*cell.pts[2*k + 1];
+        // Build the faces by walking the cell vertices counter-clockwise.
+        nv = vertices.size();
+        for (k = 0; k != nv; ++k) {
+          i = vertexMap[k];
+          j = vertexMap[(k + 1) % nv];
+          ASSERT(i < mesh.nodes.size()/2);
+          ASSERT(j < mesh.nodes.size()/2);
 
-          // Is this node distinct from the last one we visited?
-          if (distance2(xv, yv, xv_last, yv_last) > mDegeneracy2) {
-
-            // Has this vertex already been created by one of our neighbors?
-            newNode = true;
-            vector<unsigned>::const_iterator neighborItr = cellNeighbors[icell].begin();
-            while (newNode and neighborItr != cellNeighbors[icell].end()) {
-              jcell = *neighborItr++;
-              ASSERT(jcell < ncells);
-              vector<unsigned>::const_iterator nodeItr = cellNodes[jcell].begin();
-              while (newNode and nodeItr != cellNodes[jcell].end()) {
-                i = *nodeItr++;
-                ASSERT(i < mesh.nodes.size());
-                if (distance2(xv, yv, mesh.nodes[2*i], mesh.nodes[2*i + 1]) < mDegeneracy2) {
-                  // Found it!
-                  newNode = false;
-                  cellNodes[icell].push_back(i);
-                }
-              }
-            }
-
-            // This is a new vertex position, so create a new node.
-            if (newNode) {
-              i = mesh.nodes.size()/2;
-              cellNodes[icell].push_back(i);
-              mesh.nodes.push_back(xv);
-              mesh.nodes.push_back(yv);
-            }
-
-            // Figure out what "face" this node and previous one in the cell represent.
-            n = cellNodes[icell].size();
-            if (n > 1) {
-              int i = cellNodes[icell][n - 2];
-              int j = cellNodes[icell][n - 1];
-              insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
-            }
-          }
-          xv_last = xv;
-          yv_last = yv;
+          // If these vertices are distinct, add the face.
+          if (i != j) insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
         }
-        ASSERT(cellNodes[icell].size() >= 3);
-
-        // We have to tie together the first and last cell vertices in a final face.
-        int i = cellNodes[icell].back();
-        int j = cellNodes[icell].front();
-        insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
       }
     } while (loop.inc());
   }
