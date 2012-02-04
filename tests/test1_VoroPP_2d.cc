@@ -3,9 +3,9 @@
 #include <iostream>
 #include <vector>
 #include "polytope.hh"
+#include <stdlib.h>
 
-// We really want cassert for the test!
-#include <cassert>
+#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
@@ -65,10 +65,10 @@ int main() {
     // }
 
     // Now do the checks.
-    assert(mesh.nodes.size() == 2*(nx + 1)*(nx + 1));
-    assert(mesh.cells.size() == nx*nx);
-    for (unsigned i = 0; i != nx*nx; ++i) assert(mesh.cells[i].size() == 4);
-    assert(mesh.faces.size() == 2*nx*(nx + 1));
+    CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
+    CHECK(mesh.cells.size() == nx*nx);
+    for (unsigned i = 0; i != nx*nx; ++i) CHECK(mesh.cells[i].size() == 4);
+    CHECK(mesh.faces.size() == 2*nx*(nx + 1));
   }
 
   cout << "PASS" << endl;

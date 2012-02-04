@@ -1,6 +1,7 @@
 //---------------------------------Spheral++----------------------------------//
 // VoroPP_3d
 //----------------------------------------------------------------------------//
+#include <stdint.h>
 #include <iostream>
 #include <iterator>
 #include <algorithm>
@@ -107,27 +108,133 @@ distance2(const Point3<Real>& p1, const Point3<Real>& p2) {
 }
 
 //------------------------------------------------------------------------------
-// Reduce to the unique points and compute the mapping from the input position
-// ordering to the reduced set.
+// A integer version of the simple 3D point.
 //------------------------------------------------------------------------------
-template<typename Real>
-map<unsigned, unsigned>
-uniquePoints(vector<Point3<Real> >& points,
-             const Real& degeneracy2) {
-  const unsigned n0 = points.size();
-  map<unsigned, unsigned> result;
-  unsigned i, j, n1 = 0;
-  for (i = 0; i != n0; ++i) {
-    j = 0;
-    while (j != i and distance2(points[i], points[j]) > degeneracy2) ++j;
-    result[i] = j;
-    n1 = max(n1, j);
-    points[i] = points[j];
+template<typename Uint>
+struct iPoint3 {
+  Uint x, y, z;
+  iPoint3(): x(0), y(0), z(0) {}
+  iPoint3(const Uint& xi, const Uint& yi, const Uint& zi): x(xi), y(yi), z(zi) {}
+  iPoint3& operator=(const iPoint3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
+  bool operator==(const iPoint3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
+  bool operator<(const iPoint3& rhs) const {
+    return (x < rhs.x                               ? true :
+            x == rhs.x and y < rhs.y                ? true :
+            x == rhs.x and y == rhs.y and z < rhs.z ? true :
+            false);
   }
-  ++n1;
-  ASSERT(n1 <= n0);
-  points.resize(n1);
-  ASSERT(result.size() == n0);
+  template<typename Real>
+  iPoint3(const Point3<Real>& p, const Real& dx): 
+    x(static_cast<Uint>(p.x/dx + 0.5)),
+    y(static_cast<Uint>(p.y/dx + 0.5)),
+    z(static_cast<Uint>(p.z/dx + 0.5)) {}
+};
+
+// It's nice being able to print these things.
+template<typename Uint>
+std::ostream&
+operator<<(std::ostream& os, const iPoint3<Uint>& p) {
+  os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
+  return os;
+}
+
+// //------------------------------------------------------------------------------
+// // Reduce to the unique points and compute the mapping from the input position
+// // ordering to the reduced set.
+// //------------------------------------------------------------------------------
+// template<typename Real>
+// map<unsigned, unsigned>
+// uniquePoints(vector<Point3<Real> >& points,
+//              const Real& degeneracy2) {
+//   const unsigned n0 = points.size();
+//   map<unsigned, unsigned> result;
+//   unsigned i, j, n1 = 0;
+//   for (i = 0; i != n0; ++i) {
+//     j = 0;
+//     while (j != i and distance2(points[i], points[j]) > degeneracy2) ++j;
+//     result[i] = j;
+//     n1 = max(n1, j);
+//     points[i] = points[j];
+//   }
+//   ++n1;
+//   ASSERT(n1 <= n0);
+//   points.resize(n1);
+//   ASSERT(result.size() == n0);
+//   return result;
+// }
+
+//------------------------------------------------------------------------------
+// Take the given set of vertex positions, and either find them in the known
+// mesh nodes or add them to the known set.
+//------------------------------------------------------------------------------
+// template<typename Real> 
+// inline
+// uint64_t 
+// hashx(const Real& x, const double dx) {
+//   ASSERT(x >= 0.0 and x < 1.0);
+//   return uint64_t(x/dx);
+// }
+
+// template<typename Real>
+// inline
+// VERTEXHASH
+// hashPoint3(const Point3<Real>& p, const double dx) {
+//   VERTEXHASH result(hashx(p.z, dx));
+//   result <<= 64;
+//   result |= hashx(p.y, dx);
+//   result <<= 64;
+//   result |= hashx(p.x, dx);
+//   return result;
+// }
+
+template<typename Real, typename Uint>
+map<unsigned, unsigned>
+updateMeshVertices(vector<Point3<Real> >& vertices,
+                   map<iPoint3<Uint>, unsigned>& vertexHash2ID,
+                   Tessellation<3, Real>& mesh,
+                   const Real& degeneracy) {
+  const unsigned n = vertices.size();
+  bool newVertex;
+  unsigned i, j;
+  Uint ix, iy, iz, ix0, iy0, iz0, ix1, iy1, iz1;
+  iPoint3<Uint> ipt, ipt1;
+  map<unsigned, unsigned> result;
+  for (i = 0; i !=n; ++i) {
+    ipt = iPoint3<Uint>(vertices[i], degeneracy);
+    ix0 = ipt.x > 0 ? ipt.x - 1 : ipt.x;
+    iy0 = ipt.y > 0 ? ipt.y - 1 : ipt.y;
+    iz0 = ipt.z > 0 ? ipt.z - 1 : ipt.z;
+    ix1 = ipt.x + 1;
+    iy1 = ipt.y + 1;
+    iz1 = ipt.z + 1;
+    newVertex = true;
+    iz = iz0;
+    while (newVertex and iz != iz1) {
+      iy = iy0;
+      while (newVertex and iy != iy1) {
+        ix = ix0;
+        while (newVertex and ix != ix1) {
+          ipt1 = iPoint3<Uint>(ix, iy, iz);
+          newVertex = (vertexHash2ID.find(ipt1) == vertexHash2ID.end());
+          ++ix;
+        }
+        ++iy;
+      }
+      ++iz;
+    }
+    if (newVertex) {
+      j = vertexHash2ID.size();
+      vertexHash2ID[ipt] = j;
+      mesh.nodes.push_back(vertices[i].x);
+      mesh.nodes.push_back(vertices[i].y);
+      mesh.nodes.push_back(vertices[i].z);
+      ASSERT(mesh.nodes.size()/3 == j + 1);
+      result[i] = j;
+    } else {
+      result[i] = vertexHash2ID[ipt1];
+    }
+  }
+  ASSERT(result.size() == vertices.size());
   return result;
 }
 
@@ -169,11 +276,13 @@ tessellate(vector<Real>& points,
            Tessellation<3, Real>& mesh) const {
 
   typedef set<unsigned> FaceHash;
+  typedef iPoint3<uint64_t> VertexHash;
 
   const unsigned ncells = points.size()/3;
   const Real xmin = low[0], ymin = low[1], zmin = low[2];
   const Real xmax = high[0], ymax = high[1], zmax = high[2];
   const Real scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
+  const Real dx = this->degeneracy();
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -191,10 +300,8 @@ tessellate(vector<Real>& points,
   ASSERT(mesh.faces.size() == 0);
   ASSERT(mesh.faceCells.size() == 0);
 
-  bool newNode;
-  unsigned i, j, k, iv, iface, nf, nvf, icell, jcell;
+  unsigned i, j, k, iv, iface, nf, nvf, icell;
   double xc, yc, zc;
-  Real xv, yv, xv_last, yv_last, zv_last;
   FaceHash fhashi;
 
   // Size the output arrays.
@@ -225,9 +332,8 @@ tessellate(vector<Real>& points,
 
   // Build the tessellation cell by cell.
   voronoicell_neighbor cell;                       // Use cells with neighbor tracking.
-  vector<vector<unsigned> > cellNeighbors(ncells); // Keep track of neighbor cells.
-  vector<set<unsigned> > cellNodes(ncells);        // Keep track of the cell nodes.
-  map<FaceHash, unsigned> faceHash2ID;             // map from face hash to ID.
+  map<FaceHash, unsigned> faceHash2ID;             // map from face hash to mesh ID.
+  map<VertexHash, unsigned> vertexHash2ID;         // map from vertex hash to mesh ID.
   c_loop_all loop(con); // Loop over all cells.
   if (loop.start()) {
     do {
@@ -241,14 +347,6 @@ tessellate(vector<Real>& points,
         yc += pp[1];
         zc += pp[2];
 
-        // Read the neighbor cell IDs.  Any negative IDs indicate a boundary
-        // surface, so just throw them away.
-        vector<int> tmpNeighbors;
-        cell.neighbors(tmpNeighbors);
-        remove_copy_if(tmpNeighbors.begin(), tmpNeighbors.end(), 
-                       back_inserter(cellNeighbors[icell]),
-                       bind2nd(less<int>(), 0));
-
         // Read out the vertices into a temporary array.
         vector<Point3<Real> > vertices;
         for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<Real>(xc + 0.5*cell.pts[3*k],
@@ -256,20 +354,22 @@ tessellate(vector<Real>& points,
                                                                       zc + 0.5*cell.pts[3*k + 2]));
         ASSERT(vertices.size() >= 4);
 
-        // Reduce to the unique set of vertices for this cell.
-        map<unsigned, unsigned> vertexMap = uniquePoints(vertices, mDegeneracy2);
-        ASSERT(vertices.size() >= 4);
+        // Add any new vertices from this cell to the global set, and update the vertexMap
+        // to point to the global (mesh) node IDs.
+        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, dx);
 
-        // // Blago!
-        // std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<Real> >(std::cout, " "));
-        // cout << endl;
-        // ASSERT(vertices.size() == 8);
-        // // Blago!
+//         // Blago!
+//         std::cout << "Mesh vertices for cell " << icell << " : ";
+//         std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<Real> >(std::cout, " "));
+//         std::cout << "                           ";
+//         for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[i] << " ";
+//         cout << endl;
+//         ASSERT(vertices.size() == 8);
+//         // Blago!
 
         // Read the face vertex indices to a temporary array as well.
         vector<int> voroFaceVertexIndices;
         cell.face_vertices(voroFaceVertexIndices);
-        vector<unsigned> faceNodeIDs;
 
         // Walk the faces.
         nf = cell.number_of_faces();
@@ -277,51 +377,22 @@ tessellate(vector<Real>& points,
         k = 0;
         for (iface = 0; iface != nf; ++iface) {
           ASSERT(k < voroFaceVertexIndices.size());
-          fhashi = FaceHash();
+          FaceHash fhashi;
+          vector<unsigned> faceNodeIDs;
 
           // Read the vertices for this face.  We assume they are listed in the
-          // proper counter-clockwise order (viewed from outside) here!
+          // proper counter-clockwise order (viewed from outside)!
           nvf = voroFaceVertexIndices[k++];
           ASSERT(nvf >= 3);
           for (iv = 0; iv != nvf; ++iv) {
             ASSERT(k < voroFaceVertexIndices.size());
             ASSERT(vertexMap.find(voroFaceVertexIndices[k]) != vertexMap.end());
             j = vertexMap[voroFaceVertexIndices[k++]];
-            
+
             // Is this vertex new to the face?
             if (fhashi.find(j) == fhashi.end()) {
-
-              // Has this vertex already been created by one of our neighbors?
-              newNode = true;
-              vector<unsigned>::const_iterator neighborItr = cellNeighbors[icell].begin();
-              while (newNode and neighborItr != cellNeighbors[icell].end()) {
-                jcell = *neighborItr++;
-                ASSERT(jcell < ncells);
-                set<unsigned>::const_iterator nodeItr = cellNodes[jcell].begin();
-                while (newNode and nodeItr != cellNodes[jcell].end()) {
-                  i = *nodeItr++;
-                  ASSERT(i < mesh.nodes.size());
-                  if (distance2(vertices[j].x, vertices[j].y, vertices[j].z,
-                                mesh.nodes[3*i], mesh.nodes[3*i + 1], mesh.nodes[3*i + 2]) < mDegeneracy2) {
-                    // Found it!
-                    newNode = false;
-                    cellNodes[icell].insert(i);
-                    faceNodeIDs.push_back(i);
-                    fhashi.insert(i);
-                  }
-                }
-              }
-
-              // This is a new vertex position, so create a new node.
-              if (newNode) {
-                i = mesh.nodes.size()/3;
-                cellNodes[icell].insert(i);
-                faceNodeIDs.push_back(i);
-                fhashi.insert(i);
-                mesh.nodes.push_back(vertices[j].x);
-                mesh.nodes.push_back(vertices[j].y);
-                mesh.nodes.push_back(vertices[j].z);
-              }
+              fhashi.insert(j);
+              faceNodeIDs.push_back(j);
             }
           }
           ASSERT(faceNodeIDs.size() >= 3);
@@ -329,7 +400,6 @@ tessellate(vector<Real>& points,
           // Add this face to the cell.
           insertFaceInfo(fhashi, icell, faceNodeIDs, faceHash2ID, mesh);
         }
-        ASSERT(cellNodes[icell].size() >= 3);
       }
     } while (loop.inc());
   }
