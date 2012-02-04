@@ -2,13 +2,36 @@
 
 #include <iostream>
 #include <vector>
+#include <stdint.h>
+#include <stdlib.h>
+
 #include "polytope.hh"
 
-// We really want cassert for the test!
-#include <cassert>
+#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
+//------------------------------------------------------------------------------
+// Hash a 3 dimensional position to a single 64 unsigned int.
+//------------------------------------------------------------------------------
+template<typename Real>
+inline
+uint64_t 
+hash3position(const Real* pos,
+              const Real* xmin,
+              const Real* xmax,
+              const Real& dx) {
+  uint64_t result = static_cast<uint64_t>((max(xmin[2], min(xmax[2], pos[2])) - xmin[2])/dx + 0.5);
+  result <<= 21;
+  result |= static_cast<uint64_t>((max(xmin[1], min(xmax[1], pos[1])) - xmin[1])/dx + 0.5);
+  result <<= 21;
+  result |= static_cast<uint64_t>((max(xmin[0], min(xmax[0], pos[0])) - xmin[0])/dx + 0.5);
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// The main test.
+//------------------------------------------------------------------------------
 int main() {
   const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
   const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
@@ -46,37 +69,52 @@ int main() {
     cout << "   num mesh nodes : " << mesh.nodes.size()/3 << endl;
     cout << "   num mesh cells : " << mesh.cells.size() << endl;
     cout << "   num mesh faces : " << mesh.faces.size() << endl;
-    cout << "Node positions: " << endl;
-    for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
-      cout << "   Node " << i << " @ (" << mesh.nodes[3*i] << " " << mesh.nodes[3*i + 1] << " " << mesh.nodes[3*i + 2] << ")" << endl;
-    }
-    cout << "Face node sets: " << endl;
-    for (unsigned i = 0; i != nx*nx*nx; ++i) {
-      cout << "   FACES for mesh cell " << i << " :";
-      for (unsigned j = 0; j != mesh.cells[i].size(); ++j) cout << " " << mesh.cells[i][j];
-      cout << endl;
-    }
-    for (unsigned i = 0; i != mesh.faces.size(); ++i) {
-      double xf = 0.0, yf = 0.0, zf = 0.0;
-      cout << "   NODES for mesh face " << i << " :";
-      for (unsigned j = 0; j != mesh.faces[i].size(); ++j) {
-        unsigned k = mesh.faces[i][j];
-        cout << " " << k;
-        xf += mesh.nodes[3*k];
-        yf += mesh.nodes[3*k + 1];
-        zf += mesh.nodes[3*k + 2];
-      }
-      xf /= mesh.faces[i].size();
-      yf /= mesh.faces[i].size();
-      zf /= mesh.faces[i].size();
-      cout << " @ (" << xf << " " << yf << " " << zf << ")"  << endl;
-    }
+//     cout << "Node positions: " << endl;
+//     for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
+//       cout << "   Node " << i << " @ (" << mesh.nodes[3*i] << " " << mesh.nodes[3*i + 1] << " " << mesh.nodes[3*i + 2] << ")" << " " << hash3position(&mesh.nodes[3*i], xmin, xmax, 0.1*dx) 
+//            << " " << static_cast<uint64_t>((max(xmin[1], min(xmax[1], mesh.nodes[3*i + 1])) - xmin[1])/dx + 0.5)
+//            << " " << static_cast<uint64_t>((max(xmin[0], min(xmax[0], mesh.nodes[3*i + 0])) - xmin[0])/dx + 0.5)
+//            << endl;
+
+//     }
+//     cout << "Face node sets: " << endl;
+//     for (unsigned i = 0; i != nx*nx*nx; ++i) {
+//       cout << "   FACES for mesh cell " << i << " :";
+//       for (unsigned j = 0; j != mesh.cells[i].size(); ++j) cout << " " << mesh.cells[i][j];
+//       cout << endl;
+//     }
+//     for (unsigned i = 0; i != mesh.faces.size(); ++i) {
+//       double xf = 0.0, yf = 0.0, zf = 0.0;
+//       cout << "   NODES for mesh face " << i << " :";
+//       for (unsigned j = 0; j != mesh.faces[i].size(); ++j) {
+//         unsigned k = mesh.faces[i][j];
+//         cout << " " << k;
+//         xf += mesh.nodes[3*k];
+//         yf += mesh.nodes[3*k + 1];
+//         zf += mesh.nodes[3*k + 2];
+//       }
+//       xf /= mesh.faces[i].size();
+//       yf /= mesh.faces[i].size();
+//       zf /= mesh.faces[i].size();
+//       cout << " @ (" << xf << " " << yf << " " << zf << ")"  << endl;
+//     }
 
     // Now do the checks.
-    assert(mesh.nodes.size() == 3*(nx + 1)*(nx + 1));
-    assert(mesh.cells.size() == nx*nx*nx);
-    for (unsigned i = 0; i != nx*nx*nx; ++i) assert(mesh.cells[i].size() == 6);
-    // assert(mesh.faces.size() == 2*nx*nx*(nx + 1));
+    // If we bin the nodes up a small fraction of a cell size they should be unique!
+    map<uint64_t, unsigned> nodeHash2ID;
+    unsigned i;
+    uint64_t hashi;
+    for (i = 0; i != nx*nx*nx; ++i) {
+      hashi = hash3position(&mesh.nodes[3*i], xmin, xmax, 0.1*dx);
+      CHECK(nodeHash2ID.find(hashi) == nodeHash2ID.end());
+      nodeHash2ID[hashi] = i;
+    }
+
+    // Check sizes.
+    CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
+    CHECK(mesh.cells.size() == nx*nx*nx);
+    for (unsigned i = 0; i != nx*nx*nx; ++i) CHECK(mesh.cells[i].size() == 6);
+    CHECK(mesh.faces.size() == 3*nx*nx*(nx + 1));
   }
 
   cout << "PASS" << endl;
