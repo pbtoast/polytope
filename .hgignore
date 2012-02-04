@@ -4,6 +4,7 @@ syntax: glob
 *.so
 *.dylib
 *.a
+*.orig
 
 # Ignore our build output
 build
