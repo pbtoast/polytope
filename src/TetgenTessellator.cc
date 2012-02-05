@@ -95,42 +95,42 @@ computeCircumcenter(double* A, double* B, double* C, double* D, double* X)
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
-template<typename Real>
-TetgenTessellator<Real>::
+template<typename RealType>
+TetgenTessellator<RealType>::
 TetgenTessellator():
-  Tessellator<3, Real>()
+  Tessellator<3, RealType>()
 {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
-TetgenTessellator<Real>::
+template<typename RealType>
+TetgenTessellator<RealType>::
 ~TetgenTessellator() 
 {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-TetgenTessellator<Real>::
-tessellate(vector<Real>& points,
-           Tessellation<3, Real>& mesh) const 
+TetgenTessellator<RealType>::
+tessellate(vector<RealType>& points,
+           Tessellation<3, RealType>& mesh) const 
 {
   // Create a PLC representing the bounding box for these points.
-  PLC<3, Real> box = boundingBox(points);
+  PLC<3, RealType> box = boundingBox(points);
   tessellate(points, box, mesh);
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-TetgenTessellator<Real>::
-tessellate(vector<Real>& points,
-           const PLC<3, Real>& geometry,
-           Tessellation<3, Real>& mesh) const 
+TetgenTessellator<RealType>::
+tessellate(vector<RealType>& points,
+           const PLC<3, RealType>& geometry,
+           Tessellation<3, RealType>& mesh) const 
 {
 }
 //------------------------------------------------------------------------------

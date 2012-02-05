@@ -60,57 +60,57 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
-template<typename Real>
-TriangleTessellator<Real>::
+template<typename RealType>
+TriangleTessellator<RealType>::
 TriangleTessellator():
-  Tessellator<2, Real>()
+  Tessellator<2, RealType>()
 {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
-TriangleTessellator<Real>::
+template<typename RealType>
+TriangleTessellator<RealType>::
 ~TriangleTessellator() 
 {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-TriangleTessellator<Real>::
-tessellate(vector<Real>& points,
-           Real* low, Real* high,
-           Tessellation<2, Real>& mesh) const 
+TriangleTessellator<RealType>::
+tessellate(vector<RealType>& points,
+           RealType* low, RealType* high,
+           Tessellation<2, RealType>& mesh) const 
 {
   // Create a PLC for the bounding box about these points.
-  PLC<2, Real> box = boundingBox(low, high, points);
+  PLC<2, RealType> box = boundingBox(low, high, points);
   tessellate(points, box, mesh);
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-TriangleTessellator<Real>::
-tessellate(vector<Real>& points,
-           Tessellation<2, Real>& mesh) const 
+TriangleTessellator<RealType>::
+tessellate(vector<RealType>& points,
+           Tessellation<2, RealType>& mesh) const 
 {
 //  // Create a PLC for the bounding box about these points.
-//  PLC<2, Real> box = boundingBox(points);
-  PLC<2, Real> noBoundary;
+//  PLC<2, RealType> box = boundingBox(points);
+  PLC<2, RealType> noBoundary;
   tessellate(points, noBoundary, mesh);
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-TriangleTessellator<Real>::
-tessellate(vector<Real>& points,
-           const PLC<2, Real>& geometry,
-           Tessellation<2, Real>& mesh) const 
+TriangleTessellator<RealType>::
+tessellate(vector<RealType>& points,
+           const PLC<2, RealType>& geometry,
+           Tessellation<2, RealType>& mesh) const 
 {
   ASSERT(!points.empty());
 
@@ -121,7 +121,7 @@ tessellate(vector<Real>& points,
 
   // Define input points.
   in.numberofpoints = points.size()/2;
-  in.pointlist = new Real[points.size()];
+  in.pointlist = new RealType[points.size()];
   copy(points.begin(), points.end(), in.pointlist);
 
   // No point attributes or markers.
@@ -276,8 +276,8 @@ tessellate(vector<Real>& points,
 //cout << "Computed node " << mesh.nodes.size()/2 << " at (" << X[0] << ", " << X[1] << ")" << endl;
 //cout << " for cells at (" << p[0] << ", " << p[1] << "), (" << q[0] << ", " << q[1] << "), (" << r[0] << ", " << r[1] << ")\n";
 //cout << " for cells " << pindex << ", " << qindex << ", " << rindex << endl;
-    mesh.nodes.push_back(Real(X[0]));
-    mesh.nodes.push_back(Real(X[1]));
+    mesh.nodes.push_back(RealType(X[0]));
+    mesh.nodes.push_back(RealType(X[1]));
 
     // Associate this node with its Voronoi cells.
     cellNodes[pindex].push_back(i);
@@ -396,7 +396,7 @@ tessellate(vector<Real>& points,
           {
             // The node should bisect the segment on the convex hull 
             // between cell1 and cell2.
-            Real nodex = 0.5*(points[2*cell1]+points[2*cell2]),
+            RealType nodex = 0.5*(points[2*cell1]+points[2*cell2]),
                  nodey = 0.5*(points[2*cell1+1]+points[2*cell2+1]);
 //cout << "Adding node (" << nodex << ", " << nodey << ") for cells " << cell1 << ", " << cell2 << endl;
             mesh.nodes.push_back(nodex);

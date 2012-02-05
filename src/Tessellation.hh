@@ -10,7 +10,7 @@ namespace polytope
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
 //! arbitrary poly(gonal/hedral) mesh.
-template<int Dimension, typename Real>
+template<int Dimension, typename RealType>
 class Tessellation
 {
   public:
@@ -44,7 +44,7 @@ class Tessellation
   //! An array of (Dimension*numNodes) values containing components of 
   //! node positions. The components are stored in node-major order and 
   //! the 0th component of the ith node appears in nodes[Dimension*i].
-  std::vector<Real> nodes;
+  std::vector<RealType> nodes;
 
   //! This two-dimensional array defines the cell-face topology of the 
   //! mesh. A cell has an arbitrary number of faces in 2D and 3D.
@@ -71,7 +71,7 @@ class Tessellation
   //! of the point distribution. Not all Tessellators hand back the convex 
   //! hull, so this may be empty, in which case you must compute the convex 
   //! hull yourself.
-  PLC<Dimension, Real> convexHull;
+  PLC<Dimension, RealType> convexHull;
 
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)

@@ -13,7 +13,7 @@ namespace polytope
 //! \class Tessellator - An abstract base class for objects that generate 
 //! Voronoi and Voronoi-like tessellations for sets of points and/or 
 //! geometries.
-template<int Dimension, typename Real>
+template<int Dimension, typename RealType>
 class Tessellator
 {
   public:
@@ -29,8 +29,8 @@ class Tessellator
   //! the 0th component of the ith point appears in points[Dimension*i].
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<Real>& points,
-                          Tessellation<Dimension, Real>& mesh) const 
+  virtual void tessellate(std::vector<RealType>& points,
+                          Tessellation<Dimension, RealType>& mesh) const 
   {
     error("This Tessellator does not support unbounded point tessellations.");
   }
@@ -46,10 +46,10 @@ class Tessellator
   //! \param low The coordinates of the "lower-left-near" bounding box corner.
   //! \param high The coordinates of the "upper-right-far" bounding box corner.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<Real>& points,
-                          Real* low,
-                          Real* high,
-                          Tessellation<Dimension, Real>& mesh) const
+  virtual void tessellate(std::vector<RealType>& points,
+                          RealType* low,
+                          RealType* high,
+                          Tessellation<Dimension, RealType>& mesh) const
   {
     error("This Tessellator does not support point tessellations with a bounding box.");
   }
@@ -63,9 +63,9 @@ class Tessellator
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<Real>& points,
-                          const PLC<Dimension, Real>& geometry,
-                          Tessellation<Dimension, Real>& mesh) const
+  virtual void tessellate(std::vector<RealType>& points,
+                          const PLC<Dimension, RealType>& geometry,
+                          Tessellation<Dimension, RealType>& mesh) const
   {
     error("This Tessellator does not support boundaries specified as PLCs.");
   }
@@ -86,11 +86,11 @@ class Tessellator
   //! This helper method creates a piecewise linear complex (PLC) 
   //! representing the bounding box containing the given points and 
   //! adds the corners of the bounding box to \a points.
-  PLC<Dimension, Real> boundingBox(std::vector<Real>& points) const
+  PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const
   {
     // Find the minimum and maximum coordinates within the point set and 
     // their point indices.
-    Real Min[Dimension], Max[Dimension];
+    RealType Min[Dimension], Max[Dimension];
     for (int d = 0; d < Dimension; ++d)
     {
       Min[d] = FLT_MAX; 
@@ -111,7 +111,7 @@ class Tessellator
   //! This helper method creates a piecewise linear complex (PLC) 
   //! representing the bounding box with the given "low" and "high"
   //! corners, and adds these corners as generator points to \a points.
-  PLC<Dimension, Real> boundingBox(Real* low, Real* high, std::vector<Real>& points) const
+  PLC<Dimension, RealType> boundingBox(RealType* low, RealType* high, std::vector<RealType>& points) const
   {
     if (Dimension == 2)
     {
@@ -129,7 +129,7 @@ class Tessellator
       points.push_back(high[1]);
 
       // Construct the box.
-      PLC<Dimension, Real> box;
+      PLC<Dimension, RealType> box;
       box.facets.resize(4);
 
       // -y face.
@@ -192,7 +192,7 @@ class Tessellator
       points.push_back(high[2]);
 
       // Construct the box.
-      PLC<Dimension, Real> box;
+      PLC<Dimension, RealType> box;
       box.facets.resize(6);
 
       // -z face.

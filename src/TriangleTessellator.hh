@@ -17,8 +17,8 @@
 namespace polytope 
 {
 
-template<typename Real>
-class TriangleTessellator: public Tessellator<2, Real> 
+template<typename RealType>
+class TriangleTessellator: public Tessellator<2, RealType> 
 {
   public:
 
@@ -27,20 +27,20 @@ class TriangleTessellator: public Tessellator<2, Real>
   ~TriangleTessellator();
 
   // Tessellate the given generators within the given bounding box.
-  void tessellate(std::vector<Real>& points,
-                  Real* low, Real* high,
-                  Tessellation<2, Real>& mesh) const;
+  void tessellate(std::vector<RealType>& points,
+                  RealType* low, RealType* high,
+                  Tessellation<2, RealType>& mesh) const;
 
   // Tessellate the given generators. A bounding box is constructed about
   // the generators, and the corners of the bounding box are added as 
   // additional generators if they are not present in the list.
-  void tessellate(std::vector<Real>& points,
-                  Tessellation<2, Real>& mesh) const;
+  void tessellate(std::vector<RealType>& points,
+                  Tessellation<2, RealType>& mesh) const;
 
   // Tessellate obeying the given boundaries.
-  void tessellate(std::vector<Real>& points,
-                  const PLC<2, Real>& geometry,
-                  Tessellation<2, Real>& mesh) const;
+  void tessellate(std::vector<RealType>& points,
+                  const PLC<2, RealType>& geometry,
+                  Tessellation<2, RealType>& mesh) const;
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
