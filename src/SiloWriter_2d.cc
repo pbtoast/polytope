@@ -21,9 +21,9 @@ namespace
 // Traverse the nodes of cell i within the given tessellation in 
 // order, writing their indices to nodes.
 //-------------------------------------------------------------------
-template <typename Real>
+template <typename RealType>
 void 
-traverseNodes(const Tessellation<2, Real>& mesh,
+traverseNodes(const Tessellation<2, RealType>& mesh,
               int i,
               vector<int>& nodes)
 {
@@ -167,14 +167,14 @@ PMPIO_closeFile(void* file,
 }
 
 //-------------------------------------------------------------------
-template <typename Real>
+template <typename RealType>
 void 
-SiloWriter<2, Real>::
-write(const Tessellation<2, Real>& mesh, 
-      const map<string, Real*>& fields,
+SiloWriter<2, RealType>::
+write(const Tessellation<2, RealType>& mesh, 
+      const map<string, RealType*>& fields,
       const string& filePrefix,
       int cycle,
-      Real time,
+      RealType time,
       MPI_Comm comm,
       int numFiles,
       int mpiTag)
@@ -283,7 +283,7 @@ cout << endl;
   // Write out the cell-centered mesh data.
 
   // Scalar fields.
-  for (typename map<string, Real*>::const_iterator iter = fields.begin();
+  for (typename map<string, RealType*>::const_iterator iter = fields.begin();
        iter != fields.end(); ++iter)
   {
     DBPutUcdvar1(file, (char*)iter->first.c_str(), (char*)"mesh",
@@ -294,7 +294,7 @@ cout << endl;
 #if 0
   // Vector fields.
   {
-    vector<Real> xdata(mesh.numCells()), ydata(mesh.numCells());
+    vector<RealType> xdata(mesh.numCells()), ydata(mesh.numCells());
     char* compNames[2];
     compNames[0] = new char[1024];
     compNames[1] = new char[1024];

@@ -21,13 +21,13 @@ namespace
 // Traverse the given points of a polygonal facet along their convex
 // hull, writing their indices to indices.
 //-------------------------------------------------------------------
-template <typename Real>
+template <typename RealType>
 void 
-traverseConvexHull(const vector<Real>& points,
+traverseConvexHull(const vector<RealType>& points,
                    vector<int>& indices)
 {
   // Find the "lowest" point in the set.
-  Real ymin = FLT_MAX;
+  RealType ymin = FLT_MAX;
   int index0 = -1;
   int numPoints = points.size() / 2;
   for (int p = 0; p < numPoints; ++p)
@@ -40,23 +40,23 @@ traverseConvexHull(const vector<Real>& points,
   }
 
   // We start with this point and a horizontal angle.
-  Real thetaPrev = 0.0;
+  RealType thetaPrev = 0.0;
   indices.push_back(index0);
 
   // Now start gift wrapping.
   int i = index0;
   do 
   {
-    Real dthetaMin = 2.0*M_PI;
+    RealType dthetaMin = 2.0*M_PI;
     int jMin = -1;
     for (int j = 0; j < numPoints; ++j)
     {
       if (j != i)
       {
-        Real dx = points[2*j] - points[2*i],
+        RealType dx = points[2*j] - points[2*i],
              dy = points[2*j+1] - points[2*i+1];
-        Real theta = atan2(dy, dx);
-        Real dtheta = theta - thetaPrev;
+        RealType theta = atan2(dy, dx);
+        RealType dtheta = theta - thetaPrev;
         if (dtheta < 0.0)
           dtheta += 2.0*M_PI;
         if (dthetaMin > dtheta)
@@ -134,14 +134,14 @@ PMPIO_closeFile(void* file,
 }
 
 //-------------------------------------------------------------------
-template <typename Real>
+template <typename RealType>
 void 
-SiloWriter<3, Real>::
-write(const Tessellation<3, Real>& mesh, 
-      const map<string, Real*>& fields,
+SiloWriter<3, RealType>::
+write(const Tessellation<3, RealType>& mesh, 
+      const map<string, RealType*>& fields,
       const string& filePrefix,
       int cycle,
-      Real time,
+      RealType time,
       MPI_Comm comm,
       int numFiles,
       int mpiTag)
@@ -227,7 +227,7 @@ write(const Tessellation<3, Real>& mesh,
   // determination algorithm (gift wrapping).
   int numCells = mesh.cells.size();
   int numFaces = mesh.faces.size();
-  vector<Real> cellCenters(numCells);
+  vector<RealType> cellCenters(numCells);
   for (int c = 0; c < numCells; ++c)
   {
     const vector<int>& cellFaces = mesh.cells[c];
@@ -302,7 +302,7 @@ write(const Tessellation<3, Real>& mesh,
 
     // Now project the coordinates of the face's nodes to the plane
     // with the given normal and centered about the face center.
-    vector<Real> points(2*faceNodes.size()); // NOTE: planar coordinates (2D)
+    vector<RealType> points(2*faceNodes.size()); // NOTE: planar coordinates (2D)
     double e1[3], e2[3]; // Basis vectors in the plane.
     double v1Mag = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
     for (int d = 0; d < 3; ++d)
@@ -370,7 +370,7 @@ write(const Tessellation<3, Real>& mesh,
   // Write out the cell-centered mesh data.
 
   // Scalar fields.
-  for (typename map<string, Real*>::const_iterator iter = fields.begin();
+  for (typename map<string, RealType*>::const_iterator iter = fields.begin();
        iter != fields.end(); ++iter)
   {
     DBPutUcdvar1(file, (char*)iter->first.c_str(), (char*)"mesh",
@@ -381,7 +381,7 @@ write(const Tessellation<3, Real>& mesh,
 #if 0
   // Vector fields.
   {
-    vector<Real> xdata(mesh.numCells()), ydata(mesh.numCells()),
+    vector<RealType> xdata(mesh.numCells()), ydata(mesh.numCells()),
                  zdata(mesh.numCells());
     char* compNames[3];
     compNames[0] = new char[1024];

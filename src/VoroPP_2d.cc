@@ -22,22 +22,22 @@ namespace { // We hide internal functions in an anonymous namespace.
 //------------------------------------------------------------------------------
 // Compute the distance^2 between points.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 inline
-Real
-distance2(const Real& x1, const Real& y1,
-          const Real& x2, const Real& y2) {
+RealType
+distance2(const RealType& x1, const RealType& y1,
+          const RealType& x2, const RealType& y2) {
   return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1);
 }
 
 //------------------------------------------------------------------------------
 // A simple 2D point.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 struct Point2 {
-  Real x, y;
+  RealType x, y;
   Point2(): x(0.0), y(0.0) {}
-  Point2(const Real& xi, const Real& yi): x(xi), y(yi) {}
+  Point2(const RealType& xi, const RealType& yi): x(xi), y(yi) {}
   Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; return *this; }
   bool operator==(const Point2& rhs) const { return distance2(x, y, rhs.x, rhs.y) < 1.0e-14; }
   bool operator<(const Point2& rhs) const {
@@ -48,9 +48,9 @@ struct Point2 {
 };
 
 // It's nice being able to print these things.
-template<typename Real>
+template<typename RealType>
 std::ostream&
-operator<<(std::ostream& os, const Point2<Real>& p) {
+operator<<(std::ostream& os, const Point2<RealType>& p) {
   os << "(" << p.x << " " << p.y << ")";
   return os;
 }
@@ -70,8 +70,8 @@ struct iPoint2 {
             x == rhs.x and y < rhs.y                ? true :
             false);
   }
-  template<typename Real>
-  iPoint2(const Point2<Real>& p, const Real& dx): 
+  template<typename RealType>
+  iPoint2(const Point2<RealType>& p, const RealType& dx): 
     x(static_cast<Uint>(p.x/dx + 0.5)),
     y(static_cast<Uint>(p.y/dx + 0.5)) {}
 };
@@ -87,8 +87,8 @@ operator<<(std::ostream& os, const iPoint2<Uint>& p) {
 //------------------------------------------------------------------------------
 // Z coordinate of cross product : (p2 - p1)x(p3 - p1).
 //------------------------------------------------------------------------------
-template<typename Real>
-double zcross(const Point2<Real>& p1, const Point2<Real>& p2, const Point2<Real>& p3) {
+template<typename RealType>
+double zcross(const Point2<RealType>& p1, const Point2<RealType>& p2, const Point2<RealType>& p3) {
   return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
 }
 
@@ -97,9 +97,9 @@ double zcross(const Point2<Real>& p1, const Point2<Real>& p2, const Point2<Real>
 // monotone chain algorithm.
 // Based on an example at http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull.cpp
 //------------------------------------------------------------------------------
-template<typename Real>
-vector<Point2<Real> >
-sortCounterClockwise(vector<Point2<Real> >& points) {
+template<typename RealType>
+vector<Point2<RealType> >
+sortCounterClockwise(vector<Point2<RealType> >& points) {
   const unsigned n = points.size();
   int i, k, t;
   
@@ -107,7 +107,7 @@ sortCounterClockwise(vector<Point2<Real> >& points) {
   sort(points.begin(), points.end());
 
   // Prepare the result.
-  vector<Point2<Real> > result(2*n);
+  vector<Point2<RealType> > result(2*n);
 
   // Build the lower hull.
   for (i = 0, k = 0; i < n; i++) {
@@ -130,12 +130,12 @@ sortCounterClockwise(vector<Point2<Real> >& points) {
 // Take the given set of vertex positions, and either find them in the known
 // mesh nodes or add them to the known set.
 //------------------------------------------------------------------------------
-template<typename Real, typename Uint>
+template<typename RealType, typename Uint>
 map<unsigned, unsigned>
-updateMeshVertices(vector<Point2<Real> >& vertices,
+updateMeshVertices(vector<Point2<RealType> >& vertices,
                    map<iPoint2<Uint>, unsigned>& vertexHash2ID,
-                   Tessellation<2, Real>& mesh,
-                   const Real& degeneracy) {
+                   Tessellation<2, RealType>& mesh,
+                   const RealType& degeneracy) {
   const unsigned n = vertices.size();
   bool newVertex;
   unsigned i, j;
@@ -177,7 +177,7 @@ updateMeshVertices(vector<Point2<Real> >& vertices,
 //------------------------------------------------------------------------------
 // Helper method to update our face info.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 inline
 void
 insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
@@ -185,7 +185,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
                const unsigned inode,
                const unsigned jnode,
                map<pair<unsigned, unsigned>, unsigned>& faceHash2ID,
-               Tessellation<2, Real>& mesh) {
+               Tessellation<2, RealType>& mesh) {
   typedef pair<unsigned, unsigned> FaceHash;
 
   // cerr << "Looking for face hash (" << fhashi.first << " " << fhashi.second << ") in {";
@@ -240,11 +240,11 @@ hashFace(const unsigned i, const unsigned j) {
 //------------------------------------------------------------------------------
 // Constructor.
 //------------------------------------------------------------------------------
-template<typename Real>
-VoroPP_2d<Real>::
+template<typename RealType>
+VoroPP_2d<RealType>::
 VoroPP_2d(const unsigned nx,
           const unsigned ny,
-          const Real degeneracy):
+          const RealType degeneracy):
   mNx(nx),
   mNy(ny),
   mDegeneracy2(degeneracy*degeneracy) {
@@ -254,29 +254,29 @@ VoroPP_2d(const unsigned nx,
 //------------------------------------------------------------------------------
 // Destructor.
 //------------------------------------------------------------------------------
-template<typename Real>
-VoroPP_2d<Real>::
+template<typename RealType>
+VoroPP_2d<RealType>::
 ~VoroPP_2d() {
 }
 
 //------------------------------------------------------------------------------
 // Compute the tessellation in the box.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-VoroPP_2d<Real>::
-tessellate(vector<Real>& points,
-           Real* low,
-           Real* high,
-           Tessellation<2, Real>& mesh) const {
+VoroPP_2d<RealType>::
+tessellate(vector<RealType>& points,
+           RealType* low,
+           RealType* high,
+           Tessellation<2, RealType>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
   typedef iPoint2<unsigned> VertexHash;
 
   const unsigned ncells = points.size()/2;
-  const Real xmin = low[0], ymin = low[1];
-  const Real xmax = high[0], ymax = high[1];
-  const Real scale = max(xmax - xmin, ymax - ymin);
+  const RealType xmin = low[0], ymin = low[1];
+  const RealType xmax = high[0], ymax = high[1];
+  const RealType scale = max(xmax - xmin, ymax - ymin);
 
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
@@ -296,14 +296,14 @@ tessellate(vector<Real>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
-  const Real dx = this->degeneracy();
+  const RealType dx = this->degeneracy();
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
 
   // Scale the input coordinates to a unit box, which seems to be more robust for
   // Voro++.
-  vector<Real> generators;
+  vector<RealType> generators;
   generators.reserve(2*ncells);
   for (i = 0; i != ncells; ++i) {
     generators.push_back((points[2*i]     - xmin)/scale);
@@ -338,8 +338,8 @@ tessellate(vector<Real>& points,
         yc += pp[1];
 
         // Read out the vertices into a temporary array.
-        vector<Point2<Real> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<Real>(xc + 0.5*cell.pts[2*k],
+        vector<Point2<RealType> > vertices;
+        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<RealType>(xc + 0.5*cell.pts[2*k],
                                                                       yc + 0.5*cell.pts[2*k + 1]));
         ASSERT(vertices.size() >= 3);
 

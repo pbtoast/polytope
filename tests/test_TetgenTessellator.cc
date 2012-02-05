@@ -40,7 +40,7 @@ int main() {
   // Create the piecewise linear complex representing the box. Note that 
   // the box consists of facets that are defined by their connections to 
   // generating points.
-  PLC<3> box;
+  PLC<3, double> box;
 
   // 6 facets
   box.facets.resize(6);

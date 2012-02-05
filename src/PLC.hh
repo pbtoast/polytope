@@ -9,7 +9,7 @@ namespace polytope
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
-template<int Dimension, typename Real>
+template<int Dimension, typename RealType>
 class PLC
 {
   public:
@@ -27,7 +27,7 @@ class PLC
   //! cells in their corresponding mesh. The components are stored in 
   //! point-major order and the 0th component of the ith point appears in 
   //! holes[Dimension*i].
-  std::vector<Real> holes;
+  std::vector<RealType> holes;
 
   //! Returns true if this PLC is empty, false otherwise.
   bool empty() const

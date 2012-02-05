@@ -24,25 +24,25 @@ namespace { // We hide internal functions in an anonymous namespace.
 //------------------------------------------------------------------------------
 // Compute the distance^2 between points.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 inline
-Real
-distance2(const Real& x1, const Real& y1, const Real& z1,
-          const Real& x2, const Real& y2, const Real& z2) {
+RealType
+distance2(const RealType& x1, const RealType& y1, const RealType& z1,
+          const RealType& x2, const RealType& y2, const RealType& z2) {
   return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1) + (z2 - z1)*(z2 - z1);
 }
 
 //------------------------------------------------------------------------------
 // A simple 3D point.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 struct Point3 {
-  Real x, y, z;
+  RealType x, y, z;
   Point3(): x(0.0), y(0.0), z(0.0) {}
-  Point3(const Real& xi, const Real& yi, const Real& zi): x(xi), y(yi), z(zi) {}
+  Point3(const RealType& xi, const RealType& yi, const RealType& zi): x(xi), y(yi), z(zi) {}
   Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
-  bool operator==(const Point3<Real>& rhs) const { return distance2(x, y, z, rhs.x, rhs.y, rhs.z) < 1.0e-14; }
-  bool operator<(const Point3<Real>& rhs) const {
+  bool operator==(const Point3<RealType>& rhs) const { return distance2(x, y, z, rhs.x, rhs.y, rhs.z) < 1.0e-14; }
+  bool operator<(const Point3<RealType>& rhs) const {
     return (x < rhs.x                               ? true :
             x == rhs.x and y < rhs.y                ? true :
             x == rhs.x and y == rhs.y and z < rhs.z ? true :
@@ -51,9 +51,9 @@ struct Point3 {
 };
 
 // It's nice being able to print these things.
-template<typename Real>
+template<typename RealType>
 std::ostream&
-operator<<(std::ostream& os, const Point3<Real>& p) {
+operator<<(std::ostream& os, const Point3<RealType>& p) {
   os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
   return os;
 }
@@ -74,8 +74,8 @@ struct iPoint3 {
             x == rhs.x and y == rhs.y and z < rhs.z ? true :
             false);
   }
-  template<typename Real>
-  iPoint3(const Point3<Real>& p, const Real& dx): 
+  template<typename RealType>
+  iPoint3(const Point3<RealType>& p, const RealType& dx): 
     x(static_cast<Uint>(p.x/dx + 0.5)),
     y(static_cast<Uint>(p.y/dx + 0.5)),
     z(static_cast<Uint>(p.z/dx + 0.5)) {}
@@ -93,12 +93,12 @@ operator<<(std::ostream& os, const iPoint3<Uint>& p) {
 // Take the given set of vertex positions, and either find them in the known
 // mesh nodes or add them to the known set.
 //------------------------------------------------------------------------------
-template<typename Real, typename Uint>
+template<typename RealType, typename Uint>
 map<unsigned, unsigned>
-updateMeshVertices(vector<Point3<Real> >& vertices,
+updateMeshVertices(vector<Point3<RealType> >& vertices,
                    map<iPoint3<Uint>, unsigned>& vertexHash2ID,
-                   Tessellation<3, Real>& mesh,
-                   const Real& degeneracy) {
+                   Tessellation<3, RealType>& mesh,
+                   const RealType& degeneracy) {
   const unsigned n = vertices.size();
   bool newVertex;
   unsigned i, j;
@@ -147,14 +147,14 @@ updateMeshVertices(vector<Point3<Real> >& vertices,
 //------------------------------------------------------------------------------
 // Helper method to update our face info.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 inline
 void
 insertFaceInfo(const set<unsigned>& fhashi,
                const unsigned icell,
                const vector<unsigned>& faceNodeIDs,
                map<set<unsigned>, unsigned>& faceHash2ID,
-               Tessellation<3, Real>& mesh) {
+               Tessellation<3, RealType>& mesh) {
   typedef set<unsigned> FaceHash;
 
   // Is this a new face?
@@ -191,12 +191,12 @@ insertFaceInfo(const set<unsigned>& fhashi,
 //------------------------------------------------------------------------------
 // Constructor.
 //------------------------------------------------------------------------------
-template<typename Real>
-VoroPP_3d<Real>::
+template<typename RealType>
+VoroPP_3d<RealType>::
 VoroPP_3d(const unsigned nx,
           const unsigned ny,
           const unsigned nz,
-          const Real degeneracy):
+          const RealType degeneracy):
   mNx(nx),
   mNy(ny),
   mNz(nz),
@@ -207,30 +207,30 @@ VoroPP_3d(const unsigned nx,
 //------------------------------------------------------------------------------
 // Destructor.
 //------------------------------------------------------------------------------
-template<typename Real>
-VoroPP_3d<Real>::
+template<typename RealType>
+VoroPP_3d<RealType>::
 ~VoroPP_3d() {
 }
 
 //------------------------------------------------------------------------------
 // Compute the tessellation in the box.
 //------------------------------------------------------------------------------
-template<typename Real>
+template<typename RealType>
 void
-VoroPP_3d<Real>::
-tessellate(vector<Real>& points,
-           Real* low,
-           Real* high,
-           Tessellation<3, Real>& mesh) const {
+VoroPP_3d<RealType>::
+tessellate(vector<RealType>& points,
+           RealType* low,
+           RealType* high,
+           Tessellation<3, RealType>& mesh) const {
 
   typedef set<unsigned> FaceHash;
   typedef iPoint3<uint64_t> VertexHash;
 
   const unsigned ncells = points.size()/3;
-  const Real xmin = low[0], ymin = low[1], zmin = low[2];
-  const Real xmax = high[0], ymax = high[1], zmax = high[2];
-  const Real scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
-  const Real dx = this->degeneracy();
+  const RealType xmin = low[0], ymin = low[1], zmin = low[2];
+  const RealType xmax = high[0], ymax = high[1], zmax = high[2];
+  const RealType scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
+  const RealType dx = this->degeneracy();
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -256,7 +256,7 @@ tessellate(vector<Real>& points,
 
   // Scale the input coordinates to a unit box, which seems to be more robust for
   // Voro++.
-  vector<Real> generators;
+  vector<RealType> generators;
   generators.reserve(3*ncells);
   for (i = 0; i != ncells; ++i) {
     generators.push_back((points[3*i]     - xmin)/scale);
@@ -295,8 +295,8 @@ tessellate(vector<Real>& points,
         zc += pp[2];
 
         // Read out the vertices into a temporary array.
-        vector<Point3<Real> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<Real>(xc + 0.5*cell.pts[3*k],
+        vector<Point3<RealType> > vertices;
+        for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<RealType>(xc + 0.5*cell.pts[3*k],
                                                                       yc + 0.5*cell.pts[3*k + 1],
                                                                       zc + 0.5*cell.pts[3*k + 2]));
         ASSERT(vertices.size() >= 4);
@@ -307,7 +307,7 @@ tessellate(vector<Real>& points,
 
 //         // Blago!
 //         std::cout << "Mesh vertices for cell " << icell << " : ";
-//         std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<Real> >(std::cout, " "));
+//         std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<RealType> >(std::cout, " "));
 //         std::cout << "                           ";
 //         for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[i] << " ";
 //         cout << endl;

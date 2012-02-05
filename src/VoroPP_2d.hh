@@ -14,8 +14,8 @@
 
 namespace polytope {
 
-template<typename Real>
-class VoroPP_2d: public Tessellator<2, Real> {
+template<typename RealType>
+class VoroPP_2d: public Tessellator<2, RealType> {
 
   //--------------------------- Public Interface ---------------------------//
 public:
@@ -30,7 +30,7 @@ public:
   //! \param degeneracy The tolerance for merging nodes in a cell.
   VoroPP_2d(const unsigned nx = 20,
             const unsigned ny = 20,
-            const Real degeneracy = 1.0e-14);
+            const RealType degeneracy = 1.0e-14);
   ~VoroPP_2d();
 
   //! Generate a Voronoi tessellation for the given set of generator points
@@ -44,10 +44,10 @@ public:
   //! \param low The coordinates of the "lower-left-near" bounding box corner.
   //! \param high The coordinates of the "upper-right-far" bounding box corner.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<Real>& points,
-                          Real* low,
-                          Real* high,
-                          Tessellation<2, Real>& mesh) const;
+  virtual void tessellate(std::vector<RealType>& points,
+                          RealType* low,
+                          RealType* high,
+                          Tessellation<2, RealType>& mesh) const;
 
 
   // This Tessellator does not handle PLCs... yet.
@@ -56,11 +56,11 @@ public:
   // Access our attributes.
   unsigned nx() const { return mNx; }
   unsigned ny() const { return mNy; }
-  Real degeneracy() const { return std::sqrt(mDegeneracy2); }
+  RealType degeneracy() const { return std::sqrt(mDegeneracy2); }
 
 private:
   unsigned mNx, mNy;
-  Real mDegeneracy2;
+  RealType mDegeneracy2;
 
   // Forbidden methods.
   VoroPP_2d(const VoroPP_2d&);
