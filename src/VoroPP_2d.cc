@@ -251,6 +251,8 @@ tessellate(vector<Real>& points,
   const Real xmin = low[0], ymin = low[1];
   const Real xmax = high[0], ymax = high[1];
   const Real scale = max(xmax - xmin, ymax - ymin);
+  const Real dx = this->degeneracy();
+  const Real fconv = dx*scale;
 
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
@@ -270,8 +272,6 @@ tessellate(vector<Real>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
-  const Real dx = this->degeneracy();
-  const Real fconv = dx*scale;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -340,9 +340,6 @@ tessellate(vector<Real>& points,
       }
     } while (loop.inc());
   }
-        
-  // // De-normalize the vertex coordinates back to the input frame.
-  // for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = xmin + scale*mesh.nodes[i];
 }
 
 //------------------------------------------------------------------------------
