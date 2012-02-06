@@ -20,76 +20,48 @@ using std::abs;
 namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
-// Compute the distance^2 between points.
-//------------------------------------------------------------------------------
-template<typename RealType>
-inline
-RealType
-distance2(const RealType& x1, const RealType& y1,
-          const RealType& x2, const RealType& y2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1);
-}
-
-//------------------------------------------------------------------------------
-// A simple 2D point.
-//------------------------------------------------------------------------------
-template<typename RealType>
-struct Point2 {
-  RealType x, y;
-  Point2(): x(0.0), y(0.0) {}
-  Point2(const RealType& xi, const RealType& yi): x(xi), y(yi) {}
-  Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; return *this; }
-  bool operator==(const Point2& rhs) const { return distance2(x, y, rhs.x, rhs.y) < 1.0e-14; }
-  bool operator<(const Point2& rhs) const {
-    return (x < rhs.x                               ? true :
-            x == rhs.x and y < rhs.y                ? true :
-            false);
-  }
-};
-
-// It's nice being able to print these things.
-template<typename RealType>
-std::ostream&
-operator<<(std::ostream& os, const Point2<RealType>& p) {
-  os << "(" << p.x << " " << p.y << ")";
-  return os;
-}
-
-//------------------------------------------------------------------------------
 // A integer version of the simple 2D point.
 //------------------------------------------------------------------------------
-template<typename Uint>
-struct iPoint2 {
-  Uint x, y;
-  iPoint2(): x(0), y(0) {}
-  iPoint2(const Uint& xi, const Uint& yi): x(xi), y(yi) {}
-  iPoint2& operator=(const iPoint2& rhs) { x = rhs.x; y = rhs.y; return *this; }
-  bool operator==(const iPoint2& rhs) const { return (x == rhs.x and y == rhs.y); }
-  bool operator<(const iPoint2& rhs) const {
-    return (x < rhs.x                               ? true :
-            x == rhs.x and y < rhs.y                ? true :
+template<typename UintType>
+struct Point2 {
+  UintType x, y;
+  Point2(): x(0), y(0) {}
+  Point2(const UintType& xi, const UintType& yi): x(xi), y(yi) {}
+  Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; return *this; }
+  bool operator==(const Point2& rhs) const { return (x == rhs.x and y == rhs.y); }
+  bool operator<(const Point2& rhs) const {
+    return (x < rhs.x                ? true :
+            x == rhs.x and y < rhs.y ? true :
             false);
   }
   template<typename RealType>
-  iPoint2(const Point2<RealType>& p, const RealType& dx): 
-    x(static_cast<Uint>(p.x/dx + 0.5)),
-    y(static_cast<Uint>(p.y/dx + 0.5)) {}
+  Point2(const RealType& xi, const RealType& yi, const RealType& dx): 
+    x(static_cast<UintType>(xi/dx + 0.5)),
+    y(static_cast<UintType>(yi/dx + 0.5)) {}
+  template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) { return static_cast<RealType>(x*dx) + xmin; }
+  template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) { return static_cast<RealType>(y*dy) + ymin; }
 };
 
 // It's nice being able to print these things.
-template<typename Uint>
+template<typename UintType>
 std::ostream&
-operator<<(std::ostream& os, const iPoint2<Uint>& p) {
+operator<<(std::ostream& os, const Point2<UintType>& p) {
   os << "(" << p.x << " " << p.y << ")";
   return os;
 }
 
 //------------------------------------------------------------------------------
-// Z coordinate of cross product : (p2 - p1)x(p3 - p1).
+// sign of the Z coordinate of cross product : (p2 - p1)x(p3 - p1).
 //------------------------------------------------------------------------------
-template<typename RealType>
-double zcross(const Point2<RealType>& p1, const Point2<RealType>& p2, const Point2<RealType>& p3) {
-  return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
+template<typename UintType>
+int zcross_sign(const Point2<UintType>& p1, const Point2<UintType>& p2, const Point2<UintType>& p3) {
+  double scale = 1.0/max(UintType(1), max(p1.x, max(p1.y, max(p2.x, max(p2.y, max(p3.x, p3.y))))));
+  double ztest = (((p2.x - p1.x)*scale)*((p3.y - p1.y)*scale) -
+                  ((p2.y - p1.y)*scale)*((p3.x - p1.x)*scale));
+  return (ztest < 0.0 ? -1 :
+          ztest > 0.0 ?  1 :
+                         0);
+  // return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
 }
 
 //------------------------------------------------------------------------------
@@ -97,9 +69,9 @@ double zcross(const Point2<RealType>& p1, const Point2<RealType>& p2, const Poin
 // monotone chain algorithm.
 // Based on an example at http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull.cpp
 //------------------------------------------------------------------------------
-template<typename RealType>
-vector<Point2<RealType> >
-sortCounterClockwise(vector<Point2<RealType> >& points) {
+template<typename UintType>
+vector<Point2<UintType> >
+sortCounterClockwise(vector<Point2<UintType> >& points) {
   const unsigned n = points.size();
   int i, k, t;
   
@@ -107,17 +79,17 @@ sortCounterClockwise(vector<Point2<RealType> >& points) {
   sort(points.begin(), points.end());
 
   // Prepare the result.
-  vector<Point2<RealType> > result(2*n);
+  vector<Point2<UintType> > result(2*n);
 
   // Build the lower hull.
   for (i = 0, k = 0; i < n; i++) {
-    while (k >= 2 and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
+    while (k >= 2 and zcross_sign(result[k - 2], result[k - 1], points[i]) <= 0) k--;
     result[k++] = points[i];
   }
 
   // Build the upper hull.
   for (i = n - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and zcross(result[k - 2], result[k - 1], points[i]) <= 0.0) k--;
+    while (k >= t and zcross_sign(result[k - 2], result[k - 1], points[i]) <= 0) k--;
     result[k++] = points[i];
   }
 
@@ -130,20 +102,22 @@ sortCounterClockwise(vector<Point2<RealType> >& points) {
 // Take the given set of vertex positions, and either find them in the known
 // mesh nodes or add them to the known set.
 //------------------------------------------------------------------------------
-template<typename RealType, typename Uint>
+template<typename RealType, typename UintType>
 map<unsigned, unsigned>
-updateMeshVertices(vector<Point2<RealType> >& vertices,
-                   map<iPoint2<Uint>, unsigned>& vertexHash2ID,
+updateMeshVertices(vector<Point2<UintType> >& vertices,
+                   map<Point2<UintType>, unsigned>& vertexHash2ID,
                    Tessellation<2, RealType>& mesh,
-                   const RealType& degeneracy) {
+                   const RealType& xmin,
+                   const RealType& ymin,
+                   const RealType& fconv) {
   const unsigned n = vertices.size();
   bool newVertex;
   unsigned i, j;
-  Uint ix, iy, ix0, iy0, ix1, iy1;
-  iPoint2<Uint> ipt, ipt1;
+  UintType ix, iy, ix0, iy0, ix1, iy1;
+  Point2<UintType> ipt, ipt1;
   map<unsigned, unsigned> result;
-  for (i = 0; i !=n; ++i) {
-    ipt = iPoint2<Uint>(vertices[i], degeneracy);
+  for (i = 0; i != n; ++i) {
+    ipt = vertices[i];
     ix0 = ipt.x > 0 ? ipt.x - 1 : ipt.x;
     iy0 = ipt.y > 0 ? ipt.y - 1 : ipt.y;
     ix1 = ipt.x + 1;
@@ -153,7 +127,7 @@ updateMeshVertices(vector<Point2<RealType> >& vertices,
     while (newVertex and iy != iy1) {
       ix = ix0;
       while (newVertex and ix != ix1) {
-        ipt1 = iPoint2<Uint>(ix, iy);
+        ipt1 = Point2<UintType>(ix, iy);
         newVertex = (vertexHash2ID.find(ipt1) == vertexHash2ID.end());
         ++ix;
       }
@@ -162,8 +136,8 @@ updateMeshVertices(vector<Point2<RealType> >& vertices,
     if (newVertex) {
       j = vertexHash2ID.size();
       vertexHash2ID[ipt] = j;
-      mesh.nodes.push_back(vertices[i].x);
-      mesh.nodes.push_back(vertices[i].y);
+      mesh.nodes.push_back(vertices[i].realx(xmin, fconv));
+      mesh.nodes.push_back(vertices[i].realy(ymin, fconv));
       ASSERT(mesh.nodes.size()/2 == j + 1);
       result[i] = j;
     } else {
@@ -271,12 +245,14 @@ tessellate(vector<RealType>& points,
            Tessellation<2, RealType>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
-  typedef iPoint2<unsigned> VertexHash;
+  typedef Point2<uint64_t> VertexHash;
 
   const unsigned ncells = points.size()/2;
   const RealType xmin = low[0], ymin = low[1];
   const RealType xmax = high[0], ymax = high[1];
   const RealType scale = max(xmax - xmin, ymax - ymin);
+  const RealType dx = this->degeneracy();
+  const RealType fconv = dx*scale;
 
   // Pre-conditions.
   ASSERT(points.size() % 2 == 0);
@@ -296,7 +272,6 @@ tessellate(vector<RealType>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
-  const RealType dx = this->degeneracy();
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -338,9 +313,10 @@ tessellate(vector<RealType>& points,
         yc += pp[1];
 
         // Read out the vertices into a temporary array.
-        vector<Point2<RealType> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<RealType>(xc + 0.5*cell.pts[2*k],
-                                                                      yc + 0.5*cell.pts[2*k + 1]));
+        vector<Point2<uint64_t> > vertices;
+        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<uint64_t>(RealType(xc + 0.5*cell.pts[2*k]),
+                                                                          RealType(yc + 0.5*cell.pts[2*k + 1]),
+                                                                          dx));
         ASSERT(vertices.size() >= 3);
 
         // Sort the vertices counter-clockwise.
@@ -348,7 +324,7 @@ tessellate(vector<RealType>& points,
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
-        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, dx);
+        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, xmin, ymin, fconv);
 
         // Build the faces by walking the cell vertices counter-clockwise.
         nv = vertices.size();
@@ -364,9 +340,6 @@ tessellate(vector<RealType>& points,
       }
     } while (loop.inc());
   }
-        
-  // De-normalize the vertex coordinates back to the input frame.
-  for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = xmin + scale*mesh.nodes[i];
 }
 
 //------------------------------------------------------------------------------
