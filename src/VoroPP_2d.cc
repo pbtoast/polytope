@@ -94,7 +94,7 @@ sortCounterClockwise(vector<Point2<UintType> >& points) {
   }
 
   // Size the result and we're done.
-  result.resize(n);
+  result.resize(k);
   return result;
 }
 
