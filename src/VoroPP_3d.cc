@@ -22,69 +22,35 @@ using std::abs;
 namespace { // We hide internal functions in an anonymous namespace.
 
 //------------------------------------------------------------------------------
-// Compute the distance^2 between points.
-//------------------------------------------------------------------------------
-template<typename RealType>
-inline
-RealType
-distance2(const RealType& x1, const RealType& y1, const RealType& z1,
-          const RealType& x2, const RealType& y2, const RealType& z2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 -y1) + (z2 - z1)*(z2 - z1);
-}
-
-//------------------------------------------------------------------------------
-// A simple 3D point.
-//------------------------------------------------------------------------------
-template<typename RealType>
-struct Point3 {
-  RealType x, y, z;
-  Point3(): x(0.0), y(0.0), z(0.0) {}
-  Point3(const RealType& xi, const RealType& yi, const RealType& zi): x(xi), y(yi), z(zi) {}
-  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
-  bool operator==(const Point3<RealType>& rhs) const { return distance2(x, y, z, rhs.x, rhs.y, rhs.z) < 1.0e-14; }
-  bool operator<(const Point3<RealType>& rhs) const {
-    return (x < rhs.x                               ? true :
-            x == rhs.x and y < rhs.y                ? true :
-            x == rhs.x and y == rhs.y and z < rhs.z ? true :
-            false);
-  }
-};
-
-// It's nice being able to print these things.
-template<typename RealType>
-std::ostream&
-operator<<(std::ostream& os, const Point3<RealType>& p) {
-  os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
-  return os;
-}
-
-//------------------------------------------------------------------------------
 // A integer version of the simple 3D point.
 //------------------------------------------------------------------------------
-template<typename Uint>
-struct iPoint3 {
-  Uint x, y, z;
-  iPoint3(): x(0), y(0), z(0) {}
-  iPoint3(const Uint& xi, const Uint& yi, const Uint& zi): x(xi), y(yi), z(zi) {}
-  iPoint3& operator=(const iPoint3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
-  bool operator==(const iPoint3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
-  bool operator<(const iPoint3& rhs) const {
+template<typename UintType>
+struct Point3 {
+  UintType x, y, z;
+  Point3(): x(0), y(0), z(0) {}
+  Point3(const UintType& xi, const UintType& yi, const UintType& zi): x(xi), y(yi), z(zi) {}
+  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
+  bool operator==(const Point3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
+  bool operator<(const Point3& rhs) const {
     return (x < rhs.x                               ? true :
             x == rhs.x and y < rhs.y                ? true :
             x == rhs.x and y == rhs.y and z < rhs.z ? true :
             false);
   }
   template<typename RealType>
-  iPoint3(const Point3<RealType>& p, const RealType& dx): 
-    x(static_cast<Uint>(p.x/dx + 0.5)),
-    y(static_cast<Uint>(p.y/dx + 0.5)),
-    z(static_cast<Uint>(p.z/dx + 0.5)) {}
+  Point3(const RealType& xi, const RealType& yi, const RealType& zi, const RealType& dx): 
+    x(static_cast<UintType>(xi/dx + 0.5)),
+    y(static_cast<UintType>(yi/dx + 0.5)),
+    z(static_cast<UintType>(zi/dx + 0.5)) {}
+  template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) { return static_cast<RealType>(x*dx) + xmin; }
+  template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) { return static_cast<RealType>(y*dy) + ymin; }
+  template<typename RealType> RealType realz(const RealType& zmin, const RealType& dz) { return static_cast<RealType>(z*dz) + zmin; }
 };
 
 // It's nice being able to print these things.
-template<typename Uint>
+template<typename UintType>
 std::ostream&
-operator<<(std::ostream& os, const iPoint3<Uint>& p) {
+operator<<(std::ostream& os, const Point3<UintType>& p) {
   os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
   return os;
 }
@@ -93,20 +59,23 @@ operator<<(std::ostream& os, const iPoint3<Uint>& p) {
 // Take the given set of vertex positions, and either find them in the known
 // mesh nodes or add them to the known set.
 //------------------------------------------------------------------------------
-template<typename RealType, typename Uint>
+template<typename RealType, typename UintType>
 map<unsigned, unsigned>
-updateMeshVertices(vector<Point3<RealType> >& vertices,
-                   map<iPoint3<Uint>, unsigned>& vertexHash2ID,
+updateMeshVertices(vector<Point3<UintType> >& vertices,
+                   map<Point3<UintType>, unsigned>& vertexHash2ID,
                    Tessellation<3, RealType>& mesh,
-                   const RealType& degeneracy) {
+                   const RealType& xmin,
+                   const RealType& ymin,
+                   const RealType& zmin,
+                   const RealType& fconv) {
   const unsigned n = vertices.size();
   bool newVertex;
   unsigned i, j;
-  Uint ix, iy, iz, ix0, iy0, iz0, ix1, iy1, iz1;
-  iPoint3<Uint> ipt, ipt1;
+  UintType ix, iy, iz, ix0, iy0, iz0, ix1, iy1, iz1;
+  Point3<UintType> ipt, ipt1;
   map<unsigned, unsigned> result;
   for (i = 0; i !=n; ++i) {
-    ipt = iPoint3<Uint>(vertices[i], degeneracy);
+    ipt = vertices[i];
     ix0 = ipt.x > 0 ? ipt.x - 1 : ipt.x;
     iy0 = ipt.y > 0 ? ipt.y - 1 : ipt.y;
     iz0 = ipt.z > 0 ? ipt.z - 1 : ipt.z;
@@ -120,7 +89,7 @@ updateMeshVertices(vector<Point3<RealType> >& vertices,
       while (newVertex and iy != iy1) {
         ix = ix0;
         while (newVertex and ix != ix1) {
-          ipt1 = iPoint3<Uint>(ix, iy, iz);
+          ipt1 = Point3<UintType>(ix, iy, iz);
           newVertex = (vertexHash2ID.find(ipt1) == vertexHash2ID.end());
           ++ix;
         }
@@ -131,9 +100,9 @@ updateMeshVertices(vector<Point3<RealType> >& vertices,
     if (newVertex) {
       j = vertexHash2ID.size();
       vertexHash2ID[ipt] = j;
-      mesh.nodes.push_back(vertices[i].x);
-      mesh.nodes.push_back(vertices[i].y);
-      mesh.nodes.push_back(vertices[i].z);
+      mesh.nodes.push_back(vertices[i].realx(xmin, fconv));
+      mesh.nodes.push_back(vertices[i].realy(ymin, fconv));
+      mesh.nodes.push_back(vertices[i].realz(zmin, fconv));
       ASSERT(mesh.nodes.size()/3 == j + 1);
       result[i] = j;
     } else {
@@ -224,13 +193,14 @@ tessellate(vector<RealType>& points,
            Tessellation<3, RealType>& mesh) const {
 
   typedef set<unsigned> FaceHash;
-  typedef iPoint3<uint64_t> VertexHash;
+  typedef Point3<uint64_t> VertexHash;
 
   const unsigned ncells = points.size()/3;
   const RealType xmin = low[0], ymin = low[1], zmin = low[2];
   const RealType xmax = high[0], ymax = high[1], zmax = high[2];
   const RealType scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
   const RealType dx = this->degeneracy();
+  const RealType fconv = dx*scale;
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -295,24 +265,33 @@ tessellate(vector<RealType>& points,
         zc += pp[2];
 
         // Read out the vertices into a temporary array.
-        vector<Point3<RealType> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<RealType>(xc + 0.5*cell.pts[3*k],
-                                                                      yc + 0.5*cell.pts[3*k + 1],
-                                                                      zc + 0.5*cell.pts[3*k + 2]));
+        vector<Point3<uint64_t> > vertices;
+        for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<uint64_t>(RealType(xc + 0.5*cell.pts[3*k]),
+                                                                          RealType(yc + 0.5*cell.pts[3*k + 1]),
+                                                                          RealType(zc + 0.5*cell.pts[3*k + 2]),
+                                                                          dx));
         ASSERT(vertices.size() >= 4);
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
-        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, dx);
+        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, xmin, ymin, zmin, fconv);
 
-//         // Blago!
-//         std::cout << "Mesh vertices for cell " << icell << " : ";
-//         std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<RealType> >(std::cout, " "));
-//         std::cout << "                           ";
-//         for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[i] << " ";
-//         cout << endl;
-//         ASSERT(vertices.size() == 8);
-//         // Blago!
+        // // Blago!
+        // std::cout << "Mesh vertices for cell " << icell << " : ";
+        // std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<uint64_t> >(std::cout, " "));
+        // cout << endl;
+        // std::cout << "                           ";
+        // for (k = 0; k != vertices.size(); ++k) std::cout << "(" 
+        //                                                  << vertices[k].realx(xmin, fconv) << " "
+        //                                                  << vertices[k].realy(ymin, fconv) << " "
+        //                                                  << vertices[k].realz(zmin, fconv) << ") ";
+
+        // cout << endl;
+        // std::cout << "                           ";
+        // for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[k] << " ";
+        // cout << endl;
+        // ASSERT(vertices.size() == 8);
+        // // Blago!
 
         // Read the face vertex indices to a temporary array as well.
         vector<int> voroFaceVertexIndices;
@@ -350,9 +329,6 @@ tessellate(vector<RealType>& points,
       }
     } while (loop.inc());
   }
-        
-  // De-normalize the vertex coordinates back to the input frame.
-  for (int i = 0; i != mesh.nodes.size(); ++i) mesh.nodes[i] = xmin + scale*mesh.nodes[i];
 }
 
 //------------------------------------------------------------------------------
