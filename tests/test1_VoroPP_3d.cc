@@ -34,7 +34,7 @@ hash3position(const Real* pos,
 //------------------------------------------------------------------------------
 int main() {
   const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
-  const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
+  const double x2 = 10.0, y2 = 10.0, z2 = 10.0;
 
   // Try tessellating increasing numbers of generators.
   for (unsigned nx = 2; nx != 11; ++nx) {
@@ -69,14 +69,13 @@ int main() {
     cout << "   num mesh nodes : " << mesh.nodes.size()/3 << endl;
     cout << "   num mesh cells : " << mesh.cells.size() << endl;
     cout << "   num mesh faces : " << mesh.faces.size() << endl;
-//     cout << "Node positions: " << endl;
-//     for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
-//       cout << "   Node " << i << " @ (" << mesh.nodes[3*i] << " " << mesh.nodes[3*i + 1] << " " << mesh.nodes[3*i + 2] << ")" << " " << hash3position(&mesh.nodes[3*i], xmin, xmax, 0.1*dx) 
-//            << " " << static_cast<uint64_t>((max(xmin[1], min(xmax[1], mesh.nodes[3*i + 1])) - xmin[1])/dx + 0.5)
-//            << " " << static_cast<uint64_t>((max(xmin[0], min(xmax[0], mesh.nodes[3*i + 0])) - xmin[0])/dx + 0.5)
-//            << endl;
-
-//     }
+    // cout << "Node positions: " << endl;
+    // for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
+    //   cout << "   Node " << i << " @ (" << mesh.nodes[3*i] << " " << mesh.nodes[3*i + 1] << " " << mesh.nodes[3*i + 2] << ")" << " " << hash3position(&mesh.nodes[3*i], xmin, xmax, 0.1*dx) 
+    //        << " " << static_cast<uint64_t>((max(xmin[1], min(xmax[1], mesh.nodes[3*i + 1])) - xmin[1])/dx + 0.5)
+    //        << " " << static_cast<uint64_t>((max(xmin[0], min(xmax[0], mesh.nodes[3*i + 0])) - xmin[0])/dx + 0.5)
+    //        << endl;
+    // }
 //     cout << "Face node sets: " << endl;
 //     for (unsigned i = 0; i != nx*nx*nx; ++i) {
 //       cout << "   FACES for mesh cell " << i << " :";

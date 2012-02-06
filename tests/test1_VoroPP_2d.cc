@@ -38,10 +38,10 @@ int main() {
     polytope::VoroPP_2d<double> voro;
     voro.tessellate(generators, xmin, xmax, mesh);
 
-    // // Spew the mesh statistics.
-    // cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
-    // cout << "   num mesh cells : " << mesh.cells.size() << endl;
-    // cout << "   num mesh faces : " << mesh.faces.size() << endl;
+    // Spew the mesh statistics.
+    cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
+    cout << "   num mesh cells : " << mesh.cells.size() << endl;
+    cout << "   num mesh faces : " << mesh.faces.size() << endl;
     // cout << "Node positions: " << endl;
     // for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
     //   cout << "   Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i + 1] << ")" << endl;
