@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <map>
 
-#include "polytope.hh" // Pulls in ASSERT
+#include "polytope.hh"
 
 namespace polytope {
 
@@ -66,38 +66,62 @@ int zcross_sign(const Point2<UintType>& p1, const Point2<UintType>& p2, const Po
   // return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
 }
 
+//------------------------------------------------------------------------------
+// Comparator to compair std::pair's by their first element.
+//------------------------------------------------------------------------------
+template<typename T1, typename T2>
+struct ComparePairByFirstElement {
+  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
+    return lhs.first < rhs.first;
+  }
+};
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
 // The method itself.
 //------------------------------------------------------------------------------
 template<typename UintType>
-vector<Point2<UintType> >
-convexHull_2d(vector<Point2<UintType> >& points) {
+PLC<2, UintType>
+convexHull_2d(const vector<Point2<UintType> >& points) {
   const unsigned n = points.size();
-  int i, k, t;
+  int i, j, k, t;
   
-  // Sort the input points by x coordinate.
-  sort(points.begin(), points.end());
+  // Sort the input points by x coordinate, remembering the indices in the 
+  // original set.
+  vector<pair<Point2<UintType>, int> > sortedPoints;
+  sortedPoints.reserve(n);
+  for (i = 0; i != n; ++i) sortedPoints.push_back(make_pair(points[i], i));
+  sort(sortedPoints.begin(), sortedPoints.end(), ComparePairByFirstElement<Point2<UintType>, unsigned>());
 
   // Prepare the result.
-  vector<Point2<UintType> > result(2*n);
+  vector<int> result(2*n);
 
   // Build the lower hull.
   for (i = 0, k = 0; i < n; i++) {
-    while (k >= 2 and zcross_sign(result[k - 2], result[k - 1], points[i]) <= 0) k--;
-    result[k++] = points[i];
+    while (k >= 2 and
+           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+    result[k++] = i;
   }
 
   // Build the upper hull.
   for (i = n - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and zcross_sign(result[k - 2], result[k - 1], points[i]) <= 0) k--;
-    result[k++] = points[i];
+    while (k >= t and
+           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+    result[k++] = i;
   }
+  ASSERT(k >= 4);
 
-  // Size the result and we're done.
-  result.resize(k);
-  return result;
+  // Translate our sorted information to a PLC based on the input point ordering and we're done.
+  PLC<2, UintType> plc;
+  for (i = 0; i != k - 1; ++i) {
+    j = (i + 1) % k;
+    plc.facets.push_back(vector<int>());
+    plc.facets.back().push_back(sortedPoints[result[i]].second);
+    plc.facets.back().push_back(sortedPoints[result[j]].second);
+  }
+  ASSERT(plc.facets.size() == k - 1);
+  return plc;
 }
 
 }

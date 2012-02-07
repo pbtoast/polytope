@@ -38,31 +38,31 @@ int main() {
     polytope::VoroPP_2d<double> voro;
     voro.tessellate(generators, xmin, xmax, mesh);
 
-    // // Spew the mesh statistics.
-    // cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
-    // cout << "   num mesh cells : " << mesh.cells.size() << endl;
-    // cout << "   num mesh faces : " << mesh.faces.size() << endl;
-    // cout << "Node positions: " << endl;
-    // for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
-    //   cout << "   Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i + 1] << ")" << endl;
-    // }
-    // cout << "Face node sets: " << endl;
-    // for (unsigned i = 0; i != nx*nx; ++i) {
-    //   cout << "   FACES for mesh cell " << i << " :";
-    //   for (unsigned j = 0; j != mesh.cells[i].size(); ++j) cout << " " << mesh.cells[i][j];
-    //   cout << endl;
-    // }
-    // for (unsigned i = 0; i != mesh.faces.size(); ++i) {
-    //   double xf = 0.0, yf = 0.0;
-    //   cout << "   NODES for mesh face " << i << " :";
-    //   for (unsigned j = 0; j != mesh.faces[i].size(); ++j) {
-    //     unsigned k = mesh.faces[i][j];
-    //     cout << " " << k;
-    //     xf += mesh.nodes[2*k];
-    //     yf += mesh.nodes[2*k + 1];
-    //   }
-    //   cout << " @ (" << xf << " " << yf << ")"  << endl;
-    // }
+//     // Spew the mesh statistics.
+//     cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
+//     cout << "   num mesh cells : " << mesh.cells.size() << endl;
+//     cout << "   num mesh faces : " << mesh.faces.size() << endl;
+//     cout << "Node positions: " << endl;
+//     for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
+//       cout << "   Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i + 1] << ")" << endl;
+//     }
+//     cout << "Face node sets: " << endl;
+//     for (unsigned i = 0; i != nx*nx; ++i) {
+//       cout << "   FACES for mesh cell " << i << " :";
+//       for (unsigned j = 0; j != mesh.cells[i].size(); ++j) cout << " " << mesh.cells[i][j];
+//       cout << endl;
+//     }
+//     for (unsigned i = 0; i != mesh.faces.size(); ++i) {
+//       double xf = 0.0, yf = 0.0;
+//       cout << "   NODES for mesh face " << i << " :";
+//       for (unsigned j = 0; j != mesh.faces[i].size(); ++j) {
+//         unsigned k = mesh.faces[i][j];
+//         cout << " " << k;
+//         xf += mesh.nodes[2*k];
+//         yf += mesh.nodes[2*k + 1];
+//       }
+//       cout << " @ (" << xf << " " << yf << ")"  << endl;
+//     }
 
     // Now do the checks.
     CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));

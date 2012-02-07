@@ -5,6 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+#include <stdint.h>
 
 #include "polytope.hh" // Pulls in ASSERT and VoroPP_2d.hh.
 #include "convexHull_2d.hh"
@@ -194,6 +195,8 @@ tessellate(const vector<RealType>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
+  vector<Point2<uint64_t> > vertices, hullVertices;
+  PLC<2, uint64_t> hull;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -235,21 +238,26 @@ tessellate(const vector<RealType>& points,
         yc += pp[1];
 
         // Read out the vertices into a temporary array.
-        vector<Point2<uint64_t> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point2<uint64_t>(RealType(xc + 0.5*cell.pts[2*k]),
-                                                                          RealType(yc + 0.5*cell.pts[2*k + 1]),
-                                                                          dx));
-        ASSERT(vertices.size() >= 3);
+        nv = cell.p;
+        ASSERT(nv >= 3);
+        vertices = vector<Point2<uint64_t> >();
+        vertices.reserve(nv);
+        for (k = 0; k != nv; ++k) vertices.push_back(Point2<uint64_t>(RealType(xc + 0.5*cell.pts[2*k]),
+                                                                      RealType(yc + 0.5*cell.pts[2*k + 1]),
+                                                                      dx));
 
         // Sort the vertices counter-clockwise.
-        vertices = convexHull_2d(vertices);
+        hull = convexHull_2d(vertices);
+        ASSERT(hull.facets.size() == nv);
+        hullVertices = vector<Point2<uint64_t> >();
+        hullVertices.reserve(nv);
+        for (k = 0; k != nv; ++k) hullVertices.push_back(vertices[hull.facets[k][0]]);
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
-        map<unsigned, unsigned> vertexMap = updateMeshVertices(vertices, vertexHash2ID, mesh, xmin, ymin, fconv);
+        map<unsigned, unsigned> vertexMap = updateMeshVertices(hullVertices, vertexHash2ID, mesh, xmin, ymin, fconv);
 
         // Build the faces by walking the cell vertices counter-clockwise.
-        nv = vertices.size();
         for (k = 0; k != nv; ++k) {
           i = vertexMap[k];
           j = vertexMap[(k + 1) % nv];
