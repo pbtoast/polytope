@@ -26,11 +26,11 @@ class TetgenTessellator: public Tessellator<3, RealType>
   ~TetgenTessellator();
 
   // Tessellate the given generators.
-  void tessellate(std::vector<RealType>& points,
+  void tessellate(const std::vector<RealType>& points,
                   Tessellation<3, RealType>& mesh) const;
 
   // Tessellate obeying the given boundaries.
-  void tessellate(std::vector<RealType>& points,
+  void tessellate(const std::vector<RealType>& points,
                   const PLC<3, RealType>& geometry,
                   Tessellation<3, RealType>& mesh) const;
 

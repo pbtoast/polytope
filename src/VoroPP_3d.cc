@@ -187,7 +187,7 @@ VoroPP_3d<RealType>::
 template<typename RealType>
 void
 VoroPP_3d<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            RealType* low,
            RealType* high,
            Tessellation<3, RealType>& mesh) const {
