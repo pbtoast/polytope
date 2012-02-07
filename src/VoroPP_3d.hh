@@ -45,7 +45,7 @@ public:
   //! \param low The coordinates of the "lower-left-near" bounding box corner.
   //! \param high The coordinates of the "upper-right-far" bounding box corner.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<RealType>& points,
                           RealType* low,
                           RealType* high,
                           Tessellation<3, RealType>& mesh) const;

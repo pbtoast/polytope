@@ -115,12 +115,13 @@ TetgenTessellator<RealType>::
 template<typename RealType>
 void
 TetgenTessellator<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            Tessellation<3, RealType>& mesh) const 
 {
   // Create a PLC representing the bounding box for these points.
-  PLC<3, RealType> box = boundingBox(points);
-  tessellate(points, box, mesh);
+//  PLC<3, RealType> box = boundingBox(points);
+  PLC<3, RealType> noBoundary;
+  tessellate(points, noBoundary, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -128,7 +129,7 @@ tessellate(vector<RealType>& points,
 template<typename RealType>
 void
 TetgenTessellator<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            const PLC<3, RealType>& geometry,
            Tessellation<3, RealType>& mesh) const 
 {

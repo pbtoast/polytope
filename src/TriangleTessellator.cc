@@ -80,13 +80,13 @@ TriangleTessellator<RealType>::
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            RealType* low, RealType* high,
            Tessellation<2, RealType>& mesh) const 
 {
   // Create a PLC for the bounding box about these points.
-  PLC<2, RealType> box = boundingBox(low, high, points);
-  tessellate(points, box, mesh);
+//  PLC<2, RealType> box = boundingBox(low, high, points);
+//  tessellate(points, box, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ tessellate(vector<RealType>& points,
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            Tessellation<2, RealType>& mesh) const 
 {
 //  // Create a PLC for the bounding box about these points.
@@ -108,7 +108,7 @@ tessellate(vector<RealType>& points,
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
-tessellate(vector<RealType>& points,
+tessellate(const vector<RealType>& points,
            const PLC<2, RealType>& geometry,
            Tessellation<2, RealType>& mesh) const 
 {

@@ -29,7 +29,7 @@ class Tessellator
   //! the 0th component of the ith point appears in points[Dimension*i].
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<RealType>& points,
                           Tessellation<Dimension, RealType>& mesh) const 
   {
     error("This Tessellator does not support unbounded point tessellations.");
@@ -46,7 +46,7 @@ class Tessellator
   //! \param low The coordinates of the "lower-left-near" bounding box corner.
   //! \param high The coordinates of the "upper-right-far" bounding box corner.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<RealType>& points,
                           RealType* low,
                           RealType* high,
                           Tessellation<Dimension, RealType>& mesh) const
@@ -63,7 +63,7 @@ class Tessellator
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<RealType>& points,
                           const PLC<Dimension, RealType>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const
   {
