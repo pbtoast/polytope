@@ -40,3 +40,6 @@
 #include "TetgenTessellator.hh"
 #include "SiloWriter.hh"
 
+#ifdef HAVE_MPI
+#include "DistributedTessellator.hh"
+#endif

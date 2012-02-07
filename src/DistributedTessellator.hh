@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------------//
-// ParallelTessellator
+// DistributedTessellator
 // 
 // Provides a parallel tessellation.
 //
@@ -12,25 +12,25 @@
 // Based on the parallel tessellation algorithm originally implemented in 
 // Spheral++.
 //----------------------------------------------------------------------------//
-#ifndef __Polytope_ParallelTessellator__
-#define __Polytope_ParallelTessellator__
+#ifndef __Polytope_DistributedTessellator__
+#define __Polytope_DistributedTessellator__
 
 #include "Tessellator.hh"
 
 namespace polytope {
 
 template<int Dimension, typename RealType>
-class ParallelTessellator: public Tessellator<Dimension, RealType> {
+class DistributedTessellator: public Tessellator<Dimension, RealType> {
 
   //--------------------------- Public Interface ---------------------------//
 public:
 
   //! Constructor.
   //! \param serialTessellator A serial implementation of Tessellator.
-  ParallelTessellator(const Tessellator& serialTessellator);
-  ~ParallelTessellator();
+  DistributedTessellator(const Tessellator<Dimension, RealType>& serialTessellator);
+  ~DistributedTessellator();
 
-  // Note the ParallelTesselator doesn't know which of the boundary treatments
+  // Note the DistributedTesselator doesn't know which of the boundary treatments
   // are supported by the underlying serial Tessellator, so it's up to the user
   // to know which of these generic tessellate options they can use.
 
@@ -39,8 +39,8 @@ public:
   //! the 0th component of the ith point appears in points[Dimension*i].
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
-//   virtual void tessellate(std::vector<RealType>& points,
-//                           Tessellation<Dimension, RealType>& mesh) const;
+  virtual void tessellate(const std::vector<RealType>& points,
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi tessellation for the given set of generator points
   //! with a bounding box specified by \a low and \a high. Here, low[i]
@@ -53,7 +53,7 @@ public:
   //! \param low The coordinates of the "lower-left-near" bounding box corner.
   //! \param high The coordinates of the "upper-right-far" bounding box corner.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<RealType>& points,
                           RealType* low,
                           RealType* high,
                           Tessellation<Dimension, RealType>& mesh) const;
@@ -67,9 +67,9 @@ public:
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
-//   virtual void tessellate(std::vector<RealType>& points,
-//                           const PLC<Dimension, RealType>& geometry,
-//                           Tessellation<Dimension, RealType>& mesh) const;
+  virtual void tessellate(const std::vector<RealType>& points,
+                          const PLC<Dimension, RealType>& geometry,
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
@@ -83,12 +83,34 @@ public:
   virtual bool handlesPLCs() const { return mSerialTessellator.handlesPLCs(); }
 
 private:
-  Tessellator<Dimension, RealType>& mSerialTessellator;
+  // Define an enum to keep track of which type of tessellation is currently
+  // being called.
+  enum TessellationType {
+    unbounded = 0,
+    box = 1,
+    plc = 2,
+  };
+    
+  // Private data.
+  const Tessellator<Dimension, RealType>& mSerialTessellator;
+  mutable TessellationType mType;
+  mutable RealType *mLow, *mHigh;
+  mutable const PLC<Dimension, RealType>* mPLCptr;
+
+  // Internal method that implements the parallel algorithm -- called by
+  // each of the three ways we support doing tessellations.
+  void computeDistributedTessellation(const std::vector<RealType>& points,
+                                   Tessellation<Dimension, RealType>& mesh) const;
+
+  // Internal wrapper for doing a tessellation depending on the internal
+  // value of mType.
+  void tessellationWrapper(const std::vector<RealType>& points,
+                           Tessellation<Dimension, RealType>& mesh) const;
 
   // Forbidden methods.
-  ParallelTessellator();
-  ParallelTessellator(const ParallelTessellator&);
-  ParallelTessellator& operator=(const ParallelTessellator&);
+  DistributedTessellator();
+  DistributedTessellator(const DistributedTessellator&);
+  DistributedTessellator& operator=(const DistributedTessellator&);
 };
 
 }
