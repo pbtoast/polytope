@@ -223,6 +223,9 @@ tessellate(const vector<RealType>& points,
   for (i = 0; i != ncells; ++i) con.put(i, generators[2*i], generators[2*i + 1]);
   ASSERT(con.total_particles() == ncells);
 
+  // Dummy low coordinates in integer space for the convex hull.
+  uint64_t ilow[2] = {0U, 0U};
+
   // Build the tessellation cell by cell.
   voronoicell_neighbor_2d cell;                    // Use cells with neighbor tracking.
   map<FaceHash, unsigned> faceHash2ID;             // map from face hash to ID.
@@ -250,7 +253,7 @@ tessellate(const vector<RealType>& points,
         }
 
         // Sort the vertices counter-clockwise.
-        hull = convexHull_2d(vertices, uint64_t(0), uint64_t(0), uint64_t(1));
+        hull = convexHull_2d(vertices, ilow, uint64_t(1));
         ASSERT(hull.facets.size() == nv);
         hullVertices = vector<Point2<uint64_t> >();
         hullVertices.reserve(nv);

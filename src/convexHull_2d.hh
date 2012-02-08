@@ -78,7 +78,7 @@ struct ComparePairByFirstElement {
 template<typename RealType>
 PLC<2, RealType>
 convexHull_2d(const std::vector<RealType>& points,
-              const RealType& xmin, const RealType& ymin,
+              const RealType* low,
               const RealType& dx) {
   typedef uint64_t CoordHash;
   typedef Point2<CoordHash> PointHash;
@@ -86,9 +86,11 @@ convexHull_2d(const std::vector<RealType>& points,
   ASSERT(points.size() % 2 == 0);
   const unsigned n = points.size() / 2;
   int i, j, k, t;
-  
+
   // Hash the input points and sort them by x coordinate, remembering their original indices
   // in the input set.
+  const RealType& xmin = low[0];
+  const RealType& ymin = low[1];
   std::vector<std::pair<PointHash, unsigned> > sortedPoints;
   sortedPoints.reserve(n);
   for (i = 0; i != n; ++i) sortedPoints.push_back(std::make_pair(PointHash(CoordHash((points[2*i]     - xmin)/dx + 0.5),
