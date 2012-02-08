@@ -5,6 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+#include <limits>
 #include <stdint.h>
 
 #include "polytope.hh" // Pulls in ASSERT and VoroPP_2d.hh.
@@ -195,7 +196,8 @@ tessellate(const vector<RealType>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
-  vector<Point2<uint64_t> > vertices, hullVertices;
+  vector<uint64_t> vertices;
+  vector<Point2<uint64_t> > hullVertices;
   PLC<2, uint64_t> hull;
 
   // Size the output arrays.
@@ -240,18 +242,22 @@ tessellate(const vector<RealType>& points,
         // Read out the vertices into a temporary array.
         nv = cell.p;
         ASSERT(nv >= 3);
-        vertices = vector<Point2<uint64_t> >();
-        vertices.reserve(nv);
-        for (k = 0; k != nv; ++k) vertices.push_back(Point2<uint64_t>(RealType(xc + 0.5*cell.pts[2*k]),
-                                                                      RealType(yc + 0.5*cell.pts[2*k + 1]),
-                                                                      dx));
+        vertices = vector<uint64_t>();
+        vertices.reserve(2*nv);
+        for (k = 0; k != nv; ++k) {
+          vertices.push_back(uint64_t(max(0.0, min(numeric_limits<uint64_t>::max() - 1.0, (xc + 0.5*cell.pts[2*k    ])/dx + 0.5))));
+          vertices.push_back(uint64_t(max(0.0, min(numeric_limits<uint64_t>::max() - 1.0, (yc + 0.5*cell.pts[2*k + 1])/dx + 0.5))));
+        }
 
         // Sort the vertices counter-clockwise.
-        hull = convexHull_2d(vertices);
+        hull = convexHull_2d(vertices, uint64_t(0), uint64_t(0), uint64_t(1));
         ASSERT(hull.facets.size() == nv);
         hullVertices = vector<Point2<uint64_t> >();
         hullVertices.reserve(nv);
-        for (k = 0; k != nv; ++k) hullVertices.push_back(vertices[hull.facets[k][0]]);
+        for (k = 0; k != nv; ++k) {
+          i = hull.facets[k][0];
+          hullVertices.push_back(Point2<uint64_t>(vertices[2*i], vertices[2*i + 1]));
+        }
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
