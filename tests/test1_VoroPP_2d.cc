@@ -11,7 +11,7 @@ using namespace std;
 
 int main() {
   const double x1 = 0.0, y1 = 0.0;
-  const double x2 = 100.0, y2 = 100.0;
+  const double x2 = 1.0, y2 = 1.0;
 
   // Try tessellating increasing numbers of generators.
   for (unsigned nx = 2; nx != 11; ++nx) {
@@ -38,10 +38,10 @@ int main() {
     polytope::VoroPP_2d<double> voro;
     voro.tessellate(generators, xmin, xmax, mesh);
 
-//     // Spew the mesh statistics.
-//     cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
-//     cout << "   num mesh cells : " << mesh.cells.size() << endl;
-//     cout << "   num mesh faces : " << mesh.faces.size() << endl;
+    // Spew the mesh statistics.
+    cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
+    cout << "   num mesh cells : " << mesh.cells.size() << endl;
+    cout << "   num mesh faces : " << mesh.faces.size() << endl;
 //     cout << "Node positions: " << endl;
 //     for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
 //       cout << "   Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i + 1] << ")" << endl;
@@ -61,6 +61,8 @@ int main() {
 //         xf += mesh.nodes[2*k];
 //         yf += mesh.nodes[2*k + 1];
 //       }
+//       xf /= mesh.faces[i].size();
+//       yf /= mesh.faces[i].size();
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
