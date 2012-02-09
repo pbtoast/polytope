@@ -100,12 +100,18 @@ private:
   // Internal method that implements the parallel algorithm -- called by
   // each of the three ways we support doing tessellations.
   void computeDistributedTessellation(const std::vector<RealType>& points,
-                                   Tessellation<Dimension, RealType>& mesh) const;
+                                      Tessellation<Dimension, RealType>& mesh) const;
 
   // Internal wrapper for doing a tessellation depending on the internal
   // value of mType.
   void tessellationWrapper(const std::vector<RealType>& points,
                            Tessellation<Dimension, RealType>& mesh) const;
+
+  // Internal method to come up with an appropriate bounding box for the global
+  // set of generators.
+  void computeBoundingBox(const std::vector<RealType>& points,
+                          RealType* rlow,
+                          RealType* rhigh) const;
 
   // Forbidden methods.
   DistributedTessellator();

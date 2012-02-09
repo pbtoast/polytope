@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iterator>
 #include <algorithm>
+#include <stdint.h>
 
 #include "polytope.hh"
 
