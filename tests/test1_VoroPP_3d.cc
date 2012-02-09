@@ -38,7 +38,7 @@ int main() {
   const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 2; nx != 11; ++nx) {
+  for (unsigned nx = 2; nx != 50; ++nx) {
     cout << "Testing nx=" << nx << endl;
 
     // Create the generators.
