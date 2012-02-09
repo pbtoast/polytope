@@ -305,6 +305,96 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
 
+  // Now we need to remove the elements of the tessellation corresponding to
+  // other domains generators, and renumber the resulting elements.
+
+  // Start by flagging which nodes and faces we need to remove.
+  vector<int> flagNodes(mesh.nodes.size()/Dimension, 0), flagFaces(mesh.faces.size(), 0);
+  for (unsigned icell = 0; icell != nlocal; ++icell) {
+    for (vector<int>::const_iterator faceItr = mesh.cells[icell].begin();
+         faceItr != mesh.cells[icell].end();
+         ++faceItr) {
+      const unsigned iface = (*faceItr >= 0 ? *faceItr : ~(*faceItr));
+      ASSERT(iface < mesh.faces.size());
+      flagFaces[iface] = 1;
+      for (vector<unsigned>::const_iterator nodeItr = mesh.faces[iface].begin();
+           nodeItr != mesh.faces[iface].end();
+           ++nodeItr) {
+        const unsigned inode = *nodeItr;
+        ASSERT(inode < mesh.nodes.size()/Dimension);
+        flagNodes[inode] = 1;
+      }
+    }
+  }
+
+  // Figure out the new numbering for the nodes and faces.
+  map<unsigned, unsigned> old2new_nodes, old2new_faces;
+  {
+    unsigned j = 0;
+    for (unsigned i = 0; i != mesh.nodes.size()/Dimension; ++i) {
+      if (flagNodes[i] == 1) old2new_nodes[i] = j++;
+    }
+    j = 0;
+    for (unsigned i = 0; i != mesh.faces.size(); ++i) {
+      if (flagFaces[i] == 1) old2new_faces[i] = j++;
+    }
+  }
+
+  // Reconstruct the nodes.
+  {
+    vector<RealType> newNodes;
+    newNodes.reserve(mesh.nodes.size());
+    for (unsigned i = 0; i != mesh.nodes.size()/Dimension; ++i) {
+      if (flagNodes[i] == 1) {
+        copy(&mesh.nodes[Dimension*i], &mesh.nodes[Dimension*(i + 1)], back_inserter(newNodes));
+      }
+    }
+    mesh.nodes = newNodes;
+  }
+
+  // Reconstruct the faces.
+  {
+    vector<vector<unsigned> > newFaces;
+    vector<vector<unsigned> > newFaceCells;
+    newFaces.reserve(mesh.faces.size());
+    for (unsigned i = 0; i != mesh.faces.size(); ++i) {
+      if (flagFaces[i] == 1) {
+        newFaces.push_back(mesh.faces[i]);
+        for (vector<unsigned>::iterator itr = newFaces.back().begin();
+             itr != newFaces.back().end();
+             ++itr) {
+          ASSERT(old2new_nodes.find(*itr) != old2new_nodes.end());
+          *itr = old2new_nodes[*itr];
+        }
+        ASSERT(mesh.faceCells[i].size() == 1 or
+               mesh.faceCells[i].size() == 2);
+        newFaceCells.push_back(vector<unsigned>());
+        if (mesh.faceCells[i][0] < nlocal) newFaceCells.back().push_back(mesh.faceCells[i][0]);
+        if (mesh.faceCells.size() == 2 and
+            mesh.faceCells[i][1] < nlocal) newFaceCells.back().push_back(mesh.faceCells[i][1]);
+        ASSERT(newFaceCells.back().size() == 1 or
+               newFaceCells.back().size() == 2);
+      }
+    }
+    mesh.faces = newFaces;
+    mesh.faceCells = newFaceCells;
+  }
+
+  // Reconstruct the cells.
+  mesh.cells.resize(nlocal);
+  for (unsigned i = 0; i != nlocal; ++i) {
+    for (vector<int>::iterator itr = mesh.cells[i].begin();
+         itr != mesh.cells[i].end();
+         ++itr) {
+      if (*itr >= 0) {
+        ASSERT(old2new_faces.find(*itr) != old2new_faces.end());
+        *itr = old2new_faces[*itr];
+      } else {
+        ASSERT(old2new_faces.find(~(*itr)) != old2new_faces.end());
+        *itr = ~old2new_faces[~(*itr)];
+      }
+    }
+  }
 }
 
 //------------------------------------------------------------------------------
