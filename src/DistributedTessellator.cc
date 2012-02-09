@@ -136,7 +136,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
   // Compute the bounding box for normalizing our coordinates.
   RealType rlow[Dimension], rhigh[Dimension];
-  computeBoundingBox(points, rlow, rhigh);
+  this->computeBoundingBox(points, rlow, rhigh);
   RealType fscale = 0;
   for (unsigned i = 0; i != Dimension; ++i) fscale = max(fscale, rhigh[i] - rlow[i]);
   ASSERT(fscale > 0);
@@ -453,8 +453,10 @@ computeBoundingBox(const vector<RealType>& points,
   case box:
     ASSERT(mLow != 0);
     ASSERT(mHigh != 0);
-    rlow = mLow;
-    rhigh = mHigh;
+    for (unsigned j = 0; j != Dimension; ++j) {
+      rlow[j] = mLow[j];
+      rhigh[j] = mHigh[j];
+    }
     return;
 
   case plc:

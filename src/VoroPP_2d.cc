@@ -254,7 +254,15 @@ tessellate(const vector<RealType>& points,
 
         // Sort the vertices counter-clockwise.
         hull = convexHull_2d(vertices, ilow, uint64_t(1));
-        ASSERT(hull.facets.size() == nv);
+//         if (!(hull.facets.size() == nv)) {
+//           cerr << "Input vertices: " << endl;
+//           for (unsigned k = 0; k != nv; ++k) cerr << "    " << k << " (" << vertices[2*k] << " " << vertices[2*k + 1] << ")" << endl;
+//           cerr << "Hull ordering: ";
+//           for (unsigned k = 0; k != hull.facets.size(); ++k) cerr << " " << hull.facets[k][0];
+//           cerr << endl;
+//         }
+        ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the reduces to the unique set.
+        nv = hull.facets.size();
         hullVertices = vector<Point2<uint64_t> >();
         hullVertices.reserve(nv);
         for (k = 0; k != nv; ++k) {

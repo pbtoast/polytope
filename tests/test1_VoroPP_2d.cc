@@ -14,7 +14,7 @@ int main() {
   const double x2 = 1.0, y2 = 1.0;
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 2; nx != 11; ++nx) {
+  for (unsigned nx = 2; nx != 100; ++nx) {
     cout << "Testing nx=" << nx << endl;
 
     // Create the generators.
