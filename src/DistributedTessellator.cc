@@ -6,9 +6,7 @@
 #include <algorithm>
 #include <map>
 #include <limits>
-extern "C" {
 #include "mpi.h"
-}
 
 #include "polytope.hh"
 #include "polytope_serialize.hh"
