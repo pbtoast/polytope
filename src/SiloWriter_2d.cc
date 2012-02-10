@@ -2,6 +2,7 @@
 #include "polytope.hh"
 #include <fstream>
 #include <set>
+#include <cstring>
 #include "silo.h"
 
 #ifdef HAVE_MPI
@@ -19,7 +20,14 @@ namespace
 
 //-------------------------------------------------------------------
 // Traverse the nodes of cell i within the given tessellation in 
-// order, writing their indices to nodes.
+// order, writing their indices to nodes.  We rely here on two
+// assumptions:
+// 1.  cellFaces are given such that the faces are in counter-clockwise
+//     order around the cell. 
+// 2.  if cellFaces[j] > 0, the nodes of the face cellFaces[j] are 
+//     given in counter-clockwise orientation for cell i,
+//     otherwise the nodes of ~cellFaces[j] (the 1s complement) 
+//     are in *clockwise* order and need to be reversed.
 //-------------------------------------------------------------------
 template <typename RealType>
 void 
@@ -28,79 +36,13 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
               vector<int>& nodes)
 {
   const vector<int>& cellFaces = mesh.cells[i];
-
-  // Start with the first face, entering both nodes.
+  for (int j = 0; j != cellFaces.size(); ++j) 
   {
-    ASSERT(cellFaces[0] >= 0);
-    ASSERT(cellFaces[0] < mesh.faces.size());
-    const vector<unsigned>& faceNodes = mesh.faces[cellFaces[0]];
-    ASSERT(faceNodes.size() == 2);
-    nodes.push_back(faceNodes[0]);
-    nodes.push_back(faceNodes[1]);
+    int k = cellFaces[j];
+    nodes.push_back(k >= 0 ? mesh.faces[ k][0] :
+                             mesh.faces[~k][1]);
   }
-
-  // Proceed through the other faces till we're done.
-  set<int> facesUsed;
-  while (facesUsed.size() < cellFaces.size()-1)
-  {
-    int numFacesUsed = facesUsed.size();
-    for (int f = 1; f < cellFaces.size(); ++f)
-    {
-      if (facesUsed.find(f) == facesUsed.end())
-      {
-        const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
-
-        // Does it go on the back?
-        if (faceNodes[0] == nodes.back())
-        {
-          nodes.push_back(faceNodes[1]);
-          facesUsed.insert(f);
-        }
-        else if (faceNodes[1] == nodes.back())
-        {
-          nodes.push_back(faceNodes[0]);
-          facesUsed.insert(f);
-        }
-
-        // How about the front?
-        else if (faceNodes[0] == nodes.front())
-        {
-          nodes.insert(nodes.begin(), faceNodes[1]);
-          facesUsed.insert(f);
-        }
-        else if (faceNodes[1] == nodes.front())
-        {
-          nodes.insert(nodes.begin(), faceNodes[0]);
-          facesUsed.insert(f);
-        }
-      }
-    }
-
-    // If we're here and haven't processed any more 
-    // faces, we have a face remaining that doesn't 
-    // connect to the end of the chain. What about 
-    // the beginning?
-    if (numFacesUsed == facesUsed.size())
-    {
-      for (int f = 1; f < cellFaces.size(); ++f)
-      {
-        if (facesUsed.find(f) == facesUsed.end())
-        {
-          const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
-          if (faceNodes[0] == nodes.front())
-          {
-            nodes.push_back(faceNodes[0]);
-            facesUsed.insert(f);
-          }
-          else if (faceNodes[1] == nodes.front())
-          {
-            nodes.push_back(faceNodes[1]);
-            facesUsed.insert(f);
-          }
-        }
-      }
-    }
-  }
+  nodes.push_back(nodes.front());
 
 #ifndef NDEBUG
   // Make sure we don't have any garbage in our list of nodes.
@@ -263,10 +205,10 @@ write(const Tessellation<2, RealType>& mesh,
     // Gather the nodes from this cell in traversal order.
     vector<int> cellNodes;
     traverseNodes(mesh, i, cellNodes);
-cout << "cell " << i << ": ";
-for (int j = 0; j < cellNodes.size(); ++j)
-cout << cellNodes[j] << " ";
-cout << endl;
+// cout << "cell " << i << ": ";
+// for (int j = 0; j < cellNodes.size(); ++j)
+// cout << cellNodes[j] << " ";
+// cout << endl;
     // Insert the cell's node connectivity into the node list.
     nodeList.push_back(cellNodes.size());
     nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());

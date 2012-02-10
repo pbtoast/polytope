@@ -2,6 +2,7 @@
 #include "polytope.hh"
 #include <fstream>
 #include <set>
+#include <cstring>
 #include "silo.h"
 
 #ifdef HAVE_MPI
