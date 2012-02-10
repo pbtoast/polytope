@@ -16,7 +16,7 @@ find_program( silodiff_exe
     DOC "Silodiff program." )
 mark_as_advanced( silodiff_exe )
 
-# Intuit directories for Parmetis from ptest.
+# Intuit directories for silo from silodiff.
 if (silodiff_exe)
   string(REPLACE "/bin/silodiff" "/include" possible_inc_dir ${silodiff_exe})
   string(REPLACE "/bin/silodiff" "/lib" possible_lib_dir ${silodiff_exe})
