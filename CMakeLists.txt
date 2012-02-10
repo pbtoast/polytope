@@ -70,9 +70,11 @@ if (${HDF5_FOUND})
 #   FIXME: For now, we assume libsiloh5 lives with libhdf5.
 #    link_directories("${SILO_LIBRARY_DIRS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_SILO")
+    message("-- Found silo files ${SILO_INCLUDE_DIRS}")
   endif ()
 else ()
   set(SILO_FOUND FALSE)
+    message("-- Silo not found.  Skipping.")
 endif ()
 
 # Enable Triangle if triangle.h and triangle.c are found.

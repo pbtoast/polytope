@@ -56,7 +56,7 @@ struct Serializer<std::vector<T> > {
     unsigned n;
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
     value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[n], bufItr, endItr);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
   }
 };
 
