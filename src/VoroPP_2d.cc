@@ -119,7 +119,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     mesh.cells[icell].push_back(~iface);
     mesh.faceCells[iface].push_back(icell);
     ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
-    // cerr << iface << " " << mesh.faceCells[iface].size() << " " << mesh.faceCells[iface][0] << " " << mesh.faceCells[iface][1] << endl;
+//     cerr << iface << " " << mesh.faceCells[iface].size() << " " << mesh.faceCells[iface][0] << " " << mesh.faceCells[iface][1] << endl;
     ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == icell);
   }
 }
@@ -261,7 +261,7 @@ tessellate(const vector<RealType>& points,
 //           for (unsigned k = 0; k != hull.facets.size(); ++k) cerr << " " << hull.facets[k][0];
 //           cerr << endl;
 //         }
-        ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the reduces to the unique set.
+        ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the hull method reduces to the unique set.
         nv = hull.facets.size();
         hullVertices = vector<Point2<uint64_t> >();
         hullVertices.reserve(nv);
@@ -273,6 +273,10 @@ tessellate(const vector<RealType>& points,
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
         map<unsigned, unsigned> vertexMap = updateMeshVertices(hullVertices, vertexHash2ID, mesh, xmin, ymin, fconv);
+//         cerr << "Cell vertex mapping: " << endl;
+//         for (unsigned k = 0; k != nv; ++k) {
+//           cerr << "  --> " << hullVertices[k] << " " << vertexMap[k] << endl;
+//         }
 
         // Build the faces by walking the cell vertices counter-clockwise.
         for (k = 0; k != nv; ++k) {
@@ -280,9 +284,8 @@ tessellate(const vector<RealType>& points,
           j = vertexMap[(k + 1) % nv];
           ASSERT(i < mesh.nodes.size()/2);
           ASSERT(j < mesh.nodes.size()/2);
-
-          // If these vertices are distinct, add the face.
-          if (i != j) insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
+          ASSERT(i != j);
+          insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
         }
       }
     } while (loop.inc());

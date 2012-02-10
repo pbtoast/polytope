@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
 
     // Spew the mesh statistics.
     if (rank == 0) {
-      cout << "   num mesh nodes : " << ncells << " " << ncellsGlobal << endl;
-      cout << "   num mesh cells : " << nnodes << " " << nnodesGlobal << endl;
+      cout << "   num mesh cells : " << ncells << " " << ncellsGlobal << endl;
+      cout << "   num mesh nodes : " << nnodes << " " << nnodesGlobal << endl;
       cout << "   num mesh faces : " << nfaces << " " << nfacesGlobal << endl;
     }
 //     cout << "Node positions: " << endl;

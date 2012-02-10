@@ -161,7 +161,11 @@ computeDistributedTessellation(const vector<RealType>& points,
   if (numProcs > 1) {
 
     // Compute the convex hull of each domain and distribute them to all processes.
-    const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, 1.0e-14);
+    const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, 1.0e-12);
+//     cerr << "Local convex hull: " << endl;
+//     for (unsigned k = 0; k != localHull.points.size()/2; ++k) {
+//       cerr << "    " << localHull.points[2*k] << " " << localHull.points[2*k + 1] << endl;
+//     }
     vector<ConvexHull> domainHulls(numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
@@ -180,7 +184,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       }
     }
     ASSERT(domainHulls.size() == numProcs);
-    ASSERT(domainCellOffset.size() == numProcs);
+    ASSERT(domainCellOffset.size() == numProcs + 1);
 
     // Create a tessellation of the hull vertices for all domains.
     vector<RealType> hullGenerators;
@@ -189,6 +193,12 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
     ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
     Tessellation<Dimension, RealType> hullMesh;
+//     if (rank == 0) {
+//       cerr << "Preparing to generate hull mesh:" << endl;
+//       for (unsigned k = 0; k != hullGenerators.size()/2; ++k) {
+//         cerr << "    " << hullGenerators[2*k] << " " << hullGenerators[2*k + 1] << endl;
+//       }
+//     }
     this->tessellationWrapper(hullGenerators, hullMesh);
 
     // Find the set of domains we need to communicate with according to two criteria:
@@ -218,7 +228,6 @@ computeDistributedTessellation(const vector<RealType>& points,
         for (vector<unsigned>::const_iterator otherCellItr = hullMesh.faceCells[iface].begin();
              otherCellItr != hullMesh.faceCells[iface].end(); ++otherCellItr) {
           const unsigned jcell = *otherCellItr;
-          ASSERT(jcell < numProcs);
           if (jcell != icell) {
             const unsigned otherProc = bisectSearch(domainCellOffset, jcell);
             ASSERT(jcell >= domainCellOffset[otherProc] and
@@ -283,8 +292,10 @@ computeDistributedTessellation(const vector<RealType>& points,
       MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
       if (bufSize > 0) {
         vector<char>::const_iterator itr = buffer.begin();
-        deserialize(generators, itr, buffer.end());
+        vector<RealType> otherGenerators;
+        deserialize(otherGenerators, itr, buffer.end());
         ASSERT(itr == buffer.end());
+        copy(otherGenerators.begin(), otherGenerators.end(), back_inserter(generators));
       }
     }
 
@@ -304,6 +315,15 @@ computeDistributedTessellation(const vector<RealType>& points,
 
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
+
+//   // Blago!
+//   {
+//     vector<double> r2(ntotal, 1.0);
+//     map<string, double*> fields;
+//     fields["data"] = &r2[0];
+//     SiloWriter<2, RealType>::write(mesh, fields, "test_DistributedTessellator_Blago");
+//   }
+//   // Blago!
 
   // Now we need to remove the elements of the tessellation corresponding to
   // other domains generators, and renumber the resulting elements.
