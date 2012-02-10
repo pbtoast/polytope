@@ -34,14 +34,16 @@ class SiloWriter<2, RealType>
   public:
 
   //! Write an arbitrary polyhedral mesh and an associated set of 
-  //! cell-centered fields to a SILO file. 
+  //! cell-centered fields to a SILO file.
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
   static void write(const Tessellation<2, RealType>& mesh, 
                     const std::map<std::string, RealType*>& fields,
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
                     MPI_Comm comm = MPI_COMM_WORLD,
-                    int numFiles = 1,
+                    int numFiles = -1,
                     int mpiTag = 0);
 
   //! This version of write omits the cycle and time arguments.
@@ -49,7 +51,7 @@ class SiloWriter<2, RealType>
                     const std::map<std::string, RealType*>& fields,
                     const std::string& filePrefix,
                     MPI_Comm comm = MPI_COMM_WORLD,
-                    int numFiles = 1,
+                    int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, fields, filePrefix, -1, -FLT_MAX,
@@ -66,13 +68,15 @@ class SiloWriter<3, RealType>
 
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file. 
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
   static void write(const Tessellation<3, RealType>& mesh, 
                     const std::map<std::string, RealType*>& fields,
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
                     MPI_Comm comm = MPI_COMM_WORLD,
-                    int numFiles = 1,
+                    int numFiles = -1,
                     int mpiTag = 0);
 
   //! This version of write omits the cycle and time arguments.
@@ -80,7 +84,7 @@ class SiloWriter<3, RealType>
                     const std::map<std::string, RealType*>& fields,
                     const std::string& filePrefix,
                     MPI_Comm comm = MPI_COMM_WORLD,
-                    int numFiles = 1,
+                    int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, fields, filePrefix, -1, -FLT_MAX,

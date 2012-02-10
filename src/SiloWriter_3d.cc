@@ -83,13 +83,13 @@ traverseConvexHull(const vector<RealType>& points,
 #ifdef HAVE_MPI
 
 //-------------------------------------------------------------------
+void*
 PMPIO_createFile(const char* filename,
                  const char* dirname,
                  void* userData)
 {
   int driver = DB_HDF5;
-  DBfile* file = DBCreate(filename, 0, DB_LOCAL, prefix.c_str(), 
-                          driver);
+  DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   DBMkDir(file, dirname);
   DBSetDir(file, dirname);
   return (void*)file;
@@ -97,7 +97,7 @@ PMPIO_createFile(const char* filename,
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
-void* 
+void*
 PMPIO_openFile(const char* filename, 
                const char* dirname,
                PMPIO_iomode_t iomode, 
@@ -107,8 +107,7 @@ PMPIO_openFile(const char* filename,
   DBfile* file;
   if (iomode == PMPIO_WRITE)
   { 
-    file = DBCreate(filename, 0, DB_LOCAL, prefix.c_str(), 
-                    driver);
+    file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
     DBMkDir(file, dirname);
     DBSetDir(file, dirname);
   }
@@ -122,7 +121,7 @@ PMPIO_openFile(const char* filename,
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
-void*
+void
 PMPIO_closeFile(void* file,
                 void* userData)
 {
@@ -158,6 +157,8 @@ write(const Tessellation<3, RealType>& mesh,
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
+  if (numFiles == -1)
+    numFiles = nproc;
   ASSERT(numFiles <= nproc);
 
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
@@ -188,8 +189,7 @@ write(const Tessellation<3, RealType>& mesh,
     snprintf(filename, 1024, "%s.silo", prefix.c_str());
 
   int driver = DB_HDF5;
-  DBfile* file = DBCreate(filename, 0, DB_LOCAL, prefix.c_str(), 
-                          driver);
+  DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   DBSetDir(file, "/");
 #endif
 
@@ -419,10 +419,11 @@ write(const Tessellation<3, RealType>& mesh,
 
 #ifdef HAVE_MPI
   PMPIO_HandOffBaton(baton, (void*)file);
-  PMPIO_finish(baton);
+  PMPIO_Finish(baton);
 
-  // Write the multi-block objects to the file.
-  if (rankInGroup == 0)
+  // Write the multi-block objects to the file if needed.
+  int numChunks = nproc / numFiles;
+  if ((numChunks > 1) and (rankInGroup == 0))
   {
     vector<char*> meshNames(numFiles);
     vector<int> meshTypes(numFiles);
