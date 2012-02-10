@@ -60,6 +60,8 @@ if (${HDF5_FOUND})
 
   # Get rid of 'debug' and 'optimized' detritis.
   list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
+  list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
+  message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
 endif ()
 
 # If HDF5 is here, look for Silo.
