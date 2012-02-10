@@ -20,7 +20,7 @@ mark_as_advanced( silodiff_exe )
 if (silodiff_exe)
   string(REPLACE "/bin/silodiff" "/include" possible_inc_dir ${silodiff_exe})
   string(REPLACE "/bin/silodiff" "/lib" possible_lib_dir ${silodiff_exe})
-  message("-- found ptest")
+  message("-- found silodiff at ${silodiff_exe}")
 endif ()
 
 # Try to find the Silo header file.
