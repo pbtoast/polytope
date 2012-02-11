@@ -1,9 +1,9 @@
-//---------------------------------Spheral++----------------------------------//
+//------------------------------------------------------------------------
 // TriangleTessellator
 // 
 // An implemenation of the Tessellator interface that uses the Triangle
 // library by Jonathan Shewchuk.
-//----------------------------------------------------------------------------//
+//------------------------------------------------------------------------
 #ifndef __Polytope_TriangleTessellator__
 #define __Polytope_TriangleTessellator__
 

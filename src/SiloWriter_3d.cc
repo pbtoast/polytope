@@ -3,6 +3,8 @@
 #include <fstream>
 #include <set>
 #include <cstring>
+#include <sys/stat.h>
+#include <dirent.h>
 #include "silo.h"
 
 #ifdef HAVE_MPI
@@ -140,6 +142,7 @@ SiloWriter<3, RealType>::
 write(const Tessellation<3, RealType>& mesh, 
       const map<string, RealType*>& fields,
       const string& filePrefix,
+      const string& directory,
       int cycle,
       RealType time,
       MPI_Comm comm,
@@ -162,6 +165,32 @@ write(const Tessellation<3, RealType>& mesh,
     numFiles = nproc;
   ASSERT(numFiles <= nproc);
 
+  // We put the entire data set into a directory named after the 
+  // prefix, and every process gets its own subdirectory therein.
+
+  // Create the master directory if we need to.
+  string masterDirName = directory;
+  if (masterDirName.empty())
+  {
+    char dirname[1024];
+    snprintf(dirname, 1024, "%s-%d", filePrefix.c_str(), nproc);
+    masterDirName = dirname;
+  }
+  if (rank == 0)
+  {
+    DIR* masterDir = opendir(masterDirName.c_str());
+    if (masterDir == 0)
+      mkdir((char*)masterDirName.c_str(), S_IRWXU | S_IRWXG);
+    else
+      closedir(masterDir);
+    MPI_Barrier(comm);
+  }
+  else
+  {
+    MPI_Barrier(comm);
+  }
+
+  // Initialize poor man's I/O and figure out group ranks.
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
                                     &PMPIO_createFile, 
                                     &PMPIO_openFile, 
@@ -169,25 +198,42 @@ write(const Tessellation<3, RealType>& mesh,
                                     0);
   int groupRank = PMPIO_GroupRank(baton, rank);
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
-  if (cycle >= 0)
+
+  // Create a subdirectory for each group.
+  char groupdirname[1024];
+  snprintf(groupdirname, 1024, "%s/%d", masterDirName.c_str(), groupRank);
+  if (rankInGroup == 0)
   {
-    snprintf(filename, 1024, "%s-chunk-%d-%d.silo", prefix.c_str(), 
-             groupRank, cycle);
+    DIR* groupDir = opendir(groupdirname);
+    if (groupDir == 0)
+      mkdir((char*)groupdirname, S_IRWXU | S_IRWXG);
+    else
+      closedir(groupDir);
+    MPI_Barrier(comm);
   }
   else
   {
-    snprintf(filename, 1024, "%s-chunk-%d.silo", prefix.c_str(),
-             groupRank);
+    MPI_Barrier(comm);
   }
+
+  // Determine a file name.
+  if (cycle >= 0)
+    snprintf(filename, 1024, "%s/%s-d.silo", groupdirname, prefix.c_str(), cycle);
+  else
+    snprintf(filename, 1024, "%s/%s.silo", groupdirname, prefix.c_str());
 
   char dirname[1024];
   snprintf(dirname, 1024, "domain_%d", rankInGroup);
   DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename, dirname);
 #else
+  string dirname = directory;
+  if (dirname.empty())
+    dirname = ".";
+
   if (cycle >= 0)
-    snprintf(filename, 1024, "%s-%d.silo", prefix.c_str(), cycle);
+    snprintf(filename, 1024, "%s/%s-%d.silo", dirname.c_str(), prefix.c_str(), cycle);
   else
-    snprintf(filename, 1024, "%s.silo", prefix.c_str());
+    snprintf(filename, 1024, "%s/%s.silo", dirname.c_str(), prefix.c_str());
 
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
@@ -419,22 +465,17 @@ write(const Tessellation<3, RealType>& mesh,
   DBFreeOptlist(optlist);
 
 #ifdef HAVE_MPI
-  PMPIO_HandOffBaton(baton, (void*)file);
-  PMPIO_Finish(baton);
 
   // Write the multi-block objects to the file if needed.
-  int numChunks = nproc / numFiles;
-  if ((numChunks > 1) and (rankInGroup == 0))
+  if (rankInGroup == 0)
   {
-    vector<char*> meshNames(numFiles);
-    vector<int> meshTypes(numFiles);
-    for (int i = 0; i < numFiles; ++i)
+    int numChunks = nproc / numFiles;
+    vector<char*> meshNames(numChunks);
+    vector<int> meshTypes(numChunks);
+    for (int i = 0; i < numChunks; ++i)
     {
       char meshName[1024];
-      if (cycle >= 0)
-        snprintf(meshName, 1024, "%s-chunk-%d-%d.silo", prefix.c_str(), i, cycle);
-      else
-        snprintf(meshName, 1024, "%s-chunk-%d.silo", prefix.c_str(), i);
+      snprintf(meshName, 1024, "domain_%d/mesh", i);
       meshNames[i] = strdup(meshName);
       meshTypes[i] = DB_UCDMESH;
     }
@@ -448,7 +489,58 @@ write(const Tessellation<3, RealType>& mesh,
 
     DBPutMultimesh(file, "mesh", numChunks, &meshNames[0], 
                    &meshTypes[0], optlist);
+
+    // Clean up.
     DBFreeOptlist(optlist);
+    for (int i = 0; i < numChunks; ++i)
+      free(meshNames[i]);
+  }
+
+  // Write the file.
+  PMPIO_HandOffBaton(baton, (void*)file);
+  PMPIO_Finish(baton);
+
+  // Finally, write the uber-master file.
+  if (rank == 0)
+  {
+    char masterFileName[1024];
+    if (cycle >= 0)
+      snprintf(masterFileName, 1024, "%s-%d.silo", prefix.c_str(), nproc, prefix.c_str(), cycle);
+    else
+      snprintf(masterFileName, 1024, "%s.silo", prefix.c_str(), nproc, prefix.c_str());
+    int driver = DB_HDF5;
+    DBfile* file = DBCreate(masterFileName, 0, DB_LOCAL, 0, driver);
+    DBSetDir(file, "/");
+
+    vector<char*> meshNames(numFiles);
+    vector<int> meshTypes(numFiles);
+    for (int i = 0; i < numFiles; ++i)
+    {
+      char meshName[1024];
+      if (cycle >= 0)
+        snprintf(meshName, 1024, "%d/%s-%d.silo:mesh", i, prefix.c_str(), cycle);
+      else
+        snprintf(meshName, 1024, "%d/%s.silo:mesh", i, prefix.c_str(), cycle);
+      meshNames[i] = strdup(meshName);
+      meshTypes[i] = DB_UCDMESH;
+    }
+
+    DBoptlist* optlist = DBMakeOptlist(10);
+    double dtime = static_cast<double>(time);
+    if (cycle >= 0)
+      DBAddOption(optlist, DBOPT_CYCLE, &cycle);
+    if (dtime != -FLT_MAX)
+      DBAddOption(optlist, DBOPT_DTIME, &dtime);
+
+    // Write the multimesh and close the file.
+    DBPutMultimesh(file, "mesh", numFiles, &meshNames[0], 
+                   &meshTypes[0], optlist);
+    DBClose(file);
+
+    // Clean up.
+    DBFreeOptlist(optlist);
+    for (int i = 0; i < numFiles; ++i)
+      free(meshNames[i]);
   }
 #else
   // Write the file.
