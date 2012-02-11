@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdlib.h>
 #include <limits>
+#include <sstream>
 #include "mpi.h"
 
 #include "polytope.hh"
@@ -144,6 +145,17 @@ int main(int argc, char** argv) {
 //     CHECK(mesh.cells.size() == nx*nx);
 //     for (unsigned i = 0; i != nx*nx; ++i) CHECK(mesh.cells[i].size() == 4);
 //     CHECK(mesh.faces.size() == 2*nx*(nx + 1));
+
+    // Blago!
+    {
+      vector<double> r2(nx*nx, 1.0);
+      map<string, double*> fields;
+      fields["data"] = &r2[0];
+      ostringstream os;
+      os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+      polytope::SiloWriter<2, double>::write(mesh, fields, os.str());
+    }
+    // Blago!
   }
 
   cout << "PASS" << endl;

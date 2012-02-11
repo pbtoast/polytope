@@ -151,6 +151,10 @@ convexHull_2d(const std::vector<RealType>& points,
            zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
     result[k++] = i;
   }
+  if (!(k >= 4)) {
+    std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
+    for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
+  }
   ASSERT(k >= 4);
   ASSERT(result.front() == result.back());
 
