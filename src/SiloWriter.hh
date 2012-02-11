@@ -33,7 +33,7 @@ class SiloWriter<2, RealType>
 {
   public:
 
-  //! Write an arbitrary polyhedral mesh and an associated set of 
+  //! Write an arbitrary polygonal mesh and an associated set of 
   //! cell-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
@@ -47,7 +47,7 @@ class SiloWriter<2, RealType>
                     int numFiles = -1,
                     int mpiTag = 0);
 
-  //! Write an arbitrary polyhedral mesh and an associated set of 
+  //! Write an arbitrary polygonal mesh and an associated set of 
   //! cell-centered fields to a SILO file. This version generates a 
   //! directory name automatically. For parallel runs, the directory 
   //! name is filePrefix-nproc. For serial runs, the directory is 
