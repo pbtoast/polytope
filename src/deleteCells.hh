@@ -30,7 +30,6 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
   const unsigned nfaces0 = mesh.faces.size();
   const unsigned nnodes0 = mesh.nodes.size()/Dimension;
   ASSERT(cellMask.size() == ncells0);
-  ASSERT(ncells0 == 0 or *min_element(cellMask.begin(), cellMask.end()) == 0);
   ASSERT(ncells0 == 0 or *max_element(cellMask.begin(), cellMask.end()) == 1);
 
   // Create a masks for the nodes and faces.
