@@ -71,7 +71,9 @@ struct FuzzyPoint2LessThan {
 template<typename RealType>
 int zcross_sign(const Point2<RealType>& p1, const Point2<RealType>& p2, const Point2<RealType>& p3) {
 //   double scale = 1.0/max(RealType(1), max(p1.x, max(p1.y, max(p2.x, max(p2.y, max(p3.x, p3.y))))));
-  double ztest = double(p2.x - p1.x)*double(p3.y - p1.y) - double(p2.y - p1.y)*double(p3.x - p1.x);
+  const double ztest = 
+    (double(p2.x) - double(p1.x))*(double(p3.y) - double(p1.y)) -
+    (double(p2.y) - double(p1.y))*(double(p3.x) - double(p1.x));
   return (ztest < 0.0 ? -1 :
           ztest > 0.0 ?  1 :
                          0);
