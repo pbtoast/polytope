@@ -11,7 +11,7 @@ namespace polytope {
 //! \class ReducedPLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
 //! The reduced PLC is a PLC which
-//!  a) contains it's own generating points,
+//!  a) contains its own generating points,
 //!  b) is reduced to just the generating points that are used in the PLC.
 template<int Dimension, typename RealType>
 class ReducedPLC: public PLC<Dimension, RealType> {

@@ -1,6 +1,6 @@
 # Include Silo stuff if we've found it.
 if (SILO_FOUND)
-  set(IO_SOURCES SiloWriter_2d.cc;SiloWriter_3d.cc)
+  set(IO_SOURCES SiloWriter_2d.cc SiloWriter_3d.cc)
 endif()
 
 # By default, we include the Voro tessellator(s).

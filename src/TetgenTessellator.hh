@@ -1,9 +1,9 @@
-//---------------------------------Spheral++----------------------------------//
+//------------------------------------------------------------------------
 // TetgenTessellator
 // 
 // An implemenation of the Tessellator interface that uses the Tetgen
 // library by Hang Si.
-//----------------------------------------------------------------------------//
+//------------------------------------------------------------------------
 #ifndef __Polytope_TetgenTessellator__
 #define __Polytope_TetgenTessellator__
 
