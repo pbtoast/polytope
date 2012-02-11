@@ -314,19 +314,32 @@ write(const Tessellation<2, RealType>& mesh,
 
 #ifdef HAVE_MPI
   // Write the multi-block objects to the file if needed.
+  int numChunks = nproc / numFiles;
   if (rankInGroup == 0)
   {
-    int numChunks = nproc / numFiles;
     vector<char*> meshNames(numChunks);
-    vector<int> meshTypes(numChunks);
+    vector<int> meshTypes(numChunks, DB_UCDMESH);
+    vector<vector<char*> > varNames(fields.size());
+    vector<int> varTypes(numChunks, DB_UCDVAR);
     for (int i = 0; i < numChunks; ++i)
     {
+      // Mesh.
       char meshName[1024];
       snprintf(meshName, 1024, "domain_%d/mesh", i);
       meshNames[i] = strdup(meshName);
-      meshTypes[i] = DB_UCDMESH;
+
+      // Field data.
+      int fieldIndex = 0;
+      for (typename map<string, RealType*>::const_iterator iter = fields.begin();
+           iter != fields.end(); ++iter, ++fieldIndex)
+      {
+        char varName[1024];
+        snprintf(varName, 1024, "domain_%d/%s", i, iter->first.c_str());
+        varNames[fieldIndex].push_back(strdup(varName));
+      }
     }
 
+    // Stick cycle and time in there if needed.
     DBoptlist* optlist = DBMakeOptlist(10);
     double dtime = static_cast<double>(time);
     if (cycle >= 0)
@@ -334,13 +347,25 @@ write(const Tessellation<2, RealType>& mesh,
     if (dtime != -FLT_MAX)
       DBAddOption(optlist, DBOPT_DTIME, &dtime);
 
+    // Write the mesh and variable data.
+    DBSetDir(file, "/");
     DBPutMultimesh(file, "mesh", numChunks, &meshNames[0], 
                    &meshTypes[0], optlist);
+    int fieldIndex = 0;
+    for (typename map<string, RealType*>::const_iterator iter = fields.begin();
+         iter != fields.end(); ++iter, ++fieldIndex)
+    {
+      DBPutMultivar(file, iter->first.c_str(), numChunks, 
+                    &varNames[fieldIndex][0], &varTypes[0], optlist);
+    }
 
     // Clean up.
     DBFreeOptlist(optlist);
     for (int i = 0; i < numChunks; ++i)
       free(meshNames[i]);
+    for (int f = 0; f < varNames.size(); ++f)
+      for (int i = 0; i < numChunks; ++i)
+        free(varNames[f][i]);
   }
 
   // Write the file.
@@ -356,19 +381,37 @@ write(const Tessellation<2, RealType>& mesh,
     else
       snprintf(masterFileName, 1024, "%s-%d/%s.silo", prefix.c_str(), nproc, prefix.c_str());
     int driver = DB_HDF5;
-    DBfile* file = DBCreate(masterFileName, 0, DB_LOCAL, 0, driver);
+    DBfile* file = DBCreate(masterFileName, DB_CLOBBER, DB_LOCAL, "Master file", driver);
 
-    vector<char*> meshNames(numFiles);
-    vector<int> meshTypes(numFiles);
+    vector<char*> meshNames(numFiles*numChunks);
+    vector<int> meshTypes(numFiles*numChunks, DB_UCDMESH);
+    vector<vector<char*> > varNames(fields.size());
+    vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
     for (int i = 0; i < numFiles; ++i)
     {
-      char meshName[1024];
-      if (cycle >= 0)
-        snprintf(meshName, 1024, "%d/%s-%d.silo:mesh", i, prefix.c_str(), cycle);
-      else
-        snprintf(meshName, 1024, "%d/%s.silo:mesh", i, prefix.c_str(), cycle);
-      meshNames[i] = strdup(meshName);
-      meshTypes[i] = DB_UCDMESH;
+      for (int c = 0; c < numChunks; ++c)
+      {
+        // Mesh.
+        char meshName[1024];
+        if (cycle >= 0)
+          snprintf(meshName, 1024, "%d/%s-%d.silo:/domain_%d/mesh", i, prefix.c_str(), cycle, c);
+        else
+          snprintf(meshName, 1024, "%d/%s.silo:/domain_%d/mesh", i, prefix.c_str(), c);
+        meshNames[i*numChunks+c] = strdup(meshName);
+
+        // Field data.
+        int fieldIndex = 0;
+        for (typename map<string, RealType*>::const_iterator iter = fields.begin();
+             iter != fields.end(); ++iter, ++fieldIndex)
+        {
+          char varName[1024];
+          if (cycle >= 0)
+            snprintf(varName, 1024, "%d/%s-%d.silo:/domain_%d/%s", i, prefix.c_str(), cycle, c, iter->first.c_str());
+          else
+            snprintf(varName, 1024, "%d/%s.silo:/domain_%d/%s", i, prefix.c_str(), c, iter->first.c_str());
+          varNames[fieldIndex].push_back(strdup(varName));
+        }
+      }
     }
 
     DBoptlist* optlist = DBMakeOptlist(10);
@@ -378,15 +421,25 @@ write(const Tessellation<2, RealType>& mesh,
     if (dtime != -FLT_MAX)
       DBAddOption(optlist, DBOPT_DTIME, &dtime);
 
-    // Write the multimesh and close the file.
-    DBPutMultimesh(file, "mesh", numFiles, &meshNames[0], 
+    // Write the multimesh and variable data, and close the file.
+    DBPutMultimesh(file, "mesh", numFiles*numChunks, &meshNames[0], 
                    &meshTypes[0], optlist);
+    int fieldIndex = 0;
+    for (typename map<string, RealType*>::const_iterator iter = fields.begin();
+         iter != fields.end(); ++iter, ++fieldIndex)
+    {
+      DBPutMultivar(file, iter->first.c_str(), numFiles*numChunks, 
+                    &(varNames[fieldIndex][0]), &varTypes[0], optlist);
+    }
     DBClose(file);
 
     // Clean up.
     DBFreeOptlist(optlist);
-    for (int i = 0; i < numFiles; ++i)
+    for (int i = 0; i < numFiles*numChunks; ++i)
       free(meshNames[i]);
+    for (int f = 0; f < varNames.size(); ++f)
+      for (int i = 0; i < numFiles*numChunks; ++i)
+        free(varNames[f][i]);
   }
 #else
   // Write the file.
