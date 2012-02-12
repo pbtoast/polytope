@@ -35,10 +35,15 @@ class SiloReader<2, RealType>
 
   //! Read an arbitrary polygonal mesh and an associated set of 
   //! cell-centered fields to a SILO file in the given directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
                    int cycle,
@@ -52,10 +57,16 @@ class SiloReader<2, RealType>
   //! directory name automatically. For parallel runs, the directory 
   //! name is filePrefix-nproc. For serial runs, the directory is 
   //! the current working directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
+  //!                 is set to -1, one file will be written for each process.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    int cycle,
                    RealType& time,
@@ -68,7 +79,7 @@ class SiloReader<2, RealType>
 
   //! This version of read omits the cycle and time arguments.
   static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
                    MPI_Comm comm = MPI_COMM_WORLD,
@@ -83,7 +94,7 @@ class SiloReader<2, RealType>
   //! This version of read omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
   static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    MPI_Comm comm = MPI_COMM_WORLD,
                    int numFiles = -1,
@@ -104,10 +115,15 @@ class SiloReader<3, RealType>
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file in the given directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void read(Tessellation<3, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
                    int cycle,
@@ -121,10 +137,15 @@ class SiloReader<3, RealType>
   //! directory name automatically. For parallel runs, the directory 
   //! name is filePrefix-nproc. For serial runs, the directory is 
   //! the current working directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void read(Tessellation<3, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    int cycle,
                    RealType& time,
@@ -137,7 +158,7 @@ class SiloReader<3, RealType>
 
   //! This version of read omits the cycle and time arguments.
   static void read(Tessellation<3, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
                    MPI_Comm comm = MPI_COMM_WORLD,
@@ -152,7 +173,7 @@ class SiloReader<3, RealType>
   //! This version of read omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
   static void read(Tessellation<3, RealType>& mesh, 
-                   std::map<std::string, RealType*>& fields,
+                   std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    MPI_Comm comm = MPI_COMM_WORLD,
                    int numFiles = -1,
