@@ -148,9 +148,9 @@ int main(int argc, char** argv) {
 
     // Blago!
     {
-      vector<double> r2(nx*nx, 1.0);
+      vector<double> r2(nx*nx, rank);
       map<string, double*> fields;
-      fields["data"] = &r2[0];
+      fields["domain"] = &r2[0];
       ostringstream os;
       os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
       polytope::SiloWriter<2, double>::write(mesh, fields, os.str());
