@@ -77,7 +77,7 @@ template <typename RealType>
 void 
 SiloReader<2, RealType>::
 read(Tessellation<2, RealType>& mesh, 
-     map<string, RealType*>& fields,
+     map<string, vector<RealType> >& fields,
      const string& filePrefix,
      const string& directory,
      int cycle,
@@ -191,20 +191,110 @@ read(Tessellation<2, RealType>& mesh,
       mesh.faces[f][n] = dbmesh->faces->nodelist[noffset];
   }
 
-  // Reconstruct the "zones" (cells) in terms of the faces.
+  // Reconstruct the cell-face connectivity.
   mesh.cells.resize(dbmesh->zones->nzones);
-  // FIXME
-  DBFreeUcdmesh(dbmesh);
-  
-  // Retrieve the fields.
-  DBtoc* contents = DBGetToc(file);
-  for (int f = 0; f < contents->nucdvar; ++f)
+  DBcompoundarray* conn = DBGetCompoundarray(file, "connectivity");
+  if (conn == 0)
   {
-    string varname = contents->ucdvar_names[f];
-    DBucdvar* dbvar = DBGetUcdvar(file, varname.c_str());
-    fields[varname] = new RealType[dbvar->nels];
+    DBClose(file);
+    char err[1024];
+    snprintf(err, 1024, "Could not find cell-face connectivity in file %s.", filename);
+    error(err);
+  }
+  // First element is the number of faces in each zone.
+  // Second element is the list of face indices in each zone.
+  // Third element is a pair of cells for each face.
+  if ((conn->nelems != 3) or 
+      (conn->elemlengths[0] != dbmesh->zones->nzones) or 
+      (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
+  {
+    DBClose(file);
+    char err[1024];
+    snprintf(err, 1024, "Found invalid cell-face connectivity in file %s.", filename);
+    error(err);
+  }
+  int* connData = (int*)conn->values;
+  int foffset = dbmesh->zones->nzones;
+  for (int c = 0; c < dbmesh->zones->nzones; ++c)
+  {
+    int nfaces = connData[c];
+    mesh.cells[c].resize(nfaces);
+    copy(connData + foffset, connData + foffset + nfaces, mesh.cells[c].begin());
+    foffset += nfaces;
+  }
+  mesh.faceCells.resize(mesh.faces.size());
+  for (size_t f = 0; f < mesh.faceCells.size(); ++f)
+  {
+    mesh.faceCells[f].resize(2);
+    mesh.faceCells[f][0] = connData[foffset];
+    mesh.faceCells[f][1] = connData[foffset+1];
+    foffset += 2;
+  }
+  DBFreeUcdmesh(dbmesh);
+  DBFreeCompoundarray(conn);
+  
+  // Check for convex hull data.
+  // First element is the number of facets.
+  // Second element is the array of numbers of nodes per facet.
+  // Third element is the array of node indices for the facets.
+  DBcompoundarray* hull = DBGetCompoundarray(file, "convexhull");
+  if (hull != 0)
+  {
+    if ((hull->nelems != 3) or (hull->elemlengths[0] != 1))
+    {
+      DBClose(file);
+      char err[1024];
+      snprintf(err, 1024, "Found invalid convex hull data in file %s.", filename);
+      error(err);
+    }
+    int* hullData = (int*)conn->values;
+    int nfacets = hullData[0];
+    mesh.convexHull.facets.resize(nfacets);
+    int foffset = 1;
+    for (int f = 0; f < nfacets; ++f, ++foffset)
+    {
+      int nnodes = hullData[foffset];
+      mesh.convexHull.facets[f].resize(nnodes);
+    }
+    for (int f = 0; f < nfacets; ++f, ++foffset)
+    {
+      for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+        mesh.convexHull.facets[f][n] = hullData[foffset];
+    }
+    DBFreeCompoundarray(hull);
+  }
+
+  // FIXME: Check for hole data?
+
+  // Make a list of the desired fields.
+  vector<string> fieldNames;
+  if (fields.empty())
+  {
+    DBtoc* contents = DBGetToc(file);
+    for (int f = 0; f < contents->nucdvar; ++f)
+      fieldNames.push_back(string(contents->ucdvar_names[f]));
+  }
+  else
+  {
+    for (typename map<string, vector<RealType> >::const_iterator iter = fields.begin();
+         iter != fields.end(); ++iter)
+    fieldNames.push_back(iter->first);
+  }
+
+  // Retrieve the fields.
+  for (int f = 0; f < fieldNames.size(); ++f)
+  {
+    DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
+    if (dbvar == 0)
+    {
+      DBClose(file);
+      char err[1024];
+      snprintf(err, 1024, "Could not find field %s in file %s.", fieldNames[f].c_str(), filename);
+      error(err);
+    }
+    fields[fieldNames[f]].resize(dbvar->nels);
     copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
-         fields[varname]);
+         &(fields[fieldNames[f]][0]));
 
     // Clean up.
     DBFreeUcdvar(dbvar);
