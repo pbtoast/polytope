@@ -8,6 +8,10 @@
 #ifndef __polytope_convexHull_3d__
 #define __polytope_convexHull_3d__
 
+#include <set>
+
+#include "polytope.hh"
+
 namespace polytope {
 
 namespace convexHull_helpers {
@@ -28,16 +32,18 @@ template<typename CoordType>
 struct Point {
   CoordType x, y, z;
   Point *prev, *next;
+  size_t index;
 
   // These static members need to be initialized in a cc file.
   static CoordType INF;
   static Point     nil;
   static Point*    NIL;
 
-  Point(): x(0), y(0), z(0), prev(0), next(0) {}
+  Point(): x(0), y(0), z(0), prev(0), next(0), index(0) {}
   Point(const CoordType xi, const CoordType yi, const CoordType zi,
-        Point* previ, Point* nexti):
-    x(xi), y(yi), z(zi), prev(previ), next(nexti) {}
+        Point* previ, Point* nexti,
+        size_t i):
+    x(xi), y(yi), z(zi), prev(previ), next(nexti), index(i) {}
 
   void act() {
     if (prev->next != this) {
@@ -47,6 +53,28 @@ struct Point {
     }
   }
   
+};
+
+// It's nice being able to print these things.
+template<typename CoordType>
+std::ostream&
+operator<<(std::ostream& os, const Point<CoordType>& p) {
+  os << "(" << p.x << " " << p.y << " " << p.z << ")";
+  return os;
+}
+
+//------------------------------------------------------------------------------
+// A fuzzy comparison operator for Point.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+struct FuzzyPointLessThan {
+  CoordType fuzz;
+  FuzzyPointLessThan(const CoordType ifuzz = 1): fuzz(ifuzz) {}
+  bool operator()(const Point<CoordType>& p1, const Point<CoordType>& p2) {
+    return (int(p2.x) - int(p1.x) > fuzz ? true :
+            int(p2.y) - int(p1.y) > fuzz ? true : 
+            int(p2.z) - int(p1.z) > fuzz ? true : false);
+  }
 };
 
 template<typename CoordType>
@@ -144,6 +172,69 @@ void lowerHull(Point<CoordType> *list,
 }
 
 }
+
+//------------------------------------------------------------------------------
+// The 3D convex hull itself.  This is the one users should call -- it forwards
+// all work to the internal lowerHull method.
+//------------------------------------------------------------------------------
+template<typename RealType>
+PLC<3, RealType>
+convexHull_3d(const std::vector<RealType>& points,
+              const RealType* low,
+              const RealType& dx) {
+  typedef int64_t CoordHash;
+  typedef convexHull_helpers::Point<CoordHash> Point;
+
+  // Pre-conditions.
+  ASSERT(points.size() % 3 == 0);
+  const unsigned n = points.size() / 3;
+
+  unsigned i;
+
+  const RealType& xmin = low[0];
+  const RealType& ymin = low[1];
+  const RealType& zmin = low[2];
+
+  // Convert the input coordinates to unique integer point types.  Simultaneously we 
+  // reduce to the unique set of 
+  typedef std::set<Point, convexHull_helpers::FuzzyPointLessThan<CoordHash> > Set;
+  Set pointSet;
+  for (i = 0; i != n; ++i) {
+    pointSet.insert(Point(CoordHash((points[3*i]     - xmin)/dx + 0.5),
+                          CoordHash((points[3*i + 1] - ymin)/dx + 0.5),
+                          CoordHash((points[3*i + 2] - zmin)/dx + 0.5), 
+                          0, 0,
+                          i));
+  }
+  ASSERT(pointSet.size() <= n);
+
+  // Extract the unique set of points to a vector.
+  std::vector<Point> uniquePoints(pointSet.begin(), pointSet.end());
+  ASSERT(uniquePoints.size() == pointSet.size());
+
+  // Get the lower hull.
+  const unsigned nunique = uniquePoints.size();
+  Point* P = &uniquePoints.front();
+  Point* list = convexHull_helpers::sort(P, nunique);
+  Point **A = new Point*[2*nunique], **B = new Point*[2*nunique];
+  convexHull_helpers::lowerHull(list, nunique, A, B);
+
+  // Read out the data to the PLC and we're done.
+  PLC<3, RealType> plc;
+  unsigned i1, i2, i3;
+  for (i = 0; A[i] != Point::NIL; A[i++]->act()) {
+    i1 = A[i]->prev->index;
+    i2 = A[i]->index;
+    i3 = A[i]->next->index;
+    plc.facets.push_back(std::vector<int>());
+    plc.facets.back().push_back(i1);
+    plc.facets.back().push_back(i2);
+    plc.facets.back().push_back(i3);
+    std::cerr << "  -----> " << i1 << " " << i2 << " " << i3 << std::endl;
+  }
+  return plc;
+}
+
 }
 
 #endif
