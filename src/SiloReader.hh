@@ -23,7 +23,8 @@ namespace Silo
 
 // Helper function for finding available cycles.
 std::vector<int> findAvailableCycles(const std::string& prefix,
-                                     const std::string& directory);
+                                     const std::string& directory,
+                                     MPI_Comm comm);
 
 }
 
@@ -46,9 +47,10 @@ class SiloReader<2, RealType>
   //! with the given prefix, in the given directory. If the directory is 
   //! omitted, its name is generated automatically from the prefix.
   static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "")
+                                          const std::string& directory = "",
+                                          MPI_Comm comm = MPI_COMM_WORLD)
   {
-    return Silo::findAvailableCycles(filePrefix, directory);
+    return Silo::findAvailableCycles(filePrefix, directory, comm);
   }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
@@ -135,9 +137,10 @@ class SiloReader<3, RealType>
   //! with the given prefix, in the given directory. If the directory is 
   //! omitted, its name is generated automatically from the prefix.
   static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "")
+                                          const std::string& directory = "",
+                                          MPI_Comm comm = MPI_COMM_WORLD)
   {
-    return Silo::findAvailableCycles(filePrefix, directory);
+    return Silo::findAvailableCycles(filePrefix, directory, comm);
   }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
