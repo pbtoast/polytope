@@ -308,6 +308,69 @@ read(Tessellation<2, RealType>& mesh,
 // Explicit instantiation.
 template class SiloReader<2, double>;
 
+namespace Silo
+{
+
+//-------------------------------------------------------------------
+// Helper function definition
+//-------------------------------------------------------------------
+vector<int> findAvailableCycles(const string& prefix,
+                                const string& directory,
+                                MPI_Comm comm)
+{
+#ifdef HAVE_MPI
+  int nproc = 1, rank = 0;
+  MPI_Comm_size(comm, &nproc);
+#endif
+
+  // If the directory is not given, infer it from the prefix.
+  string dir = directory;
+  if (dir.empty())
+  {
+#ifdef HAVE_MPI
+    char dirname[1024];
+    snprintf(dirname, 1024, "%s-%d", prefix.c_str(), nproc);
+    dir = dirname;
+#else
+    dir = ".";
+#endif
+  }
+
+  // Now find files that match the prefix in the directory.
+  vector<int> cycles;
+  DIR* d = opendir(dir.c_str());
+  if (d == 0)
+  {
+    char err[1024];
+    snprintf(err, 1024, "Could not open the directory %s", dir.c_str());
+    error(err);
+  }
+  dirent* entry;
+  while ((entry = readdir(d)) != 0)
+  {
+    char path[1024];
+    snprintf(path, 1024, "%s/%s", dir.c_str(), entry->d_name);
+    if (entry->d_type != DT_DIR)
+    {
+      if ((strstr(path, prefix.c_str()) != 0) and 
+          (strstr(path, ".silo") != 0))
+      {
+        // Pull the cycle number out of the path.
+        string p = string(p);
+        int suffix = p.find(".silo");
+        int dash = p.rfind(suffix);
+        int cycle = atoi(p.substr(dash+1, suffix-dash-1).c_str());
+        cycles.push_back(cycle);
+      }
+    }
+  }
+
+  return cycles;
+}
+//-------------------------------------------------------------------
+
+}
+
 } // end namespace
 
 #endif
