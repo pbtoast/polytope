@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     cerr << "Facet " << k << " : ";
     for (unsigned j = 0; j != hull.facets[k].size(); ++j) cerr << " " << hull.facets[k][j];
     cerr << " : ";
-    for (unsigned j = 0; j != hull.facets[k].size(); ++j) cerr << " " << points[hull.facets[k][j]];
+    for (unsigned j = 0; j != hull.facets[k].size(); ++j) cerr << " (" << points[3*hull.facets[k][j]] << " " << points[3*hull.facets[k][j] + 1] << " " << points[3*hull.facets[k][j] + 2] << ")";
     cerr << endl;
   }
 
