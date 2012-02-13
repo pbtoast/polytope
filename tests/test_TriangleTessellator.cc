@@ -277,16 +277,28 @@ testBounded()
     generators.push_back(y);
   }
 
-  // Create a bounding box for the square.
+  // Create a bounding box for the square and add corresponding generators.
   double low[2], high[2];
   low[0] = low[1] = -0.55*L;
   high[0] = high[1] = 0.55*L;
+  generators.push_back(low[0]); generators.push_back(low[1]);
+  generators.push_back(low[0]); generators.push_back(high[1]);
+  generators.push_back(high[0]); generators.push_back(low[1]);
+  generators.push_back(high[0]); generators.push_back(high[1]);
+
+  PLC<2, double> box;
+  box.facets.resize(4);
+  box.facets[0].resize(2); box.facets[0][0] = N  ; box.facets[0][1] = N+1;
+  box.facets[1].resize(2); box.facets[1][0] = N+1; box.facets[1][1] = N+2;
+  box.facets[2].resize(2); box.facets[2][0] = N+2; box.facets[2][1] = N+3;
+  box.facets[3].resize(2); box.facets[3][0] = N+3; box.facets[3][1] = N;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  triangle.tessellate(generators, low, high, mesh);
-  CHECK(mesh.cells.size() == N + 4);
+  triangle.tessellate(generators, box, mesh);
+cout << mesh << endl;
+  CHECK(mesh.cells.size() == generators.size());
 
   // Write out the file if we can.
 #ifdef HAVE_SILO

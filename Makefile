@@ -32,7 +32,7 @@ ifneq ($(CXX), not-set)
   CXX = $(CXX)
 else
   ifeq ($(MPI), 1)
-    CXX = mpic++
+    CXX = mpicxx
   else
     CXX = c++
   endif
