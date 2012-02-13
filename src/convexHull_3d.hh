@@ -59,7 +59,7 @@ struct Point {
 template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const Point<CoordType>& p) {
-  os << "(" << p.x << " " << p.y << " " << p.z << ")";
+  os << "((" << p.x << " " << p.y << " " << p.z << ")(" << p.index << ")";
   return os;
 }
 
@@ -98,13 +98,13 @@ inline CoordType ch3dtime(Point<CoordType> *p, Point<CoordType> *q, Point<CoordT
 }
 
 template<typename CoordType>
-Point<CoordType> *sort(Point<CoordType> P[], int n) {  // mergesort
+Point<CoordType> *mergesort(Point<CoordType> P[], int n) {  // mergesort
 
   Point<CoordType> *a, *b, *c, head;
 
   if (n == 1) { P[0].next = Point<CoordType>::NIL; return P; }
-  a = sort(P, n/2);
-  b = sort(P+n/2, n-n/2); 
+  a = mergesort(P, n/2);
+  b = mergesort(P+n/2, n-n/2); 
  c = &head;
   do
     if (a->x < b->x) { c = c->next = a; a = a->next; }
@@ -196,7 +196,7 @@ convexHull_3d(const std::vector<RealType>& points,
   const RealType& zmin = low[2];
 
   // Convert the input coordinates to unique integer point types.  Simultaneously we 
-  // reduce to the unique set of 
+  // reduce to the unique set of points.
   typedef std::set<Point, convexHull_helpers::FuzzyPointLessThan<CoordHash> > Set;
   Set pointSet;
   for (i = 0; i != n; ++i) {
@@ -215,7 +215,7 @@ convexHull_3d(const std::vector<RealType>& points,
   // Get the lower hull.
   const unsigned nunique = uniquePoints.size();
   Point* P = &uniquePoints.front();
-  Point* list = convexHull_helpers::sort(P, nunique);
+  Point* list = convexHull_helpers::mergesort(P, nunique);
   Point **A = new Point*[2*nunique], **B = new Point*[2*nunique];
   convexHull_helpers::lowerHull(list, nunique, A, B);
 
@@ -223,14 +223,15 @@ convexHull_3d(const std::vector<RealType>& points,
   PLC<3, RealType> plc;
   unsigned i1, i2, i3;
   for (i = 0; A[i] != Point::NIL; A[i++]->act()) {
-    i1 = A[i]->prev->index;
-    i2 = A[i]->index;
-    i3 = A[i]->next->index;
+    i1 = A[i]->prev ->index;
+    i2 = A[i]       ->index;
+    i3 = A[i]->next ->index;
     plc.facets.push_back(std::vector<int>());
     plc.facets.back().push_back(i1);
     plc.facets.back().push_back(i2);
     plc.facets.back().push_back(i3);
-    std::cerr << "  -----> " << i1 << " " << i2 << " " << i3 << std::endl;
+    std::cerr << "  -----> " << i1 << " " << i2 << " " << i3 <<  std::endl;
+    std::cerr << "  -----> " << *(A[i]->prev) << " " << *A[i] << " " << *(A[i]->next) <<  std::endl;
   }
   return plc;
 }

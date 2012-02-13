@@ -33,9 +33,9 @@ int main(int argc, char** argv) {
   const double dx = 1.0/nx;
 
   vector<double> points;
-  for (unsigned iz = 0; iz != nx; ++iz) {
+  for (unsigned ix = 0; ix != nx; ++ix) {
     for (unsigned iy = 0; iy != nx; ++iy) {
-      for (unsigned ix = 0; ix != nx; ++ix) {
+      for (unsigned iz = 0; iz != nx; ++iz) {
         points.push_back(low[0] + (ix + 0.5)*dx);
         points.push_back(low[1] + (iy + 0.5)*dx);
         points.push_back(low[2] + (iz + 0.5)*dx);
