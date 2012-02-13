@@ -18,6 +18,15 @@
 namespace polytope
 {
 
+namespace Silo
+{
+
+// Helper function for finding available cycles.
+std::vector<int> findAvailableCycles(const std::string& prefix,
+                                     const std::string& directory);
+
+}
+
 //! \class SiloReader
 //! This class provides a static interface for reading Silo files 
 //! containing tessellations made by polytope.
@@ -32,6 +41,15 @@ template <typename RealType>
 class SiloReader<2, RealType>
 {
   public:
+
+  //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
+  //! with the given prefix, in the given directory. If the directory is 
+  //! omitted, its name is generated automatically from the prefix.
+  static std::vector<int> availableCycles(const std::string& filePrefix,
+                                          const std::string& directory = "")
+  {
+    return Silo::findAvailableCycles(filePrefix, directory);
+  }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
   //! cell-centered fields to a SILO file in the given directory.
@@ -112,6 +130,15 @@ template <typename RealType>
 class SiloReader<3, RealType>
 {
   public:
+
+  //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
+  //! with the given prefix, in the given directory. If the directory is 
+  //! omitted, its name is generated automatically from the prefix.
+  static std::vector<int> availableCycles(const std::string& filePrefix,
+                                          const std::string& directory = "")
+  {
+    return Silo::findAvailableCycles(filePrefix, directory);
+  }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
   //! cell-centered fields to a SILO file in the given directory.
