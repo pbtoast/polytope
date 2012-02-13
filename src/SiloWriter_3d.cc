@@ -414,6 +414,54 @@ write(const Tessellation<3, RealType>& mesh,
                   allCellFaces.size(), &allCellFaces[0], 
                   0, 0, numCells-1, optlist);
 
+  // Write out the cell-face connectivity data.
+  vector<int> conn(numCells);
+  int elemlengths[3];
+  char* elemnames[3];
+  for (int c = 0; c < numCells; ++c)
+    conn[c] = mesh.cells[c].size();
+  for (int c = 0; c < numCells; ++c)
+  {
+    for (int f = 0; f < mesh.cells[c].size(); ++f)
+      conn.push_back(mesh.cells[c][f]);
+  }
+  for (int f = 0; f < mesh.faceCells.size(); ++f)
+  {
+    conn.push_back(mesh.faceCells[f][0]);
+    conn.push_back(mesh.faceCells[f][0]);
+  }
+  elemnames[0] = strdup("ncellfaces");
+  elemlengths[0] = numCells;
+  elemnames[2] = strdup("facecells");
+  elemlengths[2] = conn.size() - 2*mesh.faces.size();
+  elemnames[1] = strdup("cellfaces");
+  elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
+  DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3, 
+                     (void*)&conn[0], conn.size(), DB_INT, 0);
+  free(elemnames[0]);
+  free(elemnames[1]);
+  free(elemnames[2]);
+
+  // Write out convex hull data.
+  vector<int> hull(1+mesh.convexHull.facets.size());
+  hull[0] = mesh.convexHull.facets.size();
+  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
+    hull[1+f] = mesh.convexHull.facets[f].size();
+  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
+    for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+      hull.push_back(mesh.convexHull.facets[f][n]);
+  elemnames[0] = strdup("nfacets");
+  elemlengths[0] = 1;
+  elemnames[1] = strdup("nfacetnodes");
+  elemlengths[1] = mesh.convexHull.facets.size();
+  elemnames[2] = strdup("facetnodes");
+  elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
+  DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3, 
+                     (void*)&hull[0], hull.size(), DB_INT, 0);
+  free(elemnames[0]);
+  free(elemnames[1]);
+  free(elemnames[2]);
+
   // Write out the cell-centered mesh data.
 
   // Scalar fields.

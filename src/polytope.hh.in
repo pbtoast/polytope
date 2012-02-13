@@ -39,6 +39,7 @@
 #include "TriangleTessellator.hh"
 #include "TetgenTessellator.hh"
 #include "SiloWriter.hh"
+#include "SiloReader.hh"
 
 #ifdef HAVE_MPI
 #include "DistributedTessellator.hh"
