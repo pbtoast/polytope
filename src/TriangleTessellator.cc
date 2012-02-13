@@ -5,9 +5,10 @@
 #include <algorithm>
 #include <set>
 #include "float.h"
-#include <iostream>
+#include <map>
 
 #include "polytope.hh" // Pulls in ASSERT and TriangleTessellator.hh.
+#include "Polygon.hh"  // For polygon projections, etc.
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -81,24 +82,8 @@ template<typename RealType>
 void
 TriangleTessellator<RealType>::
 tessellate(const vector<RealType>& points,
-           RealType* low, RealType* high,
            Tessellation<2, RealType>& mesh) const 
 {
-  // Create a PLC for the bounding box about these points.
-//  PLC<2, RealType> box = boundingBox(low, high, points);
-//  tessellate(points, box, mesh);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           Tessellation<2, RealType>& mesh) const 
-{
-//  // Create a PLC for the bounding box about these points.
-//  PLC<2, RealType> box = boundingBox(points);
   PLC<2, RealType> noBoundary;
   tessellate(points, noBoundary, mesh);
 }
@@ -194,6 +179,27 @@ tessellate(const vector<RealType>& points,
   // Make sure we got something.
   if (delaunay.numberoftriangles == 0)
     error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
+  if (delaunay.numberofpoints != points.size()/2)
+  {
+    char err[1024];
+    snprintf(err, 1024, "TriangleTessellator: Delauney triangulation produced %d triangles\n(%d generating points given)", 
+             delaunay.numberofpoints, (int)points.size()/2);
+    error(err);
+  }
+
+  // Transfer the convex hull data and build a Polygon representing 
+  // the hull.
+  mesh.convexHull.facets.resize(delaunay.numberofsegments);
+  vector<double> hullVertices(2*delaunay.numberofsegments);
+  for (int i = 0; i < delaunay.numberofsegments; ++i)
+  {
+    mesh.convexHull.facets[i].resize(2);
+    mesh.convexHull.facets[i][0] = delaunay.segmentlist[2*i];
+    mesh.convexHull.facets[i][1] = delaunay.segmentlist[2*i+1];
+    hullVertices[2*i]   = points[2*delaunay.segmentlist[2*i]];
+    hullVertices[2*i+1] = points[2*delaunay.segmentlist[2*i]+1];
+  }
+  Polygon<double> convexHull(hullVertices);
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
@@ -229,6 +235,17 @@ tessellate(const vector<RealType>& points,
     // Get the circumcenter.
     double X[2];
     computeCircumcenter(p, q, r, X);
+
+    // If the point is outside the convex hull, project it to 
+    // an edge.
+    if (convexHull.queryPoint(X) == Polygon<double>::POINT_OUTSIDE)
+    {
+      double Y[2];
+      convexHull.project(X, Y);
+//cout << "Projected (" << X[0] << ", " << X[1] << ", r = " << sqrt(X[0]*X[0]+X[1]*X[1]) << " -> (" << Y[0] << ", " << Y[1] << ", r = " << sqrt(Y[0]*Y[0]+Y[1]*Y[1]) << ")\n";
+      X[0] = Y[0];
+      X[1] = Y[1];
+    }
 
     // If this node lies on an edge, add it to the table.
     // This uses Jonathan Shewchuck's fast geometry predicate orient2d().
@@ -328,22 +345,16 @@ tessellate(const vector<RealType>& points,
     copy(faceNodes.begin(), faceNodes.end(), mesh.faces.back().begin());
   }
 
-  // If no boundary was specified, compute the convex hull and leave.
+  // If no boundary was specified, leave.
   if (geometry.empty()) 
   {
-    mesh.convexHull.facets.resize(delaunay.numberofsegments);
-    for (int i = 0; i < delaunay.numberofsegments; ++i)
-    {
-      mesh.convexHull.facets[i].resize(2);
-      mesh.convexHull.facets[i][0] = delaunay.segmentlist[2*i];
-      mesh.convexHull.facets[i][1] = delaunay.segmentlist[2*i+1];
-    }
-
     // Clean up.
     delete [] in.pointlist;
     trifree((VOID*)delaunay.pointlist);
+    trifree((VOID*)delaunay.pointmarkerlist);
     trifree((VOID*)delaunay.trianglelist);
     trifree((VOID*)delaunay.edgelist);
+    trifree((VOID*)delaunay.edgemarkerlist);
     if (geometry.empty())
     {
       trifree((VOID*)delaunay.segmentlist);
@@ -363,20 +374,15 @@ tessellate(const vector<RealType>& points,
   // nodes exist. However, we still have to finish constructing the 
   // Voronoi cells that sit at the boundary, since they don't have "back" 
   // faces. This Tessellator constructs faces that coincide with the 
-  // convex hull of the triangulation. The convex hull is expressed in 
-  // terms of "segments" connecting generator points. 
+  // convex hull of the triangulation. 
   
-  // Extract the convex hull here, and make sure each existing face 
-  // has two nodes.
   set<pair<int, int> > patchedFaces;
-  mesh.convexHull.facets.resize(delaunay.numberofsegments);
   for (int i = 0; i < delaunay.numberofsegments; ++i)
   {
+    // A segment of the convex hull consists of the two cells/generators
+    // connected by a face.
     int cell1 = delaunay.segmentlist[2*i];
     int cell2 = delaunay.segmentlist[2*i+1];
-    mesh.convexHull.facets[i].resize(2);
-    mesh.convexHull.facets[i][0] = cell1;
-    mesh.convexHull.facets[i][1] = cell2;
 //cout << "Inspecting segment for " << cell1 << ", " << cell2 << endl;
 
     // Add nodes to all faces attached to these cell with only 
@@ -412,7 +418,7 @@ tessellate(const vector<RealType>& points,
   // Create extra nodes for the boundary faces. These nodes coincide with 
   // the Voronoi generater points.
   size_t oldNumNodes = mesh.nodes.size() / 2;
-//cout << "Mesh had " << oldNumNodes << ", now adding " << mesh.convexHull.size() << endl;
+//cout << "Mesh had " << oldNumNodes << ", now adding " << mesh.convexHull.facets.size() << endl;
   mesh.nodes.resize(2*(oldNumNodes + mesh.convexHull.facets.size()));
   for (size_t i = 0; i < mesh.convexHull.facets.size(); ++i)
   {
@@ -423,17 +429,22 @@ tessellate(const vector<RealType>& points,
   }
 
   // Now we construct the remaining faces for the boundary cells.
+  set<int> addedBoundaryFaces;
   for (int i = 0; i < mesh.convexHull.facets.size(); ++i)
   {
     int cell = mesh.convexHull.facets[i][0]; // The boundary cell.
+    if (addedBoundaryFaces.find(cell) != addedBoundaryFaces.end())
+      continue;
+    else
+      addedBoundaryFaces.insert(cell);
 
     // Add two new faces for this cell.
     mesh.faces.resize(mesh.faces.size()+2);
     mesh.faceCells.resize(mesh.faceCells.size()+2);
 
-    // Each face has one node that it shares with an existing face.
-    // There are two such existing faces, and each has a node that 
-    // it does not yet share with any other.
+    // Each face has one node that it shares with an existing face and 
+    // one that is still to be hooked up to the new node coinciding 
+    // with the generator point (and still has value -1).
     map<unsigned, int> numFacesForNode;
     for (size_t f = 0; f < mesh.cells[cell].size(); ++f)
     {
@@ -479,8 +490,10 @@ tessellate(const vector<RealType>& points,
   // Clean up.
   delete [] in.pointlist;
   trifree((VOID*)delaunay.pointlist);
+  trifree((VOID*)delaunay.pointmarkerlist);
   trifree((VOID*)delaunay.trianglelist);
   trifree((VOID*)delaunay.edgelist);
+  trifree((VOID*)delaunay.edgemarkerlist);
   if (geometry.empty())
   {
     trifree((VOID*)delaunay.segmentlist);
