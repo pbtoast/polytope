@@ -7,6 +7,7 @@
 #ifndef __polytope_convexHull_3d__
 #define __polytope_convexHull_3d__
 
+#include <iostream>
 #include <vector>
 #include <set>
 
@@ -45,9 +46,9 @@ public:
     CoordType fuzz;
     FuzzyPointLessThan(const CoordType ifuzz = 1): fuzz(ifuzz) {}
     bool operator()(const Point& p1, const Point& p2) {
-      return (int(p2.x) - int(p1.x) > fuzz ? true :
-              int(p2.y) - int(p1.y) > fuzz ? true : 
-              int(p2.z) - int(p1.z) > fuzz ? true : false);
+      return (p2.x - p1.x > fuzz ? true :
+              p2.y - p1.y > fuzz ? true : 
+              p2.z - p1.z > fuzz ? true : false);
     }
   };
 
@@ -59,7 +60,7 @@ public:
     // Public data.
     static const std::vector<Point>* points;
     int i0, i1, i2;
-    double a, b, c, d;
+    double nx, ny, nz;
     
     // Constructor.
     Face(const int ii0, const int ii1, const int ii2): i0(ii0), i1(ii1), i2(ii2) { computePlane(); }
@@ -72,16 +73,25 @@ public:
       const double x0 = double(p0.x), y0 = double(p0.y), z0 = double(p0.z);
       const double x1 = double(p1.x), y1 = double(p1.y), z1 = double(p1.z);
       const double x2 = double(p2.x), y2 = double(p2.y), z2 = double(p2.z);
-      a = y0 * (z1 - z2) + y1 * (z2 - z0) + y2 * (z0 - z1);
-      b = z0 * (x1 - x2) + z1 * (x2 - x0) + z2 * (x0 - x1);
-      c = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
-      d = -( x0 * ( y1 * z2 - y2 * z1 ) + x1 * (y2 * z0 - y0 * z2) + x2 * (y0 * z1 - y1 * z0) );
+      const double x01 = x1 - x0, y01 = y1 - y0, z01 = z1 - z0;
+      const double x02 = x2 - x0, y02 = y2 - y0, z02 = z2 - z0;
+      nx = y01*z02 - z01*y02;
+      ny = z01*x02 - x01*z02;
+      nz = x01*y02 - y01*x02;
+      const double norm = sqrt(nx*nx + ny*ny + nz*nz);
+      nx /= norm;
+      ny /= norm;
+      nz /= norm;
     }
 
     // Test if a point is above the face.
     bool isVisible(const Point& p) const {
-      return (( a * double(p.x) + b * double(p.y) + c * double(p.z) + d ) > 0);
-    }		
+      const Point& p0 = (*points)[i0];
+      const double dx = double(p.x) - double(p0.x);
+      const double dy = double(p.y) - double(p0.y);
+      const double dz = double(p.z) - double(p0.z);
+      return nx*dx + ny*dy + nz*dz > 0;
+    }
 	
     // Compute the centroid.
     Point centroid() const {
@@ -134,8 +144,10 @@ public:
     // Pre-conditions.
     ASSERT(points.size() > 3);
 
-    // Creates a face with the first 3 vertices
+    // Initialize the face static info.
     Face::points = &points;
+
+    // Creates a face with the first 3 vertices
     Face face(0, 1, 2);
 			
     //this is the center of the tetrahedron, all face should point outwards:
@@ -258,6 +270,17 @@ faceCentroid(const std::vector<RealType>& points,
 }
 
 //------------------------------------------------------------------------------
+// Helper to output the point class.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+inline
+std::ostream&
+operator<<(std::ostream& os, const typename convexHull_helpers::ConvexHull3d<CoordType>::Point& value) {
+  os << "(" << value.x << " " << value.y << " " << value.z << ")";
+  return os;
+}
+
+//------------------------------------------------------------------------------
 // The 3D convex hull itself.  This is the one users should call -- it forwards
 // all work to the worker ConvexHull3d class.
 //------------------------------------------------------------------------------
@@ -295,6 +318,13 @@ convexHull_3d(const std::vector<RealType>& points,
   std::vector<Point> uniquePoints(pointSet.begin(), pointSet.end());
   ASSERT(uniquePoints.size() == pointSet.size());
 
+  // // Blago!
+  // std::cout << "Unique points: " << std::endl;
+  // for (unsigned k = 0; k != uniquePoints.size(); ++k) {
+  //   std::cout << "   ---> " << uniquePoints[k].x << " "<< uniquePoints[k].y << " " << uniquePoints[k].z << " " << uniquePoints[k].index << std::endl;
+  // }
+  // // Blago!
+
   // Dispatch the work 
   const std::vector<std::vector<unsigned> > faces = convexHull_helpers::ConvexHull3d<CoordHash>::process(uniquePoints);
 
@@ -308,7 +338,7 @@ convexHull_3d(const std::vector<RealType>& points,
     plc.facets.back().push_back(faces[i][1]);
     plc.facets.back().push_back(faces[i][2]);
     convexHull_helpers::faceCentroid(points, faces[i], xc, yc, zc);
-    std::cerr << "  -----> " << faces[i][0] << " " << faces[i][1] << " " << faces[i][2] << " : (" << xc << " " << yc << " " << zc << ")" << std::endl;
+    // std::cerr << "  -----> " << faces[i][0] << " " << faces[i][1] << " " << faces[i][2] << " : (" << xc << " " << yc << " " << zc << ")" << std::endl;
   }
   return plc;
 }
