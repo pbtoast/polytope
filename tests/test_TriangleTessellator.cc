@@ -349,8 +349,12 @@ cout << mesh << endl;
 
 //------------------------------------------------------------------------
 int 
-main() 
+main(int argc, char** argv) 
 {
+#ifdef HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
   test2x2Box();
   testCircle();
   testDonut();
@@ -358,6 +362,10 @@ main()
   testUnbounded();
 
   cout << "PASS" << endl;
+
+#ifdef HAVE_MPI
+  MPI_Finalize();
+#endif
   return 0;
 }
 //------------------------------------------------------------------------
