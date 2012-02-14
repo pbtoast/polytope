@@ -60,8 +60,10 @@ namespace polytope {
 //------------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 DistributedTessellator<Dimension, RealType>::
-DistributedTessellator(const Tessellator<Dimension, RealType>& tessellator):
+DistributedTessellator(Tessellator<Dimension, RealType>* tessellator,
+                       bool assumeControl):
   mSerialTessellator(tessellator),
+  mAssumeControl(assumeControl),
   mType(unbounded),
   mLow(0),
   mHigh(0),
@@ -74,6 +76,8 @@ DistributedTessellator(const Tessellator<Dimension, RealType>& tessellator):
 template<int Dimension, typename RealType>
 DistributedTessellator<Dimension, RealType>::
 ~DistributedTessellator() {
+  if (mAssumeControl)
+    delete mSerialTessellator;
 }
 
 //------------------------------------------------------------------------------
@@ -334,18 +338,18 @@ tessellationWrapper(const vector<RealType>& points,
                     Tessellation<Dimension, RealType>& mesh) const {
   switch (mType) {
   case unbounded:
-    mSerialTessellator.tessellate(points, mesh);
+    mSerialTessellator->tessellate(points, mesh);
     break;
 
   case box:
     ASSERT(mLow != 0);
     ASSERT(mHigh != 0);
-    mSerialTessellator.tessellate(points, mLow, mHigh, mesh);
+    mSerialTessellator->tessellate(points, mLow, mHigh, mesh);
     break;
 
   case plc:
     ASSERT(mPLCptr != 0);
-    mSerialTessellator.tessellate(points, *mPLCptr, mesh);
+    mSerialTessellator->tessellate(points, *mPLCptr, mesh);
     break;
   }
 }
