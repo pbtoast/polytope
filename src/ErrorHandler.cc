@@ -16,9 +16,20 @@ static void (*errorHandler)(const std::string&, int) = 0;
 //------------------------------------------------------------------------
 void defaultErrorHandler(const std::string& message, int status)
 {
+#if HAVE_MPI
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0)
+  {
+    std::cout << "Error: " << message << std::endl;
+    std::cout << "encountered in polytope library. Exiting with status " << status << std::endl;
+  }
+  MPI_Abort(MPI_COMM_WORLD, status);
+#else
   std::cout << "Error: " << message << std::endl;
   std::cout << "encountered in polytope library. Exiting with status " << status << std::endl;
   exit(status);
+#endif
 }
 //------------------------------------------------------------------------
 

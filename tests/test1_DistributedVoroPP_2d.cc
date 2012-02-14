@@ -38,8 +38,6 @@ double distance2(const double x1, const double y1,
 int main(int argc, char** argv) {
 
   // Initialize MPI.
-  printf("%d %d %d\n", OMPI_MAJOR_VERSION,
-  OMPI_MINOR_VERSION,OMPI_RELEASE_VERSION);
   MPI_Init(&argc, &argv);
 
   const double x1 = 0.0, y1 = 0.0;
