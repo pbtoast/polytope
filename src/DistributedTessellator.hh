@@ -27,7 +27,10 @@ public:
 
   //! Constructor.
   //! \param serialTessellator A serial implementation of Tessellator.
-  DistributedTessellator(const Tessellator<Dimension, RealType>& serialTessellator);
+  //! \param assumeControl If set to true, the DistributedTessellator will 
+  //!                      assume control of the serial tessellator.
+  DistributedTessellator(Tessellator<Dimension, RealType>* serialTessellator,
+                         bool assumeControl = true);
   ~DistributedTessellator();
 
   // Note the DistributedTesselator doesn't know which of the boundary treatments
@@ -80,7 +83,7 @@ public:
   //! tessellation is provided for convenience.
   //! This query mechanism prevents us from descending into the taxonomic 
   //! hell associated with elaborate inheritance hierarchies.
-  virtual bool handlesPLCs() const { return mSerialTessellator.handlesPLCs(); }
+  virtual bool handlesPLCs() const { return mSerialTessellator->handlesPLCs(); }
 
 private:
   // Define an enum to keep track of which type of tessellation is currently
@@ -92,7 +95,8 @@ private:
   };
     
   // Private data.
-  const Tessellator<Dimension, RealType>& mSerialTessellator;
+  Tessellator<Dimension, RealType>* mSerialTessellator;
+  bool mAssumeControl;
   mutable TessellationType mType;
   mutable RealType *mLow, *mHigh;
   mutable const PLC<Dimension, RealType>* mPLCptr;
