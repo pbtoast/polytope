@@ -109,7 +109,9 @@ public:
     // Flip the face.
     void flip() {
       std::swap(i0, i1);
-      computePlane();
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
     }
 
     // Equality.
