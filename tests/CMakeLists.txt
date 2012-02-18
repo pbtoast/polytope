@@ -44,4 +44,11 @@ if (USE_MPI EQUAL 1)
   target_link_libraries(test1_DistributedVoroPP_2d polytope)
   set_tests_properties(test1_DistributedVoroPP_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
                        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+
+# Distributed Voro++ 3D tessellator.
+  add_executable(test1_DistributedVoroPP_3d test1_DistributedVoroPP_3d.cc)
+  add_test(test1_DistributedVoroPP_3d test1_DistributedVoroPP_3d)
+  target_link_libraries(test1_DistributedVoroPP_3d polytope)
+  set_tests_properties(test1_DistributedVoroPP_3d PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endif()
