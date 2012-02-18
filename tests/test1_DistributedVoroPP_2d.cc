@@ -98,8 +98,8 @@ int main(int argc, char** argv) {
     double xmin[2] = { x1, y1 };
     double xmax[2] = { x2, y2 };
     polytope::Tessellation<2, double> mesh;
-    polytope::VoroPP_2d<double> voro;
-    polytope::DistributedTessellator<2, double> distVoro(voro);
+    
+    polytope::DistributedTessellator<2, double> distVoro(new polytope::VoroPP_2d<double>());
     distVoro.tessellate(generators, xmin, xmax, mesh);
 
     // Gather some global statistics.

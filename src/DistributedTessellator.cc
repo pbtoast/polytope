@@ -12,6 +12,7 @@
 #include "polytope_serialize.hh"
 #include "ReducedPLC.hh"
 #include "convexHull_2d.hh"
+#include "convexHull_3d.hh"
 #include "convexIntersect.hh"
 #include "deleteCells.hh"
 #include "bisectSearch.hh"
@@ -37,6 +38,18 @@ struct DimensionTraits<2, RealType> {
                                const RealType* low,
                                const RealType& dx) { 
     return ConvexHull(polytope::convexHull_2d(points, low, dx), points);
+  }
+};
+
+// 3D
+template<typename RealType>
+struct DimensionTraits<3, RealType> {
+  typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
+
+  static ConvexHull convexHull(const vector<RealType>& points, 
+                               const RealType* low,
+                               const RealType& dx) { 
+    return ConvexHull(polytope::convexHull_3d(points, low, dx), points);
   }
 };
 
@@ -421,5 +434,6 @@ computeBoundingBox(const vector<RealType>& points,
 // Explicit instantiation.
 //------------------------------------------------------------------------------
 template class DistributedTessellator<2, double>;
+template class DistributedTessellator<3, double>;
 
 }
