@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
   srand(10489592);
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 10; nx != 11; ++nx) {
+  for (unsigned nx = 10; nx != 20; ++nx) {
     if (rank == 0) cout << "Testing nx=" << nx << endl;
 
     // Create the seed positions for each domain.  Note we rely on this sequence
@@ -153,16 +153,16 @@ int main(int argc, char** argv) {
 //     for (unsigned i = 0; i != nx*nx; ++i) CHECK(mesh.cells[i].size() == 4);
 //     CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
-    // Blago!
-    {
-      vector<double> r2(nx*nx*nx, rank);
-      map<string, double*> fields;
-      fields["domain"] = &r2[0];
-      ostringstream os;
-      os << "test_DistributedTessellator_" << nx << "x" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<3, double>::write(mesh, fields, os.str());
-    }
-    // Blago!
+    // // Blago!
+    // {
+    //   vector<double> r2(nx*nx*nx, rank);
+    //   map<string, double*> fields;
+    //   fields["domain"] = &r2[0];
+    //   ostringstream os;
+    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+    //   polytope::SiloWriter<3, double>::write(mesh, fields, os.str());
+    // }
+    // // Blago!
   }
 
   cout << "PASS" << endl;
