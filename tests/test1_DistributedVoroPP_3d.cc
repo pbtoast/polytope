@@ -153,16 +153,16 @@ int main(int argc, char** argv) {
 //     for (unsigned i = 0; i != nx*nx; ++i) CHECK(mesh.cells[i].size() == 4);
 //     CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
-    // // Blago!
-    // {
-    //   vector<double> r2(nx*nx*nx, rank);
-    //   map<string, double*> fields;
-    //   fields["domain"] = &r2[0];
-    //   ostringstream os;
-    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-    //   polytope::SiloWriter<3, double>::write(mesh, fields, os.str());
-    // }
-    // // Blago!
+    // Blago!
+    {
+      vector<double> r2(mesh.cells.size(), rank);
+      map<string, double*> fields;
+      fields["domain"] = &r2[0];
+      ostringstream os;
+      os << "test_DistributedTessellator_" << nx << "x" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+      polytope::SiloWriter<3, double>::write(mesh, fields, os.str());
+    }
+    // Blago!
   }
 
   cout << "PASS" << endl;

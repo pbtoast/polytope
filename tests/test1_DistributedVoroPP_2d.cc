@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
     // Blago!
     {
-      vector<double> r2(nx*nx, rank);
+      vector<double> r2(mesh.cells.size(), rank);
       map<string, double*> fields;
       fields["domain"] = &r2[0];
       ostringstream os;
