@@ -218,7 +218,7 @@ write(const Tessellation<3, RealType>& mesh,
 
   // Determine a file name.
   if (cycle >= 0)
-    snprintf(filename, 1024, "%s/%s-d.silo", groupdirname, prefix.c_str(), cycle);
+    snprintf(filename, 1024, "%s/%s-%d.silo", groupdirname, prefix.c_str(), cycle);
   else
     snprintf(filename, 1024, "%s/%s.silo", groupdirname, prefix.c_str());
 
@@ -268,135 +268,35 @@ write(const Tessellation<3, RealType>& mesh,
   coords[1] = &(y[0]);
   coords[2] = &(z[0]);
 
-  // Figure out face-node connectivity. We do this by computing centers
-  // for all the cells and then using them to define face normals, 
-  // from which node orderings can be determining using a convex hull 
-  // determination algorithm (gift wrapping).
-  int numCells = mesh.cells.size();
-  int numFaces = mesh.faces.size();
-  vector<RealType> cellCenters(numCells);
-  for (int c = 0; c < numCells; ++c)
+  // Construct the silo face-node info.  We rely on the input tessellation having
+  // the faces nodes arranged counter-clockwise around the face.
+  const int numFaces = mesh.faces.size();
+  vector<int> faceNodeCounts, allFaceNodes;
+  faceNodeCounts.reserve(numFaces);
+  for (int iface = 0; iface != numFaces; ++iface) 
   {
-    const vector<int>& cellFaces = mesh.cells[c];
-    int numNodes = 0;
-    for (int f = 0; f < cellFaces.size(); ++f)
-    {
-      const vector<unsigned>& faceNodes = mesh.faces[cellFaces[f]];
-      for (int n = 0; n < faceNodes.size(); ++n)
-      {
-        cellCenters[3*c]   += mesh.nodes[3*faceNodes[n]];
-        cellCenters[3*c+1] += mesh.nodes[3*faceNodes[n]+1];
-        cellCenters[3*c+2] += mesh.nodes[3*faceNodes[n]+2];
-        ++numNodes;
-      }
-    }
-    cellCenters[3*c+0] /= numNodes;
-    cellCenters[3*c+1] /= numNodes;
-    cellCenters[3*c+2] /= numNodes;
+    faceNodeCounts.push_back(mesh.faces[iface].size());
+    std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(allFaceNodes));
   }
-  vector<int> faceNodeCounts(numFaces), 
-              allFaceNodes;
-  for (int f = 0; f < mesh.faces.size(); ++f)
+  ASSERT(faceNodeCounts.size() == numFaces);
+
+  // Construct the silo cell-face info.  We have to account for the convention
+  // that the tessellation lists faces as the 1s complement when the orientation
+  // should be reversed for the cell in question.
+  const int numCells = mesh.cells.size();
+  vector<int> cellFaceCounts, allCellFaces;
+  cellFaceCounts.reserve(numCells);
+  int i, j, n;
+  for (int icell = 0; icell != numCells; ++icell)
   {
-    const vector<unsigned>& faceNodes = mesh.faces[f];
-
-    // Compute the normal vector for the face, pointing outward from 
-    // its first cell.
-    ASSERT(faceNodes.size() >= 3);
-    double faceCenter[3];
-    for (int n = 0; n < faceNodes.size(); ++n)
-    {
-      faceCenter[0] += mesh.nodes[3*faceNodes[n]];
-      faceCenter[1] += mesh.nodes[3*faceNodes[n]+1];
-      faceCenter[2] += mesh.nodes[3*faceNodes[n]+2];
+    n = mesh.cells[icell].size();
+    cellFaceCounts.push_back(n);
+    for (i = 0; i != n; ++i) {
+      j = mesh.cells[icell][i];
+      allCellFaces.push_back(j < 0 ? ~j : j);
     }
-    faceCenter[0] /= faceNodes.size();
-    faceCenter[1] /= faceNodes.size();
-    faceCenter[2] /= faceNodes.size();
-
-    // Construct vectors v1, v2, and v3, where v1 is the vector pointing from the 
-    // face center to the first face node, v2 is a vector pointing from the face 
-    // center to any other face, node, and v3 is their cross product.
-    double v1[3];
-    for (int d = 0; d < 3; ++d)
-      v1[d] = mesh.nodes[3*faceNodes[0]+d] - faceCenter[d];
-
-    double v2[3], normal[3], normalMag;
-    for (int n = 1; n < faceNodes.size(); ++n)
-    {
-      for (int d = 0; d < 3; ++d)
-        v2[d] = mesh.nodes[3*faceNodes[n]+d] - faceCenter[d];
-
-      // normal = v1 x v2.
-      normal[0] = v1[1]*v2[2] - v1[2]*v2[1];
-      normal[1] = v1[2]*v2[0] - v1[0]*v2[2];
-      normal[1] = v1[0]*v2[1] - v1[1]*v2[0];
-      normalMag = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
-      if (normalMag > 1e-14) break;
-    }
-    normal[0] /= normalMag; normal[1] /= normalMag; normal[2] /= normalMag;
-
-    double v3[3], cellCenter[3];
-    for (int d = 0; d < 3; ++d)
-    {
-      cellCenter[d] = cellCenters[3*mesh.faceCells[f][0]+d];
-      v3[d] = faceCenter[d] - cellCenter[d];
-    }
-    if ((normal[0]*v3[0] + normal[1]*v3[1] + normal[2]*v3[2]) < 0.0)
-    {
-      normal[0] *= -1.0; normal[1] *= -1.0; normal[2] *= -1.0;
-    }
-
-    // Now project the coordinates of the face's nodes to the plane
-    // with the given normal and centered about the face center.
-    vector<RealType> points(2*faceNodes.size()); // NOTE: planar coordinates (2D)
-    double e1[3], e2[3]; // Basis vectors in the plane.
-    double v1Mag = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
-    for (int d = 0; d < 3; ++d)
-      e1[d] = v1[d] / v1Mag;
-
-    // e2 = normal x e1.
-    e2[0] = normal[1]*e1[2] - normal[2]*e1[1];
-    e2[1] = normal[2]*e1[0] - normal[0]*e1[2];
-    e2[1] = normal[0]*e1[1] - normal[1]*e1[0];
-    for (int p = 0; p < points.size(); ++p)
-    {
-      // v = node center - cell center.
-      double v[3];
-      for (int d = 0; d < 3; ++d)
-        v[d] = mesh.nodes[3*faceNodes[p]+d] - cellCenter[d];
-
-      // Compute the perpendicular component of the point
-      // with location v:
-      // vPerp = v - (n o v)n.
-      double vPerp[3];
-      for (int d = 0; d < 3; ++d)
-        vPerp[d] = v[d] - (normal[0]*v[0] + normal[1]*v[1] + normal[2]*v[2]) * normal[d];
-
-      // Project it to the plane.
-      points[2*p]   = vPerp[0]*e1[0] + vPerp[1]*e1[1] + vPerp[2]*e1[2];
-      points[2*p+1] = vPerp[0]*e2[0] + vPerp[1]*e2[1] + vPerp[2]*e2[2];
-    }
-
-    // Find the node order by traversing the convex hull of 
-    // the points within the plane, appending them to allFaceNodes.
-    vector<int> indices;
-    traverseConvexHull(points, indices);
-    faceNodeCounts[f] = indices.size();
-    for (int n = 0; n < indices.size(); ++n)
-      allFaceNodes.push_back(faceNodes[indices[n]]);
   }
-
-  // Figure out cell-face connectivity.
-  vector<int> cellFaceCounts(numCells), 
-              allCellFaces;
-  for (int c = 0; c < numCells; ++c)
-  {
-    const vector<int>& cellFaces = mesh.cells[c];
-    cellFaceCounts[c] = cellFaces.size();
-    allCellFaces.insert(allCellFaces.end(), 
-                        cellFaces.begin(), cellFaces.end());
-  }
+  ASSERT(cellFaceCounts.size() == numCells);
 
   // The polyhedral zone list is referred to in the options list.
   DBAddOption(optlist, DBOPT_PHZONELIST, (char*)"mesh_zonelist");
@@ -422,8 +322,10 @@ write(const Tessellation<3, RealType>& mesh,
     conn[c] = mesh.cells[c].size();
   for (int c = 0; c < numCells; ++c)
   {
-    for (int f = 0; f < mesh.cells[c].size(); ++f)
-      conn.push_back(mesh.cells[c][f]);
+    for (int f = 0; f < mesh.cells[c].size(); ++f) {
+      int j = mesh.cells[c][f];
+      conn.push_back(j < 0 ? ~j : j);
+    }
   }
   for (int f = 0; f < mesh.faceCells.size(); ++f)
   {
