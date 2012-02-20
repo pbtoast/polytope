@@ -227,8 +227,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // First any hulls that intersect ours.
     for (unsigned otherProc = 0; otherProc != numProcs; ++otherProc) {
       if (otherProc != rank and
-          convexIntersect(domainHulls[otherProc], domainHulls[rank],
-                          domainHulls[otherProc].points, domainHulls[rank].points)) neighborSet.insert(otherProc);
+          convexIntersect(domainHulls[otherProc], domainHulls[rank])) neighborSet.insert(otherProc);
     }
 
     // Now any hulls that have elements adjacent to ours in the hull mesh.
