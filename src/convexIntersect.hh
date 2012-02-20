@@ -2,13 +2,14 @@
 #define __polytope_convexIntersection__
 
 #include <vector>
+#include <utility>
 
 #include "PLC.hh"
 
 namespace { // anonymous
 
 //------------------------------------------------------------------------------
-// Compare a point to a line segment, and determine if the point is above,
+// Compare a point to a line and determine if the point is above,
 // below, or colinear with the line (assuming the line points (l1, l2) are
 // specified in counter-clockwise manner to indicate the interior direction.
 //------------------------------------------------------------------------------
@@ -16,18 +17,35 @@ template<typename RealType>
 int compare(const RealType& l1x, const RealType& l1y,
             const RealType& l2x, const RealType& l2y,
             const RealType& px, const RealType& py) {
-  // We scale here to avoid potential overflow issues with integer types.
-  using std::max;
-  using std::abs;
-  double scale = 1.0/max(RealType(1), 
-                         max(abs(l1x), max(abs(l1y),
-                                           max(abs(l2x), max(abs(l2y),
-                                                             max(abs(px), abs(py)))))));
-  double ztest = (((l2x - l1x)*scale)*((py - l1y)*scale) -
-                  ((l2y - l1y)*scale)*((px - l1x)*scale));
+  const double ztest = (double(l2x - l1x)*double(py - l1y) -
+                        double(l2y - l1y)*double(px - l1x));
   return (ztest < 0.0 ? -1 :
           ztest > 0.0 ?  1 :
                          0);
+}
+
+//------------------------------------------------------------------------------
+// Compare a cloud of points to a line and determine if the points are above,
+// below, or if the line passes through the points.  Assumes the line points 
+// (l1, l2) are specified in counter-clockwise manner to indicate the interior 
+// direction.
+//------------------------------------------------------------------------------
+template<typename RealType>
+int compare(const RealType& l1x, const RealType& l1y, 
+            const RealType& l2x, const RealType& l2y, 
+            const std::vector<RealType>& points) {
+  ASSERT(points.size() % 2 == 0);
+  ASSERT(points.size() > 1);
+  const unsigned n = points.size() / 2;
+  const int result = compare(l1x, l1y, l2x, l2y, points[0], points[1]);
+  unsigned i = 1;
+  while (i < n and result == compare(l1x, l1y, l2x, l2y, 
+                                     points[2*i], points[2*i + 1])) ++i;
+  if (i == n) {
+    return result;
+  } else {
+    return 0;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -46,6 +64,28 @@ int compare(const RealType& ox, const RealType& oy, const RealType& oz,
 }
 
 //------------------------------------------------------------------------------
+// Compare a cloud of points to a plane and determine if the points are above,
+// below, or if the plane passes through the points.
+//------------------------------------------------------------------------------
+template<typename RealType>
+int compare(const RealType& ox, const RealType& oy, const RealType& oz, 
+            const RealType& nx, const RealType& ny, const RealType& nz, 
+            const std::vector<RealType>& points) {
+  ASSERT(points.size() % 3 == 0);
+  ASSERT(points.size() > 1);
+  const unsigned n = points.size() / 3;
+  const int result = compare(ox, oy, oz, nx, ny, nz, points[0], points[1], points[2]);
+  unsigned i = 1;
+  while (i < n and result == compare(ox, oy, oz, nx, ny, nz,
+                                     points[3*i], points[3*i + 1], points[3*i + 2])) ++i;
+  if (i == n) {
+    return result;
+  } else {
+    return 0;
+  }
+}
+
+//------------------------------------------------------------------------------
 // Compute the 3D normal given three points (a, b, c).
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -60,58 +100,63 @@ void computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
   nz = dx_ab*dy_ac - dy_ab*dx_ac;
 }
 
+//------------------------------------------------------------------------------
+// Hash a pair points to represent an edge.
+//------------------------------------------------------------------------------
+std::pair<int, int>
+hashEdge(const int i, const int j) {
+  ASSERT(i != j);
+  return (i < j ? std::make_pair(i, j) : std::make_pair(j, i));
+}
+
 }           // anonymous
 
 namespace polytope {
 
 //------------------------------------------------------------------------------
 // Convex polygon intersection.
+// We resrict this to ReducedPLC for expediency because the ReducedPLC has 
+// already computed the unique set of vertex coordinates.
 //------------------------------------------------------------------------------
 template<typename RealType>
 bool
-convexIntersect(const PLC<2, RealType>& a, const PLC<2, RealType>& b,
-                const std::vector<RealType>& apoints, const std::vector<RealType>& bpoints) {
-  const unsigned nva = apoints.size() / 2;
-  const unsigned nvb = bpoints.size() / 2;
+convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>& b) {
+  const unsigned nva = a.points.size() / 2;
+  const unsigned nvb = b.points.size() / 2;
+  const unsigned nfa = a.facets.size();
+  const unsigned nfb = b.facets.size();
 
-  unsigned i, k, ia, ja, ib, jb;
+  bool outside = false;
+  unsigned i, j, ifacet;
 
   // Check if we can exclude b from a.
-  bool outside = true;
   {
-    i = 0;
-    while (outside and i < nva) {
-      ia = a.facets[i][0];
-      ja = a.facets[i][1];
-      k = 0;
-      while (outside and k != nvb) {
-        ib = b.facets[k][0];
-        outside = (compare(apoints[2*ia], apoints[2*ia + 1],
-                           apoints[2*ja], apoints[2*ja + 1],
-                           bpoints[2*ib], bpoints[2*ib + 1]) == 1);
-        ++k;
-      }
-      ++i;
+    ifacet = 0;
+    while (not outside and ifacet < nfa) {
+      i = a.facets[ifacet][0];
+      j = a.facets[ifacet][1];
+      ASSERT(i < nva);
+      ASSERT(j < nva);
+      outside = (compare(a.points[2*i], a.points[2*i + 1],
+                         a.points[2*j], a.points[2*j + 1],
+                         b.points) == 1);
+      ++ifacet;
     }
     if (outside) return false;
   }
 
   // Check if we can exclude a from b.
-  outside = true;
   {
-    i = 0;
-    while (outside and i < nvb) {
-      ib = b.facets[i][0];
-      jb = b.facets[i][1];
-      k = 0;
-      while (outside and k != nva) {
-        ia = a.facets[k][0];
-        outside = (compare(bpoints[2*ib], bpoints[2*ib + 1],
-                           bpoints[2*jb], bpoints[2*jb + 1],
-                           apoints[2*ia], apoints[2*ia + 1]) == 1);
-        ++k;
-      }
-      ++i;
+    ifacet = 0;
+    while (not outside and ifacet < nfb) {
+      i = b.facets[ifacet][0];
+      j = b.facets[ifacet][1];
+      ASSERT(i < nvb);
+      ASSERT(j < nvb);
+      outside = (compare(b.points[2*i], b.points[2*i + 1],
+                         b.points[2*j], b.points[2*j + 1],
+                         a.points) == 1);
+      ++ifacet;
     }
     if (outside) return false;
   }
@@ -125,77 +170,105 @@ convexIntersect(const PLC<2, RealType>& a, const PLC<2, RealType>& b,
 //------------------------------------------------------------------------------
 template<typename RealType>
 bool
-convexIntersect(const PLC<3, RealType>& a, const PLC<3, RealType>& b,
-                const std::vector<RealType>& apoints, const std::vector<RealType>& bpoints) {
-  const unsigned nva = apoints.size() / 3;
-  const unsigned nvb = bpoints.size() / 3;
-  const unsigned naf = a.facets.size();
-  const unsigned nbf = b.facets.size();
+convexIntersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
+  const unsigned nva = a.points.size() / 3;
+  const unsigned nvb = b.points.size() / 3;
+  const unsigned nfa = a.facets.size();
+  const unsigned nfb = b.facets.size();
 
-  unsigned ifaceta, ifacetb, i, j, k;
+  bool outside = false;
+  unsigned i, j, k, n, ifacet;
   double nx, ny, nz;
 
   // Check if we can exclude b from a.
-  bool outside = true;
   {
-    ifaceta = 0;
-    while (outside and ifaceta != naf) {
-      ASSERT(a.facets[ifaceta].size() >= 3);
-      i = a.facets[ifaceta][0];
-      j = a.facets[ifaceta][1];
-      k = a.facets[ifaceta][2];
-      ASSERT(i < nva and j < nva and k < nva);
-      computeNormal(apoints[3*i], apoints[3*i + 1], apoints[3*i + 2],
-                    apoints[3*j], apoints[3*j + 1], apoints[3*j + 2],
-                    apoints[3*k], apoints[3*k + 1], apoints[3*k + 2],
+    ifacet = 0;
+    while (not outside and ifacet < nfa) {
+      i = a.facets[ifacet][0];
+      j = a.facets[ifacet][1];
+      k = a.facets[ifacet][2];
+      ASSERT(i < nva);
+      ASSERT(j < nva);
+      ASSERT(k < nva);
+      computeNormal(a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
+                    a.points[3*j], a.points[3*j + 1], a.points[3*j + 2],
+                    a.points[3*k], a.points[3*k + 1], a.points[3*k + 2],
                     nx, ny, nz);
-      ifacetb = 0;
-      while (outside and ifacetb != nbf) {
-        j = 0;
-        while (outside and j != b.facets[ifacetb].size()) {
-          k = b.facets[ifacetb][j];
-          ASSERT(k < nvb);
-          outside = (compare(apoints[3*i], apoints[3*i + 1], apoints[3*i + 2],
-                             nx, ny, nz,
-                             bpoints[3*k], bpoints[3*k + 1], bpoints[3*k + 2]) == 1);
-          ++j;
-        }
-        ++ifacetb;
-      }
-      ++ifaceta;
+      outside = (compare(a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
+                         nx, ny, nz,
+                         b.points) == 1);
+      ++ifacet;
     }
     if (outside) return false;
   }
 
   // Check if we can exclude a from b.
   {
-    ifacetb = 0;
-    while (outside and ifacetb != nbf) {
-      ASSERT(b.facets[ifacetb].size() >= 3);
-      i = b.facets[ifacetb][0];
-      j = b.facets[ifacetb][1];
-      k = b.facets[ifacetb][2];
-      ASSERT(i < nvb and j < nvb and k < nvb);
-      computeNormal(bpoints[3*i], bpoints[3*i + 1], bpoints[3*i + 2],
-                    bpoints[3*j], bpoints[3*j + 1], bpoints[3*j + 2],
-                    bpoints[3*k], bpoints[3*k + 1], bpoints[3*k + 2],
+    ifacet = 0;
+    while (not outside and ifacet < nfb) {
+      i = b.facets[ifacet][0];
+      j = b.facets[ifacet][1];
+      k = b.facets[ifacet][2];
+      ASSERT(i < nvb);
+      ASSERT(j < nvb);
+      ASSERT(k < nvb);
+      computeNormal(b.points[3*i], b.points[3*i + 1], b.points[3*i + 2],
+                    b.points[3*j], b.points[3*j + 1], b.points[3*j + 2],
+                    b.points[3*k], b.points[3*k + 1], b.points[3*k + 2],
                     nx, ny, nz);
-      ifaceta = 0;
-      while (outside and ifaceta != naf) {
-        j = 0;
-        while (outside and j != a.facets[ifaceta].size()) {
-          k = a.facets[ifaceta][j];
-          ASSERT(k < nva);
-          outside = (compare(bpoints[3*i], bpoints[3*i + 1], bpoints[3*i + 2],
-                             nx, ny, nz,
-                             apoints[3*k], apoints[3*k + 1], apoints[3*k + 2]) == 1);
-          ++j;
-        }
-        ++ifaceta;
-      }
-      ++ifacetb;
+      outside = (compare(b.points[3*i], b.points[3*i + 1], b.points[3*i + 2],
+                         nx, ny, nz,
+                         a.points) == 1);
+      ++ifacet;
     }
     if (outside) return false;
+  }
+
+  // Find the edges for each polyhedron.
+  typedef std::pair<int, int> Edge;
+  typedef std::set<Edge> EdgeSet;
+  EdgeSet aEdges, bEdges;
+  for (ifacet = 0; ifacet != nfa; ++ifacet) {
+    n = a.facets[ifacet].size();
+    for (i = 0; i != n; ++i) {
+      j = (i + 1) % n;
+      aEdges.insert(hashEdge(a.facets[ifacet][i], a.facets[ifacet][j]));
+    }
+  }
+  for (ifacet = 0; ifacet != nfb; ++ifacet) {
+    n = b.facets[ifacet].size();
+    for (i = 0; i != n; ++i) {
+      j = (i + 1) % n;
+      bEdges.insert(hashEdge(b.facets[ifacet][i], b.facets[ifacet][j]));
+    }
+  }
+
+  // Test against the cross products of the edges.
+  int sidea, sideb;
+  for (typename EdgeSet::const_iterator aItr = aEdges.begin();
+       aItr != aEdges.end();
+       ++aItr) {
+    i = aItr->first;
+    for (typename EdgeSet::const_iterator bItr = bEdges.begin();
+         bItr != bEdges.end();
+         ++bItr) {
+      j = bItr->first;
+      computeNormal(RealType(0), RealType(0), RealType(0),
+                    a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
+                    b.points[3*j], b.points[3*j + 1], b.points[3*j + 2],
+                    nx, ny, nz);
+
+      // Test all of a.
+      sidea = compare(a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
+                      nx, ny, nz,
+                      a.points);
+      if (sidea == 0) continue;
+      sideb = compare(a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
+                      nx, ny, nz,
+                      b.points);
+      if (sideb == 0) continue;
+      if (sidea*sideb < 0) return false;
+    }
   }
 
   // We can't exclude anybody, so must intersect!
