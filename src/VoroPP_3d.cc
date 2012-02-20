@@ -210,7 +210,7 @@ tessellate(const vector<RealType>& points,
   const RealType scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
   const RealType dx = this->degeneracy();
   const RealType fconv = dx*scale;
-  const RealType halfdx = 0.5*dx;
+  const RealType randomfuzz = 2.0*dx;
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -255,9 +255,9 @@ tessellate(const vector<RealType>& points,
                 mNx, mNy, mNz,
                 false, false, false, 8);
   for (i = 0; i != ncells; ++i) con.put(i, 
-                                        max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*halfdx)),
-                                        max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*halfdx)),
-                                        max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*halfdx)));
+                                        max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*randomfuzz)),
+                                        max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*randomfuzz)),
+                                        max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*randomfuzz)));
   ASSERT(con.total_particles() == ncells);
 
   // Build the tessellation cell by cell.
