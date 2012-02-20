@@ -180,10 +180,6 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the convex hull of each domain and distribute them to all processes.
     const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, 1.0e-12);
-//     cerr << "Local convex hull: " << endl;
-//     for (unsigned k = 0; k != localHull.points.size()/2; ++k) {
-//       cerr << "    " << localHull.points[2*k] << " " << localHull.points[2*k + 1] << endl;
-//     }
     vector<ConvexHull> domainHulls(numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
@@ -211,12 +207,6 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
     ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
     Tessellation<Dimension, RealType> hullMesh;
-//     if (rank == 0) {
-//       cerr << "Preparing to generate hull mesh:" << endl;
-//       for (unsigned k = 0; k != hullGenerators.size()/2; ++k) {
-//         cerr << "    " << hullGenerators[2*k] << " " << hullGenerators[2*k + 1] << endl;
-//       }
-//     }
     this->tessellationWrapper(hullGenerators, hullMesh);
 
     // Find the set of domains we need to communicate with according to two criteria:
@@ -326,7 +316,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   ASSERT(ntotal >= nlocal);
   for (unsigned i = 0; i != ntotal; ++i) {
     for (unsigned j = 0; j != Dimension; ++j) {
-      generators[2*i + j] = generators[2*i + j]/fscale + rlow[j];
+      generators[Dimension*i + j] = generators[Dimension*i + j]/fscale + rlow[j];
     }
   }
 
@@ -348,11 +338,6 @@ void
 DistributedTessellator<Dimension, RealType>::
 tessellationWrapper(const vector<RealType>& points,
                     Tessellation<Dimension, RealType>& mesh) const {
-  int rank, numProcs;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-  for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
-    if (rank == sendProc) {
   switch (mType) {
   case unbounded:
     mSerialTessellator->tessellate(points, mesh);
@@ -368,9 +353,6 @@ tessellationWrapper(const vector<RealType>& points,
     ASSERT(mPLCptr != 0);
     mSerialTessellator->tessellate(points, *mPLCptr, mesh);
     break;
-  }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
   }
 }
 
