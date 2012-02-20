@@ -348,6 +348,11 @@ void
 DistributedTessellator<Dimension, RealType>::
 tessellationWrapper(const vector<RealType>& points,
                     Tessellation<Dimension, RealType>& mesh) const {
+  int rank, numProcs;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+  for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
+    if (rank == sendProc) {
   switch (mType) {
   case unbounded:
     mSerialTessellator->tessellate(points, mesh);
@@ -363,6 +368,9 @@ tessellationWrapper(const vector<RealType>& points,
     ASSERT(mPLCptr != 0);
     mSerialTessellator->tessellate(points, *mPLCptr, mesh);
     break;
+  }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 }
 

@@ -2,6 +2,7 @@
 // VoroPP_3d
 //----------------------------------------------------------------------------//
 #include <stdint.h>
+#include <stdlib.h>
 #include <iostream>
 #include <iterator>
 #include <algorithm>
@@ -155,6 +156,14 @@ insertFaceInfo(const set<unsigned>& fhashi,
   }
 }
 
+//------------------------------------------------------------------------------
+// Define our own local random number generator wrapping the standard srand &
+// rand methods.
+//------------------------------------------------------------------------------
+double random01() {
+  return double(rand())/RAND_MAX;
+}
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -191,6 +200,8 @@ tessellate(const vector<RealType>& points,
            RealType* low,
            RealType* high,
            Tessellation<3, RealType>& mesh) const {
+
+  const double degeneracy = 1.0e-9;
 
   typedef set<unsigned> FaceHash;
   typedef Point3<uint64_t> VertexHash;
@@ -244,11 +255,14 @@ tessellate(const vector<RealType>& points,
                 0.0, 1.0,
                 mNx, mNy, mNz,
                 false, false, false, 8);
-  for (i = 0; i != ncells; ++i) con.put(i, generators[3*i], generators[3*i + 1], generators[3*i + 2]);
+  for (i = 0; i != ncells; ++i) con.put(i, 
+                                        max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*degeneracy)),
+                                        max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*degeneracy)),
+                                        max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*degeneracy)));
   ASSERT(con.total_particles() == ncells);
 
   // Build the tessellation cell by cell.
-  voronoicell_neighbor cell;                       // Use cells with neighbor tracking.
+  voronoicell cell;                                // The Voro++ cell (without neighbor tracking).
   map<FaceHash, unsigned> faceHash2ID;             // map from face hash to mesh ID.
   map<VertexHash, unsigned> vertexHash2ID;         // map from vertex hash to mesh ID.
   c_loop_all loop(con); // Loop over all cells.
