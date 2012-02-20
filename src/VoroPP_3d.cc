@@ -201,8 +201,6 @@ tessellate(const vector<RealType>& points,
            RealType* high,
            Tessellation<3, RealType>& mesh) const {
 
-  const double degeneracy = 1.0e-9;
-
   typedef set<unsigned> FaceHash;
   typedef Point3<uint64_t> VertexHash;
 
@@ -212,6 +210,7 @@ tessellate(const vector<RealType>& points,
   const RealType scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
   const RealType dx = this->degeneracy();
   const RealType fconv = dx*scale;
+  const RealType halfdx = 0.5*dx;
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -256,9 +255,9 @@ tessellate(const vector<RealType>& points,
                 mNx, mNy, mNz,
                 false, false, false, 8);
   for (i = 0; i != ncells; ++i) con.put(i, 
-                                        max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*degeneracy)),
-                                        max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*degeneracy)),
-                                        max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*degeneracy)));
+                                        max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*halfdx)),
+                                        max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*halfdx)),
+                                        max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*halfdx)));
   ASSERT(con.total_particles() == ncells);
 
   // Build the tessellation cell by cell.
