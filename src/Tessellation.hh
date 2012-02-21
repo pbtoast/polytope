@@ -73,6 +73,17 @@ class Tessellation
   //! hull yourself.
   PLC<Dimension, RealType> convexHull;
 
+  //! Parallel data structure: the set of neighbor domains this portion of
+  //! the tessellation is in contact with.
+  std::vector<unsigned> neighborDomains;
+
+  //! Parallel data structure: the nodes and faces this domain shares with
+  //! each neighbor domain.
+  //! NOTE: we implicitly assume that any domains of rank less than ours we
+  //!       are receiving from, while any domains of greater rank we send
+  //!       to.
+  std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
+
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
   {

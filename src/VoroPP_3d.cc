@@ -177,7 +177,7 @@ tessellate(const vector<RealType>& points,
   const RealType scale = max(xmax - xmin, max(ymax - ymin, zmax - zmin));
   const RealType dx = this->degeneracy();
   const RealType fconv = dx*scale;
-  const RealType randomfuzz = 2.0*dx;
+  const RealType randomfuzz = 0.0; // 2.0*dx;
 
   // Pre-conditions.
   ASSERT(xmin < xmax);
@@ -265,7 +265,6 @@ tessellate(const vector<RealType>& points,
         //                                                  << vertices[k].realx(xmin, fconv) << " "
         //                                                  << vertices[k].realy(ymin, fconv) << " "
         //                                                  << vertices[k].realz(zmin, fconv) << ") ";
-
         // cout << endl;
         // std::cout << "                           ";
         // for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[k] << " ";
