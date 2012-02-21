@@ -9,6 +9,7 @@
 #include "mpi.h"
 
 #include "polytope.hh"
+#include "Point.hh"
 #include "polytope_serialize.hh"
 #include "ReducedPLC.hh"
 #include "convexHull_2d.hh"
@@ -33,11 +34,19 @@ template<int Dimension, typename RealType> struct DimensionTraits {};
 template<typename RealType>
 struct DimensionTraits<2, RealType> {
   typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
+  typedef uint64_t CoordHash;
+  typedef polytope::Point2<CoordHash> Point;
 
   static ConvexHull convexHull(const vector<RealType>& points, 
                                const RealType* low,
                                const RealType& dx) { 
     return ConvexHull(polytope::convexHull_2d(points, low, dx), points);
+  }
+  static Point constructPoint(const RealType* ri,
+                              const RealType* rlow,
+                              const RealType& dx,
+                              const size_t i) {
+    return Point(ri[0] - rlow[0], ri[1] - rlow[1], dx, i);
   }
 };
 
@@ -45,11 +54,19 @@ struct DimensionTraits<2, RealType> {
 template<typename RealType>
 struct DimensionTraits<3, RealType> {
   typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
+  typedef uint64_t CoordHash;
+  typedef polytope::Point3<CoordHash> Point;
 
   static ConvexHull convexHull(const vector<RealType>& points, 
                                const RealType* low,
                                const RealType& dx) { 
     return ConvexHull(polytope::convexHull_3d(points, low, dx), points);
+  }
+  static Point constructPoint(const RealType* ri,
+                              const RealType* rlow,
+                              const RealType& dx,
+                              const size_t i) {
+    return Point(ri[0] - rlow[0], ri[1] - rlow[1], ri[2] - rlow[2], dx, i);
   }
 };
 
@@ -64,6 +81,23 @@ template<> struct DataTypeTraits<double> {
   static MPI_Datatype MpiDataType() { return MPI_DOUBLE; }
 };
 
+//------------------------------------------------------------------------------
+// Comparator to compare std::pair's by their first or second element.
+//------------------------------------------------------------------------------
+template<typename T1, typename T2>
+struct ComparePairByFirstElement {
+  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
+    return lhs.first < rhs.first;
+  }
+};
+
+template<typename T1, typename T2>
+struct ComparePairBySecondElement {
+  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
+    return lhs.second < rhs.second;
+  }
+};
+
 } // end anonymous namespace
 
 namespace polytope {
@@ -74,9 +108,11 @@ namespace polytope {
 template<int Dimension, typename RealType>
 DistributedTessellator<Dimension, RealType>::
 DistributedTessellator(Tessellator<Dimension, RealType>* tessellator,
-                       bool assumeControl):
+                       bool assumeControl,
+                       bool buildCommunicationInfo):
   mSerialTessellator(tessellator),
   mAssumeControl(assumeControl),
+  mBuildCommunicationInfo(buildCommunicationInfo),
   mType(unbounded),
   mLow(0),
   mHigh(0),
@@ -146,7 +182,10 @@ computeDistributedTessellation(const vector<RealType>& points,
 
   // Some spiffy shorthand typedefs.
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
-
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::Point Point;
+  const double degeneracy = 1.0e-10;
+  
   // Parallel configuration.
   int rank, numProcs;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -179,7 +218,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   if (numProcs > 1) {
 
     // Compute the convex hull of each domain and distribute them to all processes.
-    const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, 1.0e-12);
+    const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
     vector<ConvexHull> domainHulls(numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
@@ -245,22 +284,24 @@ computeDistributedTessellation(const vector<RealType>& points,
       }
     }
 
+    // Copy the neighbor set information the mesh.
+    mesh.neighborDomains = vector<unsigned>();
+    copy(neighborSet.begin(), neighborSet.end(), back_inserter(mesh.neighborDomains));
+    sort(mesh.neighborDomains.begin(), mesh.neighborDomains.end());
+
 #ifndef NDEBUG
     // Make sure everyone is consistent about who talks to whom.
     // This is potentially an expensive check on massively parallel systems!
     {
-      vector<unsigned> neighborDomains;
-      copy(neighborSet.begin(), neighborSet.end(), back_inserter(neighborDomains));
-      sort(neighborDomains.begin(), neighborDomains.end());
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
-        unsigned numOthers = neighborDomains.size();
-        vector<unsigned> otherNeighbors(neighborDomains);
+        unsigned numOthers = mesh.neighborDomains.size();
+        vector<unsigned> otherNeighbors(mesh.neighborDomains);
         MPI_Bcast(&numOthers, 1, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
         if (numOthers > 0) {
           otherNeighbors.resize(numOthers);
           MPI_Bcast(&(otherNeighbors.front()), numOthers, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
           ASSERT(rank == sendProc or
-                 count(neighborDomains.begin(), neighborDomains.end(), sendProc) == 
+                 count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
                  count(otherNeighbors.begin(), otherNeighbors.end(), rank));
         }
       }
@@ -282,10 +323,12 @@ computeDistributedTessellation(const vector<RealType>& points,
       const unsigned otherProc = *otherItr;
       sendRequests.push_back(MPI_Request());
       MPI_Isend(&localBufferSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &sendRequests.back());
-      sendRequests.push_back(MPI_Request());
-      MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
+      if (localBufferSize > 0) {
+        sendRequests.push_back(MPI_Request());
+        MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
+      }
     }
-    ASSERT(sendRequests.size() == 2*neighborSet.size());
+    ASSERT(sendRequests.size() <= 2*neighborSet.size());
 
     // Get the info from each of our neighbors and append it to the result.
     for (set<unsigned>::const_iterator otherItr = neighborSet.begin();
@@ -295,9 +338,9 @@ computeDistributedTessellation(const vector<RealType>& points,
       unsigned bufSize;
       MPI_Status recvStatus1, recvStatus2;
       MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &recvStatus1);
-      vector<char> buffer(bufSize, '\0');
-      MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
       if (bufSize > 0) {
+        vector<char> buffer(bufSize, '\0');
+        MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
         vector<char>::const_iterator itr = buffer.begin();
         vector<RealType> otherGenerators;
         deserialize(otherGenerators, itr, buffer.end());
@@ -328,6 +371,122 @@ computeDistributedTessellation(const vector<RealType>& points,
   vector<unsigned> cellMask(mesh.cells.size(), 1);
   fill(cellMask.begin() + nlocal, cellMask.end(), 0);
   deleteCells(mesh, cellMask);
+
+  // If requested, build the communication info for the shared nodes & faces
+  // with our neighbor domains.
+  if (mBuildCommunicationInfo and numProcs > 1) {
+
+    // Hash the positions of our nodes and faces.
+    const unsigned numNodes = mesh.nodes.size()/Dimension;
+    const unsigned numFaces = mesh.faces.size();
+    vector<Point> localNodeHashes, localFaceHashes;
+    localNodeHashes.reserve(numNodes);
+    localFaceHashes.reserve(numFaces);
+    for (unsigned i = 0; i != numNodes; ++i) {
+      localNodeHashes.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&mesh.nodes[Dimension*i], rlow, degeneracy, i));
+    }
+    ASSERT(localNodeHashes.size() == mesh.nodes.size());
+    for (unsigned i = 0; i != numFaces; ++i) {
+      Point rf;
+      rf.index = i;
+      for (typename vector<unsigned>::const_iterator itr = mesh.faces[i].begin();
+           itr != mesh.faces[i].end(); 
+           ++itr) rf += localNodeHashes[*itr];
+      rf /= mesh.faces[i].size();
+      localFaceHashes.push_back(rf);
+    }
+    ASSERT(localFaceHashes.size() == numFaces);
+
+    // Serialize our node and face hashes into one spicy meatball.
+    vector<char> localBuffer;
+    serialize(localNodeHashes, localBuffer);
+    serialize(localFaceHashes, localBuffer);
+    unsigned localBufferSize = localBuffer.size();
+
+    // Send our node and face hashes to all our neighbors.
+    vector<MPI_Request> sendRequests;
+    sendRequests.reserve(2*mesh.neighborDomains.size());
+    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
+         otherItr != mesh.neighborDomains.end();
+         ++otherItr) {
+      const unsigned otherProc = *otherItr;
+      sendRequests.push_back(MPI_Request());
+      MPI_Isend(&localBufferSize, 1, MPI_UNSIGNED, otherProc, 10, MPI_COMM_WORLD, &sendRequests.back());
+      if (localBufferSize > 0) {
+        sendRequests.push_back(MPI_Request());
+        MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 11, MPI_COMM_WORLD, &sendRequests.back());
+      }
+    }
+    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
+
+    // Construct sets of our nodes and faces for fast testing.
+    const set<Point> myNodes(localNodeHashes.begin(), localNodeHashes.end()),
+                     myFaces(localFaceHashes.begin(), localFaceHashes.end());
+
+    // Get the node and face hashes from each of our neighbors.
+    vector<pair<unsigned, unsigned> > indices;
+    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
+         otherItr != mesh.neighborDomains.end();
+         ++otherItr) {
+      const unsigned otherProc = *otherItr;
+      unsigned bufSize;
+      MPI_Status recvStatus1, recvStatus2;
+      MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 10, MPI_COMM_WORLD, &recvStatus1);
+      if (bufSize > 0) {
+        vector<char> buffer(bufSize, '\0');
+        MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 11, MPI_COMM_WORLD, &recvStatus2);
+        vector<Point> otherNodeHashes, otherFaceHashes;
+        vector<char>::const_iterator itr = buffer.begin();
+        deserialize(otherNodeHashes, itr, buffer.end());
+        deserialize(otherFaceHashes, itr, buffer.end());
+        ASSERT(itr == buffer.end());
+        ASSERT(otherNodeHashes.size() % Dimension == 0);
+        ASSERT(otherFaceHashes.size() % Dimension == 0);
+
+        // Look for any nodes we share with the other domain.
+        const unsigned numOtherNodes = otherNodeHashes.size();
+        indices = vector<pair<unsigned, unsigned> >();
+        for (unsigned i = 0; i != numOtherNodes; ++i) {
+          const typename set<Point>::const_iterator itr = myNodes.find(otherNodeHashes[i]);
+          if (itr != myNodes.end()) indices.push_back(make_pair(otherNodeHashes[i].index, itr->index));
+        }
+
+        // Sort by the order of the minimum domain.
+        if (otherProc < rank) {
+          sort(indices.begin(), indices.end(), ComparePairByFirstElement<unsigned, unsigned>());
+        } else {
+          sort(indices.begin(), indices.end(), ComparePairBySecondElement<unsigned, unsigned>());
+        }
+
+        // Extract to the node data to the mesh.
+        mesh.sharedNodes.push_back(vector<unsigned>());
+        mesh.sharedNodes.reserve(indices.size());
+        for (unsigned i = 0; i != indices.size(); ++i) mesh.sharedNodes.back().push_back(indices[i].second);
+        ASSERT(mesh.sharedNodes.back().size() == indices.size());
+
+        // Look for any faces we share with other domain.
+        const unsigned numOtherFaces = otherFaceHashes.size();
+        indices = vector<pair<unsigned, unsigned> >();
+        for (unsigned i = 0; i != numOtherFaces; ++i) {
+          const typename set<Point>::const_iterator itr = myFaces.find(otherFaceHashes[i]);
+          if (itr != myFaces.end()) indices.push_back(make_pair(otherFaceHashes[i].index, itr->index));
+        }
+
+        // Sort by the order of the minimum domain.
+        if (otherProc < rank) {
+          sort(indices.begin(), indices.end(), ComparePairByFirstElement<unsigned, unsigned>());
+        } else {
+          sort(indices.begin(), indices.end(), ComparePairBySecondElement<unsigned, unsigned>());
+        }
+
+        // Extract to the face data to the mesh.
+        mesh.sharedFaces.push_back(vector<unsigned>());
+        mesh.sharedFaces.reserve(indices.size());
+        for (unsigned i = 0; i != indices.size(); ++i) mesh.sharedFaces.back().push_back(indices[i].second);
+        ASSERT(mesh.sharedFaces.back().size() == indices.size());
+      }
+    }
+  }
 }
 
 //------------------------------------------------------------------------------

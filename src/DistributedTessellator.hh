@@ -30,7 +30,8 @@ public:
   //! \param assumeControl If set to true, the DistributedTessellator will 
   //!                      assume control of the serial tessellator.
   DistributedTessellator(Tessellator<Dimension, RealType>* serialTessellator,
-                         bool assumeControl = true);
+                         bool assumeControl = true,
+                         bool buildCommunicationInfo = false);
   ~DistributedTessellator();
 
   // Note the DistributedTesselator doesn't know which of the boundary treatments
@@ -96,7 +97,7 @@ private:
     
   // Private data.
   Tessellator<Dimension, RealType>* mSerialTessellator;
-  bool mAssumeControl;
+  bool mAssumeControl, mBuildCommunicationInfo;
   mutable TessellationType mType;
   mutable RealType *mLow, *mHigh;
   mutable const PLC<Dimension, RealType>* mPLCptr;
