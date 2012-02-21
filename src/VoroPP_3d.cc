@@ -10,6 +10,7 @@
 #include <set>
 
 #include "polytope.hh" // Pulls in ASSERT and VoroPP_3d.hh.
+#include "Point.hh"
 #include "container.hh"
 
 namespace polytope {
@@ -21,40 +22,6 @@ using std::max;
 using std::abs;
 
 namespace { // We hide internal functions in an anonymous namespace.
-
-//------------------------------------------------------------------------------
-// A integer version of the simple 3D point.
-//------------------------------------------------------------------------------
-template<typename UintType>
-struct Point3 {
-  UintType x, y, z;
-  Point3(): x(0), y(0), z(0) {}
-  Point3(const UintType& xi, const UintType& yi, const UintType& zi): x(xi), y(yi), z(zi) {}
-  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; return *this; }
-  bool operator==(const Point3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
-  bool operator<(const Point3& rhs) const {
-    return (x < rhs.x                               ? true :
-            x == rhs.x and y < rhs.y                ? true :
-            x == rhs.x and y == rhs.y and z < rhs.z ? true :
-            false);
-  }
-  template<typename RealType>
-  Point3(const RealType& xi, const RealType& yi, const RealType& zi, const RealType& dx): 
-    x(static_cast<UintType>(xi/dx + 0.5)),
-    y(static_cast<UintType>(yi/dx + 0.5)),
-    z(static_cast<UintType>(zi/dx + 0.5)) {}
-  template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) { return static_cast<RealType>(x*dx) + xmin; }
-  template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) { return static_cast<RealType>(y*dy) + ymin; }
-  template<typename RealType> RealType realz(const RealType& zmin, const RealType& dz) { return static_cast<RealType>(z*dz) + zmin; }
-};
-
-// It's nice being able to print these things.
-template<typename UintType>
-std::ostream&
-operator<<(std::ostream& os, const Point3<UintType>& p) {
-  os << "(" << p.x << " " << p.y << " " << p.z <<  ")";
-  return os;
-}
 
 //------------------------------------------------------------------------------
 // Take the given set of vertex positions, and either find them in the known
