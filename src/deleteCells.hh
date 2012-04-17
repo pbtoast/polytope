@@ -32,8 +32,8 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
   ASSERT(cellMask.size() == ncells0);
   ASSERT(ncells0 == 0 or *max_element(cellMask.begin(), cellMask.end()) == 1);
 
-  // Create a masks for the nodes and faces.
-  std::vector<int> nodeMask(mesh.nodes.size()/Dimension, 0), faceMask(mesh.faces.size(), 0);
+  // Create masks for the nodes and faces.
+  std::vector<int> nodeMask(nnodes0, 0), faceMask(nfaces0, 0);
   for (unsigned icell = 0; icell != ncells0; ++icell) {
     if (cellMask[icell] == 1) {
       for (std::vector<int>::const_iterator faceItr = mesh.cells[icell].begin();

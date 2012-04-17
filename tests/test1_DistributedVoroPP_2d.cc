@@ -2,6 +2,8 @@
 // We use randomly chosen seed locations to divide up the generators
 // between processors.
 
+#include <algorithm>
+#include <numeric>
 #include <iostream>
 #include <vector>
 #include <map>
@@ -107,14 +109,30 @@ int main(int argc, char** argv) {
                                                          true, true);
     distVoro.tessellate(generators, xmin, xmax, mesh);
 
-    // Gather some global statistics.
-    unsigned ncellsGlobal, nnodesGlobal, nfacesGlobal;
+    // Figure out which of our nodes and faces we actually own.
     unsigned ncells = mesh.cells.size();
     unsigned nnodes = mesh.nodes.size()/2;
     unsigned nfaces = mesh.faces.size();
+    vector<unsigned> ownNodes(nnodes, 1), ownFaces(nfaces, 1);
+    for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
+      cerr << "Talking to " << mesh.neighborDomains[k] << endl;
+      if (mesh.neighborDomains[k] < rank) {
+        for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++k) ownNodes[mesh.sharedNodes[k][j]] = 0;
+        for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++k) ownFaces[mesh.sharedFaces[k][j]] = 0;
+      }
+    }
+    unsigned nnodesOwned = (nnodes == 0U ?
+                            0U :
+                            accumulate(ownNodes.begin(), ownNodes.end(), 0U));
+    unsigned nfacesOwned = (nfaces == 0U ?
+                            0U :
+                            accumulate(ownFaces.begin(), ownFaces.end(), 0U));
+
+    // Gather some global statistics.
+    unsigned ncellsGlobal, nnodesGlobal, nfacesGlobal;
     MPI_Allreduce(&ncells, &ncellsGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&nnodes, &nnodesGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&nfaces, &nfacesGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnodesOwned, &nnodesGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&nfacesOwned, &nfacesGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
 
     // Spew the mesh statistics.
     if (rank == 0) {
@@ -158,7 +176,7 @@ int main(int argc, char** argv) {
     // Blago!
 
     // Check the global sizes.
-    CHECK(nnodesGlobal/2 == (nx + 1)*(nx + 1));
+    CHECK(nnodesGlobal == (nx + 1)*(nx + 1));
     CHECK(ncellsGlobal == nx*nx);
     for (unsigned i = 0; i != ncells; ++i) CHECK(mesh.cells[i].size() == 4);
     CHECK(nfacesGlobal == 2*nx*(nx + 1));
