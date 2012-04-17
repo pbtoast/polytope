@@ -370,6 +370,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   // other domains generators, and renumber the resulting elements.
   vector<unsigned> cellMask(mesh.cells.size(), 1);
   fill(cellMask.begin() + nlocal, cellMask.end(), 0);
+  cerr << "Removing " << (mesh.cells.size() - nlocal) << " cells." << endl;
   deleteCells(mesh, cellMask);
 
   // If requested, build the communication info for the shared nodes & faces
@@ -385,7 +386,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     for (unsigned i = 0; i != numNodes; ++i) {
       localNodeHashes.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&mesh.nodes[Dimension*i], rlow, degeneracy, i));
     }
-    ASSERT(localNodeHashes.size() == mesh.nodes.size());
+    ASSERT(localNodeHashes.size() == mesh.nodes.size()/Dimension);
     for (unsigned i = 0; i != numFaces; ++i) {
       Point rf;
       rf.index = i;
