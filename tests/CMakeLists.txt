@@ -1,3 +1,10 @@
+# Convex hull 2D test.
+add_executable(test_convexHull_2d test_convexHull_2d.cc)
+add_test(test_convexHull_2d test_convexHull_2d)
+target_link_libraries(test_convexHull_2d polytope)
+set_tests_properties(test_convexHull_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+
 # Convex hull 3D test.
 add_executable(test_convexHull_3d test_convexHull_3d.cc)
 add_test(test_convexHull_3d test_convexHull_3d)
