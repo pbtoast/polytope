@@ -75,21 +75,23 @@ convexHull_2d(const std::vector<RealType>& points,
 
   ASSERT(points.size() % 2 == 0);
   const unsigned n = points.size() / 2;
-  int i, j, k, t;
+  int i, j;
 
   // Hash the input points and sort them by x coordinate, remembering their original indices
   // in the input set.  We also ensure that only unique (using a fuzzy comparison) points
   // are inserted here, since duplicates mess up the hull calculation.
   const RealType& xmin = low[0];
   const RealType& ymin = low[1];
-  std::set<std::pair<PointHash, unsigned>, FuzzyPoint2LessThan<CoordHash> > uniquePoints;
-  for (i = 0; i != n; ++i) {
-    uniquePoints.insert(std::make_pair(PointHash(CoordHash((points[2*i]     - xmin)/dx + 0.5),
-                                                 CoordHash((points[2*i + 1] - ymin)/dx + 0.5)),
-                                       i));
-  }
-  std::vector<std::pair<PointHash, unsigned> > sortedPoints(uniquePoints.begin(), uniquePoints.end());
+  std::set<PointHash, FuzzyPoint2LessThan<CoordHash> > uniquePoints;
+  for (i = 0; i != n; ++i) uniquePoints.insert(PointHash(CoordHash((points[2*i]     - xmin)/dx + 0.5),
+                                                         CoordHash((points[2*i + 1] - ymin)/dx + 0.5),
+                                                         i));
+  std::vector<PointHash> sortedPoints(uniquePoints.begin(), uniquePoints.end());
   std::sort(sortedPoints.begin(), sortedPoints.end());
+
+  // std::cerr << "Unique points : " << std::endl;
+  // for (i = 0; i != n; ++i) std::cerr << sortedPoints[i] << " ";
+  // std::cerr << std::endl;
 
 //   std::vector<std::pair<PointHash, unsigned> > sortedPoints;
 //   sortedPoints.reserve(n);
@@ -108,37 +110,45 @@ convexHull_2d(const std::vector<RealType>& points,
 
   // Prepare the result.
   const unsigned nunique = sortedPoints.size();
-  std::vector<int> result(2*nunique);
+  std::vector<int> lower, upper;
 
   // Build the lower hull.
-  for (i = 0, k = 0; i < nunique; i++) {
-    while (k >= 2 and
-           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
-    result[k++] = i;
+  for (i = 0; i < nunique; ++i) {
+    while (lower.size() >= 2 and
+           zcross_sign(sortedPoints[*(lower.end() - 2)], sortedPoints[*(lower.end() - 1)], sortedPoints[i]) <= 0) lower.pop_back();
+    lower.push_back(i);
   }
 
   // Build the upper hull.
-  for (i = nunique - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and
-           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
-    result[k++] = i;
+  for (i = 0; i != nunique; ++i) {
+    j = nunique - 1 - i;
+    while (upper.size() >= 2 and
+           zcross_sign(sortedPoints[*(upper.end() - 2)], sortedPoints[*(upper.end() - 1)], sortedPoints[j]) <= 0) upper.pop_back();
+    upper.push_back(j);
   }
-  if (!(k >= 4)) {
-    std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
-    for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
-  }
-  ASSERT(k >= 4);
-  ASSERT(result.front() == result.back());
+
+  // Concatenate the lower and upper hulls.
+  ASSERT(lower.back() == upper.front());
+  std::copy(upper.begin() + 1, upper.end(), std::back_inserter(lower));
+  ASSERT(lower.front() == lower.back());
+
+  // if (!(k >= 4)) {
+  //   std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
+  //   for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
+  // }
+  // ASSERT(k >= 4);
+  // ASSERT(result.front() == result.back());
 
   // Translate our sorted information to a PLC based on the input point ordering and we're done.
   PLC<2, RealType> plc;
-  for (i = 0; i != k - 1; ++i) {
-    j = (i + 1) % k;
+  const int nhull = lower.size();
+  for (i = 0; i != nhull - 1; ++i) {
+    j = (i + 1) % nhull;
     plc.facets.push_back(std::vector<int>());
-    plc.facets.back().push_back(sortedPoints[result[i]].second);
-    plc.facets.back().push_back(sortedPoints[result[j]].second);
+    plc.facets.back().push_back(sortedPoints[lower[i]].index);
+    plc.facets.back().push_back(sortedPoints[lower[j]].index);
   }
-  ASSERT(plc.facets.size() == k - 1);
+  ASSERT(plc.facets.size() == nhull - 1);
   return plc;
 }
 
