@@ -2,7 +2,9 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <cassert>
+#include <cstdlib>
 
 #include "polytope.hh"
 
@@ -265,39 +267,70 @@ testDonut()
 void
 testBounded()
 {
-  // Generate a bunch of random points within a square of length L.
-  double L = 10.0;
+  // Generate a bunch of random points.
   vector<double> generators;
   int N = 100;
+  double L = 10.0;
+  set<int> used;
+  const int ixmax = 1 << 14;
+  const int imax = ixmax*ixmax;
+  ASSERT(imax < RAND_MAX);
+  int ix, iy, iran;
+  double x, y;
   for (int i = 0; i < N; ++i)
   {
-    double x = L * double(::random())/RAND_MAX - 0.5*L;
-    double y = L * double(::random())/RAND_MAX - 0.5*L;
+    iran = ::random() % imax;
+    while (used.find(iran) != used.end()) iran = ::random() % imax;
+    used.insert(iran);
+    ix = iran % ixmax;
+    iy = iran / ixmax;
+    x = L * (double(ix)/ixmax - 0.5);
+    y = L * (double(iy)/ixmax - 0.5);
     generators.push_back(x);
     generators.push_back(y);
   }
 
   // Create a bounding box for the square and add corresponding generators.
-  double low[2], high[2];
-  low[0] = low[1] = -0.55*L;
-  high[0] = high[1] = 0.55*L;
-  generators.push_back(low[0]); generators.push_back(low[1]);
-  generators.push_back(low[0]); generators.push_back(high[1]);
-  generators.push_back(high[0]); generators.push_back(low[1]);
-  generators.push_back(high[0]); generators.push_back(high[1]);
+  double low[2] = {-0.55*L, -0.55*L},
+        high[2] = { 0.55*L,  0.55*L};
+  // cerr << "Bounding box : (" << low[0] << " " << low[1] << ") ("
+  //      << high[0] << " " << high[1] << ")" << endl;
+  // generators.push_back(low[0]); generators.push_back(low[1]);
+  // generators.push_back(low[0]); generators.push_back(high[1]);
+  // generators.push_back(high[0]); generators.push_back(low[1]);
+  // generators.push_back(high[0]); generators.push_back(high[1]);
 
-  PLC<2, double> box;
-  box.facets.resize(4);
-  box.facets[0].resize(2); box.facets[0][0] = N  ; box.facets[0][1] = N+1;
-  box.facets[1].resize(2); box.facets[1][0] = N+1; box.facets[1][1] = N+2;
-  box.facets[2].resize(2); box.facets[2][0] = N+2; box.facets[2][1] = N+3;
-  box.facets[3].resize(2); box.facets[3][0] = N+3; box.facets[3][1] = N;
+  // generators.push_back(low[0]);                 generators.push_back(low[1]);
+  // generators.push_back(0.5*(low[0] + high[0])); generators.push_back(low[1]);
+  // generators.push_back(high[0]);                generators.push_back(low[1]);
+  // generators.push_back(high[0]);                generators.push_back(0.5*(low[1] + high[1]));
+  // generators.push_back(high[0]);                generators.push_back(high[1]);
+  // generators.push_back(0.5*(low[0] + high[0])); generators.push_back(high[1]);
+  // generators.push_back(low[0]);                 generators.push_back(high[1]);
+  // generators.push_back(low[0]);                 generators.push_back(0.5*(low[1] + high[1]));
+
+  // PLC<2, double> box;
+  // box.facets.resize(4);
+  // box.facets[0].resize(2); box.facets[0][0] = N  ; box.facets[0][1] = N+1;
+  // box.facets[1].resize(2); box.facets[1][0] = N+1; box.facets[1][1] = N+2;
+  // box.facets[2].resize(2); box.facets[2][0] = N+2; box.facets[2][1] = N+3;
+  // box.facets[3].resize(2); box.facets[3][0] = N+3; box.facets[3][1] = N;
+
+  // box.facets.resize(8);
+  // box.facets[0].resize(2); box.facets[0][0] = N  ; box.facets[0][1] = N+1;
+  // box.facets[1].resize(2); box.facets[1][0] = N+1; box.facets[1][1] = N+2;
+  // box.facets[2].resize(2); box.facets[2][0] = N+2; box.facets[2][1] = N+3;
+  // box.facets[3].resize(2); box.facets[3][0] = N+3; box.facets[3][1] = N+4;
+  // box.facets[4].resize(2); box.facets[4][0] = N+4; box.facets[4][1] = N+5;
+  // box.facets[5].resize(2); box.facets[5][0] = N+5; box.facets[5][1] = N+6;
+  // box.facets[6].resize(2); box.facets[6][0] = N+6; box.facets[6][1] = N+7;
+  // box.facets[7].resize(2); box.facets[7][0] = N+7; box.facets[7][1] = N;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  triangle.tessellate(generators, box, mesh);
-cout << mesh << endl;
+  triangle.tessellate(generators, low, high, mesh);
+  cout << mesh << endl;
   CHECK(mesh.cells.size() == generators.size());
 
   // Write out the file if we can.
@@ -318,22 +351,42 @@ testUnbounded()
 {
   // Generate a bunch of random points.
   vector<double> generators;
-  int N = 100;
+  int N = 4;
   double L = 10.0;
+  set<int> used;
+  const int ixmax = 1 << 14;
+  const int imax = ixmax*ixmax;
+  ASSERT(imax < RAND_MAX);
+  int ix, iy, iran;
+  double x, y;
   for (int i = 0; i < N; ++i)
   {
-    double x = L * double(::random())/RAND_MAX - 0.5*L;
-    double y = L * double(::random())/RAND_MAX - 0.5*L;
+    iran = ::random() % imax;
+    while (used.find(iran) != used.end()) iran = ::random() % imax;
+    used.insert(iran);
+    ix = iran % ixmax;
+    iy = iran / ixmax;
+    x = L * (double(ix)/ixmax - 0.5);
+    y = L * (double(iy)/ixmax - 0.5);
     generators.push_back(x);
     generators.push_back(y);
+    cerr << "Generator @ (" << x << " " << y << ")" << endl;
   }
+
+  // Blago!
+  generators.resize(0);
+  generators.push_back(-1.0); generators.push_back(0.0);
+  generators.push_back( 1.0); generators.push_back(0.0);
+  generators.push_back( 0.0); generators.push_back(0.2);
+  generators.push_back( 0.9); generators.push_back(0.1);
+  // Blago!
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, mesh);
   CHECK(mesh.cells.size() == N);
-cout << mesh << endl;
+  cout << mesh << endl;
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
@@ -355,10 +408,10 @@ main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
-  test2x2Box();
-  testCircle();
-  testDonut();
-  testBounded(); 
+  // test2x2Box();
+  // testCircle();
+  // testDonut();
+  // testBounded(); 
   testUnbounded();
 
   cout << "PASS" << endl;

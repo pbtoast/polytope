@@ -39,7 +39,7 @@ class Polygon
   int numVertices() const { return m_vertices.size()/2; }
 
   //! Returns the number of edges in the polygon.
-  int numEdges() const { return m_vertices.size()/2 - 1; }
+  int numEdges() const { return m_vertices.size()/2; }
 
   //! This enum provides information about the location of a point 
   //! with respect to the PLC.
@@ -121,6 +121,16 @@ class Polygon
     return edge;
   }
 
+  //! Return the mid-point of the nearest edge.
+  void nearestEdgePosition(const RealType point[],
+                           RealType result[]) const
+  {
+    const int i0 = nearestEdge(point);
+    const int i1 = (i0 + 1) % m_vertices.size();
+    result[0] = 0.5*(m_vertices[2*i0    ] + m_vertices[2*i1    ]);
+    result[1] = 0.5*(m_vertices[2*i0 + 1] + m_vertices[2*i1 + 1]);
+  }
+
   //! Projects the given point to the given edge of the polygon.
   //! Here, the ith edge contains the ith and ((i+1)%N)th 
   //! vertices of the polygon.
@@ -178,17 +188,54 @@ class Polygon
   //! Computes the minimum distance from this point to the given edge 
   //! in the polygon. Here, the ith edge contains the ith and ((i+1)%N)th 
   //! vertices of the polygon.
-  RealType distanceToEdge(RealType point[], int edge) 
+  RealType distanceToEdge(const RealType point[], const int i0) const
   {
     // Compute the projection of the point to the given edge.
-    RealType proj[2];
-    project(point, edge, proj);
+    const int i1 = (i0 + 1) % m_vertices.size();
+    RealType proj[2] = {0.5*(m_vertices[2*i0    ] + m_vertices[2*i1    ]),
+                        0.5*(m_vertices[2*i0 + 1] + m_vertices[2*i1 + 1])};
 
     // Return the distance to the projection.
     return std::sqrt((point[0]-proj[0])*(point[0]-proj[0]) + 
                      (point[1]-proj[1])*(point[1]-proj[1]));
   }
 
+
+  //! Find the intersection of the given line segement (s1->s2) with the polygon,
+  //! closest to the line segments first point (s1).
+  //! Returns the edge index for the edge intersected (-1 if none).
+  int closestIntersection(const RealType* s1, const RealType* s2,
+                          RealType* intersect) const
+  {
+    const double sx = s2[0] - s1[0];
+    const double sy = s2[1] - s1[1];
+    unsigned i, j, n = m_vertices.size()/2;
+    double ex, ey, esx, esy, phia, phib, thpt, minPhi = FLT_MAX;
+    int result = -1;
+    for (i = 0; i != n; ++i)
+    {
+      j = (i + 1) % n;
+      ex = m_vertices[2*j] - m_vertices[2*i];
+      ey = m_vertices[2*j+1] - m_vertices[2*i+1];
+      esx = s1[0] - m_vertices[2*i];
+      esy = s1[1] - m_vertices[2*i+1];
+      thpt = ey*sx - ex*sy;
+      if (thpt != 0.0) {
+        phia = (ex*esy - ey*esx)/thpt;
+        phib = (sx*esy - sy*esx)/thpt;
+        if (phia >= 0.0 and phia <= 1.0 and
+            phib >= 0.0 and phib <= 1.0 and
+            phia < minPhi)
+        {
+          minPhi = phia;
+          result = i;
+          intersect[0] = s1[0] + phia*sx;
+          intersect[1] = s1[1] + phia*sy;
+        }
+      }
+    }
+    return result;
+  }
 
   private:
 
