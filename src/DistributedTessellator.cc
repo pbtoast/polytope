@@ -192,10 +192,13 @@ computeDistributedTessellation(const vector<RealType>& points,
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
   // Compute the bounding box for normalizing our coordinates.
-  RealType rlow[Dimension], rhigh[Dimension];
+  RealType rlow[Dimension], rhigh[Dimension], genLow[Dimension];
   this->computeBoundingBox(points, rlow, rhigh);
   RealType fscale = 0;
-  for (unsigned i = 0; i != Dimension; ++i) fscale = max(fscale, rhigh[i] - rlow[i]);
+  for (unsigned i = 0; i != Dimension; ++i) {
+    fscale = max(fscale, rhigh[i] - rlow[i]);
+    genLow[i] = RealType(0.0);
+  }
   ASSERT(fscale > 0);
   fscale = 1.0/fscale;
 
@@ -218,7 +221,16 @@ computeDistributedTessellation(const vector<RealType>& points,
   if (numProcs > 1) {
 
     // Compute the convex hull of each domain and distribute them to all processes.
-    const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
+    ConvexHull localHull;
+    for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
+      if (iproc == rank) {
+        localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, genLow, degeneracy);
+        cerr << "  Local hull " << iproc << " : ";
+        for (unsigned ii = 0; ii != localHull.points.size()/2; ++ii) cerr << " (" << localHull.points[2*ii] << " " << localHull.points[2*ii+1] << ")";
+        cerr << endl;
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
     vector<ConvexHull> domainHulls(numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
@@ -239,14 +251,29 @@ computeDistributedTessellation(const vector<RealType>& points,
     ASSERT(domainHulls.size() == numProcs);
     ASSERT(domainCellOffset.size() == numProcs + 1);
 
+    cerr << "Domain cell offsets : ";
+    copy(domainCellOffset.begin(), domainCellOffset.end(), ostream_iterator<unsigned>(cerr, " "));
+    cerr << endl;
+    cerr << " mLow, mHigh : (" << mLow[0] << " " << mLow[1] << ") (" << mHigh[0] << " " << mHigh[1] << ")" << endl;
+
     // Create a tessellation of the hull vertices for all domains.
     vector<RealType> hullGenerators;
     for (unsigned i = 0; i != numProcs; ++i) {
       copy(domainHulls[i].points.begin(), domainHulls[i].points.end(), back_inserter(hullGenerators));
     }
+    cerr << "hullGenerators : " << hullGenerators.size()/Dimension << endl;
     ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
     Tessellation<Dimension, RealType> hullMesh;
     this->tessellationWrapper(hullGenerators, hullMesh);
+
+    // Blago!
+    vector<double> r2(hullMesh.cells.size(), rank);
+    map<string, double*> fields;
+    fields["domain"] = &r2[0];
+    cerr << "Writing hull mesh with " << hullMesh.cells.size() << endl;
+    polytope::SiloWriter<Dimension, RealType>::write(hullMesh, fields, "test_DistributedTessellator_hullMesh");
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Blago!
 
     // Find the set of domains we need to communicate with according to two criteria:
     // 1.  Any domain hull that intersects our own.
@@ -293,6 +320,9 @@ computeDistributedTessellation(const vector<RealType>& points,
     // Make sure everyone is consistent about who talks to whom.
     // This is potentially an expensive check on massively parallel systems!
     {
+      cerr << "Communicating with : ";
+      copy(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), ostream_iterator<unsigned>(cerr, " "));
+      cerr << endl;
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
         unsigned numOthers = mesh.neighborDomains.size();
         vector<unsigned> otherNeighbors(mesh.neighborDomains);
@@ -500,17 +530,20 @@ tessellationWrapper(const vector<RealType>& points,
                     Tessellation<Dimension, RealType>& mesh) const {
   switch (mType) {
   case unbounded:
+    cerr << "Unbounded tessellation." << endl;
     mSerialTessellator->tessellate(points, mesh);
     break;
 
   case box:
     ASSERT(mLow != 0);
     ASSERT(mHigh != 0);
+    cerr << "box tessellation." << endl;
     mSerialTessellator->tessellate(points, mLow, mHigh, mesh);
     break;
 
   case plc:
     ASSERT(mPLCptr != 0);
+    cerr << "plc tessellation." << endl;
     mSerialTessellator->tessellate(points, *mPLCptr, mesh);
     break;
   }

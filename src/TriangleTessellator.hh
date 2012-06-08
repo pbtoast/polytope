@@ -32,6 +32,12 @@ class TriangleTessellator: public Tessellator<2, RealType>
   void tessellate(const std::vector<RealType>& points,
                   Tessellation<2, RealType>& mesh) const;
 
+  // Tessellate with a bounding box representing the boundaries.
+  void tessellate(const std::vector<RealType>& points,
+                  RealType* low,
+                  RealType* high,
+                  Tessellation<2, RealType>& mesh) const;
+
   // Tessellate obeying the given boundaries.
   void tessellate(const std::vector<RealType>& points,
                   const PLC<2, RealType>& geometry,
