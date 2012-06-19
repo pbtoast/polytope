@@ -25,6 +25,7 @@ struct Point2 {
   Point2(const UintType& xi, const UintType& yi, const unsigned i = 0): x(xi), y(yi), index(i) {}
   Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; index = rhs.index; return *this; }
   bool operator==(const Point2& rhs) const { return (x == rhs.x and y == rhs.y); }
+  bool operator!=(const Point2& rhs) const { return !(*this == rhs); }
   bool operator<(const Point2& rhs) const {
     return (x < rhs.x                ? true :
             x == rhs.x and y < rhs.y ? true :
@@ -81,6 +82,7 @@ struct Point3 {
   Point3(const UintType& xi, const UintType& yi, const UintType& zi, const unsigned i = 0): x(xi), y(yi), z(zi), index(i) {}
   Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; index = rhs.index; return *this; }
   bool operator==(const Point3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
+  bool operator!=(const Point3& rhs) const { return !(*this == rhs); }
   bool operator<(const Point3& rhs) const {
     return (x < rhs.x                               ? true :
             x == rhs.x and y < rhs.y                ? true :

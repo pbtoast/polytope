@@ -23,13 +23,12 @@ class PLC
   //! facet.
   std::vector<std::vector<int> > facets;
 
-  //! This array of size (Dimension*numHoles) contains components of 
-  //! points identifying holes to be subtracted from the volume enclosed by 
-  //! the PLC. Regions of the PLC containing a hole will not contain any 
-  //! cells in their corresponding mesh. The components are stored in 
-  //! point-major order and the 0th component of the ith point appears in 
-  //! holes[Dimension*i].
-  std::vector<RealType> holes;
+  //! This three dimensional array defines the topology of the inner facets
+  //! or holes in the geometry.  The outer-most dimension is the number of 
+  //! holes, and the remaining are facets using the same convention as the
+  //! the "facets" member.  In other words, holes[k][i][j] is the jth
+  //! generating point of the ith facet of the kth hole.
+  std::vector<std::vector<std::vector<int> > > holes;
 
   //! Returns true if this PLC is empty, false otherwise.
   bool empty() const
@@ -46,8 +45,14 @@ class PLC
       // In 2D all facets must have at least 2 points.
       for (int f = 0; f < facets.size(); ++f)
       {
-        if (facets[f].size() < 2)
-          return false;
+        if (facets[f].size() != 2) return false;
+      }
+      for (int h = 0; h < holes.size(); ++h)
+      {
+        for (int f = 0; f < holes[h].size(); ++f)
+        {
+          if (holes[h][f].size() != 2) return false;
+        }
       }
     }
     else if (Dimension == 3)
@@ -57,6 +62,13 @@ class PLC
       {
         if (facets[f].size() < 3)
           return false;
+      }
+      for (int h = 0; h < holes.size(); ++h)
+      {
+        for (int f = 0; f < holes[h].size(); ++f)
+        {
+          if (holes[h][f].size() < 3) return false;
+        }
       }
     }
     return true;
@@ -81,18 +93,22 @@ class PLC
     }
     s << std::endl;
     s << plc.holes.size() << " holes:" << std::endl;
-    for (int h = 0; h < plc.holes.size()/Dimension; ++h)
+    for (int h = 0; h < plc.holes.size(); ++h)
     {
-      s << " " << h << ": "; 
-      if (Dimension == 2)
-        s << "(" << plc.holes[2*h] << ", " << plc.holes[2*h+1] << ")" << std::endl;
-      else
+      s << "Hole #" << h << std::endl;
+      for (int f = 0; f < plc.holes[h].size(); ++f)
       {
-        ASSERT(Dimension == 3);
-        s << "(" << plc.holes[3*h] << ", " << plc.holes[3*h+1] << ", " << plc.holes[3*h+2] << ")" << std::endl;
+        s << "    " << f << ": (";
+        for (int p = 0; p < plc.holes[h][f].size(); ++p)
+        {
+          if (p < plc.holes[h][f].size()-1)
+            s << plc.holes[h][f][p] << ", ";
+          else
+            s << plc.holes[h][f][p];
+        }
+        s << ")" << std::endl;
       }
     }
-
     return s;
   }
 
@@ -102,23 +118,19 @@ class PLC
 // Serialize a PLC.
 //------------------------------------------------------------------------------
 template<int Dimension, typename RealType>
-struct Serializer<PLC<Dimension, RealType> > {
+struct Serializer<PLC<Dimension, RealType> >
+{
 
   static void serializeImpl(const PLC<Dimension, RealType>& value,
                             std::vector<char>& buffer) {
-    const unsigned nf = value.facets.size();
-    serialize(nf, buffer);
-    for (unsigned i = 0; i != nf; ++i) serialize(value.facets[i], buffer);
+    serialize(value.facets, buffer);
     serialize(value.holes, buffer);
   }
 
   static void deserializeImpl(PLC<Dimension, RealType>& value,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned nf;
-    deserialize(nf, bufItr, endItr);
-    value.facets.resize(nf);
-    for (unsigned i = 0; i != nf; ++i) deserialize(value.facets[i], bufItr, endItr);
+    deserialize(value.facets, bufItr, endItr);
     deserialize(value.holes, bufItr, endItr);
   }
 };

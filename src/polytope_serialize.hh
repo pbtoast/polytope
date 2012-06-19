@@ -60,6 +60,48 @@ struct Serializer<std::vector<T> > {
   }
 };
 
+// std::vector<std::vector> of known type.
+template<typename T>
+struct Serializer<std::vector<std::vector<T> > > {
+
+  static void serializeImpl(const std::vector<std::vector<T> >& value, 
+                            std::vector<char>& buffer) {
+    const unsigned n = value.size();
+    Serializer<unsigned>::serializeImpl(n, buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(value[i], buffer);
+  }
+
+  static void deserializeImpl(std::vector<std::vector<T> >& value, 
+                              std::vector<char>::const_iterator& bufItr, 
+                              const std::vector<char>::const_iterator& endItr) {
+    unsigned n;
+    Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
+    value.resize(n);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
+  }
+};
+
+// std::vector<std::vector<std::vector>> of known type.
+template<typename T>
+struct Serializer<std::vector<std::vector<std::vector<T> > > > {
+
+  static void serializeImpl(const std::vector<std::vector<std::vector<T> > >& value, 
+                            std::vector<char>& buffer) {
+    const unsigned n = value.size();
+    Serializer<unsigned>::serializeImpl(n, buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(value[i], buffer);
+  }
+
+  static void deserializeImpl(std::vector<std::vector<std::vector<T> > >& value, 
+                              std::vector<char>::const_iterator& bufItr, 
+                              const std::vector<char>::const_iterator& endItr) {
+    unsigned n;
+    Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
+    value.resize(n);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
+  }
+};
+
 //------------------------------------------------------------------------------
 // Dispatch to the functors!
 //------------------------------------------------------------------------------

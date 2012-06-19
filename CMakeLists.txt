@@ -41,6 +41,15 @@ if (USE_MPI EQUAL 1)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_MPI")
 endif ()
 
+# Find Boost.
+find_package(Boost)
+if (Boost_FOUND)
+  include_directories("${Boost_INCLUDE_DIR}")
+  message("-- Found BOOST installation at ${Boost_INCLUDE_DIR}")
+else ()
+  message("-- Unable to find required package BOOST.")
+endif ()
+
 # Find HDF5.
 set(HDF5_USE_STATIC_LIBRARIES TRUE)
 find_package(HDF5)
