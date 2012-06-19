@@ -6,12 +6,17 @@
 #include <set>
 #include <list>
 #include <map>
-#include "float.h"
 #include <limits>
+#include "float.h"
 
 #include "polytope.hh" // Pulls in ASSERT and TriangleTessellator.hh.
 #include "convexHull_2d.hh"
-#include "Polygon.hh"  // For polygon projections, etc.
+
+// We use the Boost.Geometry library to handle polygon intersections and such.
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/multi/geometries/multi_point.hpp>
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -33,6 +38,11 @@
 #define incircleadapt triangle_incircleadapt
 #define incircle triangle_incircle
 #include "triangle.c"
+
+//------------------------------------------------------------------------------
+// Teach Boost.Geometry how to handle our Point2 class with appropriate traits.
+//------------------------------------------------------------------------------
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y)
 
 // Fast predicate for determining colinearity of points.
 extern double orient2d(double* pa, double* pb, double* pc);
@@ -68,25 +78,25 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
 // Bound a position (X) to be inside the triangle (A,B,C).  If X is 
 // outside, it is projected to the midpoint of the closest edge.
 //------------------------------------------------------------------------
-int
-_boundPointProjector(double*A, double* B, double* X) {
-  const int checkAB = orient2d(A, B, X);
-  if (checkAB <= 0) {
-    cerr << "Projecting point " << X[0] << " " << X[1];
-    X[0] = 0.5*(A[0] + B[0]);
-    X[1] = 0.5*(A[1] + B[1]);
-    cerr << " to " << X[0] << " " << X[1] << endl;
-    return true;
-  }
-  return false;
-}
+// int
+// _boundPointProjector(double*A, double* B, double* X) {
+//   const int checkAB = orient2d(A, B, X);
+//   if (checkAB <= 0) {
+//     cerr << "Projecting point " << X[0] << " " << X[1];
+//     X[0] = 0.5*(A[0] + B[0]);
+//     X[1] = 0.5*(A[1] + B[1]);
+//     cerr << " to " << X[0] << " " << X[1] << endl;
+//     return true;
+//   }
+//   return false;
+// }
 
-void
-boundPoint(double* A, double* B, double* C, double* X) {
-  if (_boundPointProjector(A, B, X)) return;
-  if (_boundPointProjector(B, C, X)) return;
-  if (_boundPointProjector(C, A, X)) return;
-}
+// void
+// boundPoint(double* A, double* B, double* C, double* X) {
+//   if (_boundPointProjector(A, B, X)) return;
+//   if (_boundPointProjector(B, C, X)) return;
+//   if (_boundPointProjector(C, A, X)) return;
+// }
 
 //------------------------------------------------------------------------------
 // An implementation of the map specialized to help constructing counters.
@@ -111,10 +121,8 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// An implementation of the map specialized for our edge counting algorithm.
-// This changes the following things:
-//  this->flip(Key) : if Key is present, flip value.  If Key is new, set to true.
-//  this->operator[Key]: if Key exists, return value.  Otherwise throw error!
+// An implementation of the map specialized for testing true/false.
+// If tested with a key that does not exist, it is initialized as false.
 //------------------------------------------------------------------------------
 template<typename Key, 
          typename Comparator = std::less<Key> >
@@ -124,16 +132,8 @@ public:
   virtual ~BoolMap() {}
   bool operator[](const Key& key) const {
     typename std::map<Key, bool>::const_iterator itr = this->find(key);
-    ASSERT(itr != this->end());
+    if (itr == this->end()) return false;
     return itr->second;
-  }
-  void flip(const Key& key) {
-    typename std::map<Key, bool>::iterator itr = this->find(key);
-    if (itr == this->end()) {
-      this->insert(make_pair(key, true));
-    } else {
-      itr->second = !(itr->second);
-    }
   }
 };
 
@@ -174,16 +174,25 @@ struct ComparePointDistances: public std::binary_function<Point, Point, bool> {
 };
 
 //------------------------------------------------------------------------------
-// Update the map of points to unique indices.
+// z component of the cross product.
 //------------------------------------------------------------------------------
-template<typename Point>
+template<typename T>
+T
+zcross(const Point2<T>& a, const Point2<T>& b) {
+  return a.x*b.y - a.y*b.x;
+}
+
+//------------------------------------------------------------------------------
+// Update the map of thingies to unique indices.
+//------------------------------------------------------------------------------
+template<typename Key>
 int
-addMeshNode(const Point& pX, map<Point, int>& point2node) {
-  const typename map<Point, int>::const_iterator itr = point2node.find(pX);
+addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
+  const typename map<Key, int>::const_iterator itr = key2id.find(key);
   int result;
-  if (itr == point2node.end()) {
-    result = point2node.size();
-    point2node[pX] = result;
+  if (itr == key2id.end()) {
+    result = key2id.size();
+    key2id[key] = result;
   } else {
     result = itr->second;
   }
@@ -214,6 +223,68 @@ computeEquidistantPoint(double* e1, double* e2, double* p, double* X) {
     X[0] = e1[0] + ehatx*b;
     X[1] = e1[1] + ehaty*b;
   }
+}
+
+//------------------------------------------------------------------------------
+// Flag as false any collinear points we wish to eliminate along the given edge.
+//------------------------------------------------------------------------------
+template<typename Point>
+boost::geometry::model::ring<Point, false>
+eliminateCollinearNodes(boost::geometry::model::ring<Point, false>& ring,
+                        const double px,
+                        const double py) {
+  const int n = ring.size() - 1;
+  ASSERT(n >= 3);
+
+  cerr << " --> input ring : " << boost::geometry::dsv(ring) << endl;
+
+  // Start out flagging everyone as keep.
+  vector<bool> flags(n, true);
+
+  // Find the point p in the ring.
+  double thpt, minR = numeric_limits<double>::max();
+  int i = -1, j, k;
+  for (j = 0; j != n; ++j) {
+    thpt = square(ring[j].x - px) + square(ring[j].y - py);
+    if (thpt < minR) {
+      minR = thpt;
+      i = j;
+    }
+  }
+  ASSERT(i >= 0 and i < n);
+
+  cerr << " --> selected i = " << i << endl;
+
+  // Walk up from i question until the points are no longer collinear.
+  j = (i + 1) % n;
+  k = (i + 2) % n;
+  while (orient2d(&ring[i].x, &ring[j].x, &ring[k].x) == 0.0) {
+    cerr << i << " " << j << " " << k << " " << n << " " << orient2d(&ring[i].x, &ring[j].x, &ring[k].x) << endl;
+    flags[k] = false;
+    k = (k + 1) % n;
+  }
+
+  // Now walk back from i until the points are no longer collinear.
+  j = (i - 1) % n + n;
+  k = (i - 2) % n + n;
+  while (orient2d(&ring[i].x, &ring[j].x, &ring[k].x) == 0.0) {
+    cerr << i << " " << j << " " << k << " " << n << " " << orient2d(&ring[i].x, &ring[j].x, &ring[k].x) << endl;
+    flags[k] = false;
+    k = (k - 1) % n + n;
+  }
+  
+  cerr << " --> flags : ";
+  copy(flags.begin(), flags.end(), ostream_iterator<bool>(cerr, " "));
+  cerr << endl;
+
+  // Build a new ring without the extra collinear nodes.
+  vector<Point> points;
+  for (j = 0; j != n; ++j) {
+    if (flags[j]) points.push_back(ring[j]);
+  }
+  ASSERT(points.size() >= 3);
+  points.push_back(points[0]);
+  return boost::geometry::model::ring<Point, false>(points.begin(), points.end());
 }
 
 } // end anonymous namespace
@@ -303,14 +374,50 @@ tessellate(const vector<RealType>& points,
   ASSERT(mesh.empty());
 
   typedef std::pair<int, int> EdgeHash;
+  typedef uint64_t CoordHash;
+  typedef Point2<CoordHash> IntPoint;
+  typedef Point2<double> RealPoint;
+  typedef boost::geometry::model::polygon<RealPoint, // point type
+                                          false>     // clockwise
+    BGpolygon;
+  typedef boost::geometry::model::ring<RealPoint,    // point type
+                                       false>        // clockwise
+    BGring;
+  typedef boost::geometry::model::multi_point<RealPoint> BGmulti_point;
+  const CoordHash coordMax = numeric_limits<CoordHash>::max() / 16U;
 
   triangulateio in, delaunay;
 
-  // Define input points.
+  // Find the range of the generator points.
   const unsigned numGenerators = points.size()/2;
-  in.numberofpoints = numGenerators;
-  in.pointlist = new RealType[points.size()];
+  RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
+  int i, j;
+  for (i = 0; i != numGenerators; ++i) {
+    low[0] = min(low[0], points[2*i]);
+    low[1] = min(low[1], points[2*i+1]);
+    high[0] = max(high[0], points[2*i]);
+    high[1] = max(high[1], points[2*i+1]);
+  }
+  ASSERT(low[0] < high[0] and low[1] < high[1]);
+  RealType box[2] = {high[0] - low[0], 
+                     high[1] - low[1]};
+  const double boxsize = 2.0*max(box[0], box[1]);
+  const double dx = max(box[0], box[1])/coordMax;
+
+  // Define input points, including our false external generators.
+  in.numberofpoints = numGenerators + 4;
+  in.pointlist = new RealType[2*in.numberofpoints];
   copy(points.begin(), points.end(), in.pointlist);
+  const double xmin = 0.5*(low[0] + high[0]) - boxsize;
+  const double ymin = 0.5*(low[1] + high[1]) - boxsize;
+  const double xmax = 0.5*(low[0] + high[0]) + boxsize;
+  const double ymax = 0.5*(low[1] + high[1]) + boxsize;
+  in.pointlist[2*numGenerators  ] = xmin; in.pointlist[2*numGenerators+1] = ymin;
+  in.pointlist[2*numGenerators+2] = xmax; in.pointlist[2*numGenerators+3] = ymin;
+  in.pointlist[2*numGenerators+4] = xmax; in.pointlist[2*numGenerators+5] = ymax;
+  in.pointlist[2*numGenerators+6] = xmin; in.pointlist[2*numGenerators+7] = ymax;
+  cerr << "Chose bounding range : (" << xmin << " " << ymin << ") (" << xmax << " " << ymax << ")" << endl;
 
   // No point attributes or markers.
   in.numberofpointattributes = 0;
@@ -318,29 +425,18 @@ tessellate(const vector<RealType>& points,
   in.pointmarkerlist = 0; // No point markers.
 
   // Segments and/or holes.
-  if (geometry.empty())
-  {
-    in.numberofsegments = 0;
-    in.segmentlist = 0;
-    in.segmentmarkerlist = 0;
-    in.numberofholes = 0;
-    in.holelist = 0;
+  // Fill in Triangle's boundary info.  We use our imposed outer box of fake
+  // generators.
+  in.numberofsegments = 4;
+  in.segmentlist = new int[2*in.numberofsegments];
+  j = 0;
+  for (i = 0; i != 4; ++i) {
+    in.segmentlist[j++] = numGenerators + i;
+    in.segmentlist[j++] = numGenerators + (i + 1) % 4;
   }
-  else
-  {
-    in.numberofsegments = geometry.facets.size();
-    in.segmentlist = new int[2*in.numberofsegments];
-    int s = 0;
-    for (int f = 0; f < geometry.facets.size(); ++f)
-    {
-      in.segmentlist[s++] = geometry.facets[f][0];
-      in.segmentlist[s++] = geometry.facets[f][1];
-    }
-    in.segmentmarkerlist = 0;
-    in.numberofholes = geometry.holes.size();
-    in.holelist = new double[2*in.numberofholes];
-    copy(geometry.holes.begin(), geometry.holes.end(), in.holelist);
-  }
+  in.segmentmarkerlist = 0;
+  in.numberofholes = 0;
+  in.holelist = 0;
 
   // No regions.
   in.numberofregions = 0;
@@ -353,17 +449,8 @@ tessellate(const vector<RealType>& points,
   delaunay.trianglelist = 0;
   delaunay.triangleattributelist = 0;
   delaunay.neighborlist = 0;
-  if (geometry.empty())
-  {
-    delaunay.segmentlist = 0;
-    delaunay.segmentmarkerlist = 0;
-  }
-  else
-  {
-    delaunay.numberofsegments = geometry.facets.size();
-    delaunay.segmentlist = new int[2*delaunay.numberofsegments];
-    delaunay.segmentmarkerlist = new int[delaunay.numberofsegments];
-  }
+  delaunay.segmentlist = 0;
+  delaunay.segmentmarkerlist = 0;
   delaunay.edgelist = 0;
   delaunay.edgemarkerlist = 0;
   delaunay.holelist = 0;
@@ -382,33 +469,66 @@ tessellate(const vector<RealType>& points,
   // Make sure we got something.
   if (delaunay.numberoftriangles == 0)
     error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
-  if (delaunay.numberofpoints != numGenerators)
-  {
+  if (delaunay.numberofpoints != numGenerators + 4) {
     char err[1024];
     snprintf(err, 1024, "TriangleTessellator: Delauney triangulation produced %d triangles\n(%d generating points given)", 
              delaunay.numberofpoints, (int)numGenerators);
     error(err);
   }
 
-  // Transfer the convex hull data and build a Polygon representing 
-  // the hull.
+  // Transfer the convex hull data.
   mesh.convexHull.facets.resize(delaunay.numberofsegments);
   vector<double> hullVertices(2*delaunay.numberofsegments);
-  RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
-  RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
-  for (int i = 0; i < delaunay.numberofsegments; ++i)
-  {
+  for (int i = 0; i < delaunay.numberofsegments; ++i) {
     mesh.convexHull.facets[i].resize(2);
     mesh.convexHull.facets[i][0] = delaunay.segmentlist[2*i];
     mesh.convexHull.facets[i][1] = delaunay.segmentlist[2*i+1];
     hullVertices[2*i]   = points[2*delaunay.segmentlist[2*i]];
     hullVertices[2*i+1] = points[2*delaunay.segmentlist[2*i]+1];
-    low[0] = min(low[0], hullVertices[2*i]);
-    low[1] = min(low[1], hullVertices[2*i + 1]);
-    high[0] = max(high[0], hullVertices[2*i]);
-    high[1] = max(high[1], hullVertices[2*i + 1]);
   }
-  Polygon<double> convexHull(hullVertices);
+
+  // Blago!
+  {
+    int i, j, pindex, qindex, rindex, iedge;
+    copy(&delaunay.pointlist[0], &delaunay.pointlist[2*delaunay.numberofpoints], 
+         back_inserter(mesh.nodes));
+    map<EdgeHash, int> edgeHash2id;
+    mesh.cells.resize(delaunay.numberoftriangles);
+    for (i = 0; i != delaunay.numberoftriangles; ++i) {
+      pindex = delaunay.trianglelist[3*i];
+      qindex = delaunay.trianglelist[3*i + 1];
+      rindex = delaunay.trianglelist[3*i + 2];
+      iedge = addKeyToMap(hashEdge(pindex, qindex), edgeHash2id);
+      mesh.cells[i].push_back(pindex < qindex ? iedge : ~iedge);
+      iedge = addKeyToMap(hashEdge(qindex, rindex), edgeHash2id);
+      mesh.cells[i].push_back(qindex < rindex ? iedge : ~iedge);
+      iedge = addKeyToMap(hashEdge(rindex, pindex), edgeHash2id);
+      mesh.cells[i].push_back(rindex < pindex ? iedge : ~iedge);
+    }
+    mesh.faces.resize(edgeHash2id.size());
+    for (typename map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
+         itr != edgeHash2id.end();
+         ++itr) {
+      i = itr->first.first;
+      j = itr->first.second;
+      iedge = itr->second;
+      mesh.faces[iedge].push_back(i);
+      mesh.faces[iedge].push_back(j);
+    }
+    
+    const int nx = delaunay.numberoftriangles;
+    vector<double> index(nx);
+    for (i = 0; i < nx; ++i) index[i] = double(i);
+    map<string, double*> fields;
+    fields["cell_index"] = &index[0];
+    SiloWriter<2, double>::write(mesh, fields, "TriangleMesh");
+
+    mesh.nodes.resize(0);
+    mesh.cells.resize(0);
+    mesh.faces.resize(0);
+    cerr << "Wrote triangle mesh." << endl;
+  }
+  // Blago!
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
@@ -420,40 +540,47 @@ tessellate(const vector<RealType>& points,
   // get a little squirrely at boundaries.  On boundary edges we create
   // a vertex at the edge center.
 
-  // Find the circumcenters of each triangle.  
+  // Find the circumcenters of each triangle, and build the set of triangles
+  // associated with each generator.
   CounterMap<EdgeHash> edgeCounter;
-  map<Point2<uint64_t>, set<int> > point2tri;
-  vector<double> triCircumCenters(2*delaunay.numberoftriangles);
-  double X[2];
-  int i, j, k, pindex, qindex, rindex;
-  for (i = 0; i != delaunay.numberoftriangles; ++i)
-  {
+  vector<RealPoint> circumcenters(delaunay.numberoftriangles);
+  map<int, set<int> > gen2tri;
+  map<int, set<int> > neighbors;
+  int k, pindex, qindex, rindex, iedge;
+  for (i = 0; i != delaunay.numberoftriangles; ++i) {
     pindex = delaunay.trianglelist[3*i];
     qindex = delaunay.trianglelist[3*i + 1];
     rindex = delaunay.trianglelist[3*i + 2];
-    ++edgeCounter[hashEdge(pindex, qindex)];
-    ++edgeCounter[hashEdge(qindex, rindex)];
-    ++edgeCounter[hashEdge(rindex, pindex)];
+    if (pindex < numGenerators and qindex < numGenerators and rindex < numGenerators) {
+      ++edgeCounter[hashEdge(pindex, qindex)];
+      ++edgeCounter[hashEdge(qindex, rindex)];
+      ++edgeCounter[hashEdge(rindex, pindex)];
+    }
     computeCircumcenter(&delaunay.pointlist[2*pindex],
                         &delaunay.pointlist[2*qindex],
                         &delaunay.pointlist[2*rindex],
-                        &triCircumCenters[2*i]);
-    low[0] = min(low[0], triCircumCenters[2*i]);
-    low[1] = min(low[1], triCircumCenters[2*i+1]);
-    high[0] = max(high[0], triCircumCenters[2*i]);
-    high[1] = max(high[1], triCircumCenters[2*i+1]);
-    cerr << "circumcenter : " << triCircumCenters[2*i] << " " << triCircumCenters[2*i+1] << endl;
+                        &circumcenters[i].x);
+    // ASSERT(circumcenters[i].x >= xmin and circumcenters[i].x <= xmax and
+    //        circumcenters[i].y >= ymin and circumcenters[i].y <= ymax);
+    gen2tri[pindex].insert(i);
+    gen2tri[qindex].insert(i);
+    gen2tri[rindex].insert(i);
+    neighbors[pindex].insert(qindex);
+    neighbors[pindex].insert(rindex);
+    neighbors[qindex].insert(pindex);
+    neighbors[qindex].insert(rindex);
+    neighbors[rindex].insert(pindex);
+    neighbors[rindex].insert(qindex);
+    cerr << "circumcenter : " << circumcenters[i] << endl;
   }
+  ASSERT(circumcenters.size() == delaunay.numberoftriangles);
 
-  ASSERT(triCircumCenters.size() == 2*delaunay.numberoftriangles);
-  ASSERT(low[0] < high[0] and low[1] < high[1]);
-  RealType box[2] = {high[0] - low[0], 
-                     high[1] - low[1]};
-  const double dx = 1.0e-10*max(box[0], box[1]);
-
-  // Flag any generators on the edge of the tessellation.
+  // Flag any generators on the edge of the tessellation.  Here we mean the actual
+  // generators, not our added boundary ones.
   vector<bool> exteriorGenerators(numGenerators, false);
+  BoolMap<EdgeHash> exteriorEdgeTest;
   list<EdgeHash> exteriorEdges;
+  vector<vector<EdgeHash> > exteriorEdgesOfGen(numGenerators);
   for (typename CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
        itr != edgeCounter.end();
        ++itr) {
@@ -464,563 +591,287 @@ tessellate(const vector<RealType>& points,
       exteriorGenerators[i] = true;
       exteriorGenerators[j] = true;
       exteriorEdges.push_back(itr->first);
+      exteriorEdgeTest.insert(make_pair(itr->first, true));
+      exteriorEdgesOfGen[i].push_back(itr->first);
+      exteriorEdgesOfGen[j].push_back(itr->first);
     }
   }
 
-  // Connect the exterior edges into an ordered Polygon representing the boundary.
-  const unsigned numBoundaryPoints = exteriorEdges.size();
-  vector<RealType> boundaryPoints;
-  vector<EdgeHash> boundaryEdgeOrder;
-  boundaryEdgeOrder.push_back(exteriorEdges.front());
-  exteriorEdges.pop_front();
-  i = boundaryEdgeOrder.front().first;
-  boundaryPoints.reserve(2*numBoundaryPoints);
-  copy(&points[2*i], &points[2*i+2], back_inserter(boundaryPoints));
-  i = boundaryEdgeOrder.front().second;
-  copy(&points[2*i], &points[2*i+2], back_inserter(boundaryPoints));
-  while (exteriorEdges.size() > 0) {
-    list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
-                                           MatchEitherPairValue<int>(i));
-    ASSERT(itr != exteriorEdges.end());
-    i = (itr->first == i ? itr->second : itr->first);
-    boundaryEdgeOrder.push_back(*itr);
-    exteriorEdges.erase(itr);
-    if (exteriorEdges.size() > 0) copy(&points[2*i], &points[2*i+2], back_inserter(boundaryPoints));
+  // Build the polygon representing our boundaries.
+  BGpolygon boundary;
+  if (geometry.empty()) {
+    // The user did not provide a boundary, so use our local edge use count to 
+    // find the bounding edges.  Note in this case there will be no holes.
+    const unsigned numBoundaryPoints = exteriorEdges.size();
+    vector<RealPoint> boundaryPoints;
+    vector<EdgeHash> boundaryEdgeOrder;
+    boundaryEdgeOrder.push_back(exteriorEdges.front());
+    exteriorEdges.pop_front();
+    i = boundaryEdgeOrder.front().first;
+    boundaryPoints.reserve(numBoundaryPoints + 1);
+    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    i = boundaryEdgeOrder.front().second;
+    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    while (exteriorEdges.size() > 0) {
+      list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
+                                             MatchEitherPairValue<int>(i));
+      ASSERT(itr != exteriorEdges.end());
+      i = (itr->first == i ? itr->second : itr->first);
+      boundaryEdgeOrder.push_back(*itr);
+      exteriorEdges.erase(itr);
+      boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    }
+    ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
+    ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
+    ASSERT(boundaryPoints.size() == numBoundaryPoints + 1);
+    ASSERT(boundaryPoints.front() == boundaryPoints.back());
+    boost::geometry::assign(boundary, BGring(boundaryPoints.begin(), boundaryPoints.end()));
+
+  } else {
+    // Copy the PLC provided boundary information into a Boost.Geometry polygon.
+    vector<RealPoint> boundaryPoints;
+    boundaryPoints.reserve(geometry.facets.size() + 1);
+    i = geometry.facets[0][0];
+    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    for (j = 0; j != geometry.facets.size(); ++j) {
+      ASSERT(geometry.facets[j].size() == 2);
+      i =  geometry.facets[j][1];
+      boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    }
+    ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
+    ASSERT(boundaryPoints.front() == boundaryPoints.back());
+    boost::geometry::assign(boundary, BGring(boundaryPoints.begin(), boundaryPoints.end()));
+
+    // Add any interior holes.
+    const unsigned numHoles = geometry.holes.size();
+    if (numHoles > 0) {
+      typename BGpolygon::inner_container_type holes = boundary.inners();
+      holes.resize(numHoles);
+      for (k = 0; k != numHoles; ++k) {
+        boundaryPoints = vector<RealPoint>();
+        boundaryPoints.reserve(geometry.holes[k].size() + 1);
+        i = geometry.holes[k][0][0];
+        boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+        for (j = 0; j != geometry.holes[k].size(); ++j) {
+          ASSERT(geometry.holes[k][j].size() == 2);
+          i =  geometry.holes[k][j][1];
+          boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+        }
+        ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
+        ASSERT(boundaryPoints.front() == boundaryPoints.back());
+        boost::geometry::assign(holes[k], BGring(boundaryPoints.begin(), boundaryPoints.end()));
+      }
+    }
   }
-  ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
-  ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
-  ASSERT(boundaryPoints.size() == 2*numBoundaryPoints);
-  Polygon<RealType> boundary(boundaryPoints);
 
-  // Walk the triangles again, and take care of any circumcenters that are outside
-  // the allowed surface.
-  // We also compute the integer representations of the mesh node coordinates, and
-  // build up the mesh nodes as these integer versions.
-  int e1, e2, iedge;
-  Point2<uint64_t> pX;
-  double X1[2], X2[2];
-  map<Point2<uint64_t>, int> point2node;
-  map<int, set<int> > gen2nodes;
-  vector<vector<Point2<uint64_t> > > boundaryEdgePoints(numBoundaryPoints);
-  for (i = 0; i != delaunay.numberoftriangles; ++i)
-  {
-    pindex = delaunay.trianglelist[3*i];
-    qindex = delaunay.trianglelist[3*i + 1];
-    rindex = delaunay.trianglelist[3*i + 2];
+  // Walk each generator and build up it's unique nodes and faces.
+  mesh.cells.resize(numGenerators);
+  IntPoint pX1, pX2;
+  map<IntPoint, int> point2node;
+  map<EdgeHash, int> edgeHash2id;
+  map<int, vector<unsigned> > edgeCells;
+  map<int, BGring> cellRings;
+  for (i = 0; i != numGenerators; ++i) {
 
-    // if (boundary.queryPoint(&triCircumCenters[2*i]) == Polygon<double>::POINT_OUTSIDE)
-    // {
-    //   cerr << "Outside circumcenter : " << triCircumCenters[2*i] << " " << triCircumCenters[2*i+1] << endl;
-    //   cerr << "Triangle generator edges : (" << delaunay.pointlist[2*pindex] << " " << delaunay.pointlist[2*pindex+1] << ") ("
-    //        << delaunay.pointlist[2*qindex] << " " << delaunay.pointlist[2*qindex+1] << ") ("
-    //        << delaunay.pointlist[2*rindex] << " " << delaunay.pointlist[2*rindex+1] << ")" << endl;
+    // Add the circumcenters as points for the cell.
+    vector<RealPoint> cellPoints;
+    for (set<int>::const_iterator triItr = gen2tri[i].begin();
+         triItr != gen2tri[i].end();
+         ++triItr) {
+      cellPoints.push_back(circumcenters[*triItr]);
+      cerr << "Cell " << i << " adding circumcenter " << cellPoints.back() << endl;
+    }
 
-    //   // This circumcenter is outside the tessellation boundary, and needs to be truncated.
-    //   // It will turn into two new nodes along the mesh boundary.
-    //   const double inside_orient = orient2d(&delaunay.pointlist[2*pindex], 
-    //                                         &delaunay.pointlist[2*qindex], 
-    //                                         &delaunay.pointlist[2*rindex]);
-    //   if (orient2d(&delaunay.pointlist[2*pindex], 
-    //                &delaunay.pointlist[2*qindex], 
-    //                &triCircumCenters[2*i])*inside_orient < 0.0) {
-    //     e1 = pindex; e2 = qindex; j = rindex;
-    //     cerr << "Option pq : " << orient2d(&delaunay.pointlist[2*pindex], 
-    //                                        &delaunay.pointlist[2*qindex], 
-    //                                        &triCircumCenters[2*i]) << " " << inside_orient << endl;
-    //   } else if (orient2d(&delaunay.pointlist[2*qindex], 
-    //                       &delaunay.pointlist[2*rindex], 
-    //                       &triCircumCenters[2*i])*inside_orient < 0.0) {
-    //     e1 = qindex; e2 = rindex; j = pindex;
-    //     cerr << "Option qr : " << orient2d(&delaunay.pointlist[2*qindex], 
-    //                                        &delaunay.pointlist[2*rindex], 
-    //                                        &triCircumCenters[2*i]) << " " << inside_orient << endl;
-    //   } else {
-    //     ASSERT(orient2d(&delaunay.pointlist[2*rindex], 
-    //                     &delaunay.pointlist[2*pindex], 
-    //                     &triCircumCenters[2*i])*inside_orient < 0.0);
-    //     e1 = rindex; e2 = pindex; j = qindex;
-    //     cerr << "Option rp : " << orient2d(&delaunay.pointlist[2*rindex], 
-    //                                        &delaunay.pointlist[2*pindex], 
-    //                                        &triCircumCenters[2*i]) << " " << inside_orient << endl;
-    //   }
-
-    //   X1[0] = 0.5*(delaunay.pointlist[2*e1]     + delaunay.pointlist[2*j]);
-    //   X1[1] = 0.5*(delaunay.pointlist[2*e1 + 1] + delaunay.pointlist[2*j + 1]);
-    //   X2[0] = 0.5*(delaunay.pointlist[2*e2]     + delaunay.pointlist[2*j]);
-    //   X2[1] = 0.5*(delaunay.pointlist[2*e2 + 1] + delaunay.pointlist[2*j + 1]);
-
-    //   // Bump the initial points a bit to get them off of the legs of the initial triangle.
-    //   X1[0] += 1.0e-10*(triCircumCenters[2*i]   - X1[0]);
-    //   X1[1] += 1.0e-10*(triCircumCenters[2*i+1] - X1[1]);
-    //   X2[0] += 1.0e-10*(triCircumCenters[2*i]   - X2[0]);
-    //   X2[1] += 1.0e-10*(triCircumCenters[2*i+1] - X2[1]);
-
-    //   // First intersection.
-    //   iedge = boundary.closestIntersection(X1, &triCircumCenters[2*i], X);
-    //   cerr << "Intersect edge " << iedge << endl;
-    //   pX = Point2<uint64_t>(X[0] - low[0], X[1] - low[1], dx);
-    //   k = addMeshNode(pX, point2node);
-    //   gen2nodes[e1].insert(k);
-    //   gen2nodes[j].insert(k);
-    //   ASSERT(iedge >= 0 and iedge < numBoundaryPoints);
-    //   boundaryEdgePoints[iedge].push_back(pX);
-    //   cerr << "         Projecting to " << X[0] << " " << X[1] << endl;
-
-    //   // Second intersection.
-    //   iedge = boundary.closestIntersection(X2, &triCircumCenters[2*i], X);
-    //   cerr << "Intersect edge " << iedge << endl;
-    //   pX = Point2<uint64_t>(X[0] - low[0], X[1] - low[1], dx);
-    //   k = addMeshNode(pX, point2node);
-    //   gen2nodes[e2].insert(k);
-    //   gen2nodes[j].insert(k);
-    //   ASSERT(iedge >= 0 and iedge < numBoundaryPoints);
-    //   boundaryEdgePoints[iedge].push_back(pX);
-    //   cerr << "         Projecting to " << X[0] << " " << X[1] << endl;
-
-    // } else {
-      // This circumcenter is on the interior.
-      pX = Point2<uint64_t>(triCircumCenters[2*i] - low[0],
-                            triCircumCenters[2*i+1] - low[1], dx);
-      k = addMeshNode(pX, point2node);
-      gen2nodes[pindex].insert(k);
-      gen2nodes[qindex].insert(k);
-      gen2nodes[rindex].insert(k);
+    // // If we're on a boundary we need the half-way points of our boundary edges.
+    // if (exteriorGenerators[i]) {
+    //   cellPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
+    //   ASSERT(exteriorEdgesOfGen[i].size() == 2);
+    //   j = exteriorEdgesOfGen[i][0].first;
+    //   k = exteriorEdgesOfGen[i][0].second;
+    //   cellPoints.push_back(RealPoint(0.5*(points[2*j]   + points[2*k]),
+    //                                  0.5*(points[2*j+1] + points[2*k+1])));
+    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
+    //   j = exteriorEdgesOfGen[i][1].first;
+    //   k = exteriorEdgesOfGen[i][1].second;
+    //   cellPoints.push_back(RealPoint(0.5*(points[2*j]   + points[2*k]),
+    //                                  0.5*(points[2*j+1] + points[2*k+1])));
+    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
     // }
+
+    // // Build a find with the unbounded points.
+    // cellRings[i] = BGring(cellPoints.begin(), cellPoints.end());
+    // boost::geometry::correct(cellRings[i]);
+    // cerr << "Initial ring : " << boost::geometry::dsv(cellRings[i]) << endl;
+
+    // Build the convex hull of the cell points.
+    BGmulti_point mpoints(cellPoints.begin(), cellPoints.end());
+    boost::geometry::convex_hull(mpoints, cellRings[i]);
+
+    // Intersect with the boundary to get the bounded cell.
+    vector<BGring> cellIntersections;
+    boost::geometry::intersection(boundary, cellRings[i], cellIntersections);
+    ASSERT(cellIntersections.size() == 1);
+    cellRings[i] = cellIntersections[0];
+
+    // // If this is a boundary generator, look for any vertices that are
+    // // on the boundary edges.  We only want the points on those edges 
+    // // closest to us.
+    // if (exteriorGenerators[i]) {
+    //   cellRings[i] = eliminateCollinearNodes<RealPoint>(cellRings[i],
+    //                                                     points[2*i],
+    //                                                     points[2*i+1]);
+    // }
+
+    // Now build the unique mesh nodes and cell info.
+    for (typename BGring::const_iterator itr = cellRings[i].begin();
+         itr != cellRings[i].end() - 1;
+         ++itr) {
+      pX1 = IntPoint(CoordHash((itr->x - low[0])/dx),
+                     CoordHash((itr->y - low[1])/dx));
+      pX2 = IntPoint(CoordHash(((itr+1)->x - low[0])/dx),
+                     CoordHash(((itr+1)->y - low[1])/dx));
+      if (pX1 != pX2) {
+        j = addKeyToMap(pX1, point2node);
+        k = addKeyToMap(pX2, point2node);
+        ASSERT(j != k);
+        iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
+        edgeCells[iedge].push_back(i);
+        mesh.cells[i].push_back(j < k ? iedge : ~iedge);
+        cerr << "Cell " << i << " adding edge " << iedge << " : " << *itr << " " << *(itr + 1) << endl;
+      }
+    }
+    ASSERT(mesh.cells[i].size() >= 3);
   }
 
-  // // Look for any remaining edges that need to be split.
-  // for (iedge = 0; iedge != numBoundaryPoints; ++iedge) {
-  //   i = boundaryEdgeOrder[iedge].first;
-  //   j = boundaryEdgeOrder[iedge].second;
-  //   cerr << "Bounding edge (" << points[2*i] << " " << points[2*i+1] << ") (" << points[2*j] << " " << points[2*j+1] << ") : " << boundaryEdgePoints[iedge].size() << endl;
+  // // Now create the cells for boundary generators.
+  // bool interiorCheck;
+  // for (i = 0; i != numGenerators; ++i) {
+  //   if (exteriorGenerators[i]) {
+  //     ASSERT(neighbors[i].size() >= 2);
 
-  //   if (boundaryEdgePoints[iedge].size() == 0) {
-  //     // This edge does not have any points inserted, so split it in half between the
-  //     // two generator endpoints.
-  //     pX = Point2<uint64_t>(0.5*(points[2*i]   + points[2*j])   - low[0],
-  //                           0.5*(points[2*i+1] + points[2*j+1]) - low[1],
-  //                           dx);
-  //     k = addMeshNode(pX, point2node);
-  //     cerr << "Adding mesh node " << k << " @ " << pX << " to generators " << i << " " << j << endl;
-  //     gen2nodes[i].insert(k);
-  //     gen2nodes[j].insert(k);
+  //     // Add the generator to it's own cell geometry. 
+  //     set<RealPoint> cellPoints;
+  //     cellPoints.insert(RealPoint(points[2*i], points[2*i+1]));
+  //     cerr << " --> Boundary generator " << i << " adding " << RealPoint(points[2*i], points[2*i+1]) << endl;
 
-  //   } else {
-  //     // This edge has already had boundary points added, so figure out which ones 
-  //     // should be associated with each generator endpoint.
-  //     pX = Point2<uint64_t>(points[2*i] - low[0], points[2*i+1] - low[1], dx);
-  //     sort(boundaryEdgePoints[iedge].begin(), boundaryEdgePoints[iedge].end(),
-  //          ComparePointDistances<Point2<uint64_t> >(pX));
-  //     k = addMeshNode(boundaryEdgePoints[iedge].front(), point2node);
-  //     gen2nodes[i].insert(k);
-  //     k = addMeshNode(boundaryEdgePoints[iedge].back(), point2node);
-  //     gen2nodes[j].insert(k);
+  //     // Add the surrounding circumcenters.
+  //     for (set<int>::const_iterator triItr = gen2tri[i].begin();
+  //          triItr != gen2tri[i].end();
+  //          ++triItr) {
+  //       j = *triItr;
+  //       cellPoints.insert(triCircumCenters[j]);
+  //       cerr << " --> Boundary generator " << i << " adding circumcenter " << triCircumCenters[j] << endl;
+
+  //       // We may need to split the boundary edges of the triangle.
+  //       if (i == delaunay.trianglelist[3*j]) {
+  //         pindex = delaunay.trianglelist[3*j + 1];
+  //         qindex = delaunay.trianglelist[3*j + 2];
+  //       } else if (i == delaunay.trianglelist[3*j + 1]) {
+  //         pindex = delaunay.trianglelist[3*j];
+  //         qindex = delaunay.trianglelist[3*j + 2];
+  //       } else {
+  //         ASSERT(i == delaunay.trianglelist[3*j + 2]);
+  //         pindex = delaunay.trianglelist[3*j];
+  //         qindex = delaunay.trianglelist[3*j + 1];
+  //       }
+  //       const RealPoint 
+  //         ip(points[2*pindex] - points[2*i], points[2*pindex+1] - points[2*i+1]),
+  //         iq(points[2*qindex] - points[2*i], points[2*qindex+1] - points[2*i+1]),
+  //         ic(triCircumCenters[j].x - points[2*i], triCircumCenters[j].y - points[2*i+1]);
+  //       if (exteriorEdgeTest[hashEdge(i, pindex)] and zcross(ip, iq)*zcross(ip, ic) >= 0.0) {
+  //         cellPoints.insert(RealPoint(0.5*(points[2*i] + points[2*pindex]),
+  //                                     0.5*(points[2*i+1] + points[2*pindex+1])));
+  //         cerr << " --> Boundary generator " << i << " adding half edge point " << RealPoint(0.5*(points[2*i] + points[2*pindex]),
+  //                                                                                              0.5*(points[2*i+1] + points[2*pindex+1])) << endl;
+  //       }
+  //       if (exteriorEdgeTest[hashEdge(i, qindex)] and zcross(iq, ip)*zcross(iq, ic) >= 0.0) {
+  //         cellPoints.insert(RealPoint(0.5*(points[2*i] + points[2*qindex]),
+  //                                     0.5*(points[2*i+1] + points[2*qindex+1])));
+  //         cerr << " --> Boundary generator " << i << " adding half edge point " << RealPoint(0.5*(points[2*i] + points[2*qindex]),
+  //                                                                                              0.5*(points[2*i+1] + points[2*qindex+1])) << endl;
+  //       }
+  //     }
+
+  //     // Build the ring for this cell.
+  //     cellRings[i] = BGring(cellPoints.begin(), cellPoints.end());
+  //     boost::geometry::correct(cellRings[i]);
+
+  //     // Intersect with the boundary to get the bounded cell.
+  //     vector<BGring> cellIntersections;
+  //     boost::geometry::intersection(boundary, cellRings[i], cellIntersections);
+  //     ASSERT(cellIntersections.size() == 1);
+  //     cellRings[i] = cellIntersections[0];
+
+  //     // // Now whack away any volume occupied by the interior neighbors.
+  //     // vector<BGring> cellDifferences;
+  //     // for (set<int>::const_iterator neighborItr = neighbors[i].begin();
+  //     //      neighborItr != neighbors[i].end();
+  //     //      ++neighborItr) {
+  //     //   j = *neighborItr;
+  //     //   if (not exteriorGenerators[j]) {
+  //     //     boost::geometry::difference(cellRings[j], cellRings[i], cellDifferences);
+  //     //     ASSERT(cellDifferences.size() == 1);
+  //     //     cellRings[i] = cellDifferences[0];
+  //     //   }
+  //     // }
+
+  //     // Now build the unique mesh nodes and cell info.
+  //     for (typename BGring::const_iterator itr = cellRings[i].begin();
+  //          itr != cellRings[i].end() - 1;
+  //          ++itr) {
+  //       pX1 = IntPoint(CoordHash((itr->x - low[0])/dx),
+  //                      CoordHash((itr->y - low[1])/dx));
+  //       pX2 = IntPoint(CoordHash(((itr+1)->x - low[0])/dx),
+  //                      CoordHash(((itr+1)->y - low[1])/dx));
+  //       j = addKeyToMap(pX1, point2node);
+  //       k = addKeyToMap(pX2, point2node);
+  //       ASSERT(j != k);
+  //       iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
+  //       edgeCells[iedge].push_back(i);
+  //       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
+  //     }
+  //     ASSERT(mesh.cells[i].size() >= 3);
+
   //   }
   // }
+  ASSERT(edgeCells.size() == edgeHash2id.size());
 
-  // Create mesh nodes for each exterior generator.
-  for (i = 0; i != numGenerators; ++i) {
-    if (exteriorGenerators[i]) {
-      pX = Point2<uint64_t>(points[2*i] - low[0], points[2*i+1] - low[1], dx);
-      k = addMeshNode(pX, point2node);
-      gen2nodes[i].insert(k);
-    }
-  }
-
-  // Build the unique mesh nodes.
-  mesh.nodes = vector<double>(2*point2node.size());
-  for (typename map<Point2<uint64_t>, int>::const_iterator itr = point2node.begin();
+  // Fill in the mesh nodes.
+  mesh.nodes = vector<RealType>(2*point2node.size());
+  for (typename map<IntPoint, int>::const_iterator itr = point2node.begin();
        itr != point2node.end();
        ++itr) {
+    const IntPoint& p = itr->first;
     i = itr->second;
-    ASSERT(2*i < mesh.nodes.size());
-    mesh.nodes[2*i]   = itr->first.realx(low[0], dx);
-    mesh.nodes[2*i+1] = itr->first.realy(low[1], dx);
+    ASSERT(i < mesh.nodes.size()/2);
+    mesh.nodes[2*i]   = p.realx(low[0], dx);
+    mesh.nodes[2*i+1] = p.realy(low[1], dx);
   }
 
-  // Sort the vertices of each generator counter-clockwise.
-  unsigned nv, i0, i1;
-  vector<uint64_t> vertices;
-  vector<unsigned> vindices;
-  PLC<2, uint64_t> hull;
-  mesh.cells.resize(numGenerators);
-  EdgeHash ehash;
-  map<EdgeHash, int> ehash2face;
-  uint64_t ilow[2] = {0U, 0U}, imax = numeric_limits<uint64_t>::max()/4;
-  double norm, nhat[2];
-  for (i = 0; i != numGenerators; ++i)
-  {
-    cerr << "Generator @ " << points[2*i] << " " << points[2*i + 1] << endl;
-    nv = gen2nodes[i].size();
-    vindices = vector<unsigned>(gen2nodes[i].begin(), gen2nodes[i].end());
-    vertices = vector<uint64_t>();
-    vertices.reserve(2*nv);
-    low[0] = numeric_limits<RealType>::max();
-    low[1] = numeric_limits<RealType>::max();
-    high[0] = -numeric_limits<RealType>::max();
-    high[1] = -numeric_limits<RealType>::max();
-    X[0] = 0.0;
-    X[1] = 0.0;
-    for (j = 0; j != nv; ++j)
-    {
-      k = vindices[j];
-      ASSERT(k < mesh.nodes.size()/2);
-      low[0] = min(low[0], mesh.nodes[2*k]);
-      low[1] = min(low[1], mesh.nodes[2*k + 1]);
-      high[0] = max(high[0], mesh.nodes[2*k]);
-      high[1] = max(high[1], mesh.nodes[2*k + 1]);
-      X[0] += mesh.nodes[2*k];
-      X[1] += mesh.nodes[2*k + 1];
-      cerr << "   --> mesh node : " << mesh.nodes[2*k] << " " << mesh.nodes[2*k+1] << endl;
-    }
-    cerr << "  low/high : (" << low[0] << " " << low[1] << ") (" << high[0] << " " << high[1] << ")" << endl;
-    ASSERT(low[0] < high[0] and low[1] < high[1]);
-    X[0] /= nv;
-    X[1] /= nv;
-    for (j = 0; j != nv; ++j)
-    {
-      k = vindices[j];
-      ASSERT(k < mesh.nodes.size()/2);
-      nhat[0] = mesh.nodes[2*k    ] - X[0];
-      nhat[1] = mesh.nodes[2*k + 1] - X[1];
-      norm = sqrt(nhat[0]*nhat[0] + nhat[1]*nhat[1]);
-      ASSERT(norm > 0.0);
-      nhat[0] /= norm;
-      nhat[1] /= norm;
-      vertices.push_back(uint64_t(nhat[0]*imax + 2.1*imax));
-      vertices.push_back(uint64_t(nhat[1]*imax + 2.1*imax));
-      // vertices.push_back(uint64_t((mesh.nodes[2*k    ] - low[0])/box[0]*numeric_limits<uint64_t>::max()/2));
-      // vertices.push_back(uint64_t((mesh.nodes[2*k + 1] - low[1])/box[1]*numeric_limits<uint64_t>::max()/2));
-      // cerr << "Adding vertex : " << k << " (" << mesh.nodes[2*k] << " " << mesh.nodes[2*k + 1] << ") (" << vertices[2*k] << " " << vertices[2*k + 1] << ")" << endl;
-    }
-    ASSERT(vertices.size() == 2*nv);
-    hull = convexHull_2d(vertices, ilow, uint64_t(1));
-    if (!(hull.facets.size() == nv)) {
-      cerr << "Blago : " << hull.facets.size() << " " << nv << endl;
-      for (j = 0; j != nv; ++j) {
-        k = vindices[j];
-        cerr << "  (" << vertices[2*j] << " " << vertices[2*j+1] << ")    ("
-             << mesh.nodes[2*k] << " " << mesh.nodes[2*k+1] << ")" << endl;
-      }
-    }
-    cerr << "Building cell " << i << " :";
-    for (j = 0; j != nv; ++j) cerr << " (" << vindices[hull.facets[j][0]] << " " << vindices[hull.facets[j][1]] << ")";
-    cerr << endl;
-    ASSERT(hull.facets.size() == nv);
-    mesh.cells[i].reserve(nv);
-    for (j = 0; j != nv; ++j) {
-      ASSERT(hull.facets[j].size() == 2);
-      ASSERT(hull.facets[j][0] < nv and hull.facets[j][1] < nv);
-      i0 = vindices[hull.facets[j][0]];
-      i1 = vindices[hull.facets[j][1]];
-      ehash = hashEdge(i0, i1);
-      // cerr << "Checking for edge hash : " << ehash.first << " " << ehash.second << endl;
-      if (ehash2face.find(ehash) == ehash2face.end()) {
-        k = mesh.faces.size();
-        vector<unsigned> thpt(2);
-        thpt[0] = i0;
-        thpt[1] = i1;
-        mesh.faces.push_back(thpt);
-        mesh.faceCells.push_back(vector<unsigned>());
-        ehash2face[ehash] = k;
-      } else {
-        k = ehash2face[ehash];
-        ASSERT((i0 == mesh.faces[k][1] and i1 == mesh.faces[k][0]) or
-               (i0 == mesh.faces[k][0] and i1 == mesh.faces[k][1]));
-        if (i0 == mesh.faces[k][1] and i1 == mesh.faces[k][0]) k = ~k;
-      }
-      ASSERT(mesh.faces.size() == mesh.faceCells.size());
-      // cerr << "Adding face " << k << " to cell " << i << endl;
-      mesh.cells[i].push_back(k);
-      mesh.faceCells[k < 0 ? ~k : k].push_back(i);
-      ASSERT(mesh.faceCells[k < 0 ? ~k : k].size() <= 2);
-    }
+  // Fill in the mesh faces.
+  mesh.faces = vector<vector<unsigned> >(edgeHash2id.size());
+  for (typename map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
+       itr != edgeHash2id.end();
+       ++itr) {
+    const EdgeHash& ehash = itr->first;
+    i = itr->second;
+    ASSERT(i < mesh.faces.size());
+    ASSERT(mesh.faces[i].size() == 0);
+    mesh.faces[i].push_back(ehash.first);
+    mesh.faces[i].push_back(ehash.second);
   }
 
-//   // The Voronoi node is located at the center of the circle that contains 
-//   // p, q, and r. 
-//   vector<vector<int> > cellNodes(delaunay.numberofpoints);
-
-//   // A table of Voronoi nodes falling on Delaunay edges. This prevents
-//   // us from double-counting nodes.
-//   map<pair<int, int>, int> nodesOnEdges; 
-//   for (int i = 0; i < delaunay.numberoftriangles; ++i)
-//   {
-//     // Coordinates of the triangle's vertices p, q, r.
-//     int pindex = delaunay.trianglelist[3*i];
-//     double p[2];
-//     p[0] = delaunay.pointlist[2*pindex];
-//     p[1] = delaunay.pointlist[2*pindex+1];
-
-//     int qindex = delaunay.trianglelist[3*i+1];
-//     double q[2];
-//     q[0] = delaunay.pointlist[2*qindex],
-//     q[1] = delaunay.pointlist[2*qindex+1];
-
-//     int rindex = delaunay.trianglelist[3*i+2];
-//     double r[2];
-//     r[0] = delaunay.pointlist[2*rindex],
-//     r[1] = delaunay.pointlist[2*rindex+1];
-
-//     // // Get the circumcenter.
-//     // double X[2];
-//     // computeCircumcenter(p, q, r, X);
-
-//     // Compute the center of the triangle.
-//     double X[2];
-//     X[0] = (p[0] + q[0] + r[0])/3.0;
-//     X[1] = (p[1] + q[1] + r[1])/3.0;
-
-//     // If the point is outside the convex hull, project it to 
-//     // an edge.
-//     if (convexHull.queryPoint(X) == Polygon<double>::POINT_OUTSIDE)
-//     {
-//       double Y[2];
-//       convexHull.project(X, Y);
-// //cout << "Projected (" << X[0] << ", " << X[1] << ", r = " << sqrt(X[0]*X[0]+X[1]*X[1]) << " -> (" << Y[0] << ", " << Y[1] << ", r = " << sqrt(Y[0]*Y[0]+Y[1]*Y[1]) << ")\n";
-//       X[0] = Y[0];
-//       X[1] = Y[1];
-//     }
-
-//     // If this node lies on an edge, add it to the table.
-//     // This uses Jonathan Shewchuck's fast geometry predicate orient2d().
-//     if (orient2d(p, q, X) == 0.0)
-//     {
-//       pair<int, int> key(min(pindex, qindex), max(pindex, qindex));
-//       map<pair<int, int>, int>::const_iterator iter = nodesOnEdges.find(key);
-//       if (iter != nodesOnEdges.end())
-//       {
-//         // Add this existing node to the missing cell and proceed.
-//         cellNodes[rindex].push_back(iter->second);
-//         continue;
-//       }
-//       else
-//         nodesOnEdges[key] = i;
-//     }
-//     else if (orient2d(p, r, X) == 0.0) 
-//     {
-//       pair<int, int> key(min(pindex, rindex), max(pindex, rindex));
-//       map<pair<int, int>, int>::const_iterator iter = nodesOnEdges.find(key);
-//       if (iter != nodesOnEdges.end())
-//       {
-//         // Add this existing node to the missing cell and proceed.
-//         cellNodes[qindex].push_back(iter->second);
-//         continue;
-//       }
-//       else
-//         nodesOnEdges[key] = i;
-//     }
-//     else if (orient2d(q, r, X) == 0.0)
-//     {
-//       pair<int, int> key(min(qindex, rindex), max(qindex, rindex));
-//       map<pair<int, int>, int>::const_iterator iter = nodesOnEdges.find(key);
-//       if (iter != nodesOnEdges.end())
-//       {
-//         // Add this existing node to the missing cell and proceed.
-//         cellNodes[pindex].push_back(iter->second);
-//         continue;
-//       }
-//       else
-//         nodesOnEdges[key] = i;
-//     }
-
-//     // Assign the node coordinate.
-// //cout << "Computed node " << mesh.nodes.size()/2 << " at (" << X[0] << ", " << X[1] << ")" << endl;
-// //cout << " for cells at (" << p[0] << ", " << p[1] << "), (" << q[0] << ", " << q[1] << "), (" << r[0] << ", " << r[1] << ")\n";
-// //cout << " for cells " << pindex << ", " << qindex << ", " << rindex << endl;
-//     mesh.nodes.push_back(RealType(X[0]));
-//     mesh.nodes.push_back(RealType(X[1]));
-
-//     // Associate this node with its Voronoi cells.
-//     cellNodes[pindex].push_back(i);
-//     cellNodes[qindex].push_back(i);
-//     cellNodes[rindex].push_back(i);
-//   }
-
-//   // Compute the Voronoi faces between cells. These have a one-to-one
-//   // correspondence with Delaunay edges of triangles unless we have placed 
-//   // nodes along edges.
-//   mesh.cells.resize(delaunay.numberofpoints);
-//   for (int i = 0; i < delaunay.numberofedges; ++i)
-//   {
-//     int cell1 = delaunay.edgelist[2*i],
-//         cell2 = delaunay.edgelist[2*i+1];
-
-//     // Have we placed any nodes along this edge? If so, there's no 
-//     // face here.
-//     pair<int, int> key(min(cell1, cell2), max(cell1, cell2));
-//     map<pair<int, int>, int>::const_iterator iter = nodesOnEdges.find(key);
-//     if (iter != nodesOnEdges.end())
-// //{
-// //cout << "cells " << cell1 << ", " << cell2 << " have a node on their edge." << endl;
-//       continue;
-// //}
-
-//     // Hook the cells up to the faces.
-//     mesh.faces.push_back(vector<unsigned>());
-//     mesh.faceCells.push_back(vector<unsigned>());
-//     mesh.faceCells.back().reserve(2);
-//     mesh.faceCells.back().push_back(cell1);
-//     mesh.faceCells.back().push_back(cell2);
-
-//     // Hook the faces up to the cells.
-//     mesh.cells[cell1].push_back(mesh.faces.size()-1);
-//     mesh.cells[cell2].push_back(mesh.faces.size()-1);
-
-//     // Nodes that are attached to both cell 1 and cell2 are nodes 
-//     // of this face.
-//     set<int> cell1Nodes(cellNodes[cell1].begin(), cellNodes[cell1].end()),
-//              cell2Nodes(cellNodes[cell2].begin(), cellNodes[cell2].end()),
-//              faceNodes;
-//     set_intersection(cell1Nodes.begin(), cell1Nodes.end(),
-//                      cell2Nodes.begin(), cell2Nodes.end(),
-//                      inserter(faceNodes, faceNodes.begin()));
-//     mesh.faces.back().resize(faceNodes.size());
-// //cout << "Face " << mesh.faces.size()-1 << " (between " << cell1 << " and " << cell2 << ") has " << faceNodes.size() << " nodes\n";
-//     copy(faceNodes.begin(), faceNodes.end(), mesh.faces.back().begin());
-//   }
-
-//   // If no boundary was specified, leave.
-//   if (geometry.empty()) 
-//   {
-//     // Clean up.
-//     delete [] in.pointlist;
-//     trifree((VOID*)delaunay.pointlist);
-//     trifree((VOID*)delaunay.pointmarkerlist);
-//     trifree((VOID*)delaunay.trianglelist);
-//     trifree((VOID*)delaunay.edgelist);
-//     trifree((VOID*)delaunay.edgemarkerlist);
-//     if (geometry.empty())
-//     {
-//       trifree((VOID*)delaunay.segmentlist);
-//       trifree((VOID*)delaunay.segmentmarkerlist);
-//     }
-//     else
-//     {
-//       delete [] in.segmentlist;
-//       delete [] in.holelist;
-//       delete [] delaunay.segmentlist;
-//       delete [] delaunay.segmentmarkerlist;
-//     }
-//     return;
-//   }
-
-//   // At this point, all of the interior cells are set up properly, and all 
-//   // nodes exist. However, we still have to finish constructing the 
-//   // Voronoi cells that sit at the boundary, since they don't have "back" 
-//   // faces. This Tessellator constructs faces that coincide with the 
-//   // convex hull of the triangulation. 
-  
-//   set<pair<int, int> > patchedFaces;
-//   for (int i = 0; i < delaunay.numberofsegments; ++i)
-//   {
-//     // A segment of the convex hull consists of the two cells/generators
-//     // connected by a face.
-//     int cell1 = delaunay.segmentlist[2*i];
-//     int cell2 = delaunay.segmentlist[2*i+1];
-// //cout << "Inspecting segment for " << cell1 << ", " << cell2 << endl;
-
-//     // Add nodes to all faces attached to these cell with only 
-//     // one node.
-//     for (size_t f = 0; f < mesh.cells[cell1].size(); ++f)
-//     {
-//       int face = mesh.cells[cell1][f];
-// //cout << "face " << face << " has " << mesh.faces[face].size() << " nodes\n";
-//       if (mesh.faces[face].size() == 1)
-//       {
-//         // We've found a face with a single node. Find out where the
-//         // other node should go and create it.
-//         for (size_t f1 = 0; f1 < mesh.cells[cell2].size(); ++f1)
-//         {
-//           int face1 = mesh.cells[cell2][f1];
-//           if (face1 == face)
-//           {
-//             // The node should bisect the segment on the convex hull 
-//             // between cell1 and cell2.
-//             RealType nodex = 0.5*(points[2*cell1]+points[2*cell2]),
-//                  nodey = 0.5*(points[2*cell1+1]+points[2*cell2+1]);
-// //cout << "Adding node (" << nodex << ", " << nodey << ") for cells " << cell1 << ", " << cell2 << endl;
-//             mesh.nodes.push_back(nodex);
-//             mesh.nodes.push_back(nodey);
-//             mesh.faces[face].push_back(mesh.nodes.size()/2 - 1);
-//             break;
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   // Create extra nodes for the boundary faces. These nodes coincide with 
-//   // the Voronoi generater points.
-//   size_t oldNumNodes = mesh.nodes.size() / 2;
-// //cout << "Mesh had " << oldNumNodes << ", now adding " << mesh.convexHull.facets.size() << endl;
-//   mesh.nodes.resize(2*(oldNumNodes + mesh.convexHull.facets.size()));
-//   for (size_t i = 0; i < mesh.convexHull.facets.size(); ++i)
-//   {
-//     unsigned pindex = mesh.convexHull.facets[i][0];
-//     mesh.nodes[2*(oldNumNodes+i)]   = points[2*pindex];
-//     mesh.nodes[2*(oldNumNodes+i)+1] = points[2*pindex+1];
-// //cout << "Adding node (" << points[2*pindex] << ", " << points[2*pindex+1] << ")\n";
-//   }
-
-//   // Now we construct the remaining faces for the boundary cells.
-//   set<int> addedBoundaryFaces;
-//   for (int i = 0; i < mesh.convexHull.facets.size(); ++i)
-//   {
-//     int cell = mesh.convexHull.facets[i][0]; // The boundary cell.
-//     if (addedBoundaryFaces.find(cell) != addedBoundaryFaces.end())
-//       continue;
-//     else
-//       addedBoundaryFaces.insert(cell);
-
-//     // Add two new faces for this cell.
-//     mesh.faces.resize(mesh.faces.size()+2);
-//     mesh.faceCells.resize(mesh.faceCells.size()+2);
-
-//     // Each face has one node that it shares with an existing face and 
-//     // one that is still to be hooked up to the new node coinciding 
-//     // with the generator point (and still has value -1).
-//     map<unsigned, int> numFacesForNode;
-//     for (size_t f = 0; f < mesh.cells[cell].size(); ++f)
-//     {
-//       int face = mesh.cells[cell][f];
-//       for (size_t n = 0; n < mesh.faces[face].size(); ++n)
-//         ++numFacesForNode[mesh.faces[face][n]];
-//     }
-//     int node1 = -1, node2 = -1;
-//     for (map<unsigned, int>::const_iterator iter = numFacesForNode.begin();
-//          iter != numFacesForNode.end(); ++iter)
-//     {
-//       if ((iter->second < 2) and ((node1 == -1) or (node2 == -1)))
-//       {
-//         if (node1 == -1)
-//         {
-//           node1 = iter->first;
-//         }
-//         else
-//         {
-//           ASSERT(node2 == -1);
-//           node2 = iter->first;
-//         }
-//       }
-//     }
-//     ASSERT(node1 >= 0);
-//     ASSERT(node2 >= 0);
-//     mesh.faces[mesh.faces.size()-2].push_back(node1);
-//     mesh.faces[mesh.faces.size()-1].push_back(node2);
-
-//     // The remaining node on each face is the one coinciding with 
-//     // the generator point.
-//     int genPointNode = oldNumNodes+i;
-//     mesh.faces[mesh.faces.size()-2].push_back(genPointNode);
-//     mesh.faces[mesh.faces.size()-1].push_back(genPointNode);
-
-//     // Each face has only the 1 cell.
-//     mesh.faceCells[mesh.faceCells.size()-2].push_back(cell);
-//     mesh.faceCells[mesh.faceCells.size()-1].push_back(cell);
-//     mesh.cells[cell].push_back(mesh.faces.size()-2);
-//     mesh.cells[cell].push_back(mesh.faces.size()-1);
-//   }
+  // Fill in the mesh faceCells.
+  mesh.faceCells = vector<vector<unsigned> >(mesh.faces.size());
+  for (i = 0; i != mesh.faces.size(); ++i) {
+    if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
+      cerr << "Blago! " << i << " " << edgeCells[i].size() << endl;
+      for (j = 0; j != edgeCells[i].size(); ++j) cerr << " --> " << edgeCells[i][j] << " " << points[2*edgeCells[i][j]] << " " << points[2*edgeCells[i][j]+1] << endl;
+    }
+    ASSERT(edgeCells[i].size() == 1 or edgeCells[i].size() == 2);
+    mesh.faceCells[i] = edgeCells[i];
+  }
 
   // Clean up.
   delete [] in.pointlist;

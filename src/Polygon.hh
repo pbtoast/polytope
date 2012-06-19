@@ -237,6 +237,9 @@ class Polygon
     return result;
   }
 
+  // Allow const access to the vertices.
+  const std::vector<RealType>& vertices() const { return m_vertices; }
+
   private:
 
   //! An array containing the vertices of the polygon. The array has 2N 

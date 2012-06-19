@@ -72,9 +72,10 @@ test2x2Box()
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> r2(nx*nx, 1.0);
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
-  fields["data"] = &r2[0];
+  fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_2x2");
 #endif
 }
@@ -146,9 +147,8 @@ testCircle()
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> index(N+Nb);
-  for (int i = 0; i < N+Nb; ++i)
-    index[i] = double(i);
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
   fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_circle");
@@ -196,7 +196,7 @@ testDonut()
 
   // Facets on the outer circle.
   PLC<2, double> donut;
-  donut.facets.resize(2*Nb); 
+  donut.facets.resize(Nb); 
   for (int f = 0; f < Nb - 1; ++f)
   {
     donut.facets[f].resize(2);
@@ -220,23 +220,20 @@ testDonut()
   }
 
   // Facets on the inner circle.
+  donut.holes = vector<vector<vector<int> > >(1);
+  donut.holes[0].resize(Nb);
   for (int f = 0; f < Nb - 1; ++f)
   {
-    donut.facets[Nb+f].resize(2);
-    donut.facets[Nb+f][0] = generators.size()/2-Nb+f;
-    donut.facets[Nb+f][1] = generators.size()/2-Nb+f+1;
+    donut.holes[0][f].resize(2);
+    donut.holes[0][f][0] = generators.size()/2-Nb+f;
+    donut.holes[0][f][1] = generators.size()/2-Nb+f+1;
   }
 
   // Last facet completes the inner circle.
   f = Nb-1;
-  donut.facets[Nb+f].resize(2);
-  donut.facets[Nb+f][0] = generators.size()/2-Nb+f;
-  donut.facets[Nb+f][1] = generators.size()/2-Nb;
-
-  // Now bore a hole in the center of the donut.
-  donut.holes.resize(2);
-  donut.holes[0] = 0.0;
-  donut.holes[1] = 0.0;
+  donut.holes[0][f].resize(2);
+  donut.holes[0][f][0] = generators.size()/2-Nb+f;
+  donut.holes[0][f][1] = generators.size()/2-Nb;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
@@ -253,9 +250,8 @@ testDonut()
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> index(N+Nb);
-  for (int i = 0; i < N+Nb; ++i)
-    index[i] = double(i);
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
   fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_donut");
@@ -335,9 +331,8 @@ testBounded()
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> index(N+4);
-  for (int i = 0; i < N+4; ++i)
-    index[i] = double(i);
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
   fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_bounded");
@@ -390,9 +385,8 @@ testUnbounded()
 
   // Write out the file if we can.
 #ifdef HAVE_SILO
-  vector<double> index(N+4);
-  for (int i = 0; i < N+4; ++i)
-    index[i] = double(i);
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
   fields["cell_index"] = &index[0];
   SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_unbounded");
@@ -410,9 +404,9 @@ main(int argc, char** argv)
 
   // test2x2Box();
   // testCircle();
-  // testDonut();
+  testDonut();
   // testBounded(); 
-  testUnbounded();
+  // testUnbounded();
 
   cout << "PASS" << endl;
 
