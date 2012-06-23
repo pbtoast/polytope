@@ -6,6 +6,7 @@
 #include "Tessellation.hh"
 #include "Tessellator.hh"
 #include "PLC.hh"
+#include "ReducedPLC.hh"
 
 namespace polytope
 {
@@ -61,9 +62,11 @@ class Tessellator
   //! This default implementation issues an error explaining that the 
   //! Tessellator does not support PLCs.
   //! \param points A (Dimension*numPoints) array containing point coordinates.
+  //! \param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
+                          const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension, RealType>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const
   {
@@ -111,46 +114,47 @@ class Tessellator
   //! This helper method creates a piecewise linear complex (PLC) 
   //! representing the bounding box with the given "low" and "high"
   //! corners, and adds these corners as generator points to \a points.
-  PLC<Dimension, RealType> boundingBox(RealType* low, RealType* high, std::vector<RealType>& points) const
+  ReducedPLC<Dimension, RealType>
+  boundingBox(RealType* low, RealType* high) const
   {
+    ReducedPLC<Dimension, RealType> box;
     if (Dimension == 2)
     {
       // Add the new generators to points.
-      points.push_back(low[0]);
-      points.push_back(low[1]);
+      box.points.push_back(low[0]);
+      box.points.push_back(low[1]);
 
-      points.push_back(high[0]);
-      points.push_back(low[1]);
+      box.points.push_back(high[0]);
+      box.points.push_back(low[1]);
 
-      points.push_back(high[0]);
-      points.push_back(high[1]);
+      box.points.push_back(high[0]);
+      box.points.push_back(high[1]);
 
-      points.push_back(low[0]);
-      points.push_back(high[1]);
+      box.points.push_back(low[0]);
+      box.points.push_back(high[1]);
 
       // Construct the box.
-      PLC<Dimension, RealType> box;
       box.facets.resize(4);
 
       // -y face.
       box.facets[0].resize(2);
-      box.facets[0][0] = points.size()/2-4;
-      box.facets[0][1] = points.size()/2-3;
+      box.facets[0][0] = 0;
+      box.facets[0][1] = 1;
 
       // +x face.
       box.facets[1].resize(2);
-      box.facets[1][0] = points.size()/2-3;
-      box.facets[1][1] = points.size()/2-2;
+      box.facets[1][0] = 1;
+      box.facets[1][1] = 2;
 
       // +y face.
       box.facets[2].resize(2);
-      box.facets[2][0] = points.size()/2-2;
-      box.facets[2][1] = points.size()/2-1;
+      box.facets[2][0] = 2;
+      box.facets[2][1] = 3;
 
       // -x face.
       box.facets[3].resize(2);
-      box.facets[3][0] = points.size()/2-1;
-      box.facets[3][1] = points.size()/2-4;
+      box.facets[3][0] = 3;
+      box.facets[3][1] = 0;
 
       return box;
     }
@@ -159,83 +163,82 @@ class Tessellator
       ASSERT(Dimension == 3);
 
       // Add the new generators to points.
-      points.push_back(low[0]);
-      points.push_back(low[1]);
-      points.push_back(low[2]);
+      box.points.push_back(low[0]);
+      box.points.push_back(low[1]);
+      box.points.push_back(low[2]);
 
-      points.push_back(high[0]);
-      points.push_back(low[1]);
-      points.push_back(low[2]);
+      box.points.push_back(high[0]);
+      box.points.push_back(low[1]);
+      box.points.push_back(low[2]);
 
-      points.push_back(high[0]);
-      points.push_back(high[1]);
-      points.push_back(low[2]);
+      box.points.push_back(high[0]);
+      box.points.push_back(high[1]);
+      box.points.push_back(low[2]);
 
-      points.push_back(low[0]);
-      points.push_back(high[1]);
-      points.push_back(low[2]);
+      box.points.push_back(low[0]);
+      box.points.push_back(high[1]);
+      box.points.push_back(low[2]);
 
-      points.push_back(low[0]);
-      points.push_back(low[1]);
-      points.push_back(high[2]);
+      box.points.push_back(low[0]);
+      box.points.push_back(low[1]);
+      box.points.push_back(high[2]);
 
-      points.push_back(high[0]);
-      points.push_back(low[1]);
-      points.push_back(high[2]);
+      box.points.push_back(high[0]);
+      box.points.push_back(low[1]);
+      box.points.push_back(high[2]);
 
-      points.push_back(high[0]);
-      points.push_back(high[1]);
-      points.push_back(high[2]);
+      box.points.push_back(high[0]);
+      box.points.push_back(high[1]);
+      box.points.push_back(high[2]);
 
-      points.push_back(low[0]);
-      points.push_back(high[1]);
-      points.push_back(high[2]);
+      box.points.push_back(low[0]);
+      box.points.push_back(high[1]);
+      box.points.push_back(high[2]);
 
       // Construct the box.
-      PLC<Dimension, RealType> box;
       box.facets.resize(6);
 
       // -z face.
       box.facets[0].resize(4);
-      box.facets[0][0] = points.size()/3 - 8;
-      box.facets[0][1] = points.size()/3 - 7;
-      box.facets[0][2] = points.size()/3 - 6;
-      box.facets[0][3] = points.size()/3 - 5;
+      box.facets[0][0] = box.points.size()/3 - 8;
+      box.facets[0][1] = box.points.size()/3 - 7;
+      box.facets[0][2] = box.points.size()/3 - 6;
+      box.facets[0][3] = box.points.size()/3 - 5;
 
       // +z face.
       box.facets[1].resize(4);
-      box.facets[1][0] = points.size()/3 - 4;
-      box.facets[1][1] = points.size()/3 - 3;
-      box.facets[1][2] = points.size()/3 - 2;
-      box.facets[1][3] = points.size()/3 - 1;
+      box.facets[1][0] = box.points.size()/3 - 4;
+      box.facets[1][1] = box.points.size()/3 - 3;
+      box.facets[1][2] = box.points.size()/3 - 2;
+      box.facets[1][3] = box.points.size()/3 - 1;
 
       // -x face.
       box.facets[2].resize(4);
-      box.facets[2][0] = points.size()/3 - 8;
-      box.facets[2][1] = points.size()/3 - 4;
-      box.facets[2][2] = points.size()/3 - 1;
-      box.facets[2][1] = points.size()/3 - 5;
+      box.facets[2][0] = box.points.size()/3 - 8;
+      box.facets[2][1] = box.points.size()/3 - 4;
+      box.facets[2][2] = box.points.size()/3 - 1;
+      box.facets[2][1] = box.points.size()/3 - 5;
 
       // +x face.
       box.facets[3].resize(4);
-      box.facets[3][0] = points.size()/3 - 7;
-      box.facets[3][1] = points.size()/3 - 3;
-      box.facets[3][2] = points.size()/3 - 2;
-      box.facets[3][3] = points.size()/3 - 6;
+      box.facets[3][0] = box.points.size()/3 - 7;
+      box.facets[3][1] = box.points.size()/3 - 3;
+      box.facets[3][2] = box.points.size()/3 - 2;
+      box.facets[3][3] = box.points.size()/3 - 6;
 
       // -y face.
       box.facets[4].resize(4);
-      box.facets[4][0] = points.size()/3 - 8;
-      box.facets[4][1] = points.size()/3 - 7;
-      box.facets[4][2] = points.size()/3 - 3;
-      box.facets[4][3] = points.size()/3 - 4;
+      box.facets[4][0] = box.points.size()/3 - 8;
+      box.facets[4][1] = box.points.size()/3 - 7;
+      box.facets[4][2] = box.points.size()/3 - 3;
+      box.facets[4][3] = box.points.size()/3 - 4;
 
       // -y face.
       box.facets[5].resize(4);
-      box.facets[5][0] = points.size()/3 - 6;
-      box.facets[5][1] = points.size()/3 - 2;
-      box.facets[5][2] = points.size()/3 - 1;
-      box.facets[5][3] = points.size()/3 - 5;
+      box.facets[5][0] = box.points.size()/3 - 6;
+      box.facets[5][1] = box.points.size()/3 - 2;
+      box.facets[5][2] = box.points.size()/3 - 1;
+      box.facets[5][3] = box.points.size()/3 - 5;
 
       return box;
     }
