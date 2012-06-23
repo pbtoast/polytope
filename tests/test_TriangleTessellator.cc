@@ -61,7 +61,7 @@ test2x2Box()
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  triangle.tessellate(generators, box, mesh);
+  triangle.tessellate(generators, generators, box, mesh);
   CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
   CHECK(mesh.cells.size() == nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
@@ -86,7 +86,7 @@ void
 testCircle()
 {
   // Generate a bunch of random points within a circle of radius 1.
-  vector<double> generators;
+  vector<double> generators, PLCpoints;
   int N = 100;
   for (int i = 0; i < N; ++i)
   {
@@ -112,8 +112,8 @@ testCircle()
   {
     double theta = 2.0*M_PI*b/(Nb+1);
     double x = cos(theta), y = sin(theta);
-    generators.push_back(x);
-    generators.push_back(y);
+    PLCpoints.push_back(x);
+    PLCpoints.push_back(y);
   }
 
   // Facets.
@@ -122,21 +122,21 @@ testCircle()
   for (int f = 0; f < Nb - 1; ++f)
   {
     circle.facets[f].resize(2);
-    circle.facets[f][0] = generators.size()/2-Nb+f;
-    circle.facets[f][1] = generators.size()/2-Nb+f+1;
+    circle.facets[f][0] = f;
+    circle.facets[f][1] = f+1;
   }
 
   // Last facet completes the circle.
   int f = Nb-1;
   circle.facets[f].resize(2);
-  circle.facets[f][0] = generators.size()/2-Nb+f;
-  circle.facets[f][1] = generators.size()/2-Nb;
+  circle.facets[f][0] = f;
+  circle.facets[f][1] = 0;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  triangle.tessellate(generators, circle, mesh);
-  CHECK(mesh.cells.size() == (N + Nb));
+  triangle.tessellate(generators, PLCpoints, circle, mesh);
+  CHECK(mesh.cells.size() == N);
 
   // // Make sure that the nodes all fall within the circle.
   // for (int n = 0; n < mesh.nodes.size()/2; ++n)
@@ -161,7 +161,7 @@ void
 testDonut()
 {
   // Generate a bunch of random points within a circle of radius 1.
-  vector<double> generators;
+  vector<double> generators, PLCpoints;
   int N = 100;
   for (int i = 0; i < N; ++i)
   {
@@ -190,8 +190,8 @@ testDonut()
   {
     double theta = 2.0*M_PI*double(b)/double(Nb+1);
     double x = cos(theta), y = sin(theta);
-    generators.push_back(x);
-    generators.push_back(y);
+    PLCpoints.push_back(x);
+    PLCpoints.push_back(y);
   }
 
   // Facets on the outer circle.
@@ -200,23 +200,23 @@ testDonut()
   for (int f = 0; f < Nb - 1; ++f)
   {
     donut.facets[f].resize(2);
-    donut.facets[f][0] = generators.size()/2-Nb+f;
-    donut.facets[f][1] = generators.size()/2-Nb+f+1;
+    donut.facets[f][0] = PLCpoints.size()/2-Nb+f;
+    donut.facets[f][1] = PLCpoints.size()/2-Nb+f+1;
   }
 
   // Last facet completes the outer circle.
   int f = Nb-1;
   donut.facets[f].resize(2);
-  donut.facets[f][0] = generators.size()/2-Nb+f;
-  donut.facets[f][1] = generators.size()/2-Nb;
+  donut.facets[f][0] = PLCpoints.size()/2-Nb+f;
+  donut.facets[f][1] = PLCpoints.size()/2-Nb;
 
   // Inner circle.
   for (int b = 0; b < Nb; ++b)
   {
     double theta = 2.0*M_PI*(1.0 - double(b)/double(Nb+1));
     double x = 0.25*cos(theta), y = 0.25*sin(theta);
-    generators.push_back(x);
-    generators.push_back(y);
+    PLCpoints.push_back(x);
+    PLCpoints.push_back(y);
   }
 
   // Facets on the inner circle.
@@ -225,20 +225,20 @@ testDonut()
   for (int f = 0; f < Nb - 1; ++f)
   {
     donut.holes[0][f].resize(2);
-    donut.holes[0][f][0] = generators.size()/2-Nb+f;
-    donut.holes[0][f][1] = generators.size()/2-Nb+f+1;
+    donut.holes[0][f][0] = PLCpoints.size()/2-Nb+f;
+    donut.holes[0][f][1] = PLCpoints.size()/2-Nb+f+1;
   }
 
   // Last facet completes the inner circle.
   f = Nb-1;
   donut.holes[0][f].resize(2);
-  donut.holes[0][f][0] = generators.size()/2-Nb+f;
-  donut.holes[0][f][1] = generators.size()/2-Nb;
+  donut.holes[0][f][0] = PLCpoints.size()/2-Nb+f;
+  donut.holes[0][f][1] = PLCpoints.size()/2-Nb;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  triangle.tessellate(generators, donut, mesh);
+  triangle.tessellate(generators, PLCpoints, donut, mesh);
 
 //   // Make sure that the nodes all fall within the donut.
 //   for (int n = 0; n < mesh.nodes.size()/2; ++n)
@@ -286,20 +286,9 @@ testBounded()
     generators.push_back(y);
   }
 
-  // Create a bounding box for the square and add corresponding generators.
+  // Create a bounding box for the square.
   double low[2] = {-0.55*L, -0.55*L},
         high[2] = { 0.55*L,  0.55*L};
-  generators.push_back(low[0]); generators.push_back(low[1]);
-  generators.push_back(high[0]); generators.push_back(low[1]);
-  generators.push_back(high[0]); generators.push_back(high[1]);
-  generators.push_back(low[0]); generators.push_back(high[1]);
-
-  PLC<2, double> box;
-  box.facets.resize(4);
-  box.facets[0].resize(2); box.facets[0][0] = N  ; box.facets[0][1] = N+1;
-  box.facets[1].resize(2); box.facets[1][0] = N+1; box.facets[1][1] = N+2;
-  box.facets[2].resize(2); box.facets[2][0] = N+2; box.facets[2][1] = N+3;
-  box.facets[3].resize(2); box.facets[3][0] = N+3; box.facets[3][1] = N;
 
   // Create the tessellation.
   Tessellation<2, double> mesh;

@@ -1,7 +1,10 @@
 #ifndef POLYTOPE_REDUCEDPLC_HH
 #define POLYTOPE_REDUCEDPLC_HH
 
+#include <vector>
 #include <set>
+#include <map>
+#include <algorithm>
 
 #include "polytope_serialize.hh"
 #include "PLC.hh"

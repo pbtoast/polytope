@@ -293,16 +293,14 @@ eliminateCollinearNodes(boost::geometry::model::ring<Point, false>& ring,
 template<typename RealType>
 TriangleTessellator<RealType>::
 TriangleTessellator():
-  Tessellator<2, RealType>()
-{
+  Tessellator<2, RealType>() {
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 template<typename RealType>
 TriangleTessellator<RealType>::
-~TriangleTessellator() 
-{
+~TriangleTessellator() {
 }
 //------------------------------------------------------------------------------
 
@@ -311,28 +309,10 @@ template<typename RealType>
 void
 TriangleTessellator<RealType>::
 tessellate(const vector<RealType>& points,
-           Tessellation<2, RealType>& mesh) const 
-{
-  // Find the range of the input.
-  RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
-  RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
-  unsigned i, j, n = points.size();
-  for (i = 0; i != n; ++i)
-  {
-    j = i % 2;
-    low[j] = min(low[j], points[i]);
-    high[j] = max(high[j], points[i]);
-  }
-  ASSERT(low[0] < high[0] and low[1] < high[1]);
-  RealType box[2] = {high[0] - low[0], 
-                     high[1] - low[1]};
-  const double dx = 1.0e-10*max(box[0], box[1]);
-
-  // Build the convex hull of the input points.
-  PLC<2, RealType> hull = convexHull_2d(points, low, dx);
-
-  // Now tessellate in the hull.
-  tessellate(points, hull, mesh);
+           Tessellation<2, RealType>& mesh) const {
+  // Use the PLC method with an empty geometry.
+  PLC<2, RealType> geometry;
+  tessellate(points, points, geometry, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -345,18 +325,9 @@ tessellate(const vector<RealType>& points,
            RealType* high,
            Tessellation<2, RealType>& mesh) const 
 {
-  // First do a null boundary tessellation.
-  this->tessellate(points, mesh);
-  const unsigned numGens = points.size()/2;
-
-  // Now extrapolate pseudo-generators from the convex hull to the bounding
-  // box.
-  unsigned i, j;
-  for (i = 0; i != mesh.convexHull.facets.size(); ++i)
-  {
-    j = mesh.convexHull.facets[i][0];
-  }
-
+  // Build a PLC with the bounding box, and then use the PLC method.
+  ReducedPLC<2, RealType> box = this->boundingBox(low, high);
+  this->tessellate(points, box.points, box, mesh);
 }
 //------------------------------------------------------------------------------
 
@@ -365,6 +336,7 @@ template<typename RealType>
 void
 TriangleTessellator<RealType>::
 tessellate(const vector<RealType>& points,
+           const vector<RealType>& PLCpoints,
            const PLC<2, RealType>& geometry,
            Tessellation<2, RealType>& mesh) const 
 {
@@ -390,6 +362,7 @@ tessellate(const vector<RealType>& points,
 
   // Find the range of the generator points.
   const unsigned numGenerators = points.size()/2;
+  const unsigned numPLCpoints = PLCpoints.size()/2;
   RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
   RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
   int i, j;
@@ -398,6 +371,12 @@ tessellate(const vector<RealType>& points,
     low[1] = min(low[1], points[2*i+1]);
     high[0] = max(high[0], points[2*i]);
     high[1] = max(high[1], points[2*i+1]);
+  }
+  for (i = 0; i != numPLCpoints; ++i) {
+    low[0] = min(low[0], PLCpoints[2*i]);
+    low[1] = min(low[1], PLCpoints[2*i+1]);
+    high[0] = max(high[0], PLCpoints[2*i]);
+    high[1] = max(high[1], PLCpoints[2*i+1]);
   }
   ASSERT(low[0] < high[0] and low[1] < high[1]);
   RealType box[2] = {high[0] - low[0], 
@@ -487,48 +466,50 @@ tessellate(const vector<RealType>& points,
   //   hullVertices[2*i+1] = points[2*delaunay.segmentlist[2*i]+1];
   // }
 
-  // Blago!
-  {
-    int i, j, pindex, qindex, rindex, iedge;
-    copy(&delaunay.pointlist[0], &delaunay.pointlist[2*delaunay.numberofpoints], 
-         back_inserter(mesh.nodes));
-    map<EdgeHash, int> edgeHash2id;
-    mesh.cells.resize(delaunay.numberoftriangles);
-    for (i = 0; i != delaunay.numberoftriangles; ++i) {
-      pindex = delaunay.trianglelist[3*i];
-      qindex = delaunay.trianglelist[3*i + 1];
-      rindex = delaunay.trianglelist[3*i + 2];
-      iedge = addKeyToMap(hashEdge(pindex, qindex), edgeHash2id);
-      mesh.cells[i].push_back(pindex < qindex ? iedge : ~iedge);
-      iedge = addKeyToMap(hashEdge(qindex, rindex), edgeHash2id);
-      mesh.cells[i].push_back(qindex < rindex ? iedge : ~iedge);
-      iedge = addKeyToMap(hashEdge(rindex, pindex), edgeHash2id);
-      mesh.cells[i].push_back(rindex < pindex ? iedge : ~iedge);
-    }
-    mesh.faces.resize(edgeHash2id.size());
-    for (typename map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
-         itr != edgeHash2id.end();
-         ++itr) {
-      i = itr->first.first;
-      j = itr->first.second;
-      iedge = itr->second;
-      mesh.faces[iedge].push_back(i);
-      mesh.faces[iedge].push_back(j);
-    }
+  // // The following is a debugging helper that dumps the triangle mesh to a silo file.
+  // // Uncomment if you're having trouble figuring something out!
+  // // Blago!
+  // {
+  //   int i, j, pindex, qindex, rindex, iedge;
+  //   copy(&delaunay.pointlist[0], &delaunay.pointlist[2*delaunay.numberofpoints], 
+  //        back_inserter(mesh.nodes));
+  //   map<EdgeHash, int> edgeHash2id;
+  //   mesh.cells.resize(delaunay.numberoftriangles);
+  //   for (i = 0; i != delaunay.numberoftriangles; ++i) {
+  //     pindex = delaunay.trianglelist[3*i];
+  //     qindex = delaunay.trianglelist[3*i + 1];
+  //     rindex = delaunay.trianglelist[3*i + 2];
+  //     iedge = addKeyToMap(hashEdge(pindex, qindex), edgeHash2id);
+  //     mesh.cells[i].push_back(pindex < qindex ? iedge : ~iedge);
+  //     iedge = addKeyToMap(hashEdge(qindex, rindex), edgeHash2id);
+  //     mesh.cells[i].push_back(qindex < rindex ? iedge : ~iedge);
+  //     iedge = addKeyToMap(hashEdge(rindex, pindex), edgeHash2id);
+  //     mesh.cells[i].push_back(rindex < pindex ? iedge : ~iedge);
+  //   }
+  //   mesh.faces.resize(edgeHash2id.size());
+  //   for (typename map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
+  //        itr != edgeHash2id.end();
+  //        ++itr) {
+  //     i = itr->first.first;
+  //     j = itr->first.second;
+  //     iedge = itr->second;
+  //     mesh.faces[iedge].push_back(i);
+  //     mesh.faces[iedge].push_back(j);
+  //   }
     
-    const int nx = delaunay.numberoftriangles;
-    vector<double> index(nx);
-    for (i = 0; i < nx; ++i) index[i] = double(i);
-    map<string, double*> fields;
-    fields["cell_index"] = &index[0];
-    SiloWriter<2, double>::write(mesh, fields, "TriangleMesh");
+  //   const int nx = delaunay.numberoftriangles;
+  //   vector<double> index(nx);
+  //   for (i = 0; i < nx; ++i) index[i] = double(i);
+  //   map<string, double*> fields;
+  //   fields["cell_index"] = &index[0];
+  //   SiloWriter<2, double>::write(mesh, fields, "TriangleMesh");
 
-    mesh.nodes.resize(0);
-    mesh.cells.resize(0);
-    mesh.faces.resize(0);
-    // cerr << "Wrote triangle mesh." << endl;
-  }
-  // Blago!
+  //   mesh.nodes.resize(0);
+  //   mesh.cells.resize(0);
+  //   mesh.faces.resize(0);
+  //   // cerr << "Wrote triangle mesh." << endl;
+  // }
+  // // Blago!
 
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
@@ -630,11 +611,11 @@ tessellate(const vector<RealType>& points,
     vector<RealPoint> boundaryPoints;
     boundaryPoints.reserve(geometry.facets.size() + 1);
     i = geometry.facets[0][0];
-    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
     for (j = 0; j != geometry.facets.size(); ++j) {
       ASSERT(geometry.facets[j].size() == 2);
       i =  geometry.facets[j][1];
-      boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+      boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
     }
     ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
     ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -649,11 +630,11 @@ tessellate(const vector<RealType>& points,
         boundaryPoints = vector<RealPoint>();
         boundaryPoints.reserve(geometry.holes[k].size() + 1);
         i = geometry.holes[k][0][0];
-        boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+        boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         for (j = 0; j != geometry.holes[k].size(); ++j) {
           ASSERT(geometry.holes[k][j].size() == 2);
           i =  geometry.holes[k][j][1];
-          boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+          boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         }
         ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
         ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -682,28 +663,6 @@ tessellate(const vector<RealType>& points,
       cellPoints.push_back(circumcenters[*triItr]);
       // cerr << "Cell " << i << " adding circumcenter " << cellPoints.back() << endl;
     }
-
-    // // If we're on a boundary we need the half-way points of our boundary edges.
-    // if (exteriorGenerators[i]) {
-    //   cellPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
-    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
-    //   ASSERT(exteriorEdgesOfGen[i].size() == 2);
-    //   j = exteriorEdgesOfGen[i][0].first;
-    //   k = exteriorEdgesOfGen[i][0].second;
-    //   cellPoints.push_back(RealPoint(0.5*(points[2*j]   + points[2*k]),
-    //                                  0.5*(points[2*j+1] + points[2*k+1])));
-    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
-    //   j = exteriorEdgesOfGen[i][1].first;
-    //   k = exteriorEdgesOfGen[i][1].second;
-    //   cellPoints.push_back(RealPoint(0.5*(points[2*j]   + points[2*k]),
-    //                                  0.5*(points[2*j+1] + points[2*k+1])));
-    //   cerr << "Cell " << i << " adding boundary position " << cellPoints.back() << endl;
-    // }
-
-    // // Build a find with the unbounded points.
-    // cellRings[i] = BGring(cellPoints.begin(), cellPoints.end());
-    // boost::geometry::correct(cellRings[i]);
-    // cerr << "Initial ring : " << boost::geometry::dsv(cellRings[i]) << endl;
 
     // Build the convex hull of the cell points.
     BGmulti_point mpoints(cellPoints.begin(), cellPoints.end());
@@ -737,15 +696,6 @@ tessellate(const vector<RealType>& points,
       cellRings[i] = cellIntersections[k];
     }
 
-    // // If this is a boundary generator, look for any vertices that are
-    // // on the boundary edges.  We only want the points on those edges 
-    // // closest to us.
-    // if (exteriorGenerators[i]) {
-    //   cellRings[i] = eliminateCollinearNodes<RealPoint>(cellRings[i],
-    //                                                     points[2*i],
-    //                                                     points[2*i+1]);
-    // }
-
     // Now build the unique mesh nodes and cell info.
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end() - 1;
@@ -766,98 +716,6 @@ tessellate(const vector<RealType>& points,
     }
     ASSERT(mesh.cells[i].size() >= 3);
   }
-
-  // // Now create the cells for boundary generators.
-  // bool interiorCheck;
-  // for (i = 0; i != numGenerators; ++i) {
-  //   if (exteriorGenerators[i]) {
-  //     ASSERT(neighbors[i].size() >= 2);
-
-  //     // Add the generator to it's own cell geometry. 
-  //     set<RealPoint> cellPoints;
-  //     cellPoints.insert(RealPoint(points[2*i], points[2*i+1]));
-  //     cerr << " --> Boundary generator " << i << " adding " << RealPoint(points[2*i], points[2*i+1]) << endl;
-
-  //     // Add the surrounding circumcenters.
-  //     for (set<int>::const_iterator triItr = gen2tri[i].begin();
-  //          triItr != gen2tri[i].end();
-  //          ++triItr) {
-  //       j = *triItr;
-  //       cellPoints.insert(triCircumCenters[j]);
-  //       cerr << " --> Boundary generator " << i << " adding circumcenter " << triCircumCenters[j] << endl;
-
-  //       // We may need to split the boundary edges of the triangle.
-  //       if (i == delaunay.trianglelist[3*j]) {
-  //         pindex = delaunay.trianglelist[3*j + 1];
-  //         qindex = delaunay.trianglelist[3*j + 2];
-  //       } else if (i == delaunay.trianglelist[3*j + 1]) {
-  //         pindex = delaunay.trianglelist[3*j];
-  //         qindex = delaunay.trianglelist[3*j + 2];
-  //       } else {
-  //         ASSERT(i == delaunay.trianglelist[3*j + 2]);
-  //         pindex = delaunay.trianglelist[3*j];
-  //         qindex = delaunay.trianglelist[3*j + 1];
-  //       }
-  //       const RealPoint 
-  //         ip(points[2*pindex] - points[2*i], points[2*pindex+1] - points[2*i+1]),
-  //         iq(points[2*qindex] - points[2*i], points[2*qindex+1] - points[2*i+1]),
-  //         ic(triCircumCenters[j].x - points[2*i], triCircumCenters[j].y - points[2*i+1]);
-  //       if (exteriorEdgeTest[hashEdge(i, pindex)] and zcross(ip, iq)*zcross(ip, ic) >= 0.0) {
-  //         cellPoints.insert(RealPoint(0.5*(points[2*i] + points[2*pindex]),
-  //                                     0.5*(points[2*i+1] + points[2*pindex+1])));
-  //         cerr << " --> Boundary generator " << i << " adding half edge point " << RealPoint(0.5*(points[2*i] + points[2*pindex]),
-  //                                                                                              0.5*(points[2*i+1] + points[2*pindex+1])) << endl;
-  //       }
-  //       if (exteriorEdgeTest[hashEdge(i, qindex)] and zcross(iq, ip)*zcross(iq, ic) >= 0.0) {
-  //         cellPoints.insert(RealPoint(0.5*(points[2*i] + points[2*qindex]),
-  //                                     0.5*(points[2*i+1] + points[2*qindex+1])));
-  //         cerr << " --> Boundary generator " << i << " adding half edge point " << RealPoint(0.5*(points[2*i] + points[2*qindex]),
-  //                                                                                              0.5*(points[2*i+1] + points[2*qindex+1])) << endl;
-  //       }
-  //     }
-
-  //     // Build the ring for this cell.
-  //     cellRings[i] = BGring(cellPoints.begin(), cellPoints.end());
-  //     boost::geometry::correct(cellRings[i]);
-
-  //     // Intersect with the boundary to get the bounded cell.
-  //     vector<BGring> cellIntersections;
-  //     boost::geometry::intersection(boundary, cellRings[i], cellIntersections);
-  //     ASSERT(cellIntersections.size() == 1);
-  //     cellRings[i] = cellIntersections[0];
-
-  //     // // Now whack away any volume occupied by the interior neighbors.
-  //     // vector<BGring> cellDifferences;
-  //     // for (set<int>::const_iterator neighborItr = neighbors[i].begin();
-  //     //      neighborItr != neighbors[i].end();
-  //     //      ++neighborItr) {
-  //     //   j = *neighborItr;
-  //     //   if (not exteriorGenerators[j]) {
-  //     //     boost::geometry::difference(cellRings[j], cellRings[i], cellDifferences);
-  //     //     ASSERT(cellDifferences.size() == 1);
-  //     //     cellRings[i] = cellDifferences[0];
-  //     //   }
-  //     // }
-
-  //     // Now build the unique mesh nodes and cell info.
-  //     for (typename BGring::const_iterator itr = cellRings[i].begin();
-  //          itr != cellRings[i].end() - 1;
-  //          ++itr) {
-  //       pX1 = IntPoint(CoordHash((itr->x - low[0])/dx),
-  //                      CoordHash((itr->y - low[1])/dx));
-  //       pX2 = IntPoint(CoordHash(((itr+1)->x - low[0])/dx),
-  //                      CoordHash(((itr+1)->y - low[1])/dx));
-  //       j = addKeyToMap(pX1, point2node);
-  //       k = addKeyToMap(pX2, point2node);
-  //       ASSERT(j != k);
-  //       iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
-  //       edgeCells[iedge].push_back(i);
-  //       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
-  //     }
-  //     ASSERT(mesh.cells[i].size() >= 3);
-
-  //   }
-  // }
   ASSERT(edgeCells.size() == edgeHash2id.size());
 
   // Fill in the mesh nodes.
