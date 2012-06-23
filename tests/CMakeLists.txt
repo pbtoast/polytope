@@ -33,6 +33,15 @@ if (TRIANGLE_FOUND)
   target_link_libraries(test_TriangleTessellator polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
   set_tests_properties(test_TriangleTessellator PROPERTIES PASS_REGULAR_EXPRESSION PASS
                        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+
+  # Distributed Triangle tessellator.
+  if (USE_MPI EQUAL 1)
+    add_executable(test_DistributedTriangle test_DistributedTriangle.cc)
+    add_test(test_DistributedTriangle test_DistributedTriangle)
+    target_link_libraries(test_DistributedTriangle polytope)
+    set_tests_properties(test_DistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+  endif()
 endif()
 
 # Tetgen (3D) tessellator.
