@@ -68,7 +68,7 @@ struct Serializer<std::vector<std::vector<T> > > {
                             std::vector<char>& buffer) {
     const unsigned n = value.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(value[i], buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::serializeImpl(value[i], buffer);
   }
 
   static void deserializeImpl(std::vector<std::vector<T> >& value, 
@@ -77,7 +77,7 @@ struct Serializer<std::vector<std::vector<T> > > {
     unsigned n;
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
     value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(value[i], bufItr, endItr);
   }
 };
 
@@ -89,7 +89,7 @@ struct Serializer<std::vector<std::vector<std::vector<T> > > > {
                             std::vector<char>& buffer) {
     const unsigned n = value.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(value[i], buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::serializeImpl(value[i], buffer);
   }
 
   static void deserializeImpl(std::vector<std::vector<std::vector<T> > >& value, 
@@ -98,7 +98,7 @@ struct Serializer<std::vector<std::vector<std::vector<T> > > > {
     unsigned n;
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
     value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::deserializeImpl(value[i], bufItr, endItr);
   }
 };
 

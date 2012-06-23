@@ -116,6 +116,7 @@ DistributedTessellator(Tessellator<Dimension, RealType>* tessellator,
   mType(unbounded),
   mLow(0),
   mHigh(0),
+  mPLCpointsPtr(0),
   mPLCptr(0) {
 }
 
@@ -164,9 +165,11 @@ template<int Dimension, typename RealType>
 void
 DistributedTessellator<Dimension, RealType>::
 tessellate(const vector<RealType>& points,
+           const vector<RealType>& PLCpoints,
            const PLC<Dimension, RealType>& geometry,
            Tessellation<Dimension, RealType>& mesh) const {
   mType = plc;
+  mPLCpointsPtr = &PLCpoints;
   mPLCptr = &geometry;
   this->computeDistributedTessellation(points, mesh);
 }
@@ -544,7 +547,7 @@ tessellationWrapper(const vector<RealType>& points,
   case plc:
     ASSERT(mPLCptr != 0);
     cerr << "plc tessellation." << endl;
-    mSerialTessellator->tessellate(points, *mPLCptr, mesh);
+    mSerialTessellator->tessellate(points, *mPLCpointsPtr, *mPLCptr, mesh);
     break;
   }
 }

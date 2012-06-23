@@ -72,6 +72,7 @@ public:
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
+                          const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension, RealType>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const;
 
@@ -100,6 +101,7 @@ private:
   bool mAssumeControl, mBuildCommunicationInfo;
   mutable TessellationType mType;
   mutable RealType *mLow, *mHigh;
+  mutable const std::vector<RealType>* mPLCpointsPtr;
   mutable const PLC<Dimension, RealType>* mPLCptr;
 
   // Internal method that implements the parallel algorithm -- called by
