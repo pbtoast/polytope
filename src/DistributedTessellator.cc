@@ -474,8 +474,6 @@ computeDistributedTessellation(const vector<RealType>& points,
         deserialize(otherNodeHashes, itr, buffer.end());
         deserialize(otherFaceHashes, itr, buffer.end());
         ASSERT(itr == buffer.end());
-        ASSERT(otherNodeHashes.size() % Dimension == 0);
-        ASSERT(otherFaceHashes.size() % Dimension == 0);
 
         // Look for any nodes we share with the other domain.
         const unsigned numOtherNodes = otherNodeHashes.size();

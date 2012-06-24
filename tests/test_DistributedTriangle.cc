@@ -102,16 +102,31 @@ int main(int argc, char** argv) {
                                                          true, true);
     distTest.tessellate(generators, xmin, xmax, mesh);
 
-    // Figure out which of our nodes and faces we actually own.
+    // Do some sanity checks on the stuff in the shared info.
     unsigned ncells = mesh.cells.size();
     unsigned nnodes = mesh.nodes.size()/2;
     unsigned nfaces = mesh.faces.size();
+    CHECK(mesh.sharedNodes.size() == mesh.neighborDomains.size());
+    CHECK(mesh.sharedFaces.size() == mesh.neighborDomains.size());
+    CHECK(mesh.neighborDomains.size() == 0 or *max_element(mesh.neighborDomains.begin(), mesh.neighborDomains.end()) < numProcs);
+    for (unsigned k = 0; k != mesh.neighborDomains.size(); ++k) {
+      CHECK(mesh.sharedNodes.size() > 0 and *max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
+      CHECK(mesh.sharedFaces.size() > 0 and *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
+    }
+
+    // Figure out which of our nodes and faces we actually own.
     vector<unsigned> ownNodes(nnodes, 1), ownFaces(nfaces, 1);
     for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
       cerr << "Talking to " << mesh.neighborDomains[k] << endl;
       if (mesh.neighborDomains[k] < rank) {
-        for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++k) ownNodes[mesh.sharedNodes[k][j]] = 0;
-        for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++k) ownFaces[mesh.sharedFaces[k][j]] = 0;
+        for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++k) {
+          ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
+          ownNodes[mesh.sharedNodes[k][j]] = 0;
+        }
+        for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++k) {
+          ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
+          ownFaces[mesh.sharedFaces[k][j]] = 0;
+        }
       }
     }
     unsigned nnodesOwned = (nnodes == 0U ?
@@ -120,6 +135,7 @@ int main(int argc, char** argv) {
     unsigned nfacesOwned = (nfaces == 0U ?
                             0U :
                             accumulate(ownFaces.begin(), ownFaces.end(), 0U));
+    cerr << " Check : " << nnodesOwned << " " << nfacesOwned << endl;
 
     // Gather some global statistics.
     unsigned ncellsGlobal, nnodesGlobal, nfacesGlobal;
