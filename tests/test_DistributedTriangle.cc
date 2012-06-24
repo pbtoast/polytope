@@ -59,10 +59,10 @@ int main(int argc, char** argv) {
     xproc.reserve(numProcs);
     yproc.reserve(numProcs);
     for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
-      xproc.push_back(x1 + 0.5*(iproc + 0.5)*(x2 - x1));
-      yproc.push_back(y1 + 0.5*(y2 - y1));
-      // xproc.push_back(x1 + random01()*(x2 - x1));
-      // yproc.push_back(y1 + random01()*(y2 - y1));
+      // xproc.push_back(x1 + 0.5*(iproc + 0.5)*(x2 - x1));
+      // yproc.push_back(y1 + 0.5*(y2 - y1));
+      xproc.push_back(x1 + random01()*(x2 - x1));
+      yproc.push_back(y1 + random01()*(y2 - y1));
     }
 
     // Create the local generators.  Note this is not efficient in a couple of ways!  
@@ -103,15 +103,18 @@ int main(int argc, char** argv) {
     distTest.tessellate(generators, xmin, xmax, mesh);
 
     // Do some sanity checks on the stuff in the shared info.
+    unsigned numNeighborDomains = mesh.neighborDomains.size();
     unsigned ncells = mesh.cells.size();
     unsigned nnodes = mesh.nodes.size()/2;
     unsigned nfaces = mesh.faces.size();
-    CHECK(mesh.sharedNodes.size() == mesh.neighborDomains.size());
-    CHECK(mesh.sharedFaces.size() == mesh.neighborDomains.size());
+    CHECK(mesh.sharedNodes.size() == numNeighborDomains);
+    CHECK(mesh.sharedFaces.size() == numNeighborDomains);
     CHECK(mesh.neighborDomains.size() == 0 or *max_element(mesh.neighborDomains.begin(), mesh.neighborDomains.end()) < numProcs);
-    for (unsigned k = 0; k != mesh.neighborDomains.size(); ++k) {
-      CHECK(mesh.sharedNodes.size() > 0 and *max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
-      CHECK(mesh.sharedFaces.size() > 0 and *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
+    for (unsigned k = 0; k != numNeighborDomains; ++k) {
+      CHECK(mesh.sharedNodes[k].size() > 0);
+      CHECK(mesh.sharedFaces[k].size() > 0);
+      CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
+      CHECK(*max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
     }
 
     // Figure out which of our nodes and faces we actually own.
@@ -171,16 +174,16 @@ int main(int argc, char** argv) {
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
-    // Blago!
-    {
-      vector<double> r2(mesh.cells.size(), rank);
-      map<string, double*> fields;
-      fields["domain"] = &r2[0];
-      ostringstream os;
-      os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<2, double>::write(mesh, fields, os.str());
-    }
-    // Blago!
+    // // Blago!
+    // {
+    //   vector<double> r2(mesh.cells.size(), rank);
+    //   map<string, double*> fields;
+    //   fields["domain"] = &r2[0];
+    //   ostringstream os;
+    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+    //   polytope::SiloWriter<2, double>::write(mesh, fields, os.str());
+    // }
+    // // Blago!
 
     // Check the global sizes.
     CHECK(nnodesGlobal == (nx + 1)*(nx + 1));

@@ -513,6 +513,17 @@ computeDistributedTessellation(const vector<RealType>& points,
         ASSERT(mesh.sharedFaces.back().size() == indices.size());
       }
     }
+
+    // Remove any neighbors we don't actually share any info with.
+    unsigned numNeighbors = mesh.neighborDomains.size();
+    for (int i = numNeighbors - 1; i != -1; --i) {
+      if (mesh.sharedNodes[i].size() == 0 and mesh.sharedFaces[i].size() == 0) {
+        cerr << "Removing neighbor " << i << " of " << numNeighbors << endl;
+        mesh.neighborDomains.erase(mesh.neighborDomains.begin() + i);
+        mesh.sharedNodes.erase(mesh.sharedNodes.begin() + i);
+        mesh.sharedFaces.erase(mesh.sharedFaces.begin() + i);
+      }
+    }
   }
 }
 
