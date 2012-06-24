@@ -14,19 +14,10 @@
 #include "mpi.h"
 
 #include "polytope.hh"
+#include "polytope_test_utilities.hh"
 #include "Point.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
-
 using namespace std;
-
-//------------------------------------------------------------------------------
-// Define our own local random number generator wrapping the standard srand &
-// rand methods.
-//------------------------------------------------------------------------------
-double random01() {
-  return double(rand())/RAND_MAX;
-}
 
 //------------------------------------------------------------------------------
 // Compute the square of the distance.

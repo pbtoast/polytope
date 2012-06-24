@@ -308,7 +308,7 @@ computeDistributedTessellation(const vector<RealType>& points,
             const unsigned otherProc = bisectSearch(domainCellOffset, jcell);
             ASSERT(jcell >= domainCellOffset[otherProc] and
                    jcell <  domainCellOffset[otherProc + 1]);
-            neighborSet.insert(otherProc);
+            if (otherProc != rank) neighborSet.insert(otherProc);
           }
         }
       }

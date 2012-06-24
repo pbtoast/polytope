@@ -1,3 +1,10 @@
+# Serialization test.
+add_executable(test_serialize test_serialize.cc)
+add_test(test_serialize test_serialize)
+target_link_libraries(test_serialize polytope)
+set_tests_properties(test_serialize PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+
 # Convex hull 2D test.
 add_executable(test_convexHull_2d test_convexHull_2d.cc)
 add_test(test_convexHull_2d test_convexHull_2d)
