@@ -117,13 +117,12 @@ int main(int argc, char** argv) {
     // Figure out which of our nodes and faces we actually own.
     vector<unsigned> ownNodes(nnodes, 1), ownFaces(nfaces, 1);
     for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
-      cerr << "Talking to " << mesh.neighborDomains[k] << endl;
       if (mesh.neighborDomains[k] < rank) {
-        for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++k) {
+        for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++j) {
           ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
           ownNodes[mesh.sharedNodes[k][j]] = 0;
         }
-        for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++k) {
+        for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++j) {
           ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
           ownFaces[mesh.sharedFaces[k][j]] = 0;
         }
@@ -135,7 +134,6 @@ int main(int argc, char** argv) {
     unsigned nfacesOwned = (nfaces == 0U ?
                             0U :
                             accumulate(ownFaces.begin(), ownFaces.end(), 0U));
-    cerr << " Check : " << nnodesOwned << " " << nfacesOwned << endl;
 
     // Gather some global statistics.
     unsigned ncellsGlobal, nnodesGlobal, nfacesGlobal;
@@ -272,7 +270,6 @@ int main(int argc, char** argv) {
           CHECK(otherFaceHashes.size() == nf);
           for (unsigned j = 0; j != nn; ++j) {
             const unsigned k = mesh.sharedNodes[i][j];
-            cerr << "Checking " << localNodeHashes[k] << " " << otherNodeHashes[j] << endl;
             CHECK(localNodeHashes[k] == otherNodeHashes[j]);
           }
           for (unsigned j = 0; j != nf; ++j) {
