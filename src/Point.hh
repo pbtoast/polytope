@@ -62,7 +62,7 @@ struct Serializer<Point2<UintType> > {
   }
 
   static void deserializeImpl(Point2<UintType>& value,
-                              std::vector<char>::const_iterator bufItr,
+                              std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator endItr) {
     deserialize(value.x, bufItr, endItr);
     deserialize(value.y, bufItr, endItr);
@@ -123,7 +123,7 @@ struct Serializer<Point3<UintType> > {
   }
 
   static void deserializeImpl(Point3<UintType>& value,
-                              std::vector<char>::const_iterator bufItr,
+                              std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator endItr) {
     deserialize(value.x, bufItr, endItr);
     deserialize(value.y, bufItr, endItr);
