@@ -138,6 +138,7 @@ add_subdirectory(tests)
 
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
+               "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
                "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh" 
