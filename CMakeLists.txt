@@ -138,12 +138,12 @@ add_subdirectory(tests)
 
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
-               "${PROJECT_BINARY_DIR}/VoroPP_2d.hh" 
-               "${PROJECT_BINARY_DIR}/VoroPP_3d.hh" 
-               "${PROJECT_BINARY_DIR}/TriangleTessellator.hh" 
-               "${PROJECT_BINARY_DIR}/TetgenTessellator.hh" 
-               "${PROJECT_BINARY_DIR}/SiloWriter.hh" 
-               "${PROJECT_BINARY_DIR}/SiloReader.hh" 
+               "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
+               "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
+               "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh" 
+               "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh" 
+               "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
+               "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
          DESTINATION include/polytope)
 
 # build a CPack driven installer package
