@@ -147,6 +147,12 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
          DESTINATION include/polytope)
 
+# If we're parallel we have a few extra install items.
+if (USE_MPI EQUAL 1)
+  install (FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
+           DESTINATION include/polytope)
+endif ()
+
 # build a CPack driven installer package
 include(InstallRequiredSystemLibraries)
 set (CPACK_RESOURCE_FILE_LICENSE  
