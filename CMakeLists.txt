@@ -38,7 +38,9 @@ if (USE_MPI EQUAL 1)
   # CC and CXX should already have been set in Makefile or wherever.
   set(MPIEXEC mpirun)
   set(MPIEXEC_NUMPROC_FLAG -np)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_MPI")
+  set(HAVE_MPI true)
+else ()
+  set(HAVE_MPI false)
 endif ()
 
 # Find Boost.
@@ -51,7 +53,7 @@ else ()
 endif ()
 
 # Find HDF5.
-set(HDF5_USE_STATIC_LIBRARIES TRUE)
+set(HDF5_USE_STATIC_LIBRARIES true)
 find_package(HDF5)
 if (${HDF5_FOUND})
   # Do we have parallel HDF5?
@@ -59,7 +61,7 @@ if (${HDF5_FOUND})
     if (${HDF5_IS_PARALLEL})
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_PARALLEL_HDF5")
 #      message("-- Parallel HDF5 not found. Skipping.")
-#      set(HDF5_FOUND FALSE)
+#      set(HDF5_FOUND false)
     endif ()
   endif ()
 endif ()
@@ -85,7 +87,7 @@ if (${HDF5_FOUND})
     message("-- Found silo files ${SILO_INCLUDE_DIRS}")
   endif ()
 else ()
-  set(SILO_FOUND FALSE)
+  set(SILO_FOUND false)
     message("-- Silo not found.  Skipping.")
 endif ()
 
@@ -93,19 +95,21 @@ endif ()
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 if (EXISTS ${CWD}/src/triangle.h AND 
     EXISTS ${CWD}/src/triangle.c)
-  set(TRIANGLE_FOUND TRUE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_TRIANGLE")
+  set(TRIANGLE_FOUND true)
+  set(HAVE_TRIANGLE true)
 else()
-  set(TRIANGLE_FOUND FALSE)
+  set(TRIANGLE_FOUND false)
+  set(HAVE_TRIANGLE false)
 endif()
 
 # Enable Tetgen if the proper files are found.
 if (EXISTS ${CWD}/src/tetgen.h AND 
     EXISTS ${CWD}/src/tetgen.cxx)
-  set(TETGEN_FOUND TRUE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_TETGEN")
+  set(TETGEN_FOUND true)
+  set(HAVE_TETGEN true)
 else()
-  set(TETGEN_FOUND FALSE)
+  set(TETGEN_FOUND false)
+  set(HAVE_TETGEN false)
 endif()
 
 # Build a configuration header file from our options.
@@ -138,7 +142,12 @@ add_subdirectory(tests)
 
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
                "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
+               "${PROJECT_SOURCE_DIR}/src/Tessellation.hh" 
+               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
+               "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
+               "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
                "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh" 

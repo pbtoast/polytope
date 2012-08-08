@@ -8,7 +8,8 @@
 #include <limits>
 #include <stdint.h>
 
-#include "polytope.hh" // Pulls in ASSERT and VoroPP_2d.hh.
+#include "polytope.hh"
+#include "polytope_internal.hh" // Pulls in ASSERT and VoroPP_2d.hh.
 #include "convexHull_2d.hh"
 #include "container_2d.hh"
 

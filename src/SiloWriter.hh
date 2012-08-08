@@ -3,7 +3,7 @@
 
 #ifdef HAVE_SILO
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 #include <mpi.h>
 #else
 #define MPI_Comm int

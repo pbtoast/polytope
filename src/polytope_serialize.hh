@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <stdint.h>
 
+#include "polytope_internal.hh"
+
 namespace polytope {
 
 //------------------------------------------------------------------------------

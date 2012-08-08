@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include "silo.h"
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 #include "mpi.h"
 #include "pmpio.h"
 #endif
@@ -20,7 +20,7 @@ using namespace std;
 namespace 
 {
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 
 //-------------------------------------------------------------------
 void*
@@ -94,7 +94,7 @@ read(Tessellation<3, RealType>& mesh,
 
   // Open a file in Silo/HDF5 format for reading.
   char filename[1024];
-#ifdef HAVE_MPI
+#if HAVE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
