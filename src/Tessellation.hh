@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include "PLC.hh"
+#include "polytope_internal.hh"
 
 namespace polytope
 {

@@ -4,8 +4,6 @@
 #include <vector>
 #include <iostream>
 
-#include "polytope_serialize.hh"
-
 namespace polytope
 {
 
@@ -112,27 +110,6 @@ class PLC
     return s;
   }
 
-};
-
-//------------------------------------------------------------------------------
-// Serialize a PLC.
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-struct Serializer<PLC<Dimension, RealType> >
-{
-
-  static void serializeImpl(const PLC<Dimension, RealType>& value,
-                            std::vector<char>& buffer) {
-    serialize(value.facets, buffer);
-    serialize(value.holes, buffer);
-  }
-
-  static void deserializeImpl(PLC<Dimension, RealType>& value,
-                              std::vector<char>::const_iterator& bufItr,
-                              const std::vector<char>::const_iterator& endItr) {
-    deserialize(value.facets, bufItr, endItr);
-    deserialize(value.holes, bufItr, endItr);
-  }
 };
 
 }

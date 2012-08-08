@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include "silo.h"
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 #include "mpi.h"
 #include "pmpio.h"
 #endif
@@ -83,7 +83,7 @@ traverseConvexHull(const vector<RealType>& points,
 }
 //-------------------------------------------------------------------
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 
 //-------------------------------------------------------------------
 void*
@@ -157,7 +157,7 @@ write(const Tessellation<3, RealType>& mesh,
 
   // Open a file in Silo/HDF5 format for writing.
   char filename[1024];
-#ifdef HAVE_MPI
+#if HAVE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
@@ -414,7 +414,7 @@ write(const Tessellation<3, RealType>& mesh,
   // Clean up.
   DBFreeOptlist(optlist);
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
   // Write the multi-block objects to the file if needed.
   int numChunks = nproc / numFiles;
   if (rankInGroup == 0)

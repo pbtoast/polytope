@@ -9,7 +9,8 @@
 #include <map>
 #include <set>
 
-#include "polytope.hh" // Pulls in ASSERT and VoroPP_3d.hh.
+#include "polytope.hh"
+#include "polytope_internal.hh" // Pulls in ASSERT and VoroPP_3d.hh.
 #include "Point.hh"
 #include "container.hh"
 

@@ -7,6 +7,7 @@
 #include "Tessellator.hh"
 #include "PLC.hh"
 #include "ReducedPLC.hh"
+#include "polytope_internal.hh"
 
 namespace polytope
 {

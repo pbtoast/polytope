@@ -7,7 +7,7 @@
 #ifndef __Polytope_TetgenTessellator__
 #define __Polytope_TetgenTessellator__
 
-#ifdef HAVE_TETGEN
+#if HAVE_TETGEN
 
 #include <vector>
 #include <cmath>
