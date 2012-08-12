@@ -1,3 +1,4 @@
+#-*-makefile-*-
 # Makefile -- Use this to build on *NIX systems.
 
 # Options set on command line.
@@ -19,7 +20,7 @@ CONFIG_FLAGS = -DCMAKE_VERBOSE_MAKEFILE=1 -DUNIX=1
 
 # Did the user specify compilers?
 ifneq ($(CC), not-set)
-  CC = $(CC)
+  CC = '$(CC)'
 else
   ifeq ($(MPI), 1)
     CC = mpicc
@@ -46,7 +47,7 @@ else
   CONFIG_FLAGS += -DUSE_MPI=0
 endif
 
-CONFIG_FLAGS += -DCC=${CC} -DCXX=${CXX}
+CONFIG_FLAGS += -DCC='${CC}' -DCXX='${CXX}'
 
 # Debugging symbols
 ifneq ($(debug), not-set)
@@ -89,7 +90,7 @@ config: distclean
 	$(run-config)
 
 distclean:
-	rm -rf $(BUILDDIR)
+		rm -rf $(BUILDDIR)
 
 #dist:
 #	utils/mkdist.sh $(PKGNAME)
