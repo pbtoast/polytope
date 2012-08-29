@@ -104,7 +104,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     mesh.faces.push_back(vector<unsigned>());
     mesh.faces.back().push_back(inode);
     mesh.faces.back().push_back(jnode);
-    mesh.faceCells.push_back(vector<unsigned>());
+    mesh.faceCells.push_back(vector<int>());
     mesh.faceCells.back().push_back(icell);
     ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
     ASSERT(mesh.faces.size() == iface + 1);
@@ -115,13 +115,13 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
 
     // Nope, this is an existing face, so we record it in the 
     // cell list as the 1's complement.
-    const unsigned iface = faceItr->second;
+    const int iface = faceItr->second;
     ASSERT(iface < mesh.faces.size());
     mesh.cells[icell].push_back(~iface);
-    mesh.faceCells[iface].push_back(icell);
+    mesh.faceCells[iface].push_back(~int(icell));
     ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
 //     cerr << iface << " " << mesh.faceCells[iface].size() << " " << mesh.faceCells[iface][0] << " " << mesh.faceCells[iface][1] << endl;
-    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == icell);
+    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == ~int(icell));
   }
 }
 
