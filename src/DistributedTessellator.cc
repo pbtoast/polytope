@@ -295,11 +295,11 @@ computeDistributedTessellation(const vector<RealType>& points,
     for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
       for (typename vector<int>::const_iterator faceItr = hullMesh.cells[icell].begin();
            faceItr != hullMesh.cells[icell].end(); ++faceItr) {
-        const unsigned iface = (*faceItr >= 0 ? *faceItr : ~(*faceItr));
+        const unsigned iface = (*faceItr < 0 ? ~(*faceItr) : *faceItr);
         ASSERT(iface < hullMesh.faceCells.size());
-        for (vector<unsigned>::const_iterator otherCellItr = hullMesh.faceCells[iface].begin();
+        for (vector<int>::const_iterator otherCellItr = hullMesh.faceCells[iface].begin();
              otherCellItr != hullMesh.faceCells[iface].end(); ++otherCellItr) {
-          const unsigned jcell = *otherCellItr;
+          const unsigned jcell = (*otherCellItr < 0 ? ~(*otherCellItr) : *otherCellItr);
           if (jcell != icell) {
             const unsigned otherProc = bisectSearch(domainCellOffset, jcell);
             ASSERT(jcell >= domainCellOffset[otherProc] and

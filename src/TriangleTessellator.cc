@@ -74,30 +74,6 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
 }
 //------------------------------------------------------------------------
 
-//------------------------------------------------------------------------
-// Bound a position (X) to be inside the triangle (A,B,C).  If X is 
-// outside, it is projected to the midpoint of the closest edge.
-//------------------------------------------------------------------------
-// int
-// _boundPointProjector(double*A, double* B, double* X) {
-//   const int checkAB = orient2d(A, B, X);
-//   if (checkAB <= 0) {
-//     cerr << "Projecting point " << X[0] << " " << X[1];
-//     X[0] = 0.5*(A[0] + B[0]);
-//     X[1] = 0.5*(A[1] + B[1]);
-//     cerr << " to " << X[0] << " " << X[1] << endl;
-//     return true;
-//   }
-//   return false;
-// }
-
-// void
-// boundPoint(double* A, double* B, double* C, double* X) {
-//   if (_boundPointProjector(A, B, X)) return;
-//   if (_boundPointProjector(B, C, X)) return;
-//   if (_boundPointProjector(C, A, X)) return;
-// }
-
 //------------------------------------------------------------------------------
 // An implementation of the map specialized to help constructing counters.
 // This thing just overloads the index operator to start the count at zero
@@ -157,32 +133,6 @@ struct MatchEitherPairValue {
 };
 
 //------------------------------------------------------------------------------
-// Predicate to compare points based on distance from an origin.
-//------------------------------------------------------------------------------
-template<typename Point>
-struct ComparePointDistances: public std::binary_function<Point, Point, bool> {
-  const Point& origin;
-  ComparePointDistances(const Point& x): origin(x) {}
-  bool operator()(const Point& lhs, const Point& rhs) const {
-    typedef typename Point::CoordType Coord;
-    const Coord dx1 = lhs.x - origin.x;
-    const Coord dy1 = lhs.y - origin.y;
-    const Coord dx2 = rhs.x - origin.x;
-    const Coord dy2 = rhs.y - origin.y;
-    return ((dx1*dx1 + dy1*dy1) < (dx2*dx2 + dy2*dy2));
-  }
-};
-
-//------------------------------------------------------------------------------
-// z component of the cross product.
-//------------------------------------------------------------------------------
-template<typename T>
-T
-zcross(const Point2<T>& a, const Point2<T>& b) {
-  return a.x*b.y - a.y*b.x;
-}
-
-//------------------------------------------------------------------------------
 // Update the map of thingies to unique indices.
 //------------------------------------------------------------------------------
 template<typename Key>
@@ -197,94 +147,6 @@ addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
     result = itr->second;
   }
   return result;
-}
-
-//------------------------------------------------------------------------------
-// Compute the intermediate point along the line segment (e1, e2) that is 
-// equidistant from e1 and a third point p.
-//------------------------------------------------------------------------------
-double square(const double& a) { return a*a; }
-
-void
-computeEquidistantPoint(double* e1, double* e2, double* p, double* X) {
-  double ehatx = e2[0] - e1[0];
-  double ehaty = e2[1] - e1[1];
-  const double e = sqrt(ehatx*ehatx + ehaty*ehaty);
-  if (e < 1.0e-10) {
-    X[0] = 0.5*(e1[0] + e2[0]);
-    X[1] = 0.5*(e1[1] + e2[1]);
-  } else {
-    ehatx /= e;
-    ehaty /= e;
-    const double ax = p[0] - e1[0];
-    const double ay = p[1] - e1[1];
-    const double d = sqrt(square(ehatx*ax) + square(ehaty*ay));
-    const double b = min(e, 0.5*(ax*ax + ay*ay)/d);
-    X[0] = e1[0] + ehatx*b;
-    X[1] = e1[1] + ehaty*b;
-  }
-}
-
-//------------------------------------------------------------------------------
-// Flag as false any collinear points we wish to eliminate along the given edge.
-//------------------------------------------------------------------------------
-template<typename Point>
-boost::geometry::model::ring<Point, false>
-eliminateCollinearNodes(boost::geometry::model::ring<Point, false>& ring,
-                        const double px,
-                        const double py) {
-  const int n = ring.size() - 1;
-  ASSERT(n >= 3);
-
-  cerr << " --> input ring : " << boost::geometry::dsv(ring) << endl;
-
-  // Start out flagging everyone as keep.
-  vector<bool> flags(n, true);
-
-  // Find the point p in the ring.
-  double thpt, minR = numeric_limits<double>::max();
-  int i = -1, j, k;
-  for (j = 0; j != n; ++j) {
-    thpt = square(ring[j].x - px) + square(ring[j].y - py);
-    if (thpt < minR) {
-      minR = thpt;
-      i = j;
-    }
-  }
-  ASSERT(i >= 0 and i < n);
-
-  cerr << " --> selected i = " << i << endl;
-
-  // Walk up from i question until the points are no longer collinear.
-  j = (i + 1) % n;
-  k = (i + 2) % n;
-  while (orient2d(&ring[i].x, &ring[j].x, &ring[k].x) == 0.0) {
-    cerr << i << " " << j << " " << k << " " << n << " " << orient2d(&ring[i].x, &ring[j].x, &ring[k].x) << endl;
-    flags[k] = false;
-    k = (k + 1) % n;
-  }
-
-  // Now walk back from i until the points are no longer collinear.
-  j = (i - 1) % n + n;
-  k = (i - 2) % n + n;
-  while (orient2d(&ring[i].x, &ring[j].x, &ring[k].x) == 0.0) {
-    cerr << i << " " << j << " " << k << " " << n << " " << orient2d(&ring[i].x, &ring[j].x, &ring[k].x) << endl;
-    flags[k] = false;
-    k = (k - 1) % n + n;
-  }
-  
-  cerr << " --> flags : ";
-  copy(flags.begin(), flags.end(), ostream_iterator<bool>(cerr, " "));
-  cerr << endl;
-
-  // Build a new ring without the extra collinear nodes.
-  vector<Point> points;
-  for (j = 0; j != n; ++j) {
-    if (flags[j]) points.push_back(ring[j]);
-  }
-  ASSERT(points.size() >= 3);
-  points.push_back(points[0]);
-  return boost::geometry::model::ring<Point, false>(points.begin(), points.end());
 }
 
 } // end anonymous namespace
@@ -455,62 +317,6 @@ tessellate(const vector<RealType>& points,
     error(err);
   }
 
-  // // Transfer the convex hull data.
-  // mesh.convexHull.facets.resize(delaunay.numberofsegments);
-  // vector<double> hullVertices(2*delaunay.numberofsegments);
-  // for (int i = 0; i < delaunay.numberofsegments; ++i) {
-  //   mesh.convexHull.facets[i].resize(2);
-  //   mesh.convexHull.facets[i][0] = delaunay.segmentlist[2*i];
-  //   mesh.convexHull.facets[i][1] = delaunay.segmentlist[2*i+1];
-  //   hullVertices[2*i]   = points[2*delaunay.segmentlist[2*i]];
-  //   hullVertices[2*i+1] = points[2*delaunay.segmentlist[2*i]+1];
-  // }
-
-  // // The following is a debugging helper that dumps the triangle mesh to a silo file.
-  // // Uncomment if you're having trouble figuring something out!
-  // // Blago!
-  // {
-  //   int i, j, pindex, qindex, rindex, iedge;
-  //   copy(&delaunay.pointlist[0], &delaunay.pointlist[2*delaunay.numberofpoints], 
-  //        back_inserter(mesh.nodes));
-  //   map<EdgeHash, int> edgeHash2id;
-  //   mesh.cells.resize(delaunay.numberoftriangles);
-  //   for (i = 0; i != delaunay.numberoftriangles; ++i) {
-  //     pindex = delaunay.trianglelist[3*i];
-  //     qindex = delaunay.trianglelist[3*i + 1];
-  //     rindex = delaunay.trianglelist[3*i + 2];
-  //     iedge = addKeyToMap(hashEdge(pindex, qindex), edgeHash2id);
-  //     mesh.cells[i].push_back(pindex < qindex ? iedge : ~iedge);
-  //     iedge = addKeyToMap(hashEdge(qindex, rindex), edgeHash2id);
-  //     mesh.cells[i].push_back(qindex < rindex ? iedge : ~iedge);
-  //     iedge = addKeyToMap(hashEdge(rindex, pindex), edgeHash2id);
-  //     mesh.cells[i].push_back(rindex < pindex ? iedge : ~iedge);
-  //   }
-  //   mesh.faces.resize(edgeHash2id.size());
-  //   for (typename map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
-  //        itr != edgeHash2id.end();
-  //        ++itr) {
-  //     i = itr->first.first;
-  //     j = itr->first.second;
-  //     iedge = itr->second;
-  //     mesh.faces[iedge].push_back(i);
-  //     mesh.faces[iedge].push_back(j);
-  //   }
-    
-  //   const int nx = delaunay.numberoftriangles;
-  //   vector<double> index(nx);
-  //   for (i = 0; i < nx; ++i) index[i] = double(i);
-  //   map<string, double*> fields;
-  //   fields["cell_index"] = &index[0];
-  //   SiloWriter<2, double>::write(mesh, fields, "TriangleMesh");
-
-  //   mesh.nodes.resize(0);
-  //   mesh.cells.resize(0);
-  //   mesh.faces.resize(0);
-  //   // cerr << "Wrote triangle mesh." << endl;
-  // }
-  // // Blago!
-
   //--------------------------------------------------------
   // Create the Voronoi tessellation from the triangulation.
   //--------------------------------------------------------
@@ -651,7 +457,7 @@ tessellate(const vector<RealType>& points,
   IntPoint pX1, pX2;
   map<IntPoint, int> point2node;
   map<EdgeHash, int> edgeHash2id;
-  map<int, vector<unsigned> > edgeCells;
+  map<int, vector<int> > edgeCells;
   map<int, BGring> cellRings;
   for (i = 0; i != numGenerators; ++i) {
 
@@ -709,7 +515,7 @@ tessellate(const vector<RealType>& points,
         k = addKeyToMap(pX2, point2node);
         ASSERT(j != k);
         iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
-        edgeCells[iedge].push_back(i);
+        edgeCells[iedge].push_back(j < k ? i : ~i);
         mesh.cells[i].push_back(j < k ? iedge : ~iedge);
         // cerr << "Cell " << i << " adding edge " << iedge << " : " << *itr << " " << *(itr + 1) << endl;
       }
@@ -744,7 +550,7 @@ tessellate(const vector<RealType>& points,
   }
 
   // Fill in the mesh faceCells.
-  mesh.faceCells = vector<vector<unsigned> >(mesh.faces.size());
+  mesh.faceCells = vector<vector<int> >(mesh.faces.size());
   for (i = 0; i != mesh.faces.size(); ++i) {
     // if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
     //   cerr << "Blago! " << i << " " << edgeCells[i].size() << endl;

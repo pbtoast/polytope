@@ -82,7 +82,8 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
 
   // Reconstruct the faces.
   {
-    std::vector<std::vector<unsigned> > newFaces, newFaceCells;
+    std::vector<std::vector<unsigned> > newFaces;
+    std::vector<std::vector<int> > newFaceCells;
     newFaces.reserve(nfaces1);
     newFaceCells.reserve(nfaces1);
     for (unsigned i = 0; i != nfaces0; ++i) {
@@ -96,10 +97,17 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
         }
         ASSERT(mesh.faceCells[i].size() == 1 or
                mesh.faceCells[i].size() == 2);
-        newFaceCells.push_back(std::vector<unsigned>());
-        if (cellMask[mesh.faceCells[i][0]] == 1) newFaceCells.back().push_back(old2new_cells[mesh.faceCells[i][0]]);
-        if (mesh.faceCells[i].size() == 2 and
-            cellMask[mesh.faceCells[i][1]] == 1) newFaceCells.back().push_back(old2new_cells[mesh.faceCells[i][1]]);
+        newFaceCells.push_back(std::vector<int>());
+        unsigned fc = (mesh.faceCells[i][0] < 0 ? ~mesh.faceCells[i][0] : mesh.faceCells[i][0]);
+        if (cellMask[fc] == 1) newFaceCells.back().push_back(mesh.faceCells[i][0] < 0 ?
+                                                             ~old2new_cells[fc] :
+                                                             old2new_cells[fc]);
+        if (mesh.faceCells[i].size() == 2) {
+          fc = (mesh.faceCells[i][1] < 0 ? ~mesh.faceCells[i][1] : mesh.faceCells[i][1]);
+          if (cellMask[fc] == 1) newFaceCells.back().push_back(mesh.faceCells[i][1] < 0 ?
+                                                               ~old2new_cells[fc] :
+                                                               old2new_cells[fc]);
+        }
         ASSERT(newFaceCells.back().size() == 1 or
                newFaceCells.back().size() == 2);
       }

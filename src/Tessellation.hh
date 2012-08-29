@@ -66,7 +66,7 @@ class Tessellation
   //! the face.
   //! For a given cell there will be either 1 or 2 cells -- the cases with 1
   //! cell indicate a face on a boundary of the tessellation.
-  std::vector<std::vector<unsigned> > faceCells;
+  std::vector<std::vector<int> > faceCells;
 
   //! A PLC connecting the generating points belonging to the convex hull 
   //! of the point distribution. Not all Tessellators hand back the convex 
