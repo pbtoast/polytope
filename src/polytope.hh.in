@@ -6,6 +6,9 @@
 
 // Various flags determined by how polytope is configured.
 #define HAVE_MPI @HAVE_MPI@
+#define HAVE_HDF5 @HAVE_HDF5@
+#define HAVE_PARALLEL_HDF5 @HAVE_PARALLEL_HDF5@
+#define HAVE_SILO @HAVE_SILO@
 #define HAVE_TRIANGLE @HAVE_TRIANGLE@
 #define HAVE_TETGEN @HAVE_TETGEN@
 

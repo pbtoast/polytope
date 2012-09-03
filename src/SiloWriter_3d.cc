@@ -1,5 +1,5 @@
-#ifdef HAVE_SILO
 #include "polytope.hh"
+#ifdef HAVE_SILO
 #include <fstream>
 #include <set>
 #include <cstring>
