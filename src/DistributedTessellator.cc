@@ -10,13 +10,13 @@
 
 #include "polytope.hh"
 #include "Point.hh"
-#include "polytope_serialize.hh"
 #include "ReducedPLC.hh"
 #include "convexHull_2d.hh"
 #include "convexHull_3d.hh"
 #include "convexIntersect.hh"
 #include "deleteCells.hh"
 #include "bisectSearch.hh"
+#include "polytope_serialize.hh"
 
 using namespace std;
 using std::min;
@@ -224,16 +224,10 @@ computeDistributedTessellation(const vector<RealType>& points,
   if (numProcs > 1) {
 
     // Compute the convex hull of each domain and distribute them to all processes.
-    ConvexHull localHull;
-    for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
-      if (iproc == rank) {
-        localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, genLow, degeneracy);
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-    }
-    vector<ConvexHull> domainHulls(numProcs);
+    vector<ConvexHull> domainHulls; // (numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
+      const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, genLow, degeneracy);
       vector<char> localBuffer;
       serialize(localHull, localBuffer);
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -243,8 +237,10 @@ computeDistributedTessellation(const vector<RealType>& points,
         buffer.resize(bufSize);
         MPI_Bcast(&buffer.front(), bufSize, MPI_CHAR, sendProc, MPI_COMM_WORLD);
         vector<char>::const_iterator itr = buffer.begin();
-        deserialize(domainHulls[sendProc], itr, buffer.end());
+        ConvexHull newHull;
+        deserialize(newHull, itr, buffer.end());
         ASSERT(itr == buffer.end());
+        domainHulls.push_back(newHull);
         domainCellOffset.push_back(domainCellOffset.back() + domainHulls[sendProc].points.size()/Dimension);
       }
     }
@@ -518,7 +514,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     unsigned numNeighbors = mesh.neighborDomains.size();
     for (int i = numNeighbors - 1; i != -1; --i) {
       if (mesh.sharedNodes[i].size() == 0 and mesh.sharedFaces[i].size() == 0) {
-        cerr << "Removing neighbor " << i << " of " << numNeighbors << endl;
+        // cerr << "Removing neighbor " << i << " of " << numNeighbors << endl;
         mesh.neighborDomains.erase(mesh.neighborDomains.begin() + i);
         mesh.sharedNodes.erase(mesh.sharedNodes.begin() + i);
         mesh.sharedFaces.erase(mesh.sharedFaces.begin() + i);
