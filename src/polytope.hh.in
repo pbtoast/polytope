@@ -20,6 +20,6 @@
 #include "SiloWriter.hh"
 #include "SiloReader.hh"
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
 #include "DistributedTessellator.hh"
 #endif
