@@ -480,8 +480,10 @@ tessellate(const vector<RealType>& points,
     vector<BGring> cellIntersections;
     boost::geometry::intersection(boundary, cellRings[i], cellIntersections);
     if (cellIntersections.size() == 0) {
-      cerr << points[2*i] << " " << points[2*i+1] << endl << boost::geometry::dsv(cellRings[i]) << endl;
-      cerr << boost::geometry::dsv(mpoints) << endl;
+      cerr << points[2*i] << " " << points[2*i+1] << endl 
+           << boost::geometry::dsv(cellRings[i]) << endl
+           << boost::geometry::dsv(mpoints) << endl
+           << boost::geometry::dsv(boundary) << endl;
     }
     ASSERT(cellIntersections.size() > 0);    
     if (cellIntersections.size() == 1) {
@@ -576,8 +578,8 @@ tessellate(const vector<RealType>& points,
   {
     delete [] in.segmentlist;
     delete [] in.holelist;
-    delete [] delaunay.segmentlist;
-    delete [] delaunay.segmentmarkerlist;
+    trifree((VOID*) delaunay.segmentlist);
+    trifree((VOID*) delaunay.segmentmarkerlist);
   }
 }
 //------------------------------------------------------------------------------
