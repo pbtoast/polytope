@@ -1,7 +1,7 @@
 #ifndef POLYTOPE_SILO_WRITER_HH
 #define POLYTOPE_SILO_WRITER_HH
 
-#ifdef HAVE_SILO
+#if HAVE_SILO
 
 #if HAVE_MPI
 #include <mpi.h>
