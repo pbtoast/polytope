@@ -19,7 +19,7 @@ if (USE_MPI EQUAL 1)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} DistributedTessellator.cc)
 endif()
 
-add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc)
+add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
 target_link_libraries(polytope voro_2d voro_3d ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
 
 # Library install targets

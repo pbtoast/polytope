@@ -11,12 +11,18 @@
 // Parallel ASSERT -- calls MPI_Abort if NDEBUG is defined.
 #include <mpi.h>
 #include <iostream>
+
+// Forward declare our helper abort method.
+namespace polytope {
+  void internal_abort();
+}
+
 #ifndef NDEBUG
 #define ASSERT(x) \
   if (!(x)) \
   { \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    MPI_Abort(MPI_COMM_WORLD, -1); \
+    polytope::internal_abort(); \
   }
 #else
 #define ASSERT(x) 
