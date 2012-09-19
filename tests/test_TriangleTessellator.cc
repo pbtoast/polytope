@@ -71,7 +71,7 @@ test2x2Box()
   CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
@@ -146,7 +146,7 @@ testCircle()
   // }
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
@@ -249,7 +249,7 @@ testDonut()
 //   }
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
@@ -297,7 +297,7 @@ testBounded()
   CHECK(mesh.cells.size() == generators.size()/2);
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
@@ -349,7 +349,7 @@ testUnbounded()
   CHECK(mesh.cells.size() == N);
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
   map<string, double*> fields;
@@ -363,7 +363,7 @@ testUnbounded()
 int 
 main(int argc, char** argv) 
 {
-#ifdef HAVE_MPI
+#if HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
@@ -375,7 +375,7 @@ main(int argc, char** argv)
 
   cout << "PASS" << endl;
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;

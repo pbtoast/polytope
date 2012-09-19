@@ -100,7 +100,7 @@ int main() {
   CHECK(mesh.faces.size() == 2*nx*nx*(nx + 1));
 
   // Write out the file if we can.
-#ifdef HAVE_SILO
+#if HAVE_SILO
   vector<double> r2(nx*nx*nx, 1.0);
   map<string, double*> fields;
   fields["data"] = &r2[0];

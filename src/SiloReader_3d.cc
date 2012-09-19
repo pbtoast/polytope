@@ -1,4 +1,4 @@
-#ifdef HAVE_SILO
+#if HAVE_SILO
 #include "polytope.hh"
 #include <fstream>
 #include <set>
