@@ -261,6 +261,85 @@ testDonut()
 
 //------------------------------------------------------------------------
 void
+testMwithHoles()
+{
+  // Define the geometry of the outer boundary.
+  PLC<2, double> boundary;
+  vector<double> boundaryPoints;
+  boundaryPoints.push_back(0.0); boundaryPoints.push_back(0.0);
+  boundaryPoints.push_back(2.0); boundaryPoints.push_back(0.0);
+  boundaryPoints.push_back(2.0); boundaryPoints.push_back(2.0);
+  boundaryPoints.push_back(1.0); boundaryPoints.push_back(1.0);
+  boundaryPoints.push_back(0.0); boundaryPoints.push_back(2.0);
+  
+  boundary.facets.resize(5, vector<int>(2));
+  for (unsigned i = 0; i != 5; ++i) {
+    boundary.facets[i][0] = i;
+    boundary.facets[i][1] = (i + 1) % 5;
+  }
+
+  // Define two square holes on the interior.
+  boundaryPoints.push_back(0.25); boundaryPoints.push_back(0.25);
+  boundaryPoints.push_back(0.25); boundaryPoints.push_back(0.75);
+  boundaryPoints.push_back(0.75); boundaryPoints.push_back(0.75);
+  boundaryPoints.push_back(0.75); boundaryPoints.push_back(0.25);
+  boundaryPoints.push_back(1.25); boundaryPoints.push_back(0.25);
+  boundaryPoints.push_back(1.25); boundaryPoints.push_back(0.75);
+  boundaryPoints.push_back(1.75); boundaryPoints.push_back(0.75);
+  boundaryPoints.push_back(1.75); boundaryPoints.push_back(0.25);
+
+  boundary.holes.resize(2, vector<vector<int> >(4, vector<int>(2)));
+  for (unsigned i = 0; i != 4; ++i) {
+    boundary.holes[0][i][0] = 5 + i;
+    boundary.holes[0][i][1] = 5 + ((i + 1) % 4);
+    boundary.holes[1][i][0] = 9 + i;
+    boundary.holes[1][i][1] = 9 + ((i + 1) % 4);
+  }
+
+  // Generate a bunch of random points within the M.
+  vector<double> generators;
+  int N = 500;
+  set<int> usedKeys;
+  const int ixmax = 2 << 10;
+  const int ixmax2 = ixmax*ixmax;
+  CHECK(ixmax2 < RAND_MAX);
+  const double dx = 2.0/ixmax;
+  int i = rand() % ixmax2;
+  double x, y;
+  while (generators.size() < 2*N) {
+    while (usedKeys.find(i) != usedKeys.end()) i = rand() % ixmax2;
+    usedKeys.insert(i);
+    x = double((i % ixmax) + 0.5)*dx;
+    y = double((i / ixmax) + 0.5)*dx;
+    if (((x > y) or                      // First triangle test
+         (x < 2.0 - y)) and              // Second triangle test
+        ((x < 0.25 or x > 0.75 or        // External to first hole
+          y < 0.25 or y > 0.75) and
+         (x < 1.25 or x > 1.75 or        // External to second hole
+          y < 0.25 or y > 0.75))) {
+      generators.push_back(x);
+      generators.push_back(y);
+    }
+  }
+
+  // Create the tessellation.
+  Tessellation<2, double> mesh;
+  TriangleTessellator<double> triangle;
+  triangle.tessellate(generators, boundaryPoints, boundary, mesh);
+
+  // Write out the file if we can.
+#if HAVE_SILO
+  vector<double> index(mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
+  map<string, double*> fields;
+  fields["cell_index"] = &index[0];
+  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_MwithHoles");
+#endif
+}
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
+void
 testBounded()
 {
   // Generate a bunch of random points.
@@ -370,6 +449,7 @@ main(int argc, char** argv)
   test2x2Box();
   testCircle();
   testDonut();
+  testMwithHoles();
   testBounded(); 
   testUnbounded();
 
