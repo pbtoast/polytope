@@ -375,8 +375,10 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
 
     // Make sure all our sends are completed.
+    // cerr << rank << " : Waiting for generator sends to complete." << endl;
     vector<MPI_Status> sendStatus(sendRequests.size());
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
+    // cerr << rank << " : DONE." << endl;
   }
 
   // Denormalize the generator positions.
@@ -427,6 +429,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     serialize(localNodeHashes, localBuffer);
     serialize(localFaceHashes, localBuffer);
     unsigned localBufferSize = localBuffer.size();
+    // cerr << rank << " : packing hashes " << localNodeHashes.size() << " " << localFaceHashes.size() << " " << localBufferSize << endl;
 
     // Send our node and face hashes to all our neighbors.
     vector<MPI_Request> sendRequests;
@@ -520,6 +523,12 @@ computeDistributedTessellation(const vector<RealType>& points,
         mesh.sharedFaces.erase(mesh.sharedFaces.begin() + i);
       }
     }
+
+    // Make sure all our sends are completed.
+    // cerr << rank << " : Waiting for hash sends to complete." << endl;
+    vector<MPI_Status> sendStatus(sendRequests.size());
+    MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
+    // cerr << rank << " : DONE." << endl;
   }
 }
 
