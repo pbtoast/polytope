@@ -369,7 +369,7 @@ tessellate(const vector<RealType>& points,
   RealType cbox[2] = {chigh[0] - clow[0], 
                       chigh[1] - clow[1]};
   const double cboxsize = 2.0*max(cbox[0], cbox[1]);
-  const double cdx = max(1e-12, max(cbox[0], cbox[1])/coordMax);
+  const double cdx = max(1e-10, max(cbox[0], cbox[1])/coordMax);
 
   // Flag any generators on the edge of the tessellation.  Here we mean the actual
   // generators, not our added boundary ones.

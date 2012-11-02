@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   srand(10489592);
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 10; nx != 50; ++nx) {
+  for (unsigned nx = 10; nx != 75; ++nx) {
     if (rank == 0) cout << "Testing nx=" << nx << endl;
 
     // Create the seed positions for each domain.  Note we rely on this sequence
