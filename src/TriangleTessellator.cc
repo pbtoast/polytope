@@ -329,6 +329,8 @@ tessellate(const vector<RealType>& points,
 
   // Find the circumcenters of each triangle, and build the set of triangles
   // associated with each generator.
+  RealType  clow[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType chigh[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
   CounterMap<EdgeHash> edgeCounter;
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
   map<int, set<int> > gen2tri;
@@ -357,8 +359,17 @@ tessellate(const vector<RealType>& points,
     neighbors[rindex].insert(pindex);
     neighbors[rindex].insert(qindex);
     // cerr << "circumcenter : " << circumcenters[i] << endl;
+    clow[0] = min(clow[0], circumcenters[i].x);
+    clow[1] = min(clow[1], circumcenters[i].y);
+    chigh[0] = max(chigh[0], circumcenters[i].x);
+    chigh[1] = max(chigh[1], circumcenters[i].y);
   }
   ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+  ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1]);
+  RealType cbox[2] = {chigh[0] - clow[0], 
+                      chigh[1] - clow[1]};
+  const double cboxsize = 2.0*max(cbox[0], cbox[1]);
+  const double cdx = max(1e-12, max(cbox[0], cbox[1])/coordMax);
 
   // Flag any generators on the edge of the tessellation.  Here we mean the actual
   // generators, not our added boundary ones.
@@ -462,16 +473,43 @@ tessellate(const vector<RealType>& points,
   for (i = 0; i != numGenerators; ++i) {
 
     // Add the circumcenters as points for the cell.
-    vector<RealPoint> cellPoints;
+    set<IntPoint> cellPointSet;
     for (set<int>::const_iterator triItr = gen2tri[i].begin();
          triItr != gen2tri[i].end();
          ++triItr) {
-      cellPoints.push_back(circumcenters[*triItr]);
+      cellPointSet.insert(IntPoint(circumcenters[*triItr].x - clow[0],
+                                   circumcenters[*triItr].y - clow[1],
+                                   cdx));
+      // cellPoints.push_back(circumcenters[*triItr]);
       // cerr << "Cell " << i << " adding circumcenter " << cellPoints.back() << endl;
     }
+    ASSERT(cellPointSet.size() >= 3);
+
+    // // Build the convex hull of the cell points.
+    // vector<double> cellPointCoords;
+    // for (j = 0; j != cellPoints.size(); ++j) {
+    //   cellPointCoords.push_back(cellPoints[j].x);
+    //   cellPointCoords.push_back(cellPoints[j].y);
+    // }
+    // ASSERT(cellPointCoords.size() == 2*cellPoints.size());
+    // PLC<2, double> hull = convexHull_2d<double>(cellPointCoords, low, dx);
+    // ASSERT(hull.facets.size() >= 3);
+    // ASSERT(hull.facets[0][0] < cellPoints.size());
+    // vector<RealPoint> ringPoints;
+    // ringPoints.push_back(cellPoints[hull.facets[0][0]]);
+    // for (j = 0; j != hull.facets.size(); ++j) {
+    //   ASSERT(hull.facets[j].size() == 2);
+    //   ASSERT(hull.facets[j][1] < cellPoints.size());
+    //   ringPoints.push_back(cellPoints[hull.facets[j][1]]);
+    // }
+    // cellRings[i] = BGring(ringPoints.begin(), ringPoints.end());
 
     // Build the convex hull of the cell points.
-    BGmulti_point mpoints(cellPoints.begin(), cellPoints.end());
+    BGmulti_point mpoints;
+    for (typename set<IntPoint>::const_iterator itr = cellPointSet.begin();
+         itr != cellPointSet.end();
+         ++itr) mpoints.push_back(RealPoint(itr->realx(clow[0], cdx),
+                                            itr->realy(clow[1], cdx)));
     boost::geometry::convex_hull(mpoints, cellRings[i]);
 
     // Intersect with the boundary to get the bounded cell.
@@ -508,10 +546,10 @@ tessellate(const vector<RealType>& points,
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end() - 1;
          ++itr) {
-      pX1 = IntPoint(itr->x - low[0],
-                     itr->y - low[1], dx);
-      pX2 = IntPoint((itr+1)->x - low[0],
-                     (itr+1)->y - low[1], dx);
+      pX1 = IntPoint(itr->x - clow[0],
+                     itr->y - clow[1], cdx);
+      pX2 = IntPoint((itr+1)->x - clow[0],
+                     (itr+1)->y - clow[1], cdx);
       if (pX1 != pX2) {
         j = addKeyToMap(pX1, point2node);
         k = addKeyToMap(pX2, point2node);
@@ -534,8 +572,8 @@ tessellate(const vector<RealType>& points,
     const IntPoint& p = itr->first;
     i = itr->second;
     ASSERT(i < mesh.nodes.size()/2);
-    mesh.nodes[2*i]   = p.realx(low[0], dx);
-    mesh.nodes[2*i+1] = p.realy(low[1], dx);
+    mesh.nodes[2*i]   = p.realx(clow[0], cdx);
+    mesh.nodes[2*i+1] = p.realy(clow[1], cdx);
   }
 
   // Fill in the mesh faces.
