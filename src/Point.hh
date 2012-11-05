@@ -36,6 +36,14 @@ struct Point2 {
     x(static_cast<UintType>(xi/dx + 0.5)),
     y(static_cast<UintType>(yi/dx + 0.5)),
     index(i) {}
+  template<typename RealType>
+  Point2(const RealType& xi, const RealType& yi, 
+         const RealType& xlow, const RealType& ylow,
+         const RealType& dx,
+         const unsigned i = 0): 
+    x(static_cast<UintType>((xi - xlow)/dx + 0.5)),
+    y(static_cast<UintType>((yi - ylow)/dx + 0.5)),
+    index(i) {}
   template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
   Point2& operator+=(const Point2& rhs) { x += rhs.x; y += rhs.y; return *this; }
@@ -94,6 +102,15 @@ struct Point3 {
     x(static_cast<UintType>(xi/dx + 0.5)),
     y(static_cast<UintType>(yi/dx + 0.5)),
     z(static_cast<UintType>(zi/dx + 0.5)),
+    index(i) {}
+  template<typename RealType>
+  Point3(const RealType& xi, const RealType& yi, const RealType& zi, 
+         const RealType& xlow, const RealType& ylow, const RealType& zlow, 
+         const RealType& dx, 
+         const unsigned i = 0): 
+    x(static_cast<UintType>((xi - xlow)/dx + 0.5)),
+    y(static_cast<UintType>((yi - ylow)/dx + 0.5)),
+    z(static_cast<UintType>((zi - zlow)/dx + 0.5)),
     index(i) {}
   template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
