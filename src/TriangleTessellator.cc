@@ -42,7 +42,8 @@
 //------------------------------------------------------------------------------
 // Teach Boost.Geometry how to handle our Point2 class with appropriate traits.
 //------------------------------------------------------------------------------
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y)
+typedef int64_t CoordHash;
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, boost::geometry::cs::cartesian, x, y)
 
 // Fast predicate for determining colinearity of points.
 extern double orient2d(double* pa, double* pb, double* pc);
@@ -208,17 +209,17 @@ tessellate(const vector<RealType>& points,
   ASSERT(mesh.empty());
 
   typedef std::pair<int, int> EdgeHash;
-  typedef uint64_t CoordHash;
   typedef Point2<CoordHash> IntPoint;
   typedef Point2<double> RealPoint;
-  typedef boost::geometry::model::polygon<RealPoint, // point type
+  typedef boost::geometry::model::polygon<IntPoint,  // point type
                                           false>     // clockwise
     BGpolygon;
-  typedef boost::geometry::model::ring<RealPoint,    // point type
+  typedef boost::geometry::model::ring<IntPoint,     // point type
                                        false>        // clockwise
     BGring;
-  typedef boost::geometry::model::multi_point<RealPoint> BGmulti_point;
-  const CoordHash coordMax = numeric_limits<CoordHash>::max() / 2U;
+  typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
+  const CoordHash coordMax = (1U << 50); // numeric_limits<CoordHash>::max() >> 32U;
+  const double degeneracy = 1.0e-12;
 
   triangulateio in, delaunay;
 
@@ -244,7 +245,7 @@ tessellate(const vector<RealType>& points,
   RealType box[2] = {high[0] - low[0], 
                      high[1] - low[1]};
   const double boxsize = 2.0*max(box[0], box[1]);
-  const double dx = max(1e-12, max(box[0], box[1])/coordMax);
+  const double dx = max(degeneracy, boxsize/coordMax);
 
   // Define input points, including our false external generators.
   in.numberofpoints = numGenerators + 4;
@@ -369,7 +370,7 @@ tessellate(const vector<RealType>& points,
   RealType cbox[2] = {chigh[0] - clow[0], 
                       chigh[1] - clow[1]};
   const double cboxsize = 2.0*max(cbox[0], cbox[1]);
-  const double cdx = max(1e-10, max(cbox[0], cbox[1])/coordMax);
+  const double cdx = max(degeneracy, cboxsize/coordMax);
 
   // Flag any generators on the edge of the tessellation.  Here we mean the actual
   // generators, not our added boundary ones.
@@ -399,15 +400,19 @@ tessellate(const vector<RealType>& points,
     // The user did not provide a boundary, so use our local edge use count to 
     // find the bounding edges.  Note in this case there will be no holes.
     const unsigned numBoundaryPoints = exteriorEdges.size();
-    vector<RealPoint> boundaryPoints;
+    vector<IntPoint> boundaryPoints;
     vector<EdgeHash> boundaryEdgeOrder;
     boundaryEdgeOrder.push_back(exteriorEdges.front());
     exteriorEdges.pop_front();
     i = boundaryEdgeOrder.front().first;
     boundaryPoints.reserve(numBoundaryPoints + 1);
-    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
+                                      clow[0], clow[1],
+                                      cdx));
     i = boundaryEdgeOrder.front().second;
-    boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+    boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
+                                      clow[0], clow[1],
+                                      cdx));
     while (exteriorEdges.size() > 0) {
       list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
                                              MatchEitherPairValue<int>(i));
@@ -415,7 +420,9 @@ tessellate(const vector<RealType>& points,
       i = (itr->first == i ? itr->second : itr->first);
       boundaryEdgeOrder.push_back(*itr);
       exteriorEdges.erase(itr);
-      boundaryPoints.push_back(RealPoint(points[2*i], points[2*i+1]));
+      boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
+                                        clow[0], clow[1],
+                                        cdx));
     }
     ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
     ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
@@ -425,14 +432,18 @@ tessellate(const vector<RealType>& points,
 
   } else {
     // Copy the PLC provided boundary information into a Boost.Geometry polygon.
-    vector<RealPoint> boundaryPoints;
+    vector<IntPoint> boundaryPoints;
     boundaryPoints.reserve(geometry.facets.size() + 1);
     i = geometry.facets[0][0];
-    boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+    boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
+                                      clow[0], clow[1],
+                                      cdx));
     for (j = 0; j != geometry.facets.size(); ++j) {
       ASSERT(geometry.facets[j].size() == 2);
       i =  geometry.facets[j][1];
-      boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+      boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
+                                        clow[0], clow[1],
+                                        cdx));
     }
     ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
     ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -444,14 +455,18 @@ tessellate(const vector<RealType>& points,
       typename BGpolygon::inner_container_type& holes = boundary.inners();
       holes.resize(numHoles);
       for (k = 0; k != numHoles; ++k) {
-        boundaryPoints = vector<RealPoint>();
+        boundaryPoints = vector<IntPoint>();
         boundaryPoints.reserve(geometry.holes[k].size() + 1);
         i = geometry.holes[k][0][0];
-        boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+        boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
+                                          clow[0], clow[1],
+                                          cdx));
         for (j = 0; j != geometry.holes[k].size(); ++j) {
           ASSERT(geometry.holes[k][j].size() == 2);
           i =  geometry.holes[k][j][1];
-          boundaryPoints.push_back(RealPoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+          boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
+                                            clow[0], clow[1],
+                                            cdx));
         }
         ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
         ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -463,9 +478,8 @@ tessellate(const vector<RealType>& points,
   // Walk each generator and build up it's unique nodes and faces.
   mesh.cells.resize(numGenerators);
   bool inside;
-  double minR, thpt;
-  RealPoint X;
-  IntPoint pX1, pX2;
+  CoordHash minR, thpt;
+  IntPoint X;
   map<IntPoint, int> point2node;
   map<EdgeHash, int> edgeHash2id;
   map<int, vector<int> > edgeCells;
@@ -477,8 +491,8 @@ tessellate(const vector<RealType>& points,
     for (set<int>::const_iterator triItr = gen2tri[i].begin();
          triItr != gen2tri[i].end();
          ++triItr) {
-      cellPointSet.insert(IntPoint(circumcenters[*triItr].x - clow[0],
-                                   circumcenters[*triItr].y - clow[1],
+      cellPointSet.insert(IntPoint(circumcenters[*triItr].x, circumcenters[*triItr].y,
+                                   clow[0], clow[1],
                                    cdx));
       // cellPoints.push_back(circumcenters[*triItr]);
       // cerr << "Cell " << i << " adding circumcenter " << cellPoints.back() << endl;
@@ -505,11 +519,11 @@ tessellate(const vector<RealType>& points,
     // cellRings[i] = BGring(ringPoints.begin(), ringPoints.end());
 
     // Build the convex hull of the cell points.
-    BGmulti_point mpoints;
-    for (typename set<IntPoint>::const_iterator itr = cellPointSet.begin();
-         itr != cellPointSet.end();
-         ++itr) mpoints.push_back(RealPoint(itr->realx(clow[0], cdx),
-                                            itr->realy(clow[1], cdx)));
+    BGmulti_point mpoints(cellPointSet.begin(), cellPointSet.end());
+    // for (typename set<IntPoint>::const_iterator itr = cellPointSet.begin();
+    //      itr != cellPointSet.end();
+    //      ++itr) mpoints.push_back(RealPoint(itr->realx(clow[0], cdx),
+    //                                         itr->realy(clow[1], cdx)));
     boost::geometry::convex_hull(mpoints, cellRings[i]);
 
     // Intersect with the boundary to get the bounded cell.
@@ -527,9 +541,11 @@ tessellate(const vector<RealType>& points,
     if (cellIntersections.size() == 1) {
       cellRings[i] = cellIntersections[0];
     } else {
-      X = RealPoint(points[2*i], points[2*i+1]);
+      X = IntPoint(points[2*i], points[2*i+1],
+                   clow[0], clow[1],
+                   cdx);
       inside = boost::geometry::within(X, cellIntersections[j]);
-      minR = numeric_limits<double>::max();
+      minR = numeric_limits<CoordHash>::max();
       j = 0;
       for (j = 0; j != cellIntersections.size(); ++j) {
         thpt = boost::geometry::distance(X, cellIntersections[j]);
@@ -546,19 +562,22 @@ tessellate(const vector<RealType>& points,
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end() - 1;
          ++itr) {
-      pX1 = IntPoint(itr->x - clow[0],
-                     itr->y - clow[1], cdx);
-      pX2 = IntPoint((itr+1)->x - clow[0],
-                     (itr+1)->y - clow[1], cdx);
-      if (pX1 != pX2) {
-        j = addKeyToMap(pX1, point2node);
-        k = addKeyToMap(pX2, point2node);
-        ASSERT(j != k);
-        iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
-        edgeCells[iedge].push_back(j < k ? i : ~i);
-        mesh.cells[i].push_back(j < k ? iedge : ~iedge);
-        // cerr << "Cell " << i << " adding edge " << iedge << " : " << *itr << " " << *(itr + 1) << endl;
-      }
+      // pX1 = IntPoint(itr->x - clow[0],
+      //                itr->y - clow[1], cdx);
+      // pX2 = IntPoint((itr+1)->x - clow[0],
+      //                (itr+1)->y - clow[1], cdx);
+      const IntPoint& pX1 = *itr;
+      const IntPoint& pX2 = *(itr + 1);
+      ASSERT(*itr != *(itr + 1));
+      j = addKeyToMap(pX1, point2node);
+      k = addKeyToMap(pX2, point2node);
+      ASSERT(j != k);
+      iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
+      edgeCells[iedge].push_back(j < k ? i : ~i);
+      mesh.cells[i].push_back(j < k ? iedge : ~iedge);
+      // cerr << "Cell " << i << " adding edge " << iedge << " : " << pX1 << " " << pX2 << " : (" 
+      //      << pX1.realx(clow[0], cdx) << " " << pX1.realy(clow[1], cdx) << ") ("
+      //      << pX2.realx(clow[0], cdx) << " " << pX2.realy(clow[1], cdx) << ")" << endl;
     }
     ASSERT(mesh.cells[i].size() >= 3);
   }
@@ -574,6 +593,7 @@ tessellate(const vector<RealType>& points,
     ASSERT(i < mesh.nodes.size()/2);
     mesh.nodes[2*i]   = p.realx(clow[0], cdx);
     mesh.nodes[2*i+1] = p.realy(clow[1], cdx);
+    // cerr << "Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i+1] << ") " << p << endl;
   }
 
   // Fill in the mesh faces.
@@ -592,10 +612,13 @@ tessellate(const vector<RealType>& points,
   // Fill in the mesh faceCells.
   mesh.faceCells = vector<vector<int> >(mesh.faces.size());
   for (i = 0; i != mesh.faces.size(); ++i) {
-    // if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
-    //   cerr << "Blago! " << i << " " << edgeCells[i].size() << endl;
-    //   for (j = 0; j != edgeCells[i].size(); ++j) cerr << " --> " << edgeCells[i][j] << " " << points[2*edgeCells[i][j]] << " " << points[2*edgeCells[i][j]+1] << endl;
-    // }
+    if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
+      const int n1 = mesh.faces[i][0], n2 = mesh.faces[i][1];
+      cerr << "Blago! " << i << " " << edgeCells[i].size() << " : " << n1 << " " << n2 << " : ("
+           << mesh.nodes[2*n1] << " " << mesh.nodes[2*n1 + 1] << ") ("
+           << mesh.nodes[2*n2] << " " << mesh.nodes[2*n2 + 1] << ")" << endl;
+      for (j = 0; j != edgeCells[i].size(); ++j) cerr << " --> " << edgeCells[i][j] << " " << points[2*edgeCells[i][j]] << " " << points[2*edgeCells[i][j]+1] << endl;
+    }
     ASSERT(edgeCells[i].size() == 1 or edgeCells[i].size() == 2);
     mesh.faceCells[i] = edgeCells[i];
   }
