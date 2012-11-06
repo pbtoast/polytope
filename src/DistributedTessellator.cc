@@ -46,7 +46,9 @@ struct DimensionTraits<2, RealType> {
                               const RealType* rlow,
                               const RealType& dx,
                               const size_t i) {
-    return Point(ri[0] - rlow[0], ri[1] - rlow[1], dx, i);
+    return Point(ri[0], ri[1], 
+                 rlow[0], rlow[1], 
+                 dx, i);
   }
 };
 
@@ -66,7 +68,9 @@ struct DimensionTraits<3, RealType> {
                               const RealType* rlow,
                               const RealType& dx,
                               const size_t i) {
-    return Point(ri[0] - rlow[0], ri[1] - rlow[1], ri[2] - rlow[2], dx, i);
+    return Point(ri[0], ri[1], ri[2], 
+                 rlow[0], rlow[1], rlow[2],
+                 dx, i);
   }
 };
 
@@ -187,7 +191,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point Point;
-  const double degeneracy = 1.0e-10;
+  const double degeneracy = 1.0e-8;
   
   // Parallel configuration.
   int rank, numProcs;
