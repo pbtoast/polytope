@@ -156,11 +156,11 @@ int main(int argc, char** argv) {
     // Blago!
     {
       vector<double> r2(mesh.cells.size(), rank);
-      map<string, double*> fields;
-      fields["domain"] = &r2[0];
+      map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+      cellFields["domain"] = &r2[0];
       ostringstream os;
       os << "test_DistributedTessellator_" << nx << "x" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<3, double>::write(mesh, fields, os.str());
+      polytope::SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
     }
     // Blago!
   }

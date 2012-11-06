@@ -102,9 +102,9 @@ int main() {
   // Write out the file if we can.
 #if HAVE_SILO
   vector<double> r2(nx*nx*nx, 1.0);
-  map<string, double*> fields;
-  fields["data"] = &r2[0];
-  SiloWriter<3, double>::write(mesh, fields, "test_TetgenTessellator");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["data"] = &r2[0];
+  SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
 #endif
 
   cout << "PASS" << endl;

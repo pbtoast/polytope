@@ -12,6 +12,8 @@
 #include "pmpio.h"
 #endif
 
+#include "SiloUtils.hh"
+
 namespace polytope
 {
 
@@ -140,7 +142,10 @@ template <typename RealType>
 void 
 SiloWriter<3, RealType>::
 write(const Tessellation<3, RealType>& mesh, 
-      const map<string, RealType*>& fields,
+      const std::map<std::string, RealType*>& nodeFields,
+      const std::map<std::string, RealType*>& edgeFields,
+      const std::map<std::string, RealType*>& faceFields,
+      const std::map<std::string, RealType*>& cellFields,
       const string& filePrefix,
       const string& directory,
       int cycle,
@@ -366,14 +371,11 @@ write(const Tessellation<3, RealType>& mesh,
 
   // Write out the cell-centered mesh data.
 
-  // Scalar fields.
-  for (typename map<string, RealType*>::const_iterator iter = fields.begin();
-       iter != fields.end(); ++iter)
-  {
-    DBPutUcdvar1(file, (char*)iter->first.c_str(), (char*)"mesh",
-                 (void*)iter->second, numCells, 0, 0,
-                 DB_DOUBLE, DB_ZONECENT, optlist);
-  }
+  // Write out the field mesh data.
+  writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
+  writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
+  writeFieldsToFile<RealType>(faceFields, file, numFaces, DB_FACECENT, optlist);
+  writeFieldsToFile<RealType>(cellFields, file, numCells, DB_ZONECENT, optlist);
 
 #if 0
   // Vector fields.
@@ -421,7 +423,10 @@ write(const Tessellation<3, RealType>& mesh,
   {
     vector<char*> meshNames(numChunks);
     vector<int> meshTypes(numChunks, DB_UCDMESH);
-    vector<vector<char*> > varNames(fields.size());
+    vector<vector<char*> > varNames(nodeFields.size() +
+                                    edgeFields.size() +
+                                    faceFields.size() +
+                                    cellFields.size());
     vector<int> varTypes(numChunks, DB_UCDVAR);
     for (int i = 0; i < numChunks; ++i)
     {
@@ -432,13 +437,10 @@ write(const Tessellation<3, RealType>& mesh,
 
       // Field data.
       int fieldIndex = 0;
-      for (typename map<string, RealType*>::const_iterator iter = fields.begin();
-           iter != fields.end(); ++iter, ++fieldIndex)
-      {
-        char varName[1024];
-        snprintf(varName, 1024, "domain_%d/%s", i, iter->first.c_str());
-        varNames[fieldIndex].push_back(strdup(varName));
-      }
+      appendFieldNames<RealType>(nodeFields, fieldIndex, i, varNames);
+      appendFieldNames<RealType>(edgeFields, fieldIndex, i, varNames);
+      appendFieldNames<RealType>(faceFields, fieldIndex, i, varNames);
+      appendFieldNames<RealType>(cellFields, fieldIndex, i, varNames);
     }
 
     // Stick cycle and time in there if needed.
@@ -454,12 +456,10 @@ write(const Tessellation<3, RealType>& mesh,
     DBPutMultimesh(file, "mesh", numChunks, &meshNames[0], 
                    &meshTypes[0], optlist);
     int fieldIndex = 0;
-    for (typename map<string, RealType*>::const_iterator iter = fields.begin();
-         iter != fields.end(); ++iter, ++fieldIndex)
-    {
-      DBPutMultivar(file, iter->first.c_str(), numChunks, 
-                    &varNames[fieldIndex][0], &varTypes[0], optlist);
-    }
+    putMultivarInFile<RealType>(nodeFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
+    putMultivarInFile<RealType>(edgeFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
+    putMultivarInFile<RealType>(faceFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
+    putMultivarInFile<RealType>(cellFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
 
     // Clean up.
     DBFreeOptlist(optlist);
@@ -487,7 +487,10 @@ write(const Tessellation<3, RealType>& mesh,
 
     vector<char*> meshNames(numFiles*numChunks);
     vector<int> meshTypes(numFiles*numChunks, DB_UCDMESH);
-    vector<vector<char*> > varNames(fields.size());
+    vector<vector<char*> > varNames(nodeFields.size() +
+                                    edgeFields.size() +
+                                    faceFields.size() +
+                                    cellFields.size());
     vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
     for (int i = 0; i < numFiles; ++i)
     {
@@ -503,16 +506,10 @@ write(const Tessellation<3, RealType>& mesh,
 
         // Field data.
         int fieldIndex = 0;
-        for (typename map<string, RealType*>::const_iterator iter = fields.begin();
-             iter != fields.end(); ++iter, ++fieldIndex)
-        {
-          char varName[1024];
-          if (cycle >= 0)
-            snprintf(varName, 1024, "%d/%s-%d.silo:/domain_%d/%s", i, prefix.c_str(), cycle, c, iter->first.c_str());
-          else
-            snprintf(varName, 1024, "%d/%s.silo:/domain_%d/%s", i, prefix.c_str(), c, iter->first.c_str());
-          varNames[fieldIndex].push_back(strdup(varName));
-        }
+        appendFieldNames<RealType>(nodeFields, fieldIndex, i, c, cycle, prefix, varNames);
+        appendFieldNames<RealType>(edgeFields, fieldIndex, i, c, cycle, prefix, varNames);
+        appendFieldNames<RealType>(faceFields, fieldIndex, i, c, cycle, prefix, varNames);
+        appendFieldNames<RealType>(cellFields, fieldIndex, i, c, cycle, prefix, varNames);
       }
     }
 
@@ -527,12 +524,10 @@ write(const Tessellation<3, RealType>& mesh,
     DBPutMultimesh(file, "mesh", numFiles*numChunks, &meshNames[0], 
                    &meshTypes[0], optlist);
     int fieldIndex = 0;
-    for (typename map<string, RealType*>::const_iterator iter = fields.begin();
-         iter != fields.end(); ++iter, ++fieldIndex)
-    {
-      DBPutMultivar(file, iter->first.c_str(), numFiles*numChunks, 
-                    &(varNames[fieldIndex][0]), &varTypes[0], optlist);
-    }
+    putMultivarInFile<RealType>(nodeFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
+    putMultivarInFile<RealType>(edgeFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
+    putMultivarInFile<RealType>(faceFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
+    putMultivarInFile<RealType>(cellFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
     DBClose(file);
 
     // Clean up.
