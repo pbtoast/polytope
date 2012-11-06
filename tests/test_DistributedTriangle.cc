@@ -174,16 +174,20 @@ int main(int argc, char** argv) {
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
-    // // Blago!
-    // {
-    //   vector<double> r2(mesh.cells.size(), rank);
-    //   map<string, double*> fields;
-    //   fields["domain"] = &r2[0];
-    //   ostringstream os;
-    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-    //   polytope::SiloWriter<2, double>::write(mesh, fields, os.str());
-    // }
-    // // Blago!
+    // Blago!
+    {
+      vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
+      for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
+      for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
+      map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+      cellFields["domain"] = &r2[0];
+      nodeFields["ownNodes"] = &rownNodes[0];
+      faceFields["ownFaces"] = &rownFaces[0];
+      ostringstream os;
+      os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+    }
+    // Blago!
 
     // Check the global sizes.
     CHECK(nnodesGlobal == (nx + 1)*(nx + 1));

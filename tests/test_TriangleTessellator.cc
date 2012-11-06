@@ -74,9 +74,9 @@ test2x2Box()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_2x2");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_2x2");
 #endif
 }
 //------------------------------------------------------------------------
@@ -149,9 +149,9 @@ testCircle()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_circle");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_circle");
 #endif
 }
 //------------------------------------------------------------------------
@@ -252,9 +252,9 @@ testDonut()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_donut");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_donut");
 #endif
 }
 //------------------------------------------------------------------------
@@ -331,9 +331,9 @@ testMwithHoles()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_MwithHoles");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_MwithHoles");
 #endif
 }
 //------------------------------------------------------------------------
@@ -379,9 +379,9 @@ testBounded()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_bounded");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_bounded");
 #endif
 }
 //------------------------------------------------------------------------
@@ -431,9 +431,9 @@ testUnbounded()
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string, double*> fields;
-  fields["cell_index"] = &index[0];
-  SiloWriter<2, double>::write(mesh, fields, "test_TriangleTessellator_unbounded");
+  map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TriangleTessellator_unbounded");
 #endif
 }
 //------------------------------------------------------------------------
