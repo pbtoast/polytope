@@ -4,7 +4,7 @@ if (SILO_FOUND)
 endif()
 
 # By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc predicates.cc convexHull_3d.cc)
+set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc predicates.cc convexHull_3d.cc KeyTraits.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (TRIANGLE_FOUND)
