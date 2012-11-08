@@ -17,6 +17,7 @@
 #include "deleteCells.hh"
 #include "bisectSearch.hh"
 #include "polytope_serialize.hh"
+#include "mortonOrderIndices.hh"
 
 using namespace std;
 using std::min;
@@ -34,7 +35,7 @@ template<int Dimension, typename RealType> struct DimensionTraits {};
 template<typename RealType>
 struct DimensionTraits<2, RealType> {
   typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
-  typedef uint64_t CoordHash;
+  typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point2<CoordHash> Point;
 
   static ConvexHull convexHull(const vector<RealType>& points, 
@@ -50,13 +51,30 @@ struct DimensionTraits<2, RealType> {
                  rlow[0], rlow[1], 
                  dx, i);
   }
+  static Point faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
+                            const unsigned iface,
+                            const RealType* rlow,
+                            const RealType& dx) {
+    ASSERT(iface < mesh.faces.size());
+    ASSERT(mesh.faces[iface].size() == 2);
+    RealType pface[2];
+    const unsigned n1 = mesh.faces[iface][0], n2 = mesh.faces[iface][1];
+    ASSERT(n1 < mesh.nodes.size()/2);
+    ASSERT(n2 < mesh.nodes.size()/2);
+    pface[0] = 0.5*(mesh.nodes[2*n1]     + mesh.nodes[2*n2]);
+    pface[1] = 0.5*(mesh.nodes[2*n1 + 1] + mesh.nodes[2*n2 + 1]);
+    return constructPoint(pface, rlow, dx, iface);
+  }
+  static RealType maxLength(const RealType* low, const RealType* high) {
+    return std::max(high[0] - low[0], high[1] - low[1]);
+  }
 };
 
 // 3D
 template<typename RealType>
 struct DimensionTraits<3, RealType> {
   typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
-  typedef uint64_t CoordHash;
+  typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point3<CoordHash> Point;
 
   static ConvexHull convexHull(const vector<RealType>& points, 
@@ -71,6 +89,31 @@ struct DimensionTraits<3, RealType> {
     return Point(ri[0], ri[1], ri[2], 
                  rlow[0], rlow[1], rlow[2],
                  dx, i);
+  }
+  static Point faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
+                            const unsigned iface,
+                            const RealType* rlow,
+                            const RealType& dx) {
+    ASSERT(iface < mesh.faces.size());
+    const unsigned nnodes = mesh.faces[iface].size();
+    ASSERT(nnodes >= 3);
+    RealType pface[3] = {0.0, 0.0, 0.0};
+    unsigned ni;
+    for (typename vector<unsigned>::const_iterator itr = mesh.faces[iface].begin();
+         itr != mesh.faces[iface].end();
+         ++itr) {
+      ni = mesh.faces[iface][*itr];
+      pface[0] += mesh.nodes[3*ni];
+      pface[1] += mesh.nodes[3*ni + 1];
+      pface[2] += mesh.nodes[3*ni + 2];
+    }
+    pface[0] /= nnodes;
+    pface[1] /= nnodes;
+    pface[2] /= nnodes;
+    return constructPoint(pface, rlow, dx, iface);
+  }
+  static RealType maxLength(const RealType* low, const RealType* high) {
+    return std::max(std::max(high[0] - low[0], high[1] - low[1]), high[2] - low[2]);
   }
 };
 
@@ -101,6 +144,21 @@ struct ComparePairBySecondElement {
     return lhs.second < rhs.second;
   }
 };
+
+//------------------------------------------------------------------------------
+// Sort a vector of stuff by the given keys.
+//------------------------------------------------------------------------------
+template<typename Value, typename Key>
+void
+sortByKeys(vector<Value>& values, const vector<Key>& keys) {
+  ASSERT(values.size() == keys.size());
+  vector<pair<Key, Value> > stuff;
+  stuff.reserve(values.size());
+  for (unsigned i = 0; i != values.size(); ++i) stuff.push_back(make_pair(keys[i], values[i]));
+  ASSERT(stuff.size() == values.size());
+  sort(stuff.begin(), stuff.end(), ComparePairByFirstElement<Key, Value>());
+  for (unsigned i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
+}
 
 } // end anonymous namespace
 
@@ -191,6 +249,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point Point;
+  typedef KeyTraits::Key Key;
   const double degeneracy = 1.0e-8;
   
   // Parallel configuration.
@@ -225,6 +284,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   ASSERT(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1);
 
   // We can skip a lot of work if there's only one domain!
+  vector<unsigned> gen2domain(nlocal, rank);
   if (numProcs > 1) {
 
     // Compute the convex hull of each domain and distribute them to all processes.
@@ -360,8 +420,9 @@ computeDistributedTessellation(const vector<RealType>& points,
     ASSERT(sendRequests.size() <= 2*neighborSet.size());
 
     // Get the info from each of our neighbors and append it to the result.
-    for (set<unsigned>::const_iterator otherItr = neighborSet.begin();
-         otherItr != neighborSet.end();
+    // Simultaneously build the mapping of local generator ID to domain.
+    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
+         otherItr != mesh.neighborDomains.end();
          ++otherItr) {
       const unsigned otherProc = *otherItr;
       unsigned bufSize;
@@ -375,6 +436,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         deserialize(otherGenerators, itr, buffer.end());
         ASSERT(itr == buffer.end());
         copy(otherGenerators.begin(), otherGenerators.end(), back_inserter(generators));
+        gen2domain.resize(generators.size()/Dimension, otherProc);
       }
     }
 
@@ -384,6 +446,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
     // cerr << rank << " : DONE." << endl;
   }
+  ASSERT(gen2domain.size() == generators.size()/Dimension);
 
   // Denormalize the generator positions.
   const unsigned ntotal = generators.size() / Dimension;
@@ -397,124 +460,47 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
 
-  // Now we need to remove the elements of the tessellation corresponding to
-  // other domains generators, and renumber the resulting elements.
-  vector<unsigned> cellMask(mesh.cells.size(), 1);
-  fill(cellMask.begin() + nlocal, cellMask.end(), 0);
-  deleteCells(mesh, cellMask);
-
   // If requested, build the communication info for the shared nodes & faces
   // with our neighbor domains.
   if (mBuildCommunicationInfo and numProcs > 1) {
 
-    // Hash the positions of our nodes and faces.
-    const unsigned numNodes = mesh.nodes.size()/Dimension;
-    const unsigned numFaces = mesh.faces.size();
-    vector<Point> localNodeHashes, localFaceHashes;
-    localNodeHashes.reserve(numNodes);
-    localFaceHashes.reserve(numFaces);
-    for (unsigned i = 0; i != numNodes; ++i) {
-      localNodeHashes.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&mesh.nodes[Dimension*i], rlow, degeneracy, i));
-    }
-    ASSERT(localNodeHashes.size() == mesh.nodes.size()/Dimension);
-    for (unsigned i = 0; i != numFaces; ++i) {
-      Point rf;
-      rf.index = i;
-      for (typename vector<unsigned>::const_iterator itr = mesh.faces[i].begin();
-           itr != mesh.faces[i].end(); 
-           ++itr) rf += localNodeHashes[*itr];
-      rf /= mesh.faces[i].size();
-      localFaceHashes.push_back(rf);
-    }
-    ASSERT(localFaceHashes.size() == numFaces);
+    // Build the reverse lookup from procID to index in the neighborDomain set.
+    map<unsigned, unsigned> proc2offset;
+    for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) proc2offset[mesh.neighborDomains[i]] = i;
+    ASSERT(proc2offset.size() == mesh.neighborDomains.size());
 
-    // Serialize our node and face hashes into one spicy meatball.
-    vector<char> localBuffer;
-    serialize(localNodeHashes, localBuffer);
-    serialize(localFaceHashes, localBuffer);
-    unsigned localBufferSize = localBuffer.size();
-    // cerr << rank << " : packing hashes " << localNodeHashes.size() << " " << localFaceHashes.size() << " " << localBufferSize << endl;
-
-    // Send our node and face hashes to all our neighbors.
-    vector<MPI_Request> sendRequests;
-    sendRequests.reserve(2*mesh.neighborDomains.size());
-    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
-         otherItr != mesh.neighborDomains.end();
-         ++otherItr) {
-      const unsigned otherProc = *otherItr;
-      sendRequests.push_back(MPI_Request());
-      MPI_Isend(&localBufferSize, 1, MPI_UNSIGNED, otherProc, 10, MPI_COMM_WORLD, &sendRequests.back());
-      if (localBufferSize > 0) {
-        sendRequests.push_back(MPI_Request());
-        MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 11, MPI_COMM_WORLD, &sendRequests.back());
+    // Look for the nodes and faces we share with other processors.
+    mesh.sharedFaces.resize(mesh.neighborDomains.size());
+    mesh.sharedNodes.resize(mesh.neighborDomains.size());
+    for (int icell = 0; icell != nlocal; ++icell) {
+      const vector<int>& faces = mesh.cells[icell];
+      for (vector<int>::const_iterator faceItr = faces.begin();
+           faceItr != faces.end();
+           ++faceItr) {
+        const int iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+        ASSERT(mesh.faceCells[iface].size() == 1 or mesh.faceCells[iface].size() == 2);
+        if (mesh.faceCells[iface].size() == 2) {
+          const int jcell1 = mesh.faceCells[iface][0] < 0 ? ~mesh.faceCells[iface][0] : mesh.faceCells[iface][0];
+          const int jcell2 = mesh.faceCells[iface][1] < 0 ? ~mesh.faceCells[iface][1] : mesh.faceCells[iface][1];
+          ASSERT(jcell1 == icell or jcell2 == icell);
+          const int jcell = jcell1 == icell ? jcell2 : jcell1;
+          ASSERT(jcell < gen2domain.size());
+          const unsigned otherProc = gen2domain[jcell];
+          if (otherProc != rank) {
+            ASSERT(proc2offset.find(otherProc) != proc2offset.end());
+            const unsigned joff = proc2offset[otherProc];
+            mesh.sharedFaces[joff].push_back(iface);
+            copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), back_inserter(mesh.sharedNodes[joff]));
+          }
+        }
       }
     }
-    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
 
-    // Construct sets of our nodes and faces for fast testing.
-    const set<Point> myNodes(localNodeHashes.begin(), localNodeHashes.end()),
-                     myFaces(localFaceHashes.begin(), localFaceHashes.end());
-
-    // Get the node and face hashes from each of our neighbors.
-    vector<pair<unsigned, unsigned> > indices;
-    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
-         otherItr != mesh.neighborDomains.end();
-         ++otherItr) {
-      const unsigned otherProc = *otherItr;
-      unsigned bufSize;
-      MPI_Status recvStatus1, recvStatus2;
-      MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 10, MPI_COMM_WORLD, &recvStatus1);
-      if (bufSize > 0) {
-        vector<char> buffer(bufSize, '\0');
-        MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 11, MPI_COMM_WORLD, &recvStatus2);
-        vector<Point> otherNodeHashes, otherFaceHashes;
-        vector<char>::const_iterator itr = buffer.begin();
-        deserialize(otherNodeHashes, itr, buffer.end());
-        deserialize(otherFaceHashes, itr, buffer.end());
-        ASSERT(itr == buffer.end());
-
-        // Look for any nodes we share with the other domain.
-        const unsigned numOtherNodes = otherNodeHashes.size();
-        indices = vector<pair<unsigned, unsigned> >();
-        for (unsigned i = 0; i != numOtherNodes; ++i) {
-          const typename set<Point>::const_iterator itr = myNodes.find(otherNodeHashes[i]);
-          if (itr != myNodes.end()) indices.push_back(make_pair(otherNodeHashes[i].index, itr->index));
-        }
-
-        // Sort by the order of the minimum domain.
-        if (otherProc < rank) {
-          sort(indices.begin(), indices.end(), ComparePairByFirstElement<unsigned, unsigned>());
-        } else {
-          sort(indices.begin(), indices.end(), ComparePairBySecondElement<unsigned, unsigned>());
-        }
-
-        // Extract to the node data to the mesh.
-        mesh.sharedNodes.push_back(vector<unsigned>());
-        mesh.sharedNodes.reserve(indices.size());
-        for (unsigned i = 0; i != indices.size(); ++i) mesh.sharedNodes.back().push_back(indices[i].second);
-        ASSERT(mesh.sharedNodes.back().size() == indices.size());
-
-        // Look for any faces we share with other domain.
-        const unsigned numOtherFaces = otherFaceHashes.size();
-        indices = vector<pair<unsigned, unsigned> >();
-        for (unsigned i = 0; i != numOtherFaces; ++i) {
-          const typename set<Point>::const_iterator itr = myFaces.find(otherFaceHashes[i]);
-          if (itr != myFaces.end()) indices.push_back(make_pair(otherFaceHashes[i].index, itr->index));
-        }
-
-        // Sort by the order of the minimum domain.
-        if (otherProc < rank) {
-          sort(indices.begin(), indices.end(), ComparePairByFirstElement<unsigned, unsigned>());
-        } else {
-          sort(indices.begin(), indices.end(), ComparePairBySecondElement<unsigned, unsigned>());
-        }
-
-        // Extract to the face data to the mesh.
-        mesh.sharedFaces.push_back(vector<unsigned>());
-        mesh.sharedFaces.reserve(indices.size());
-        for (unsigned i = 0; i != indices.size(); ++i) mesh.sharedFaces.back().push_back(indices[i].second);
-        ASSERT(mesh.sharedFaces.back().size() == indices.size());
-      }
+    // Remove any duplicate shared nodes.  (Faces should already be unique).
+    for (unsigned i = 0; i != mesh.sharedNodes.size(); ++i) {
+      sort(mesh.sharedNodes[i].begin(), mesh.sharedNodes[i].end());
+      mesh.sharedNodes[i].erase(unique(mesh.sharedNodes[i].begin(), mesh.sharedNodes[i].end()), 
+                                mesh.sharedNodes[i].end());
     }
 
     // Remove any neighbors we don't actually share any info with.
@@ -528,12 +514,45 @@ computeDistributedTessellation(const vector<RealType>& points,
       }
     }
 
-    // Make sure all our sends are completed.
-    // cerr << rank << " : Waiting for hash sends to complete." << endl;
-    vector<MPI_Status> sendStatus(sendRequests.size());
-    MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
-    // cerr << rank << " : DONE." << endl;
+    // Compute the bounding box for the mesh coordinates.
+    this->computeBoundingBox(mesh.nodes, rlow, rhigh);
+    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/KeyTraits::maxKey1d;
+
+    // Sort the shared elements by Morton ordering.  This should make the ordering consistent
+    // on all domains without communication.
+    numNeighbors = mesh.neighborDomains.size();
+    for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
+
+      // Nodes.
+      vector<Point> nodePoints;
+      nodePoints.reserve(mesh.sharedNodes[idomain].size());
+      for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
+           itr != mesh.sharedNodes[idomain].end();
+           ++itr) nodePoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&mesh.nodes[*itr],
+                                                                                            &rlow[0],
+                                                                                            dx,
+                                                                                            *itr));
+      vector<Key> nodeKeys = mortonOrderIndices(nodePoints);
+      sortByKeys(mesh.sharedNodes[idomain], nodeKeys);
+
+      // Faces.
+      vector<Point> facePoints;
+      for (vector<unsigned>::const_iterator itr = mesh.sharedFaces[idomain].begin();
+           itr != mesh.sharedFaces[idomain].end();
+           ++itr) facePoints.push_back(DimensionTraits<Dimension, RealType>::faceCentroid(mesh,
+                                                                                          *itr,
+                                                                                          &rlow[0],
+                                                                                          dx));
+      vector<Key> faceKeys = mortonOrderIndices(facePoints);
+      sortByKeys(mesh.sharedFaces[idomain], faceKeys);
+    }
   }
+
+  // Now we need to remove the elements of the tessellation corresponding to
+  // other domains generators, and renumber the resulting elements.
+  vector<unsigned> cellMask(mesh.cells.size(), 1);
+  fill(cellMask.begin() + nlocal, cellMask.end(), 0);
+  deleteCells(mesh, cellMask);
 }
 
 //------------------------------------------------------------------------------
