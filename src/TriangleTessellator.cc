@@ -218,7 +218,7 @@ tessellate(const vector<RealType>& points,
                                        false>        // clockwise
     BGring;
   typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
-  const CoordHash coordMax = (1U << 50); // numeric_limits<CoordHash>::max() >> 32U;
+  const CoordHash coordMax = (1LL << 50); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
 
   triangulateio in, delaunay;
@@ -245,7 +245,6 @@ tessellate(const vector<RealType>& points,
   RealType box[2] = {high[0] - low[0], 
                      high[1] - low[1]};
   const double boxsize = 2.0*max(box[0], box[1]);
-  const double dx = max(degeneracy, boxsize/coordMax);
 
   // Define input points, including our false external generators.
   in.numberofpoints = numGenerators + 4;
@@ -494,8 +493,10 @@ tessellate(const vector<RealType>& points,
       cellPointSet.insert(IntPoint(circumcenters[*triItr].x, circumcenters[*triItr].y,
                                    clow[0], clow[1],
                                    cdx));
-      // cellPoints.push_back(circumcenters[*triItr]);
-      // cerr << "Cell " << i << " adding circumcenter " << cellPoints.back() << endl;
+      // cerr << "Cell " << i << " adding circumcenter (" << circumcenters[*triItr].x << " " << circumcenters[*triItr].y << ") "
+      //      << IntPoint(circumcenters[*triItr].x, circumcenters[*triItr].y,
+      //                  clow[0], clow[1],
+      //                  cdx) << endl;
     }
     ASSERT(cellPointSet.size() >= 3);
 
