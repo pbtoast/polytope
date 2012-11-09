@@ -8,8 +8,8 @@
 
 namespace polytope {
 
-const uint32_t KeyTraits::numbits = 64;
-const uint32_t KeyTraits::numbits1d = 20;
+const uint32_t KeyTraits::numbits = 64U;
+const uint32_t KeyTraits::numbits1d = 20U;
 const KeyTraits::Key KeyTraits::zero = 0ULL;
 const KeyTraits::Key KeyTraits::one = 1ULL;
 const KeyTraits::Key KeyTraits::two = 2ULL;
