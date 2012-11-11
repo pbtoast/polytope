@@ -218,7 +218,7 @@ tessellate(const vector<RealType>& points,
                                        false>        // clockwise
     BGring;
   typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
-  const CoordHash coordMax = (1LL << 50); // numeric_limits<CoordHash>::max() >> 32U;
+  const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
 
   triangulateio in, delaunay;
