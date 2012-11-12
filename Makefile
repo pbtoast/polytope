@@ -7,6 +7,7 @@ MPI        = not-set
 CC         = not-set
 CXX        = not-set
 prefix     = not-set
+boost_root = not-set
 
 # This proxies everything to the builddir cmake.
 
@@ -63,6 +64,11 @@ ifneq ($(prefix), not-set)
   CONFIG_FLAGS += -DCMAKE_INSTALL_PREFIX=$(prefix)
 else
   CONFIG_FLAGS += -DCMAKE_INSTALL_PREFIX=/usr/local
+endif
+
+# explicit boost path
+ifneq ($(boost_root), not-set)
+  CONFIG_FLAGS += -DBOOST_ROOT=$(boost_root)
 endif
 
 # Special considerations for specific systems.
