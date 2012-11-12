@@ -44,8 +44,9 @@ else ()
 endif ()
 
 # Find Boost.
-set(Boost_ADDITIONAL_VERSIONS "1.51" "1.52")
-find_package(Boost 1.50)
+# set(Boost_DEBUG 1)
+set(Boost_ADDITIONAL_VERSIONS "1.50" "1.51" "1.52")
+find_package(Boost "1.50")
 if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
   message("-- Found BOOST installation at ${Boost_INCLUDE_DIR}")
