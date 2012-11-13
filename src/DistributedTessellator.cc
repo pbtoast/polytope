@@ -5,6 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+#include <list>
 #include <limits>
 #include "mpi.h"
 
@@ -68,6 +69,20 @@ struct DimensionTraits<2, RealType> {
   static RealType maxLength(const RealType* low, const RealType* high) {
     return std::max(high[0] - low[0], high[1] - low[1]);
   }
+  static vector<RealType> extractCoords(const vector<RealType>& allCoords,
+                                        const vector<unsigned>& indices) {
+    vector<RealType> result;
+    result.reserve(2*indices.size());
+    for (vector<unsigned>::const_iterator itr = indices.begin();
+         itr != indices.end();
+         ++itr) {
+      const unsigned i = *itr;
+      ASSERT(i < allCoords.size()/2);
+      result.push_back(allCoords[2*i]);
+      result.push_back(allCoords[2*i + 1]);
+    }
+    return result;
+  }
 };
 
 // 3D
@@ -115,10 +130,25 @@ struct DimensionTraits<3, RealType> {
   static RealType maxLength(const RealType* low, const RealType* high) {
     return std::max(std::max(high[0] - low[0], high[1] - low[1]), high[2] - low[2]);
   }
+  static vector<RealType> extractCoords(const vector<RealType>& allCoords,
+                                        const vector<unsigned>& indices) {
+    vector<RealType> result;
+    result.reserve(3*indices.size());
+    for (vector<unsigned>::const_iterator itr = indices.begin();
+         itr != indices.end();
+         ++itr) {
+      const unsigned i = *itr;
+      ASSERT(i < allCoords.size()/3);
+      result.push_back(allCoords[3*i]);
+      result.push_back(allCoords[3*i + 1]);
+      result.push_back(allCoords[3*i + 2]);
+    }
+    return result;
+  }
 };
 
 // Traits to handle mapping RealType -> MPI data type.
-template<typename RealType> struct DataTypeTraits {};
+template<typename RealType> struct DataTypeTraits;
 
 template<> struct DataTypeTraits<float> { 
   static MPI_Datatype MpiDataType() { return MPI_FLOAT; }
@@ -548,11 +578,82 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
   }
 
-  // Now we need to remove the elements of the tessellation corresponding to
+  // Remove the elements of the tessellation corresponding to
   // other domains generators, and renumber the resulting elements.
   vector<unsigned> cellMask(mesh.cells.size(), 1);
   fill(cellMask.begin() + nlocal, cellMask.end(), 0);
   deleteCells(mesh, cellMask);
+
+  // In parallel we need to make sure the shared nodes are bit perfect the same.
+  if (numProcs > 0) {
+
+    // Figure out which domain owns the shared nodes.
+    const unsigned nNodes = mesh.nodes.size()/Dimension;
+    vector<unsigned> ownNode(nNodes, rank);
+    const unsigned numNeighbors = mesh.neighborDomains.size();
+    for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
+      for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
+           itr != mesh.sharedNodes[idomain].end();
+           ++itr) {
+        ASSERT(*itr < nNodes);
+        ownNode[*itr] = std::min(ownNode[*itr], mesh.neighborDomains[idomain]);
+      }
+    }
+
+    // Post the sends for any nodes we own, and note which nodes we expect to receive.
+    list<vector<double> > sendCoords;
+    list<vector<unsigned> > allRecvNodes;
+    vector<MPI_Request> sendRequests;
+    sendRequests.reserve(numNeighbors);
+    for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
+      vector<unsigned> sendNodes;
+      allRecvNodes.push_back(vector<unsigned>());
+      vector<unsigned>& recvNodes = allRecvNodes.back();
+      for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
+           itr != mesh.sharedNodes[idomain].end();
+           ++itr) {
+        ASSERT(ownNode[*itr] <= rank);
+        if (ownNode[*itr] == rank) {
+          sendNodes.push_back(*itr);
+        } else if (ownNode[*itr] == mesh.neighborDomains[idomain]) {
+          recvNodes.push_back(*itr);
+        }
+      }
+
+      // Send any nodes we have for this neighbor.
+      if (sendNodes.size() > 0) {
+        sendCoords.push_back(DimensionTraits<Dimension, RealType>::extractCoords(mesh.nodes, sendNodes));
+        vector<RealType>& coords = sendCoords.back();
+        ASSERT(coords.size() == Dimension*sendNodes.size());
+        sendRequests.push_back(MPI_Request());
+        MPI_Isend(&coords.front(), Dimension*sendNodes.size(), DataTypeTraits<RealType>::MpiDataType(),
+                  mesh.neighborDomains[idomain], 10, MPI_COMM_WORLD, &sendRequests.back());
+      }
+    }
+
+    // Iterate over the neighbors again and look for any receive information.
+    list<vector<unsigned> >::const_iterator recvNodesItr = allRecvNodes.begin();
+    for (unsigned idomain = 0; idomain != numNeighbors; ++idomain, ++recvNodesItr) {
+      ASSERT(recvNodesItr != allRecvNodes.end());
+      const vector<unsigned>& recvNodes = *recvNodesItr;
+      if (recvNodes.size() > 0) {
+        vector<RealType> recvCoords(Dimension*recvNodes.size());
+        MPI_Status recvStatus;
+        MPI_Recv(&recvCoords.front(), Dimension*recvNodes.size(), DataTypeTraits<RealType>::MpiDataType(),
+                 mesh.neighborDomains[idomain], 10, MPI_COMM_WORLD, &recvStatus);
+
+        // Unpack the coordinates to the receive nodes.
+        for (unsigned j = 0; j != recvNodes.size(); ++j) {
+          const unsigned i = recvNodes[j];
+          for (unsigned k = 0; k != Dimension; ++k) mesh.nodes[Dimension*i + k] = recvCoords[Dimension*j + k];
+        }
+      }
+    }
+
+    // Wait until all our send are complete.
+    vector<MPI_Status> sendStatus(sendRequests.size());
+    MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
+  }
 }
 
 //------------------------------------------------------------------------------
