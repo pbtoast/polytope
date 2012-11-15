@@ -6,12 +6,6 @@
 // An ASSERT macro, if one isn't already defined.
 #ifndef ASSERT
 
-#if HAVE_MPI
-
-// Parallel ASSERT -- calls MPI_Abort if NDEBUG is defined.
-#include <mpi.h>
-#include <iostream>
-
 // Forward declare our helper abort method.
 namespace polytope {
   void internal_abort();
@@ -24,18 +18,18 @@ namespace polytope {
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
     polytope::internal_abort(); \
   }
+#define ASSERT2(x, msg) \
+  if (!(x)) \
+  { \
+    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+    polytope::internal_abort(); \
+  }
 #else
-#define ASSERT(x) 
-#endif
-
-#else
-
-// Serial ASSERT -- forwarded to C assert.
-#include <cassert>
-#define ASSERT(x) assert(x)
-#endif
-
+#define ASSERT(x)
+#define ASSERT2(x, msg)
 #endif
 
 // Classes within the library.
 #include "ErrorHandler.hh"
+
+#endif
