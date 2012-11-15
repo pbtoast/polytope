@@ -190,10 +190,10 @@ int main(int argc, char** argv) {
     // Blago!
 
     // Check the global sizes.
-    CHECK(nnodesGlobal == (nx + 1)*(nx + 1));
-    CHECK(ncellsGlobal == nx*nx);
-    for (unsigned i = 0; i != ncells; ++i) CHECK(mesh.cells[i].size() == 4);
-    CHECK(nfacesGlobal == 2*nx*(nx + 1));
+    CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));
+    CHECK2(ncellsGlobal == nx*nx, ncellsGlobal << " != " << nx*nx);
+    for (unsigned i = 0; i != ncells; ++i) CHECK2(mesh.cells[i].size() == 4, mesh.cells[i].size() << " != " << 4);
+    CHECK2(nfacesGlobal == 2*nx*(nx + 1), nfacesGlobal << " != " << 2*nx*(nx + 1));
 
     // Check that everyone agrees who talks to who.
     for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -213,16 +213,17 @@ int main(int argc, char** argv) {
     typedef polytope::Point2<uint64_t> Point;
     vector<Point> localNodeHashes, localFaceHashes;
     const double lmax = max(lx, ly);
-    for (unsigned i = 0; i != nnodes; ++i) localNodeHashes.push_back(Point((mesh.nodes[2*i]     - x1)/lmax,
-                                                                           (mesh.nodes[2*i + 1] - y1)/lmax,
+    for (unsigned i = 0; i != nnodes; ++i) localNodeHashes.push_back(Point(mesh.nodes[2*i],
+                                                                           mesh.nodes[2*i + 1],
+                                                                           x1, y1,
                                                                            degeneracy, i));
     for (unsigned i = 0; i != nfaces; ++i) {
-      CHECK(mesh.faces[i].size() == 2);
+      ASSERT(mesh.faces[i].size() == 2);
       const unsigned i1 = mesh.faces[i][0];
       const unsigned i2 = mesh.faces[i][1];
-      const double xf = (0.5*(mesh.nodes[2*i1] + mesh.nodes[2*i2]) - x1)/lmax;
-      const double yf = (0.5*(mesh.nodes[2*i1 + 1] + mesh.nodes[2*i2 + 1]) - y1)/lmax;
-      localFaceHashes.push_back(Point(xf, yf, degeneracy, i));
+      const double xf = (0.5*(mesh.nodes[2*i1] + mesh.nodes[2*i2]))/lmax;
+      const double yf = (0.5*(mesh.nodes[2*i1 + 1] + mesh.nodes[2*i2 + 1]))/lmax;
+      localFaceHashes.push_back(Point(xf, yf, x1, y1, degeneracy, i));
     }
 
     // Each processor sends it's local hashes to each of it's process neighbors that have a greater rank.
@@ -230,61 +231,86 @@ int main(int argc, char** argv) {
     sendRequests.reserve(2*mesh.neighborDomains.size());
     list<vector<char> > localBuffers;
     list<unsigned> localBufSizes;
-    for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) {
-      const unsigned otherProc = mesh.neighborDomains[i];
-      if (otherProc > rank) {
-        vector<Point> sendNodeHashes, sendFaceHashes;
-        for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
-             itr != mesh.sharedNodes[i].end();
-             ++itr) sendNodeHashes.push_back(localNodeHashes[*itr]);
-        for (vector<unsigned>::const_iterator itr = mesh.sharedFaces[i].begin();
-             itr != mesh.sharedFaces[i].end();
-             ++itr) sendFaceHashes.push_back(localFaceHashes[*itr]);
-        localBuffers.push_back(vector<char>());
-        serialize(sendNodeHashes, localBuffers.back());
-        serialize(sendFaceHashes, localBuffers.back());
-        localBufSizes.push_back(localBuffers.back().size());
-        sendRequests.push_back(MPI_Request());
-        MPI_Isend(&localBufSizes.back(), 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &sendRequests.back());
-        if (localBufSizes.back() > 0) {
-          sendRequests.push_back(MPI_Request());
-          MPI_Isend(&localBuffers.back().front(), localBufSizes.back(), MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
+    for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
+      if (iproc == rank) {
+        for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) {
+          const unsigned otherProc = mesh.neighborDomains[i];
+          if (otherProc > rank) {
+            // cerr << rank << " --> " << otherProc << " : ";
+            // for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
+            //      itr != mesh.sharedNodes[i].end();
+            //      ++itr) cerr << "(" << mesh.nodes[2*(*itr)] << " " << mesh.nodes[2*(*itr)+1] << ") ";
+            // cerr << endl;
+            vector<Point> sendNodeHashes, sendFaceHashes;
+            for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
+                 itr != mesh.sharedNodes[i].end();
+                 ++itr) sendNodeHashes.push_back(localNodeHashes[*itr]);
+            for (vector<unsigned>::const_iterator itr = mesh.sharedFaces[i].begin();
+                 itr != mesh.sharedFaces[i].end();
+                 ++itr) sendFaceHashes.push_back(localFaceHashes[*itr]);
+            localBuffers.push_back(vector<char>());
+            serialize(sendNodeHashes, localBuffers.back());
+            serialize(sendFaceHashes, localBuffers.back());
+            localBufSizes.push_back(localBuffers.back().size());
+            sendRequests.push_back(MPI_Request());
+            MPI_Isend(&localBufSizes.back(), 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &sendRequests.back());
+            if (localBufSizes.back() > 0) {
+              sendRequests.push_back(MPI_Request());
+              MPI_Isend(&localBuffers.back().front(), localBufSizes.back(), MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
+            }
+          }
         }
       }
+      MPI_Barrier(MPI_COMM_WORLD);
     }
+    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
 
     // Now go over each of our neighbors and look for who we're receiving from.
-    for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) {
-      const unsigned otherProc = mesh.neighborDomains[i];
-      if (mesh.neighborDomains[i] < rank) {
+    for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
+      if (rank == iproc) {
+        for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) {
+          const unsigned otherProc = mesh.neighborDomains[i];
+          if (mesh.neighborDomains[i] < rank) {
 
-        // Get the other processors hashed positions.
-        unsigned bufSize;
-        MPI_Status recvStatus1, recvStatus2;
-        MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &recvStatus1);
-        if (bufSize > 0) {
-          vector<char> buffer(bufSize, '\0');
-          MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
-          vector<Point> otherNodeHashes, otherFaceHashes;
-          vector<char>::const_iterator itr = buffer.begin();
-          deserialize(otherNodeHashes, itr, buffer.end());
-          deserialize(otherFaceHashes, itr, buffer.end());
-          ASSERT(itr == buffer.end());
+            // Get the other processors hashed positions.
+            unsigned bufSize;
+            MPI_Status recvStatus1, recvStatus2;
+            MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &recvStatus1);
+            if (bufSize > 0) {
+              vector<char> buffer(bufSize, '\0');
+              MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
+              vector<Point> otherNodeHashes, otherFaceHashes;
+              vector<char>::const_iterator itr = buffer.begin();
+              deserialize(otherNodeHashes, itr, buffer.end());
+              deserialize(otherFaceHashes, itr, buffer.end());
+              ASSERT(itr == buffer.end());
 
-          // Check that the other processes node and face positions line up with ours.
-          const unsigned nn = mesh.sharedNodes[i].size(), nf = mesh.sharedFaces[i].size();
-          CHECK(otherNodeHashes.size() == nn);
-          CHECK(otherFaceHashes.size() == nf);
-          for (unsigned j = 0; j != nn; ++j) {
-            const unsigned k = mesh.sharedNodes[i][j];
-            CHECK(localNodeHashes[k] == otherNodeHashes[j]);
-          }
-          for (unsigned j = 0; j != nf; ++j) {
-            const unsigned k = mesh.sharedFaces[i][j];
-            CHECK(localFaceHashes[k] == otherFaceHashes[j]);
+              // Check that the other processes node and face positions line up with ours.
+              const unsigned nn = mesh.sharedNodes[i].size(), nf = mesh.sharedFaces[i].size();
+              CHECK(otherNodeHashes.size() == nn);
+              CHECK(otherFaceHashes.size() == nf);
+              vector<Point> myNodeHashes, myFaceHashes;
+              for (unsigned j = 0; j != nn; ++j) myNodeHashes.push_back(localNodeHashes[mesh.sharedNodes[i][j]]);
+              for (unsigned j = 0; j != nf; ++j) myFaceHashes.push_back(localFaceHashes[mesh.sharedFaces[i][j]]);
+              if (!(myNodeHashes == otherNodeHashes)) {
+                cerr << rank << " <-> " << otherProc << " : " << endl;
+                cerr << "    ";
+                copy(myNodeHashes.begin(), myNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
+                cerr << endl << "    ";
+                copy(otherNodeHashes.begin(), otherNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
+                cerr << endl;
+                for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
+                     itr != mesh.sharedNodes[i].end();
+                     ++itr) cerr << "(" << mesh.nodes[2*(*itr)] << " " << mesh.nodes[2*(*itr)+1] << ") ";
+                cerr << endl;
+              }
+              CHECK(myNodeHashes == otherNodeHashes);
+              //CHECK(myFaceHashes == otherFaceHashes);
+            }
           }
         }
       }
+      MPI_Barrier(MPI_COMM_WORLD);
     }
 
     // Make sure all our sends are completed.
