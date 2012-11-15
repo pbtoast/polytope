@@ -498,7 +498,7 @@ tessellate(const vector<RealType>& points,
       //                  clow[0], clow[1],
       //                  cdx) << endl;
     }
-    ASSERT(cellPointSet.size() >= 3);
+    ASSERT2(cellPointSet.size() >= 3, cellPointSet.size());
 
     // // Build the convex hull of the cell points.
     // vector<double> cellPointCoords;
