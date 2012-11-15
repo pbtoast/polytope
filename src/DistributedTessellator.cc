@@ -375,25 +375,37 @@ computeDistributedTessellation(const vector<RealType>& points,
           convexIntersect(domainHulls[otherProc], domainHulls[rank])) neighborSet.insert(otherProc);
     }
 
+    // We need the set of cells that share nodes.
+    vector<set<unsigned> > hullNodeCells(hullMesh.nodes.size()/Dimension);
+    for (unsigned i = 0; i != hullMesh.cells.size(); ++i) {
+      for (vector<int>::const_iterator faceItr = hullMesh.cells[i].begin();
+           faceItr != hullMesh.cells[i].end();
+           ++faceItr) {
+        const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+        for (vector<unsigned>::const_iterator nodeItr = hullMesh.faces[iface].begin();
+             nodeItr != hullMesh.faces[iface].end();
+             ++nodeItr) {
+          ASSERT(*nodeItr < hullNodeCells.size());
+          hullNodeCells[*nodeItr].insert(i);
+        }
+      }
+    }
+
     // Now any hulls that have elements adjacent to ours in the hull mesh.
-    // *NOTE*
-    // In the original Spheral++ version of this algorithm I used cell adjacency through nodes 
-    // as the criterion here, which is more conservative than adjacency through faces.  We don't have
-    // node->cell mapping in polytope, however, so for expediency I'm just implementing the face
-    // adjacency check for now.  I'm not sure this won't ever miss anything though, so it bears
-    // more thought/testing.
     for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
       for (typename vector<int>::const_iterator faceItr = hullMesh.cells[icell].begin();
            faceItr != hullMesh.cells[icell].end(); ++faceItr) {
-        const unsigned iface = (*faceItr < 0 ? ~(*faceItr) : *faceItr);
+        const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
         ASSERT(iface < hullMesh.faceCells.size());
-        for (vector<int>::const_iterator otherCellItr = hullMesh.faceCells[iface].begin();
-             otherCellItr != hullMesh.faceCells[iface].end(); ++otherCellItr) {
-          const unsigned jcell = (*otherCellItr < 0 ? ~(*otherCellItr) : *otherCellItr);
-          if (jcell != icell) {
-            const unsigned otherProc = bisectSearch(domainCellOffset, jcell);
-            ASSERT(jcell >= domainCellOffset[otherProc] and
-                   jcell <  domainCellOffset[otherProc + 1]);
+        for (vector<unsigned>::const_iterator nodeItr = hullMesh.faces[iface].begin();
+             nodeItr != hullMesh.faces[iface].end();
+             ++nodeItr) {
+          const unsigned inode = *nodeItr;
+          ASSERT(inode < hullNodeCells.size());
+          for (set<unsigned>::const_iterator itr = hullNodeCells[inode].begin();
+               itr != hullNodeCells[inode].end();
+               ++itr) {
+            const unsigned otherProc = bisectSearch(domainCellOffset, *itr);
             if (otherProc != rank) neighborSet.insert(otherProc);
           }
         }
