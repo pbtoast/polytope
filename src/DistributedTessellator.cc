@@ -435,9 +435,9 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Fire off our sends asynchronously.
     vector<MPI_Request> sendRequests;
-    sendRequests.reserve(2*neighborSet.size());
-    for (set<unsigned>::const_iterator otherItr = neighborSet.begin();
-         otherItr != neighborSet.end();
+    sendRequests.reserve(2*mesh.neighborDomains.size());
+    for (vector<unsigned>::const_iterator otherItr = mesh.neighborDomains.begin();
+         otherItr != mesh.neighborDomains.end();
          ++otherItr) {
       const unsigned otherProc = *otherItr;
       sendRequests.push_back(MPI_Request());
@@ -447,7 +447,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
       }
     }
-    ASSERT(sendRequests.size() <= 2*neighborSet.size());
+    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
 
     // Get the info from each of our neighbors and append it to the result.
     // Simultaneously build the mapping of local generator ID to domain.
@@ -558,12 +558,15 @@ computeDistributedTessellation(const vector<RealType>& points,
       nodePoints.reserve(mesh.sharedNodes[idomain].size());
       for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
            itr != mesh.sharedNodes[idomain].end();
-           ++itr) nodePoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&mesh.nodes[*itr],
+           ++itr) nodePoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(mesh.nodes[2 * (*itr)]),
                                                                                             &rlow[0],
                                                                                             dx,
                                                                                             *itr));
-      vector<Key> nodeKeys = mortonOrderIndices(nodePoints);
-      sortByKeys(mesh.sharedNodes[idomain], nodeKeys);
+      sort(nodePoints.begin(), nodePoints.end());
+      for (unsigned i = 0; i != mesh.sharedNodes[idomain].size(); ++i) mesh.sharedNodes[idomain][i] = nodePoints[i].index;
+
+      // vector<Key> nodeKeys = mortonOrderIndices(nodePoints);
+      // sortByKeys(mesh.sharedNodes[idomain], nodeKeys);
 
       // Faces.
       vector<Point> facePoints;
@@ -573,8 +576,11 @@ computeDistributedTessellation(const vector<RealType>& points,
                                                                                           *itr,
                                                                                           &rlow[0],
                                                                                           dx));
-      vector<Key> faceKeys = mortonOrderIndices(facePoints);
-      sortByKeys(mesh.sharedFaces[idomain], faceKeys);
+      sort(facePoints.begin(), facePoints.end());
+      for (unsigned i = 0; i != mesh.sharedFaces[idomain].size(); ++i) mesh.sharedFaces[idomain][i] = facePoints[i].index;
+
+      // vector<Key> faceKeys = mortonOrderIndices(facePoints);
+      // sortByKeys(mesh.sharedFaces[idomain], faceKeys);
     }
   }
 
@@ -601,10 +607,11 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
 
     // Post the sends for any nodes we own, and note which nodes we expect to receive.
+    vector<unsigned> bufSizes(numNeighbors, 0);
     list<vector<double> > sendCoords;
     list<vector<unsigned> > allRecvNodes;
     vector<MPI_Request> sendRequests;
-    sendRequests.reserve(numNeighbors);
+    sendRequests.reserve(2*numNeighbors);
     for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
       vector<unsigned> sendNodes;
       allRecvNodes.push_back(vector<unsigned>());
@@ -621,6 +628,10 @@ computeDistributedTessellation(const vector<RealType>& points,
       }
 
       // Send any nodes we have for this neighbor.
+      bufSizes[idomain] = Dimension*sendNodes.size();
+      sendRequests.push_back(MPI_Request());
+      MPI_Isend(&bufSizes[idomain], 1, MPI_UNSIGNED,
+                mesh.neighborDomains[idomain], 9, MPI_COMM_WORLD, &sendRequests.back());
       if (sendNodes.size() > 0) {
         sendCoords.push_back(DimensionTraits<Dimension, RealType>::extractCoords(mesh.nodes, sendNodes));
         vector<RealType>& coords = sendCoords.back();
@@ -630,17 +641,37 @@ computeDistributedTessellation(const vector<RealType>& points,
                   mesh.neighborDomains[idomain], 10, MPI_COMM_WORLD, &sendRequests.back());
       }
     }
+    ASSERT(sendRequests.size() <= 2*numNeighbors);
 
     // Iterate over the neighbors again and look for any receive information.
     list<vector<unsigned> >::const_iterator recvNodesItr = allRecvNodes.begin();
     for (unsigned idomain = 0; idomain != numNeighbors; ++idomain, ++recvNodesItr) {
       ASSERT(recvNodesItr != allRecvNodes.end());
       const vector<unsigned>& recvNodes = *recvNodesItr;
+
+      unsigned otherSize;
+      MPI_Status recvStatus;
+      MPI_Recv(&otherSize, 1, MPI_UNSIGNED, mesh.neighborDomains[idomain], 9, MPI_COMM_WORLD, &recvStatus);
+      // ASSERT2(otherSize == Dimension*recvNodes.size(),
+      //         "Bad message size (" << mesh.neighborDomains[idomain] << " " << otherSize << ") (" << rank << " " << Dimension*recvNodes.size() << ")");
       if (recvNodes.size() > 0) {
-        vector<RealType> recvCoords(Dimension*recvNodes.size());
+        vector<RealType> recvCoords(otherSize); // Dimension*recvNodes.size());
         MPI_Status recvStatus;
         MPI_Recv(&recvCoords.front(), Dimension*recvNodes.size(), DataTypeTraits<RealType>::MpiDataType(),
                  mesh.neighborDomains[idomain], 10, MPI_COMM_WORLD, &recvStatus);
+
+        if (otherSize != Dimension*recvNodes.size()) {
+          cout << "Other coordinates : ";
+          copy(recvCoords.begin(), recvCoords.end(), ostream_iterator<RealType>(cout, " "));
+          cout << endl;
+          cout << "My coordinates : ";
+          for (unsigned j = 0; j != recvNodes.size(); ++j) {
+            const unsigned i = recvNodes[j];
+            for (unsigned k = 0; k != Dimension; ++k) cout << mesh.nodes[Dimension*i + k] << " ";
+          }
+          cout << endl;
+          ASSERT(false);
+        }
 
         // Unpack the coordinates to the receive nodes.
         for (unsigned j = 0; j != recvNodes.size(); ++j) {
