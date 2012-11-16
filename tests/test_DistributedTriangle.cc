@@ -173,20 +173,20 @@ int main(int argc, char** argv) {
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
-    // Blago!
-    {
-      vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
-      for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
-      for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
-      map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-      cellFields["domain"] = &r2[0];
-      nodeFields["ownNodes"] = &rownNodes[0];
-      faceFields["ownFaces"] = &rownFaces[0];
-      ostringstream os;
-      os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
-    }
-    // Blago!
+    // // Blago!
+    // {
+    //   vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
+    //   for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
+    //   for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
+    //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+    //   cellFields["domain"] = &r2[0];
+    //   nodeFields["ownNodes"] = &rownNodes[0];
+    //   faceFields["ownFaces"] = &rownFaces[0];
+    //   ostringstream os;
+    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+    //   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+    // }
+    // // Blago!
 
     // Check the global sizes.
     CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));
@@ -291,20 +291,20 @@ int main(int argc, char** argv) {
               vector<Point> myNodeHashes, myFaceHashes;
               for (unsigned j = 0; j != nn; ++j) myNodeHashes.push_back(localNodeHashes[mesh.sharedNodes[i][j]]);
               for (unsigned j = 0; j != nf; ++j) myFaceHashes.push_back(localFaceHashes[mesh.sharedFaces[i][j]]);
-              if (!(myNodeHashes == otherNodeHashes)) {
-                cerr << rank << " <-> " << otherProc << " : " << endl;
-                cerr << "    ";
-                copy(myNodeHashes.begin(), myNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
-                cerr << endl << "    ";
-                copy(otherNodeHashes.begin(), otherNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
-                cerr << endl;
-                for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
-                     itr != mesh.sharedNodes[i].end();
-                     ++itr) cerr << "(" << mesh.nodes[2*(*itr)] << " " << mesh.nodes[2*(*itr)+1] << ") ";
-                cerr << endl;
-              }
+              // if (!(myNodeHashes == otherNodeHashes)) {
+              //   cerr << rank << " <-> " << otherProc << " : " << endl;
+              //   cerr << "    ";
+              //   copy(myNodeHashes.begin(), myNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
+              //   cerr << endl << "    ";
+              //   copy(otherNodeHashes.begin(), otherNodeHashes.end(), ostream_iterator<Point>(cerr, " "));
+              //   cerr << endl;
+              //   for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[i].begin();
+              //        itr != mesh.sharedNodes[i].end();
+              //        ++itr) cerr << "(" << mesh.nodes[2*(*itr)] << " " << mesh.nodes[2*(*itr)+1] << ") ";
+              //   cerr << endl;
+              // }
               CHECK(myNodeHashes == otherNodeHashes);
-              //CHECK(myFaceHashes == otherFaceHashes);
+              CHECK(myFaceHashes == otherFaceHashes);
             }
           }
         }
