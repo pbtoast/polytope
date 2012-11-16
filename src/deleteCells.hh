@@ -135,6 +135,25 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
     mesh.cells = newCells;
   }
 
+  // Update the shared nodes and faces.
+  const unsigned numNeighbors = mesh.sharedNodes.size();
+  ASSERT(mesh.sharedFaces.size() == numNeighbors);
+  for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
+    std::vector<unsigned> newNodes, newFaces;
+    for (std::vector<unsigned>::iterator itr = mesh.sharedNodes[idomain].begin();
+         itr != mesh.sharedNodes[idomain].end();
+         ++itr) {
+      if (nodeMask[*itr] == 1) newNodes.push_back(old2new_nodes[*itr]);
+    }
+    for (std::vector<unsigned>::iterator itr = mesh.sharedFaces[idomain].begin();
+         itr != mesh.sharedFaces[idomain].end();
+         ++itr) {
+      if (faceMask[*itr] == 1) newFaces.push_back(old2new_faces[*itr]);
+    }
+    mesh.sharedNodes[idomain] = newNodes;
+    mesh.sharedFaces[idomain] = newFaces;
+  }
+
   // If there was a convex hull in the mesh, it's probably no longer valid.
   mesh.convexHull = PLC<Dimension, RealType>();
 
