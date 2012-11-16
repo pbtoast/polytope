@@ -112,7 +112,6 @@ int main(int argc, char** argv) {
     CHECK(mesh.neighborDomains.size() == 0 or *max_element(mesh.neighborDomains.begin(), mesh.neighborDomains.end()) < numProcs);
     for (unsigned k = 0; k != numNeighborDomains; ++k) {
       CHECK(mesh.sharedNodes[k].size() > 0);
-      CHECK(mesh.sharedFaces[k].size() > 0);
       CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
       CHECK(*max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
     }
