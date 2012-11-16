@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   srand(10489592);
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 10; nx != 75; ++nx) {
+  for (unsigned nx = 20; nx != 75; ++nx) {
     if (rank == 0) cout << "Testing nx=" << nx << endl;
 
     // Create the seed positions for each domain.  Note we rely on this sequence
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     for (unsigned k = 0; k != numNeighborDomains; ++k) {
       CHECK(mesh.sharedNodes[k].size() > 0);
       CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
-      CHECK(*max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
+      CHECK(mesh.sharedFaces[k].size() == 0 or *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
     }
 
     // Figure out which of our nodes and faces we actually own.
