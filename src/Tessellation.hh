@@ -2,6 +2,7 @@
 #define POLYTOPE_TESSELLATION_HH
 
 #include <vector>
+#include <set>
 #include <iostream>
 #include "PLC.hh"
 #include "polytope_internal.hh"
@@ -84,6 +85,29 @@ class Tessellation
   //!       are receiving from, while any domains of greater rank we send
   //!       to.
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
+
+  //! Find the set of cells that touch each mesh node.
+  std::vector<std::set<unsigned> > computeNodeCells()
+  {
+    std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
+    for (unsigned i = 0; i != cells.size(); ++i)
+    {
+      for (std::vector<int>::const_iterator faceItr = cells[i].begin();
+           faceItr != cells[i].end();
+           ++faceItr)
+      {
+        const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+        for (std::vector<unsigned>::const_iterator nodeItr = faces[iface].begin();
+             nodeItr != faces[iface].end();
+             ++nodeItr)
+        {
+          ASSERT(*nodeItr < result.size());
+          result[*nodeItr].insert(i);
+        }
+      }
+    }
+    return result;
+  }
 
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
