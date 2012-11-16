@@ -6,6 +6,10 @@ commands:
      $ make config
      $ make
 
+Polytope also currently requires Boost of at least version >= 1.50.  Boost can
+be found at http://www.boost.org/.  Note that we are only using the header only
+components of Boost, so it is only necessary to install the header only libraries.
+
 Other make commands
 -------------------
    $ make test 
@@ -16,6 +20,37 @@ Other make commands
    
    $ make distclean 
           Performs clean and completely removes the build directory.
+
+   $ make install
+          Installs the polytope headers and libraries in the appropriate places 
+          according to the chosen prefix path.
+
+Useful make parameters
+----------------------
+debug=1
+        Turns on debug building and internal contract checking.
+
+MPI=1
+        Builds the distributed parallel capabilities of polytope.  Requires that
+        an MPI compiler & libraries be available!
+
+CC=<path>
+        Explicitly select the C compiler.
+
+CXX=<path>
+        Explicitly select the C++ compiler.
+
+CCFLAGS=<stuff>
+        Extra flags to throw the C compiler.
+
+CXXFLAGS=<stuff>
+        Extra flags to throw the C++ compiler.
+
+prefix=<path>
+        Where to put the polytope libraries and headers for make install.
+
+boost_root=<path>
+        Explicitly choose the path to the Boost installation.
 
 ------------------------------------------------------------------------------
                       O T H E R   C O N S I D E R A T I O N S
