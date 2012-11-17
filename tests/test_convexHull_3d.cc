@@ -12,7 +12,7 @@
 #include "polytope.hh"
 #include "convexHull_3d.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
@@ -40,7 +40,7 @@ convexContains(const polytope::PLC<3, RealType>& surface,
   RealType xn, yn, zn, dx1, dy1, dz1, dx2, dy2, dz2, norm;
   while (containmentTest and ifacet < surface.facets.size()) {
     n = surface.facets[ifacet].size();
-    ASSERT(n >= 3);
+    POLY_ASSERT(n >= 3);
     xn = 0.0; yn = 0.0; zn = 0.0;
 
     // Compute the facet normal.
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     points.push_back(low[1] + (high[1] - low[1])*random01());
     points.push_back(low[2] + (high[2] - low[2])*random01());
   }
-  CHECK(points.size() == 3*n);
+  POLY_CHECK(points.size() == 3*n);
   clock_t t1 = clock();
   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
   for (unsigned i = 0; i != n; ++i) {
     badFacet = convexContains(hull, &points.front(), &points[3*i], tolerance);
     if (badFacet < nFacets) cerr << "Failed containment for facet : " << badFacet << endl;
-    CHECK(badFacet == nFacets);
+    POLY_CHECK(badFacet == nFacets);
   }
   t1 = clock();
   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;

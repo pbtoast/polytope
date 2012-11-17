@@ -8,7 +8,7 @@
 
 #include "polytope.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
@@ -107,15 +107,15 @@ int main() {
     uint64_t hashi;
     for (i = 0; i != nx*nx*nx; ++i) {
       hashi = hash3position(&mesh.nodes[3*i], xmin, xmax, 0.1*dx);
-      CHECK(nodeHash2ID.find(hashi) == nodeHash2ID.end());
+      POLY_CHECK(nodeHash2ID.find(hashi) == nodeHash2ID.end());
       nodeHash2ID[hashi] = i;
     }
 
     // Check sizes.
-    CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
-    CHECK(mesh.cells.size() == nx*nx*nx);
-    for (unsigned i = 0; i != nx*nx*nx; ++i) CHECK(mesh.cells[i].size() == 6);
-    CHECK(mesh.faces.size() == 3*nx*nx*(nx + 1));
+    POLY_CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
+    POLY_CHECK(mesh.cells.size() == nx*nx*nx);
+    for (unsigned i = 0; i != nx*nx*nx; ++i) POLY_CHECK(mesh.cells[i].size() == 6);
+    POLY_CHECK(mesh.faces.size() == 3*nx*nx*(nx + 1));
   }
 
   cout << "PASS" << endl;

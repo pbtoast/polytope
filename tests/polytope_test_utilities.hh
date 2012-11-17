@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
 //------------------------------------------------------------------------------
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
-#define CHECK2(x, msg) if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK2(x, msg) if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); }
 
 //------------------------------------------------------------------------------
 // Define our own local random number generator wrapping the standard srand &

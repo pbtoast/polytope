@@ -144,7 +144,7 @@ public:
   static std::vector<std::vector<unsigned> > process(const std::vector<Point>& points) {
 
     // Pre-conditions.
-    ASSERT(points.size() > 3);
+    POLY_ASSERT(points.size() > 3);
 
     // Initialize the face static info.
     Face::points = &points;
@@ -263,7 +263,7 @@ faceCentroid(const std::vector<RealType>& points,
              RealType& xc,
              RealType& yc,
              RealType& zc) {
-  ASSERT(indices.size() == 3);
+  POLY_ASSERT(indices.size() == 3);
   xc = (points[3*indices[0]    ] + points[3*indices[1]    ] + points[3*indices[2]    ])/3.0;
   yc = (points[3*indices[0] + 1] + points[3*indices[1] + 1] + points[3*indices[2] + 1])/3.0;
   zc = (points[3*indices[0] + 2] + points[3*indices[1] + 2] + points[3*indices[2] + 2])/3.0;
@@ -295,7 +295,7 @@ convexHull_3d(const std::vector<RealType>& points,
   typedef convexHull_helpers::ConvexHull3d<CoordHash>::Point Point;
 
   // Pre-conditions.
-  ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(points.size() % 3 == 0);
   const unsigned n = points.size() / 3;
 
   unsigned i;
@@ -314,11 +314,11 @@ convexHull_3d(const std::vector<RealType>& points,
                           CoordHash((points[3*i + 2] - zmin)/dx + 0.5), 
                           i));
   }
-  ASSERT(pointSet.size() <= n);
+  POLY_ASSERT(pointSet.size() <= n);
 
   // Extract the unique set of points to a vector.
   std::vector<Point> uniquePoints(pointSet.begin(), pointSet.end());
-  ASSERT(uniquePoints.size() == pointSet.size());
+  POLY_ASSERT(uniquePoints.size() == pointSet.size());
 
   // // Blago!
   // std::cout << "Unique points: " << std::endl;
@@ -334,7 +334,7 @@ convexHull_3d(const std::vector<RealType>& points,
   PLC<3, RealType> plc;
   RealType xc, yc, zc;
   for (i = 0; i != faces.size(); ++i) {
-    ASSERT(faces[i].size() == 3);
+    POLY_ASSERT(faces[i].size() == 3);
     plc.facets.push_back(std::vector<int>());
     plc.facets.back().push_back(faces[i][0]);
     plc.facets.back().push_back(faces[i][1]);

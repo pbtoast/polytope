@@ -56,12 +56,12 @@ struct DimensionTraits<2, RealType> {
                             const unsigned iface,
                             const RealType* rlow,
                             const RealType& dx) {
-    ASSERT(iface < mesh.faces.size());
-    ASSERT(mesh.faces[iface].size() == 2);
+    POLY_ASSERT(iface < mesh.faces.size());
+    POLY_ASSERT(mesh.faces[iface].size() == 2);
     RealType pface[2];
     const unsigned n1 = mesh.faces[iface][0], n2 = mesh.faces[iface][1];
-    ASSERT(n1 < mesh.nodes.size()/2);
-    ASSERT(n2 < mesh.nodes.size()/2);
+    POLY_ASSERT(n1 < mesh.nodes.size()/2);
+    POLY_ASSERT(n2 < mesh.nodes.size()/2);
     pface[0] = 0.5*(mesh.nodes[2*n1]     + mesh.nodes[2*n2]);
     pface[1] = 0.5*(mesh.nodes[2*n1 + 1] + mesh.nodes[2*n2 + 1]);
     return constructPoint(pface, rlow, dx, iface);
@@ -77,7 +77,7 @@ struct DimensionTraits<2, RealType> {
          itr != indices.end();
          ++itr) {
       const unsigned i = *itr;
-      ASSERT(i < allCoords.size()/2);
+      POLY_ASSERT(i < allCoords.size()/2);
       result.push_back(allCoords[2*i]);
       result.push_back(allCoords[2*i + 1]);
     }
@@ -109,9 +109,9 @@ struct DimensionTraits<3, RealType> {
                             const unsigned iface,
                             const RealType* rlow,
                             const RealType& dx) {
-    ASSERT(iface < mesh.faces.size());
+    POLY_ASSERT(iface < mesh.faces.size());
     const unsigned nnodes = mesh.faces[iface].size();
-    ASSERT(nnodes >= 3);
+    POLY_ASSERT(nnodes >= 3);
     RealType pface[3] = {0.0, 0.0, 0.0};
     unsigned ni;
     for (typename vector<unsigned>::const_iterator itr = mesh.faces[iface].begin();
@@ -138,7 +138,7 @@ struct DimensionTraits<3, RealType> {
          itr != indices.end();
          ++itr) {
       const unsigned i = *itr;
-      ASSERT(i < allCoords.size()/3);
+      POLY_ASSERT(i < allCoords.size()/3);
       result.push_back(allCoords[3*i]);
       result.push_back(allCoords[3*i + 1]);
       result.push_back(allCoords[3*i + 2]);
@@ -181,11 +181,11 @@ struct ComparePairBySecondElement {
 template<typename Value, typename Key>
 void
 sortByKeys(vector<Value>& values, const vector<Key>& keys) {
-  ASSERT(values.size() == keys.size());
+  POLY_ASSERT(values.size() == keys.size());
   vector<pair<Key, Value> > stuff;
   stuff.reserve(values.size());
   for (unsigned i = 0; i != values.size(); ++i) stuff.push_back(make_pair(keys[i], values[i]));
-  ASSERT(stuff.size() == values.size());
+  POLY_ASSERT(stuff.size() == values.size());
   sort(stuff.begin(), stuff.end(), ComparePairByFirstElement<Key, Value>());
   for (unsigned i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
 }
@@ -295,7 +295,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     fscale = max(fscale, rhigh[i] - rlow[i]);
     genLow[i] = RealType(0.0);
   }
-  ASSERT(fscale > 0);
+  POLY_ASSERT(fscale > 0);
   fscale = 1.0/fscale;
 
   // Our goal is to build up the necessary set of generators to completely 
@@ -309,9 +309,9 @@ computeDistributedTessellation(const vector<RealType>& points,
       generators.push_back((points[Dimension*i + j] - rlow[j])*fscale);
     }
   }
-  ASSERT(generators.size() == points.size());
-  ASSERT(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0);
-  ASSERT(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1);
+  POLY_ASSERT(generators.size() == points.size());
+  POLY_ASSERT(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0);
+  POLY_ASSERT(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1);
 
   // We can skip a lot of work if there's only one domain!
   vector<unsigned> gen2domain(nlocal, rank);
@@ -333,13 +333,13 @@ computeDistributedTessellation(const vector<RealType>& points,
         vector<char>::const_iterator itr = buffer.begin();
         ConvexHull newHull;
         deserialize(newHull, itr, buffer.end());
-        ASSERT(itr == buffer.end());
+        POLY_ASSERT(itr == buffer.end());
         domainHulls.push_back(newHull);
         domainCellOffset.push_back(domainCellOffset.back() + domainHulls[sendProc].points.size()/Dimension);
       }
     }
-    ASSERT(domainHulls.size() == numProcs);
-    ASSERT(domainCellOffset.size() == numProcs + 1);
+    POLY_ASSERT(domainHulls.size() == numProcs);
+    POLY_ASSERT(domainCellOffset.size() == numProcs + 1);
 
     // cerr << "Domain cell offsets : ";
     // copy(domainCellOffset.begin(), domainCellOffset.end(), ostream_iterator<unsigned>(cerr, " "));
@@ -351,7 +351,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     for (unsigned i = 0; i != numProcs; ++i) {
       copy(domainHulls[i].points.begin(), domainHulls[i].points.end(), back_inserter(hullGenerators));
     }
-    ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
+    POLY_ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
     Tessellation<Dimension, RealType> hullMesh;
     this->tessellationWrapper(hullGenerators, hullMesh);
 
@@ -383,12 +383,12 @@ computeDistributedTessellation(const vector<RealType>& points,
       for (typename vector<int>::const_iterator faceItr = hullMesh.cells[icell].begin();
            faceItr != hullMesh.cells[icell].end(); ++faceItr) {
         const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-        ASSERT(iface < hullMesh.faceCells.size());
+        POLY_ASSERT(iface < hullMesh.faceCells.size());
         for (vector<unsigned>::const_iterator nodeItr = hullMesh.faces[iface].begin();
              nodeItr != hullMesh.faces[iface].end();
              ++nodeItr) {
           const unsigned inode = *nodeItr;
-          ASSERT(inode < hullNodeCells.size());
+          POLY_ASSERT(inode < hullNodeCells.size());
           for (set<unsigned>::const_iterator itr = hullNodeCells[inode].begin();
                itr != hullNodeCells[inode].end();
                ++itr) {
@@ -418,7 +418,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         if (numOthers > 0) {
           otherNeighbors.resize(numOthers);
           MPI_Bcast(&(otherNeighbors.front()), numOthers, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
-          ASSERT(rank == sendProc or
+          POLY_ASSERT(rank == sendProc or
                  count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
                  count(otherNeighbors.begin(), otherNeighbors.end(), rank));
         }
@@ -446,7 +446,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
       }
     }
-    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
+    POLY_ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
 
     // Get the info from each of our neighbors and append it to the result.
     // Simultaneously build the mapping of local generator ID to domain.
@@ -463,7 +463,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         vector<char>::const_iterator itr = buffer.begin();
         vector<RealType> otherGenerators;
         deserialize(otherGenerators, itr, buffer.end());
-        ASSERT(itr == buffer.end());
+        POLY_ASSERT(itr == buffer.end());
         copy(otherGenerators.begin(), otherGenerators.end(), back_inserter(generators));
         gen2domain.resize(generators.size()/Dimension, otherProc);
       }
@@ -475,11 +475,11 @@ computeDistributedTessellation(const vector<RealType>& points,
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
     // cerr << rank << " : DONE." << endl;
   }
-  ASSERT(gen2domain.size() == generators.size()/Dimension);
+  POLY_ASSERT(gen2domain.size() == generators.size()/Dimension);
 
   // Denormalize the generator positions.
   const unsigned ntotal = generators.size() / Dimension;
-  ASSERT(ntotal >= nlocal);
+  POLY_ASSERT(ntotal >= nlocal);
   for (unsigned i = 0; i != ntotal; ++i) {
     for (unsigned j = 0; j != Dimension; ++j) {
       generators[Dimension*i + j] = generators[Dimension*i + j]/fscale + rlow[j];
@@ -490,7 +490,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   this->tessellationWrapper(generators, mesh);
 
   // // Blago!
-  // ASSERT(gen2domain.size() == mesh.cells.size());
+  // POLY_ASSERT(gen2domain.size() == mesh.cells.size());
   // vector<double> r2(mesh.cells.size());
   // for (unsigned i = 0; i != mesh.cells.size(); ++i) r2[i] = gen2domain[i];
   // map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
@@ -507,7 +507,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // Build the reverse lookup from procID to index in the neighborDomain set.
     map<unsigned, unsigned> proc2offset;
     for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) proc2offset[mesh.neighborDomains[i]] = i;
-    ASSERT(proc2offset.size() == mesh.neighborDomains.size());
+    POLY_ASSERT(proc2offset.size() == mesh.neighborDomains.size());
 
     // Look for the faces we share with other processors.
     mesh.sharedFaces.resize(mesh.neighborDomains.size());
@@ -519,16 +519,16 @@ computeDistributedTessellation(const vector<RealType>& points,
            faceItr != faces.end();
            ++faceItr) {
         const int iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-        ASSERT(mesh.faceCells[iface].size() == 1 or mesh.faceCells[iface].size() == 2);
+        POLY_ASSERT(mesh.faceCells[iface].size() == 1 or mesh.faceCells[iface].size() == 2);
         if (mesh.faceCells[iface].size() == 2) {
           const int jcell1 = mesh.faceCells[iface][0] < 0 ? ~mesh.faceCells[iface][0] : mesh.faceCells[iface][0];
           const int jcell2 = mesh.faceCells[iface][1] < 0 ? ~mesh.faceCells[iface][1] : mesh.faceCells[iface][1];
-          ASSERT(jcell1 == icell or jcell2 == icell);
+          POLY_ASSERT(jcell1 == icell or jcell2 == icell);
           const int jcell = jcell1 == icell ? jcell2 : jcell1;
-          ASSERT(jcell < gen2domain.size());
+          POLY_ASSERT(jcell < gen2domain.size());
           const unsigned otherProc = gen2domain[jcell];
           if (otherProc != rank) {
-            ASSERT(proc2offset.find(otherProc) != proc2offset.end());
+            POLY_ASSERT(proc2offset.find(otherProc) != proc2offset.end());
             const unsigned joff = proc2offset[otherProc];
             mesh.sharedFaces[joff].push_back(iface);
           }
@@ -544,10 +544,10 @@ computeDistributedTessellation(const vector<RealType>& points,
       for (typename set<unsigned>::const_iterator cellItr = cells.begin();
            cellItr != cells.end();
            ++cellItr) {
-        ASSERT(*cellItr < gen2domain.size());
+        POLY_ASSERT(*cellItr < gen2domain.size());
         const unsigned otherProc = gen2domain[*cellItr];
         if (otherProc != rank) {
-          ASSERT(proc2offset.find(otherProc) != proc2offset.end());
+          POLY_ASSERT(proc2offset.find(otherProc) != proc2offset.end());
           const unsigned joff = proc2offset[otherProc];
           mesh.sharedNodes[joff].push_back(inode);
         }
@@ -657,7 +657,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
            itr != mesh.sharedNodes[idomain].end();
            ++itr) {
-        ASSERT(*itr < nNodes);
+        POLY_ASSERT(*itr < nNodes);
         ownNode[*itr] = std::min(ownNode[*itr], mesh.neighborDomains[idomain]);
       }
     }
@@ -690,7 +690,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[idomain].begin();
            itr != mesh.sharedNodes[idomain].end();
            ++itr) {
-        ASSERT(ownNode[*itr] <= rank);
+        POLY_ASSERT(ownNode[*itr] <= rank);
         if (ownNode[*itr] == rank) {
           sendNodes.push_back(*itr);
         } else if (ownNode[*itr] == mesh.neighborDomains[idomain]) {
@@ -708,25 +708,25 @@ computeDistributedTessellation(const vector<RealType>& points,
       if (sendNodes.size() > 0) {
         sendCoords.push_back(DimensionTraits<Dimension, RealType>::extractCoords(mesh.nodes, sendNodes));
         vector<RealType>& coords = sendCoords.back();
-        ASSERT(coords.size() == Dimension*sendNodes.size());
+        POLY_ASSERT(coords.size() == Dimension*sendNodes.size());
         sendRequests.push_back(MPI_Request());
         MPI_Isend(&coords.front(), Dimension*sendNodes.size(), DataTypeTraits<RealType>::MpiDataType(),
                   mesh.neighborDomains[idomain], 10, MPI_COMM_WORLD, &sendRequests.back());
       }
     }
-    ASSERT(sendRequests.size() <= 2*numNeighbors);
+    POLY_ASSERT(sendRequests.size() <= 2*numNeighbors);
 
     // Iterate over the neighbors again and look for any receive information.
     list<vector<unsigned> >::const_iterator recvNodesItr = allRecvNodes.begin();
     for (unsigned idomain = 0; idomain != numNeighbors; ++idomain, ++recvNodesItr) {
-      ASSERT(recvNodesItr != allRecvNodes.end());
+      POLY_ASSERT(recvNodesItr != allRecvNodes.end());
       const vector<unsigned>& recvNodes = *recvNodesItr;
 
 #ifndef NDEBUG      
       unsigned otherSize;
       MPI_Status recvStatus;
       MPI_Recv(&otherSize, 1, MPI_UNSIGNED, mesh.neighborDomains[idomain], 9, MPI_COMM_WORLD, &recvStatus);
-      ASSERT2(otherSize == Dimension*recvNodes.size(),
+      POLY_ASSERT2(otherSize == Dimension*recvNodes.size(),
               "Bad message size (" << mesh.neighborDomains[idomain] << " " << otherSize << ") (" << rank << " " << Dimension*recvNodes.size() << ")");
 #endif
 
@@ -748,7 +748,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         //     for (unsigned k = 0; k != Dimension; ++k) cout << mesh.nodes[Dimension*i + k] << " ";
         //   }
         //   cout << endl;
-        //   ASSERT(false);
+        //   POLY_ASSERT(false);
         // }
         // // Blago!
 
@@ -780,13 +780,13 @@ tessellationWrapper(const vector<RealType>& points,
     break;
 
   case box:
-    ASSERT(mLow != 0);
-    ASSERT(mHigh != 0);
+    POLY_ASSERT(mLow != 0);
+    POLY_ASSERT(mHigh != 0);
     mSerialTessellator->tessellate(points, mLow, mHigh, mesh);
     break;
 
   case plc:
-    ASSERT(mPLCptr != 0);
+    POLY_ASSERT(mPLCptr != 0);
     mSerialTessellator->tessellate(points, *mPLCpointsPtr, *mPLCptr, mesh);
     break;
   }
@@ -820,8 +820,8 @@ computeBoundingBox(const vector<RealType>& points,
     break;
 
   case box:
-    ASSERT(mLow != 0);
-    ASSERT(mHigh != 0);
+    POLY_ASSERT(mLow != 0);
+    POLY_ASSERT(mHigh != 0);
     for (unsigned j = 0; j != Dimension; ++j) {
       rlow[j] = mLow[j];
       rhigh[j] = mHigh[j];
@@ -829,7 +829,7 @@ computeBoundingBox(const vector<RealType>& points,
     return;
 
   case plc:
-    ASSERT(mPLCptr != 0);
+    POLY_ASSERT(mPLCptr != 0);
     for (vector<vector<int> >::const_iterator facetItr = mPLCptr->facets.begin();
          facetItr != mPLCptr->facets.end();
          ++facetItr) {

@@ -100,7 +100,7 @@ read(Tessellation<2, RealType>& mesh,
   MPI_Comm_rank(comm, &rank);
   if (numFiles == -1)
     numFiles = nproc;
-  ASSERT(numFiles <= nproc);
+  POLY_ASSERT(numFiles <= nproc);
 
   // We put the entire data set into a directory named after the 
   // prefix, and every process gets its own subdirectory therein.

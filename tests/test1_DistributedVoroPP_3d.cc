@@ -12,7 +12,7 @@
 
 #include "polytope.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
@@ -148,10 +148,10 @@ int main(int argc, char** argv) {
 //     }
 
 //     // Now do the checks.
-//     CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
-//     CHECK(mesh.cells.size() == nx*nx);
-//     for (unsigned i = 0; i != nx*nx; ++i) CHECK(mesh.cells[i].size() == 4);
-//     CHECK(mesh.faces.size() == 2*nx*(nx + 1));
+//     POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
+//     POLY_CHECK(mesh.cells.size() == nx*nx);
+//     for (unsigned i = 0; i != nx*nx; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
+//     POLY_CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
     // Blago!
     {

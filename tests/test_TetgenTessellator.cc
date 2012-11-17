@@ -6,7 +6,7 @@
 
 #include "polytope.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 using namespace polytope;
@@ -91,13 +91,13 @@ int main() {
   Tessellation<3, double> mesh;
   TetgenTessellator<double> Tetgen;
   Tetgen.tessellate(generators, box, mesh);
-  CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));
-  CHECK(mesh.cells.size() == nx*nx*nx);
+  POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));
+  POLY_CHECK(mesh.cells.size() == nx*nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
   {
-    CHECK(mesh.cells[i].size() == 6);
+    POLY_CHECK(mesh.cells[i].size() == 6);
   }
-  CHECK(mesh.faces.size() == 2*nx*nx*(nx + 1));
+  POLY_CHECK(mesh.faces.size() == 2*nx*nx*(nx + 1));
 
   // Write out the file if we can.
 #if HAVE_SILO

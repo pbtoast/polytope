@@ -101,7 +101,7 @@ class Tessellation
              nodeItr != faces[iface].end();
              ++nodeItr)
         {
-          ASSERT(*nodeItr < result.size());
+          POLY_ASSERT(*nodeItr < result.size());
           result[*nodeItr].insert(i);
         }
       }
@@ -121,7 +121,7 @@ class Tessellation
         s << "(" << mesh.nodes[2*n] << ", " << mesh.nodes[2*n+1] << ")" << std::endl;
       else
       {
-        ASSERT(Dimension == 3);
+        POLY_ASSERT(Dimension == 3);
         s << "(" << mesh.nodes[3*n] << ", " << mesh.nodes[3*n+1] << ", " << mesh.nodes[3*n+2] << ")" << std::endl;
       }
     }

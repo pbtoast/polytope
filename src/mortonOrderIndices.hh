@@ -29,8 +29,8 @@ hashPosition(const polytope::Point2<polytope::KeyTraits::Key>& xoff) {
   typedef polytope::KeyTraits::Key Key;
 
   // Get the bits for each dimension.
-  ASSERT(xoff.x <= polytope::KeyTraits::maxKey1d);
-  ASSERT(xoff.y <= polytope::KeyTraits::maxKey1d);
+  POLY_ASSERT(xoff.x <= polytope::KeyTraits::maxKey1d);
+  POLY_ASSERT(xoff.y <= polytope::KeyTraits::maxKey1d);
 
   // Interleave the bits.
   Key result = polytope::KeyTraits::zero;
@@ -41,7 +41,7 @@ hashPosition(const polytope::Point2<polytope::KeyTraits::Key>& xoff) {
   }
 
   // That's it.
-  ASSERT(result <= polytope::KeyTraits::maxKey);
+  POLY_ASSERT(result <= polytope::KeyTraits::maxKey);
   return result;
 }
 
@@ -53,9 +53,9 @@ hashPosition(const polytope::Point3<polytope::KeyTraits::Key>& xoff) {
   typedef polytope::KeyTraits::Key Key;
 
   // Get the bits for each dimension.
-  ASSERT(xoff.x <= polytope::KeyTraits::maxKey1d);
-  ASSERT(xoff.y <= polytope::KeyTraits::maxKey1d);
-  ASSERT(xoff.z <= polytope::KeyTraits::maxKey1d);
+  POLY_ASSERT(xoff.x <= polytope::KeyTraits::maxKey1d);
+  POLY_ASSERT(xoff.y <= polytope::KeyTraits::maxKey1d);
+  POLY_ASSERT(xoff.z <= polytope::KeyTraits::maxKey1d);
 
   // Interleave the bits.
   Key result = polytope::KeyTraits::zero;
@@ -67,7 +67,7 @@ hashPosition(const polytope::Point3<polytope::KeyTraits::Key>& xoff) {
   }
 
   // That's it.
-  ASSERT(result <= polytope::KeyTraits::maxKey);
+  POLY_ASSERT(result <= polytope::KeyTraits::maxKey);
   return result;
 }
 
@@ -94,7 +94,7 @@ mortonOrderIndices(const std::vector<PointType>& points) {
        itr != points.end();
        ++itr) result.push_back(hashPosition(*itr));
 
-  ASSERT(result.size() == npoints);
+  POLY_ASSERT(result.size() == npoints);
   return result;
 }
 
