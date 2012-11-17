@@ -52,8 +52,8 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
   // Make sure we don't have any garbage in our list of nodes.
   for (int n = 0; n < nodes.size(); ++n)
   {
-    ASSERT(nodes[n] >= 0);
-    ASSERT(nodes[n] < mesh.nodes.size()/2);
+    POLY_ASSERT(nodes[n] >= 0);
+    POLY_ASSERT(nodes[n] < mesh.nodes.size()/2);
   }
 #endif
 }
@@ -143,7 +143,7 @@ write(const Tessellation<2, RealType>& mesh,
   MPI_Comm_rank(comm, &rank);
   if (numFiles == -1)
     numFiles = nproc;
-  ASSERT(numFiles <= nproc);
+  POLY_ASSERT(numFiles <= nproc);
 
   // We put the entire data set into a directory named after the 
   // prefix, and every process gets its own subdirectory therein.

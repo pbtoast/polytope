@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <map>
 
-#include "polytope.hh" // Pulls in ASSERT and TetgenTessellator.hh.
+#include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 
 // Pull in tetgen stuff.
 #define TETLIBRARY

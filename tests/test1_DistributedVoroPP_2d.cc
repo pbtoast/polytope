@@ -16,7 +16,7 @@
 #include "polytope.hh"
 #include "Point.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 
@@ -182,10 +182,10 @@ int main(int argc, char** argv) {
     // Blago!
 
     // Check the global sizes.
-    CHECK(nnodesGlobal == (nx + 1)*(nx + 1));
-    CHECK(ncellsGlobal == nx*nx);
-    for (unsigned i = 0; i != ncells; ++i) CHECK(mesh.cells[i].size() == 4);
-    CHECK(nfacesGlobal == 2*nx*(nx + 1));
+    POLY_CHECK(nnodesGlobal == (nx + 1)*(nx + 1));
+    POLY_CHECK(ncellsGlobal == nx*nx);
+    for (unsigned i = 0; i != ncells; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
+    POLY_CHECK(nfacesGlobal == 2*nx*(nx + 1));
 
     // Check that everyone agrees who talks to who.
     for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
       if (numOthers > 0) {
         otherNeighbors.resize(numOthers);
         MPI_Bcast(&(otherNeighbors.front()), numOthers, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
-        CHECK(rank == sendProc or
+        POLY_CHECK(rank == sendProc or
                count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
                count(otherNeighbors.begin(), otherNeighbors.end(), rank));
       }
@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
                                                                            (mesh.nodes[2*i + 1] - y1)/lmax,
                                                                            degeneracy, i));
     for (unsigned i = 0; i != nfaces; ++i) {
-      CHECK(mesh.faces[i].size() == 2);
+      POLY_CHECK(mesh.faces[i].size() == 2);
       const unsigned i1 = mesh.faces[i][0];
       const unsigned i2 = mesh.faces[i][1];
       const double xf = (0.5*(mesh.nodes[2*i1] + mesh.nodes[2*i2]) - x1)/lmax;
@@ -261,20 +261,20 @@ int main(int argc, char** argv) {
           vector<char>::const_iterator itr = buffer.begin();
           deserialize(otherNodeHashes, itr, buffer.end());
           deserialize(otherFaceHashes, itr, buffer.end());
-          ASSERT(itr == buffer.end());
+          POLY_ASSERT(itr == buffer.end());
 
           // Check that the other processes node and face positions line up with ours.
           const unsigned nn = mesh.sharedNodes[i].size(), nf = mesh.sharedFaces[i].size();
-          CHECK(otherNodeHashes.size() == nn);
-          CHECK(otherFaceHashes.size() == nf);
+          POLY_CHECK(otherNodeHashes.size() == nn);
+          POLY_CHECK(otherFaceHashes.size() == nf);
           for (unsigned j = 0; j != nn; ++j) {
             const unsigned k = mesh.sharedNodes[i][j];
             cerr << "Checking " << localNodeHashes[k] << " " << otherNodeHashes[j] << endl;
-            CHECK(localNodeHashes[k] == otherNodeHashes[j]);
+            POLY_CHECK(localNodeHashes[k] == otherNodeHashes[j]);
           }
           for (unsigned j = 0; j != nf; ++j) {
             const unsigned k = mesh.sharedFaces[i][j];
-            CHECK(localFaceHashes[k] == otherFaceHashes[j]);
+            POLY_CHECK(localFaceHashes[k] == otherFaceHashes[j]);
           }
         }
       }

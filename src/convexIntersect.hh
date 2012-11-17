@@ -34,8 +34,8 @@ template<typename RealType>
 int compare(const RealType& l1x, const RealType& l1y, 
             const RealType& l2x, const RealType& l2y, 
             const std::vector<RealType>& points) {
-  ASSERT(points.size() % 2 == 0);
-  ASSERT(points.size() > 1);
+  POLY_ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(points.size() > 1);
   const unsigned n = points.size() / 2;
   const int result = compare(l1x, l1y, l2x, l2y, points[0], points[1]);
   unsigned i = 1;
@@ -71,8 +71,8 @@ template<typename RealType>
 int compare(const RealType& ox, const RealType& oy, const RealType& oz, 
             const RealType& nx, const RealType& ny, const RealType& nz, 
             const std::vector<RealType>& points) {
-  ASSERT(points.size() % 3 == 0);
-  ASSERT(points.size() > 1);
+  POLY_ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(points.size() > 1);
   const unsigned n = points.size() / 3;
   const int result = compare(ox, oy, oz, nx, ny, nz, points[0], points[1], points[2]);
   unsigned i = 1;
@@ -105,7 +105,7 @@ void computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
 //------------------------------------------------------------------------------
 std::pair<int, int>
 hashEdge(const int i, const int j) {
-  ASSERT(i != j);
+  POLY_ASSERT(i != j);
   return (i < j ? std::make_pair(i, j) : std::make_pair(j, i));
 }
 
@@ -135,8 +135,8 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
     while (not outside and ifacet < nfa) {
       i = a.facets[ifacet][0];
       j = a.facets[ifacet][1];
-      ASSERT(i < nva);
-      ASSERT(j < nva);
+      POLY_ASSERT(i < nva);
+      POLY_ASSERT(j < nva);
       outside = (compare(a.points[2*i], a.points[2*i + 1],
                          a.points[2*j], a.points[2*j + 1],
                          b.points) == 1);
@@ -151,8 +151,8 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
     while (not outside and ifacet < nfb) {
       i = b.facets[ifacet][0];
       j = b.facets[ifacet][1];
-      ASSERT(i < nvb);
-      ASSERT(j < nvb);
+      POLY_ASSERT(i < nvb);
+      POLY_ASSERT(j < nvb);
       outside = (compare(b.points[2*i], b.points[2*i + 1],
                          b.points[2*j], b.points[2*j + 1],
                          a.points) == 1);
@@ -187,9 +187,9 @@ convexIntersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>&
       i = a.facets[ifacet][0];
       j = a.facets[ifacet][1];
       k = a.facets[ifacet][2];
-      ASSERT(i < nva);
-      ASSERT(j < nva);
-      ASSERT(k < nva);
+      POLY_ASSERT(i < nva);
+      POLY_ASSERT(j < nva);
+      POLY_ASSERT(k < nva);
       computeNormal(a.points[3*i], a.points[3*i + 1], a.points[3*i + 2],
                     a.points[3*j], a.points[3*j + 1], a.points[3*j + 2],
                     a.points[3*k], a.points[3*k + 1], a.points[3*k + 2],
@@ -209,9 +209,9 @@ convexIntersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>&
       i = b.facets[ifacet][0];
       j = b.facets[ifacet][1];
       k = b.facets[ifacet][2];
-      ASSERT(i < nvb);
-      ASSERT(j < nvb);
-      ASSERT(k < nvb);
+      POLY_ASSERT(i < nvb);
+      POLY_ASSERT(j < nvb);
+      POLY_ASSERT(k < nvb);
       computeNormal(b.points[3*i], b.points[3*i + 1], b.points[3*i + 2],
                     b.points[3*j], b.points[3*j + 1], b.points[3*j + 2],
                     b.points[3*k], b.points[3*k + 1], b.points[3*k + 2],

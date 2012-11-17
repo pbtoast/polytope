@@ -9,7 +9,7 @@
 #include <limits>
 #include "float.h"
 
-#include "polytope.hh" // Pulls in ASSERT and TriangleTessellator.hh.
+#include "polytope.hh" // Pulls in POLY_ASSERT and TriangleTessellator.hh.
 #include "convexHull_2d.hh"
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
@@ -92,7 +92,7 @@ public:
       std::map<Key, unsigned>::operator[](key) = 0U;
       itr = this->find(key);
     }
-    ASSERT(itr != this->end());
+    POLY_ASSERT(itr != this->end());
     return itr->second;
   }
 };
@@ -119,7 +119,7 @@ public:
 //------------------------------------------------------------------------------
 std::pair<int, int>
 hashEdge(const int i, const int j) {
-  ASSERT(i != j);
+  POLY_ASSERT(i != j);
   return i < j ? std::make_pair(i, j) : std::make_pair(j, i);
 }
 
@@ -203,10 +203,10 @@ tessellate(const vector<RealType>& points,
            const PLC<2, RealType>& geometry,
            Tessellation<2, RealType>& mesh) const 
 {
-  ASSERT(!points.empty());
+  POLY_ASSERT(!points.empty());
 
   // Make sure we're not modifying an existing tessellation.
-  ASSERT(mesh.empty());
+  POLY_ASSERT(mesh.empty());
 
   typedef std::pair<int, int> EdgeHash;
   typedef Point2<CoordHash> IntPoint;
@@ -241,7 +241,7 @@ tessellate(const vector<RealType>& points,
     high[0] = max(high[0], PLCpoints[2*i]);
     high[1] = max(high[1], PLCpoints[2*i+1]);
   }
-  ASSERT(low[0] < high[0] and low[1] < high[1]);
+  POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
   RealType box[2] = {high[0] - low[0], 
                      high[1] - low[1]};
   const double boxsize = 2.0*max(box[0], box[1]);
@@ -364,8 +364,8 @@ tessellate(const vector<RealType>& points,
     chigh[0] = max(chigh[0], circumcenters[i].x);
     chigh[1] = max(chigh[1], circumcenters[i].y);
   }
-  ASSERT(circumcenters.size() == delaunay.numberoftriangles);
-  ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1]);
+  POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+  POLY_ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1]);
   RealType cbox[2] = {chigh[0] - clow[0], 
                       chigh[1] - clow[1]};
   const double cboxsize = 2.0*max(cbox[0], cbox[1]);
@@ -380,7 +380,7 @@ tessellate(const vector<RealType>& points,
   for (typename CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
        itr != edgeCounter.end();
        ++itr) {
-    ASSERT(itr->second == 1 or itr->second == 2);
+    POLY_ASSERT(itr->second == 1 or itr->second == 2);
     if (itr->second == 1) {
       i = itr->first.first;
       j = itr->first.second;
@@ -415,7 +415,7 @@ tessellate(const vector<RealType>& points,
     while (exteriorEdges.size() > 0) {
       list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
                                              MatchEitherPairValue<int>(i));
-      ASSERT(itr != exteriorEdges.end());
+      POLY_ASSERT(itr != exteriorEdges.end());
       i = (itr->first == i ? itr->second : itr->first);
       boundaryEdgeOrder.push_back(*itr);
       exteriorEdges.erase(itr);
@@ -423,10 +423,10 @@ tessellate(const vector<RealType>& points,
                                         clow[0], clow[1],
                                         cdx));
     }
-    ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
-    ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
-    ASSERT(boundaryPoints.size() == numBoundaryPoints + 1);
-    ASSERT(boundaryPoints.front() == boundaryPoints.back());
+    POLY_ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
+    POLY_ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
+    POLY_ASSERT(boundaryPoints.size() == numBoundaryPoints + 1);
+    POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
     boost::geometry::assign(boundary, BGring(boundaryPoints.begin(), boundaryPoints.end()));
 
   } else {
@@ -438,14 +438,14 @@ tessellate(const vector<RealType>& points,
                                       clow[0], clow[1],
                                       cdx));
     for (j = 0; j != geometry.facets.size(); ++j) {
-      ASSERT(geometry.facets[j].size() == 2);
+      POLY_ASSERT(geometry.facets[j].size() == 2);
       i =  geometry.facets[j][1];
       boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                         clow[0], clow[1],
                                         cdx));
     }
-    ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
-    ASSERT(boundaryPoints.front() == boundaryPoints.back());
+    POLY_ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
+    POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
     boost::geometry::assign(boundary, BGring(boundaryPoints.begin(), boundaryPoints.end()));
 
     // Add any interior holes.
@@ -461,14 +461,14 @@ tessellate(const vector<RealType>& points,
                                           clow[0], clow[1],
                                           cdx));
         for (j = 0; j != geometry.holes[k].size(); ++j) {
-          ASSERT(geometry.holes[k][j].size() == 2);
+          POLY_ASSERT(geometry.holes[k][j].size() == 2);
           i =  geometry.holes[k][j][1];
           boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                             clow[0], clow[1],
                                             cdx));
         }
-        ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
-        ASSERT(boundaryPoints.front() == boundaryPoints.back());
+        POLY_ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
+        POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
         boost::geometry::assign(holes[k], BGring(boundaryPoints.begin(), boundaryPoints.end()));
       }
     }
@@ -498,7 +498,7 @@ tessellate(const vector<RealType>& points,
       //                  clow[0], clow[1],
       //                  cdx) << endl;
     }
-    ASSERT2(cellPointSet.size() >= 3, cellPointSet.size());
+    POLY_ASSERT2(cellPointSet.size() >= 3, cellPointSet.size());
 
     // // Build the convex hull of the cell points.
     // vector<double> cellPointCoords;
@@ -506,15 +506,15 @@ tessellate(const vector<RealType>& points,
     //   cellPointCoords.push_back(cellPoints[j].x);
     //   cellPointCoords.push_back(cellPoints[j].y);
     // }
-    // ASSERT(cellPointCoords.size() == 2*cellPoints.size());
+    // POLY_ASSERT(cellPointCoords.size() == 2*cellPoints.size());
     // PLC<2, double> hull = convexHull_2d<double>(cellPointCoords, low, dx);
-    // ASSERT(hull.facets.size() >= 3);
-    // ASSERT(hull.facets[0][0] < cellPoints.size());
+    // POLY_ASSERT(hull.facets.size() >= 3);
+    // POLY_ASSERT(hull.facets[0][0] < cellPoints.size());
     // vector<RealPoint> ringPoints;
     // ringPoints.push_back(cellPoints[hull.facets[0][0]]);
     // for (j = 0; j != hull.facets.size(); ++j) {
-    //   ASSERT(hull.facets[j].size() == 2);
-    //   ASSERT(hull.facets[j][1] < cellPoints.size());
+    //   POLY_ASSERT(hull.facets[j].size() == 2);
+    //   POLY_ASSERT(hull.facets[j][1] < cellPoints.size());
     //   ringPoints.push_back(cellPoints[hull.facets[j][1]]);
     // }
     // cellRings[i] = BGring(ringPoints.begin(), ringPoints.end());
@@ -538,7 +538,7 @@ tessellate(const vector<RealType>& points,
            << boost::geometry::dsv(mpoints) << endl
            << boost::geometry::dsv(boundary) << endl;
     }
-    ASSERT(cellIntersections.size() > 0);    
+    POLY_ASSERT(cellIntersections.size() > 0);    
     if (cellIntersections.size() == 1) {
       cellRings[i] = cellIntersections[0];
     } else {
@@ -555,7 +555,7 @@ tessellate(const vector<RealType>& points,
           minR = thpt;
         }
       }
-      ASSERT(k < cellIntersections.size());
+      POLY_ASSERT(k < cellIntersections.size());
       cellRings[i] = cellIntersections[k];
     }
 
@@ -569,10 +569,10 @@ tessellate(const vector<RealType>& points,
       //                (itr+1)->y - clow[1], cdx);
       const IntPoint& pX1 = *itr;
       const IntPoint& pX2 = *(itr + 1);
-      ASSERT(*itr != *(itr + 1));
+      POLY_ASSERT(*itr != *(itr + 1));
       j = addKeyToMap(pX1, point2node);
       k = addKeyToMap(pX2, point2node);
-      ASSERT(j != k);
+      POLY_ASSERT(j != k);
       iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
@@ -580,9 +580,9 @@ tessellate(const vector<RealType>& points,
       //      << pX1.realx(clow[0], cdx) << " " << pX1.realy(clow[1], cdx) << ") ("
       //      << pX2.realx(clow[0], cdx) << " " << pX2.realy(clow[1], cdx) << ")" << endl;
     }
-    ASSERT(mesh.cells[i].size() >= 3);
+    POLY_ASSERT(mesh.cells[i].size() >= 3);
   }
-  ASSERT(edgeCells.size() == edgeHash2id.size());
+  POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
 
   // Fill in the mesh nodes.
   mesh.nodes = vector<RealType>(2*point2node.size());
@@ -591,7 +591,7 @@ tessellate(const vector<RealType>& points,
        ++itr) {
     const IntPoint& p = itr->first;
     i = itr->second;
-    ASSERT(i < mesh.nodes.size()/2);
+    POLY_ASSERT(i < mesh.nodes.size()/2);
     mesh.nodes[2*i]   = p.realx(clow[0], cdx);
     mesh.nodes[2*i+1] = p.realy(clow[1], cdx);
     // cerr << "Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i+1] << ") " << p << endl;
@@ -604,8 +604,8 @@ tessellate(const vector<RealType>& points,
        ++itr) {
     const EdgeHash& ehash = itr->first;
     i = itr->second;
-    ASSERT(i < mesh.faces.size());
-    ASSERT(mesh.faces[i].size() == 0);
+    POLY_ASSERT(i < mesh.faces.size());
+    POLY_ASSERT(mesh.faces[i].size() == 0);
     mesh.faces[i].push_back(ehash.first);
     mesh.faces[i].push_back(ehash.second);
   }
@@ -620,7 +620,7 @@ tessellate(const vector<RealType>& points,
            << mesh.nodes[2*n2] << " " << mesh.nodes[2*n2 + 1] << ")" << endl;
       for (j = 0; j != edgeCells[i].size(); ++j) cerr << " --> " << edgeCells[i][j] << " " << points[2*edgeCells[i][j]] << " " << points[2*edgeCells[i][j]+1] << endl;
     }
-    ASSERT(edgeCells[i].size() == 1 or edgeCells[i].size() == 2);
+    POLY_ASSERT(edgeCells[i].size() == 1 or edgeCells[i].size() == 2);
     mesh.faceCells[i] = edgeCells[i];
   }
 

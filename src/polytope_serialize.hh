@@ -35,7 +35,7 @@ struct Serializer {
                               const std::vector<char>::const_iterator& endItr) {
     const unsigned n = sizeof(T);
     char* data = reinterpret_cast<char*>(&value);
-    ASSERT(bufItr + n <= endItr);
+    POLY_ASSERT(bufItr + n <= endItr);
     std::copy(bufItr, bufItr + n, data);
     bufItr += n;
   }

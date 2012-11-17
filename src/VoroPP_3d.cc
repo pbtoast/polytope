@@ -10,7 +10,7 @@
 #include <set>
 
 #include "polytope.hh"
-#include "polytope_internal.hh" // Pulls in ASSERT and VoroPP_3d.hh.
+#include "polytope_internal.hh" // Pulls in POLY_ASSERT and VoroPP_3d.hh.
 #include "Point.hh"
 #include "container.hh"
 
@@ -72,13 +72,13 @@ updateMeshVertices(vector<Point3<UintType> >& vertices,
       mesh.nodes.push_back(vertices[i].realx(xmin, fconv));
       mesh.nodes.push_back(vertices[i].realy(ymin, fconv));
       mesh.nodes.push_back(vertices[i].realz(zmin, fconv));
-      ASSERT(mesh.nodes.size()/3 == j + 1);
+      POLY_ASSERT(mesh.nodes.size()/3 == j + 1);
       result[i] = j;
     } else {
       result[i] = vertexHash2ID[ipt1];
     }
   }
-  ASSERT(result.size() == vertices.size());
+  POLY_ASSERT(result.size() == vertices.size());
   return result;
 }
 
@@ -106,21 +106,21 @@ insertFaceInfo(const set<unsigned>& fhashi,
     mesh.faces.push_back(faceNodeIDs);
     mesh.faceCells.push_back(vector<int>());
     mesh.faceCells.back().push_back(icell);
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
-    ASSERT(mesh.faces.size() == iface + 1);
-    ASSERT(mesh.faceCells.size() == iface + 1);
-    ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
+    POLY_ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
+    POLY_ASSERT(mesh.faces.size() == iface + 1);
+    POLY_ASSERT(mesh.faceCells.size() == iface + 1);
+    POLY_ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
 
   } else {
 
     // Nope, this is an existing face, so we record it in the 
     // cell list as the 1's complement.
     const int iface = faceItr->second;
-    ASSERT(iface < mesh.faces.size());
+    POLY_ASSERT(iface < mesh.faces.size());
     mesh.cells[icell].push_back(~iface);
     mesh.faceCells[iface].push_back(~int(icell));
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
-    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == ~int(icell));
+    POLY_ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
+    POLY_ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == ~int(icell));
   }
 }
 
@@ -147,7 +147,7 @@ VoroPP_3d(const unsigned nx,
   mNy(ny),
   mNz(nz),
   mDegeneracy2(degeneracy*degeneracy) {
-  ASSERT(mDegeneracy2 > 0.0);
+  POLY_ASSERT(mDegeneracy2 > 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -181,20 +181,20 @@ tessellate(const vector<RealType>& points,
   const RealType randomfuzz = 0.0; // 2.0*dx;
 
   // Pre-conditions.
-  ASSERT(xmin < xmax);
-  ASSERT(ymin < ymax);
-  ASSERT(zmin < zmax);
-  ASSERT(scale > 0.0);
-  ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(xmin < xmax);
+  POLY_ASSERT(ymin < ymax);
+  POLY_ASSERT(zmin < zmax);
+  POLY_ASSERT(scale > 0.0);
+  POLY_ASSERT(points.size() % 3 == 0);
   for (int i = 0; i != ncells; ++i) {
-    ASSERT(points[3*i]     >= xmin and points[3*i]     <= xmax);
-    ASSERT(points[3*i + 1] >= ymin and points[3*i + 1] <= ymax);
-    ASSERT(points[3*i + 2] >= zmin and points[3*i + 2] <= zmax);
+    POLY_ASSERT(points[3*i]     >= xmin and points[3*i]     <= xmax);
+    POLY_ASSERT(points[3*i + 1] >= ymin and points[3*i + 1] <= ymax);
+    POLY_ASSERT(points[3*i + 2] >= zmin and points[3*i + 2] <= zmax);
   }
-  ASSERT(mesh.nodes.size() == 0);
-  ASSERT(mesh.cells.size() == 0);
-  ASSERT(mesh.faces.size() == 0);
-  ASSERT(mesh.faceCells.size() == 0);
+  POLY_ASSERT(mesh.nodes.size() == 0);
+  POLY_ASSERT(mesh.cells.size() == 0);
+  POLY_ASSERT(mesh.faces.size() == 0);
+  POLY_ASSERT(mesh.faceCells.size() == 0);
 
   unsigned i, j, k, iv, iface, nf, nvf, icell;
   double xc, yc, zc;
@@ -210,11 +210,11 @@ tessellate(const vector<RealType>& points,
     generators.push_back((points[3*i]     - xmin)/scale);
     generators.push_back((points[3*i + 1] - ymin)/scale);
     generators.push_back((points[3*i + 2] - zmin)/scale);
-    ASSERT(generators[3*i]     >= 0.0 and generators[3*i]     <= 1.0);
-    ASSERT(generators[3*i + 1] >= 0.0 and generators[3*i + 1] <= 1.0);
-    ASSERT(generators[3*i + 2] >= 0.0 and generators[3*i + 2] <= 1.0);
+    POLY_ASSERT(generators[3*i]     >= 0.0 and generators[3*i]     <= 1.0);
+    POLY_ASSERT(generators[3*i + 1] >= 0.0 and generators[3*i + 1] <= 1.0);
+    POLY_ASSERT(generators[3*i + 2] >= 0.0 and generators[3*i + 2] <= 1.0);
   }
-  ASSERT(generators.size() == 3*ncells);
+  POLY_ASSERT(generators.size() == 3*ncells);
 
   // Build the Voro++ container, and add the generators.
   container con(0.0, 1.0,
@@ -226,7 +226,7 @@ tessellate(const vector<RealType>& points,
                                         max(0.0, min(1.0, generators[3*i]     + (random01() - 0.5)*randomfuzz)),
                                         max(0.0, min(1.0, generators[3*i + 1] + (random01() - 0.5)*randomfuzz)),
                                         max(0.0, min(1.0, generators[3*i + 2] + (random01() - 0.5)*randomfuzz)));
-  ASSERT(con.total_particles() == ncells);
+  POLY_ASSERT(con.total_particles() == ncells);
 
   // Build the tessellation cell by cell.
   voronoicell cell;                                // The Voro++ cell (without neighbor tracking).
@@ -251,7 +251,7 @@ tessellate(const vector<RealType>& points,
                                                                           RealType(yc + 0.5*cell.pts[3*k + 1]),
                                                                           RealType(zc + 0.5*cell.pts[3*k + 2]),
                                                                           dx));
-        ASSERT(vertices.size() >= 4);
+        POLY_ASSERT(vertices.size() >= 4);
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
         // to point to the global (mesh) node IDs.
@@ -270,7 +270,7 @@ tessellate(const vector<RealType>& points,
         // std::cout << "                           ";
         // for (k = 0; k != vertices.size(); ++k) std::cout << vertexMap[k] << " ";
         // cout << endl;
-        // ASSERT(vertices.size() == 8);
+        // POLY_ASSERT(vertices.size() == 8);
         // // Blago!
 
         // Read the face vertex indices to a temporary array as well.
@@ -279,20 +279,20 @@ tessellate(const vector<RealType>& points,
 
         // Walk the faces.
         nf = cell.number_of_faces();
-        ASSERT(nf >= 4);
+        POLY_ASSERT(nf >= 4);
         k = 0;
         for (iface = 0; iface != nf; ++iface) {
-          ASSERT(k < voroFaceVertexIndices.size());
+          POLY_ASSERT(k < voroFaceVertexIndices.size());
           FaceHash fhashi;
           vector<unsigned> faceNodeIDs;
 
           // Read the vertices for this face.  We assume they are listed in the
           // proper counter-clockwise order (viewed from outside)!
           nvf = voroFaceVertexIndices[k++];
-          ASSERT(nvf >= 3);
+          POLY_ASSERT(nvf >= 3);
           for (iv = 0; iv != nvf; ++iv) {
-            ASSERT(k < voroFaceVertexIndices.size());
-            ASSERT(vertexMap.find(voroFaceVertexIndices[k]) != vertexMap.end());
+            POLY_ASSERT(k < voroFaceVertexIndices.size());
+            POLY_ASSERT(vertexMap.find(voroFaceVertexIndices[k]) != vertexMap.end());
             j = vertexMap[voroFaceVertexIndices[k++]];
 
             // Is this vertex new to the face?
@@ -301,7 +301,7 @@ tessellate(const vector<RealType>& points,
               faceNodeIDs.push_back(j);
             }
           }
-          ASSERT(faceNodeIDs.size() >= 3);
+          POLY_ASSERT(faceNodeIDs.size() >= 3);
 
           // Add this face to the cell.
           insertFaceInfo(fhashi, icell, faceNodeIDs, faceHash2ID, mesh);

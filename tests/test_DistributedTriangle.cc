@@ -107,13 +107,13 @@ int main(int argc, char** argv) {
     unsigned ncells = mesh.cells.size();
     unsigned nnodes = mesh.nodes.size()/2;
     unsigned nfaces = mesh.faces.size();
-    CHECK(mesh.sharedNodes.size() == numNeighborDomains);
-    CHECK(mesh.sharedFaces.size() == numNeighborDomains);
-    CHECK(mesh.neighborDomains.size() == 0 or *max_element(mesh.neighborDomains.begin(), mesh.neighborDomains.end()) < numProcs);
+    POLY_CHECK(mesh.sharedNodes.size() == numNeighborDomains);
+    POLY_CHECK(mesh.sharedFaces.size() == numNeighborDomains);
+    POLY_CHECK(mesh.neighborDomains.size() == 0 or *max_element(mesh.neighborDomains.begin(), mesh.neighborDomains.end()) < numProcs);
     for (unsigned k = 0; k != numNeighborDomains; ++k) {
-      CHECK(mesh.sharedNodes[k].size() > 0);
-      CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
-      CHECK(mesh.sharedFaces[k].size() == 0 or *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
+      POLY_CHECK(mesh.sharedNodes[k].size() > 0);
+      POLY_CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
+      POLY_CHECK(mesh.sharedFaces[k].size() == 0 or *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
     }
 
     // Figure out which of our nodes and faces we actually own.
@@ -121,11 +121,11 @@ int main(int argc, char** argv) {
     for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
       if (mesh.neighborDomains[k] < rank) {
         for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++j) {
-          ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
+          POLY_ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
           ownNodes[mesh.sharedNodes[k][j]] = 0;
         }
         for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++j) {
-          ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
+          POLY_ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
           ownFaces[mesh.sharedFaces[k][j]] = 0;
         }
       }
@@ -189,10 +189,10 @@ int main(int argc, char** argv) {
     // // Blago!
 
     // Check the global sizes.
-    CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));
-    CHECK2(ncellsGlobal == nx*nx, ncellsGlobal << " != " << nx*nx);
-    for (unsigned i = 0; i != ncells; ++i) CHECK2(mesh.cells[i].size() == 4, mesh.cells[i].size() << " != " << 4);
-    CHECK2(nfacesGlobal == 2*nx*(nx + 1), nfacesGlobal << " != " << 2*nx*(nx + 1));
+    POLY_CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));
+    POLY_CHECK2(ncellsGlobal == nx*nx, ncellsGlobal << " != " << nx*nx);
+    for (unsigned i = 0; i != ncells; ++i) POLY_CHECK2(mesh.cells[i].size() == 4, mesh.cells[i].size() << " != " << 4);
+    POLY_CHECK2(nfacesGlobal == 2*nx*(nx + 1), nfacesGlobal << " != " << 2*nx*(nx + 1));
 
     // Check that everyone agrees who talks to who.
     for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
       if (numOthers > 0) {
         otherNeighbors.resize(numOthers);
         MPI_Bcast(&(otherNeighbors.front()), numOthers, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
-        CHECK(rank == sendProc or
+        POLY_CHECK(rank == sendProc or
                count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
                count(otherNeighbors.begin(), otherNeighbors.end(), rank));
       }
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
                                                                            x1, y1,
                                                                            degeneracy, i));
     for (unsigned i = 0; i != nfaces; ++i) {
-      ASSERT(mesh.faces[i].size() == 2);
+      POLY_ASSERT(mesh.faces[i].size() == 2);
       const unsigned i1 = mesh.faces[i][0];
       const unsigned i2 = mesh.faces[i][1];
       const double xf = (0.5*(mesh.nodes[2*i1] + mesh.nodes[2*i2]))/lmax;
@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
       }
       MPI_Barrier(MPI_COMM_WORLD);
     }
-    ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
+    POLY_ASSERT(sendRequests.size() <= 2*mesh.neighborDomains.size());
 
     // Now go over each of our neighbors and look for who we're receiving from.
     for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
@@ -282,12 +282,12 @@ int main(int argc, char** argv) {
               vector<char>::const_iterator itr = buffer.begin();
               deserialize(otherNodeHashes, itr, buffer.end());
               deserialize(otherFaceHashes, itr, buffer.end());
-              ASSERT(itr == buffer.end());
+              POLY_ASSERT(itr == buffer.end());
 
               // Check that the other processes node and face positions line up with ours.
               const unsigned nn = mesh.sharedNodes[i].size(), nf = mesh.sharedFaces[i].size();
-              CHECK(otherNodeHashes.size() == nn);
-              CHECK(otherFaceHashes.size() == nf);
+              POLY_CHECK(otherNodeHashes.size() == nn);
+              POLY_CHECK(otherFaceHashes.size() == nf);
               vector<Point> myNodeHashes, myFaceHashes;
               for (unsigned j = 0; j != nn; ++j) myNodeHashes.push_back(localNodeHashes[mesh.sharedNodes[i][j]]);
               for (unsigned j = 0; j != nf; ++j) myFaceHashes.push_back(localFaceHashes[mesh.sharedFaces[i][j]]);
@@ -303,8 +303,8 @@ int main(int argc, char** argv) {
               //        ++itr) cerr << "(" << mesh.nodes[2*(*itr)] << " " << mesh.nodes[2*(*itr)+1] << ") ";
               //   cerr << endl;
               // }
-              CHECK(myNodeHashes == otherNodeHashes);
-              CHECK(myFaceHashes == otherFaceHashes);
+              POLY_CHECK(myNodeHashes == otherNodeHashes);
+              POLY_CHECK(myFaceHashes == otherFaceHashes);
             }
           }
         }

@@ -29,8 +29,8 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
   const unsigned ncells0 = mesh.cells.size();
   const unsigned nfaces0 = mesh.faces.size();
   const unsigned nnodes0 = mesh.nodes.size()/Dimension;
-  ASSERT(cellMask.size() == ncells0);
-  ASSERT(ncells0 == 0 or *max_element(cellMask.begin(), cellMask.end()) == 1);
+  POLY_ASSERT(cellMask.size() == ncells0);
+  POLY_ASSERT(ncells0 == 0 or *max_element(cellMask.begin(), cellMask.end()) == 1);
 
   // Create masks for the nodes and faces.
   std::vector<int> nodeMask(nnodes0, 0), faceMask(nfaces0, 0);
@@ -40,13 +40,13 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
            faceItr != mesh.cells[icell].end();
            ++faceItr) {
         const unsigned iface = (*faceItr >= 0 ? *faceItr : ~(*faceItr));
-        ASSERT(iface < mesh.faces.size());
+        POLY_ASSERT(iface < mesh.faces.size());
         faceMask[iface] = 1;
         for (std::vector<unsigned>::const_iterator nodeItr = mesh.faces[iface].begin();
              nodeItr != mesh.faces[iface].end();
              ++nodeItr) {
           const unsigned inode = *nodeItr;
-          ASSERT(inode < mesh.nodes.size()/Dimension);
+          POLY_ASSERT(inode < mesh.nodes.size()/Dimension);
           nodeMask[inode] = 1;
         }
       }
@@ -92,10 +92,10 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
         for (std::vector<unsigned>::iterator itr = newFaces.back().begin();
              itr != newFaces.back().end();
              ++itr) {
-          ASSERT(old2new_nodes.find(*itr) != old2new_nodes.end());
+          POLY_ASSERT(old2new_nodes.find(*itr) != old2new_nodes.end());
           *itr = old2new_nodes[*itr];
         }
-        ASSERT(mesh.faceCells[i].size() == 1 or
+        POLY_ASSERT(mesh.faceCells[i].size() == 1 or
                mesh.faceCells[i].size() == 2);
         newFaceCells.push_back(std::vector<int>());
         unsigned fc = (mesh.faceCells[i][0] < 0 ? ~mesh.faceCells[i][0] : mesh.faceCells[i][0]);
@@ -108,7 +108,7 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
                                                                ~old2new_cells[fc] :
                                                                old2new_cells[fc]);
         }
-        ASSERT(newFaceCells.back().size() == 1 or
+        POLY_ASSERT(newFaceCells.back().size() == 1 or
                newFaceCells.back().size() == 2);
       }
     }
@@ -127,7 +127,7 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
              itr != newCells.back().end();
              ++itr) {
           const int iface = (*itr >= 0 ? *itr : ~(*itr));
-          ASSERT(old2new_faces.find(iface) != old2new_faces.end());
+          POLY_ASSERT(old2new_faces.find(iface) != old2new_faces.end());
           *itr = (*itr >= 0 ? old2new_faces[iface] : ~old2new_faces[iface]);
         }
       }
@@ -137,7 +137,7 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
 
   // Update the shared nodes and faces.
   const unsigned numNeighbors = mesh.sharedNodes.size();
-  ASSERT(mesh.sharedFaces.size() == numNeighbors);
+  POLY_ASSERT(mesh.sharedFaces.size() == numNeighbors);
   for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
     std::vector<unsigned> newNodes, newFaces;
     for (std::vector<unsigned>::iterator itr = mesh.sharedNodes[idomain].begin();
@@ -158,10 +158,10 @@ deleteCells(Tessellation<Dimension, RealType>& mesh,
   mesh.convexHull = PLC<Dimension, RealType>();
 
   // Post-conditions.
-  ASSERT(mesh.nodes.size() == Dimension*nnodes1);
-  ASSERT(mesh.faces.size() == nfaces1);
-  ASSERT(mesh.faceCells.size() == nfaces1);
-  ASSERT(mesh.cells.size() == ncells1);
+  POLY_ASSERT(mesh.nodes.size() == Dimension*nnodes1);
+  POLY_ASSERT(mesh.faces.size() == nfaces1);
+  POLY_ASSERT(mesh.faceCells.size() == nfaces1);
+  POLY_ASSERT(mesh.cells.size() == ncells1);
 }
 
 }

@@ -161,7 +161,7 @@ class Tessellator
     }
     else
     {
-      ASSERT(Dimension == 3);
+      POLY_ASSERT(Dimension == 3);
 
       // Add the new generators to points.
       box.points.push_back(low[0]);

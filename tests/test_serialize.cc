@@ -25,8 +25,8 @@ checkSerialization(const T& val0) {
   vector<char>::const_iterator bufItr = buffer.begin();
   deserialize(val1, bufItr, buffer.end());
   // cout << "Check equivalence : " << val0 << " <=> " << val1 << endl;
-  CHECK(bufItr == buffer.end());
-  CHECK(val1 == val0);
+  POLY_CHECK(bufItr == buffer.end());
+  POLY_CHECK(val1 == val0);
 }
 
 //------------------------------------------------------------------------------

@@ -32,8 +32,8 @@ bisectSearch(const std::vector<DataType>& table,
   }
 
   // Post conditions.
-  ASSERT(ju - jl == 1);
-  ASSERT((jl == -1 && (val <= table[0]) == ascnd) ||
+  POLY_ASSERT(ju - jl == 1);
+  POLY_ASSERT((jl == -1 && (val <= table[0]) == ascnd) ||
          (jl == n - 1 && (val >= table[n - 1]) == ascnd) ||
          (((val >= table[jl]) == ascnd) &&
           ((val <= table[ju]) == ascnd)));

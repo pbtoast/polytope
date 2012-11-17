@@ -80,7 +80,7 @@ traverseConvexHull(const vector<RealType>& points,
 
   // The convex hull should be a polygon unless the input points 
   // don't form a polygon.
-  ASSERT((numPoints <= 2) or 
+  POLY_ASSERT((numPoints <= 2) or 
          ((numPoints > 2) and (indices.size() > 2)));
 }
 //-------------------------------------------------------------------
@@ -168,7 +168,7 @@ write(const Tessellation<3, RealType>& mesh,
   MPI_Comm_rank(comm, &rank);
   if (numFiles == -1)
     numFiles = nproc;
-  ASSERT(numFiles <= nproc);
+  POLY_ASSERT(numFiles <= nproc);
 
   // We put the entire data set into a directory named after the 
   // prefix, and every process gets its own subdirectory therein.
@@ -283,7 +283,7 @@ write(const Tessellation<3, RealType>& mesh,
     faceNodeCounts.push_back(mesh.faces[iface].size());
     std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(allFaceNodes));
   }
-  ASSERT(faceNodeCounts.size() == numFaces);
+  POLY_ASSERT(faceNodeCounts.size() == numFaces);
 
   // Construct the silo cell-face info.  We have to account for the convention
   // that the tessellation lists faces as the 1s complement when the orientation
@@ -301,7 +301,7 @@ write(const Tessellation<3, RealType>& mesh,
       allCellFaces.push_back(j < 0 ? ~j : j);
     }
   }
-  ASSERT(cellFaceCounts.size() == numCells);
+  POLY_ASSERT(cellFaceCounts.size() == numCells);
 
   // The polyhedral zone list is referred to in the options list.
   DBAddOption(optlist, DBOPT_PHZONELIST, (char*)"mesh_zonelist");

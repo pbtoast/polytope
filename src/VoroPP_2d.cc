@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include "polytope.hh"
-#include "polytope_internal.hh" // Pulls in ASSERT and VoroPP_2d.hh.
+#include "polytope_internal.hh" // Pulls in POLY_ASSERT and VoroPP_2d.hh.
 #include "convexHull_2d.hh"
 #include "container_2d.hh"
 
@@ -63,13 +63,13 @@ updateMeshVertices(vector<Point2<UintType> >& vertices,
       vertexHash2ID[ipt] = j;
       mesh.nodes.push_back(vertices[i].realx(xmin, fconv));
       mesh.nodes.push_back(vertices[i].realy(ymin, fconv));
-      ASSERT(mesh.nodes.size()/2 == j + 1);
+      POLY_ASSERT(mesh.nodes.size()/2 == j + 1);
       result[i] = j;
     } else {
       result[i] = vertexHash2ID[ipt1];
     }
   }
-  ASSERT(result.size() == vertices.size());
+  POLY_ASSERT(result.size() == vertices.size());
   return result;
 }
 
@@ -106,22 +106,22 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
     mesh.faces.back().push_back(jnode);
     mesh.faceCells.push_back(vector<int>());
     mesh.faceCells.back().push_back(icell);
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
-    ASSERT(mesh.faces.size() == iface + 1);
-    ASSERT(mesh.faceCells.size() == iface + 1);
-    ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
+    POLY_ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), iface) == 1);
+    POLY_ASSERT(mesh.faces.size() == iface + 1);
+    POLY_ASSERT(mesh.faceCells.size() == iface + 1);
+    POLY_ASSERT(mesh.faceCells[iface].size() == 1 and mesh.faceCells[iface][0] == icell);
 
   } else {
 
     // Nope, this is an existing face, so we record it in the 
     // cell list as the 1's complement.
     const int iface = faceItr->second;
-    ASSERT(iface < mesh.faces.size());
+    POLY_ASSERT(iface < mesh.faces.size());
     mesh.cells[icell].push_back(~iface);
     mesh.faceCells[iface].push_back(~int(icell));
-    ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
+    POLY_ASSERT(count(mesh.cells[icell].begin(), mesh.cells[icell].end(), ~iface) == 1);
 //     cerr << iface << " " << mesh.faceCells[iface].size() << " " << mesh.faceCells[iface][0] << " " << mesh.faceCells[iface][1] << endl;
-    ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == ~int(icell));
+    POLY_ASSERT(mesh.faceCells[iface].size() == 2 and mesh.faceCells[iface][1] == ~int(icell));
   }
 }
 
@@ -130,7 +130,7 @@ insertFaceInfo(const pair<unsigned, unsigned>& fhashi,
 //------------------------------------------------------------------------------
 pair<unsigned, unsigned> 
 hashFace(const unsigned i, const unsigned j) {
-  ASSERT(i != j);
+  POLY_ASSERT(i != j);
   return (i < j ? make_pair(i, j) : make_pair(j, i));
 }
 
@@ -147,7 +147,7 @@ VoroPP_2d(const unsigned nx,
   mNx(nx),
   mNy(ny),
   mDegeneracy2(degeneracy*degeneracy) {
-  ASSERT(mDegeneracy2 > 0.0);
+  POLY_ASSERT(mDegeneracy2 > 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -180,20 +180,20 @@ tessellate(const vector<RealType>& points,
   const RealType fconv = dx*scale;
 
   // Pre-conditions.
-  ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(points.size() % 2 == 0);
   for (int i = 0; i != ncells; ++i) {
     if (!(points[2*i]     >= xmin and points[2*i]     <= xmax)) cerr << "Blago : " << points[2*i] << " " << xmin << " " << xmax << endl;
     if (!(points[2*i + 1] >= ymin and points[2*i + 1] <= ymax)) cerr << "Blago : " << points[2*i+1] << " " << ymin << " " << ymax << endl;
-    ASSERT(points[2*i]     >= xmin and points[2*i]     <= xmax);
-    ASSERT(points[2*i + 1] >= ymin and points[2*i + 1] <= ymax);
+    POLY_ASSERT(points[2*i]     >= xmin and points[2*i]     <= xmax);
+    POLY_ASSERT(points[2*i + 1] >= ymin and points[2*i + 1] <= ymax);
   }
-  ASSERT(mesh.nodes.size() == 0);
-  ASSERT(mesh.cells.size() == 0);
-  ASSERT(mesh.faces.size() == 0);
-  ASSERT(mesh.faceCells.size() == 0);
-  ASSERT(xmin < xmax);
-  ASSERT(ymin < ymax);
-  ASSERT(scale > 0.0);
+  POLY_ASSERT(mesh.nodes.size() == 0);
+  POLY_ASSERT(mesh.cells.size() == 0);
+  POLY_ASSERT(mesh.faces.size() == 0);
+  POLY_ASSERT(mesh.faceCells.size() == 0);
+  POLY_ASSERT(xmin < xmax);
+  POLY_ASSERT(ymin < ymax);
+  POLY_ASSERT(scale > 0.0);
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
@@ -211,10 +211,10 @@ tessellate(const vector<RealType>& points,
   for (i = 0; i != ncells; ++i) {
     generators.push_back((points[2*i]     - xmin)/scale);
     generators.push_back((points[2*i + 1] - ymin)/scale);
-    ASSERT(generators[2*i]     >= 0.0 and generators[2*i]     <= 1.0);
-    ASSERT(generators[2*i + 1] >= 0.0 and generators[2*i + 1] <= 1.0);
+    POLY_ASSERT(generators[2*i]     >= 0.0 and generators[2*i]     <= 1.0);
+    POLY_ASSERT(generators[2*i + 1] >= 0.0 and generators[2*i + 1] <= 1.0);
   }
-  ASSERT(generators.size() == 2*ncells);
+  POLY_ASSERT(generators.size() == 2*ncells);
 
   // Build the Voro++ container, and add the generators.
   container_2d con(0.0, 1.0,
@@ -222,7 +222,7 @@ tessellate(const vector<RealType>& points,
                    mNx, mNy,
                    false, false, 8);
   for (i = 0; i != ncells; ++i) con.put(i, generators[2*i], generators[2*i + 1]);
-  ASSERT(con.total_particles() == ncells);
+  POLY_ASSERT(con.total_particles() == ncells);
 
   // Dummy low coordinates in integer space for the convex hull.
   uint64_t ilow[2] = {0U, 0U};
@@ -245,7 +245,7 @@ tessellate(const vector<RealType>& points,
 
         // Read out the vertices into a temporary array.
         nv = cell.p;
-        ASSERT(nv >= 3);
+        POLY_ASSERT(nv >= 3);
         vertices = vector<uint64_t>();
         vertices.reserve(2*nv);
         for (k = 0; k != nv; ++k) {
@@ -262,7 +262,7 @@ tessellate(const vector<RealType>& points,
 //           for (unsigned k = 0; k != hull.facets.size(); ++k) cerr << " " << hull.facets[k][0];
 //           cerr << endl;
 //         }
-        ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the hull method reduces to the unique set.
+        POLY_ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the hull method reduces to the unique set.
         nv = hull.facets.size();
         hullVertices = vector<Point2<uint64_t> >();
         hullVertices.reserve(nv);
@@ -283,9 +283,9 @@ tessellate(const vector<RealType>& points,
         for (k = 0; k != nv; ++k) {
           i = vertexMap[k];
           j = vertexMap[(k + 1) % nv];
-          ASSERT(i < mesh.nodes.size()/2);
-          ASSERT(j < mesh.nodes.size()/2);
-          ASSERT(i != j);
+          POLY_ASSERT(i < mesh.nodes.size()/2);
+          POLY_ASSERT(j < mesh.nodes.size()/2);
+          POLY_ASSERT(i != j);
           insertFaceInfo(hashFace(i, j), icell, i, j, faceHash2ID, mesh);
         }
       }

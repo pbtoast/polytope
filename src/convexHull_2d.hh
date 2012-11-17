@@ -76,7 +76,7 @@ convexHull_2d(const std::vector<RealType>& points,
   typedef uint64_t CoordHash;
   typedef Point2<CoordHash> PointHash;
 
-  ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(points.size() % 2 == 0);
   const unsigned n = points.size() / 2;
   int i, j, k, t;
 
@@ -133,8 +133,8 @@ convexHull_2d(const std::vector<RealType>& points,
     std::cerr << "Input:" << std::endl;
     for (unsigned i = 0; i != n; ++i) std::cerr << "  --> " << points[2*i] << " " << points[2*i+1] << std::endl;
   }
-  ASSERT(k >= 4);
-  ASSERT(result.front() == result.back());
+  POLY_ASSERT(k >= 4);
+  POLY_ASSERT(result.front() == result.back());
 
   // Translate our sorted information to a PLC based on the input point ordering and we're done.
   PLC<2, RealType> plc;
@@ -144,7 +144,7 @@ convexHull_2d(const std::vector<RealType>& points,
     plc.facets.back().push_back(sortedPoints[result[i]].second);
     plc.facets.back().push_back(sortedPoints[result[j]].second);
   }
-  ASSERT(plc.facets.size() == k - 1);
+  POLY_ASSERT(plc.facets.size() == k - 1);
   return plc;
 }
 

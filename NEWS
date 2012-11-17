@@ -1,0 +1,18 @@
+--------------------------------------------------------------------------------
+Release 0.5.1
+
+Minor bugfix release:
+
+- Puts the ASSERT2 macro inside the polytope namespace to avoid conflicts with
+  host codes.
+
+--------------------------------------------------------------------------------
+Release 0.5.0
+
+Initial release of polytope.  Includes functional 2D tessellator
+TriangleTessellator and somewhat flaky VoroPP_2d and VoroPP_3d tessellators.
+The DistributedTessellator seems to be working OK as well.  TetgenTessellator is
+not passing it's unit tests.
+
+Basically this release is intended as an initial beta release for the 2D
+Triangle based tessellator, both serial and parallel.

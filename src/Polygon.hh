@@ -17,8 +17,8 @@ class Polygon
   explicit Polygon(const std::vector<RealType>& vertices):
     m_vertices(vertices) 
   {
-    ASSERT((vertices.size() % 2) == 0);
-    ASSERT((vertices.size()/2) >= 3); // Must be at least a triangle!
+    POLY_ASSERT((vertices.size() % 2) == 0);
+    POLY_ASSERT((vertices.size()/2) >= 3); // Must be at least a triangle!
   }
 
   //! Construct a polygon by traversing the given vertices in order.
@@ -28,8 +28,8 @@ class Polygon
   Polygon(IteratorType begin, IteratorType end):
     m_vertices(begin, end) 
   {
-    ASSERT((m_vertices.size() % 2) == 0);
-    ASSERT((m_vertices.size()/2) >= 3); // Must be at least a triangle!
+    POLY_ASSERT((m_vertices.size() % 2) == 0);
+    POLY_ASSERT((m_vertices.size()/2) >= 3); // Must be at least a triangle!
   }
 
   // Default constructor, copy constructor, destructor, 
@@ -136,8 +136,8 @@ class Polygon
   //! vertices of the polygon.
   void project(const RealType point[], int edge, RealType projection[]) const
   {
-    ASSERT(edge >= 0);
-    ASSERT(edge < numEdges());
+    POLY_ASSERT(edge >= 0);
+    POLY_ASSERT(edge < numEdges());
 
     // Retrieve the coordinates of the edge's vertices.
     RealType v1x = m_vertices[2*edge], v1y = m_vertices[2*edge+1],

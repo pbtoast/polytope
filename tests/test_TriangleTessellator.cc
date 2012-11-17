@@ -8,7 +8,7 @@
 
 #include "polytope.hh"
 
-#define CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
 using namespace std;
 using namespace polytope;
@@ -62,13 +62,13 @@ test2x2Box()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, generators, box, mesh);
-  CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
-  CHECK(mesh.cells.size() == nx*nx);
+  POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
+  POLY_CHECK(mesh.cells.size() == nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
   {
-    CHECK(mesh.cells[i].size() == 4);
+    POLY_CHECK(mesh.cells[i].size() == 4);
   }
-  CHECK(mesh.faces.size() == 2*nx*(nx + 1));
+  POLY_CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
   // Write out the file if we can.
 #if HAVE_SILO
@@ -136,13 +136,13 @@ testCircle()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, PLCpoints, circle, mesh);
-  CHECK(mesh.cells.size() == N);
+  POLY_CHECK(mesh.cells.size() == N);
 
   // // Make sure that the nodes all fall within the circle.
   // for (int n = 0; n < mesh.nodes.size()/2; ++n)
   // {
   //   double x = mesh.nodes[2*n], y = mesh.nodes[2*n+1];
-  //   CHECK(x*x + y*y < 1+1e-14);
+  //   POLY_CHECK(x*x + y*y < 1+1e-14);
   // }
 
   // Write out the file if we can.
@@ -244,8 +244,8 @@ testDonut()
 //   for (int n = 0; n < mesh.nodes.size()/2; ++n)
 //   {
 //     double x = mesh.nodes[2*n], y = mesh.nodes[2*n+1];
-//     CHECK(x*x + y*y < 1+1e-14);
-// //    CHECK(x*x + y*y > 0.25*0.25-1e-14);
+//     POLY_CHECK(x*x + y*y < 1+1e-14);
+// //    POLY_CHECK(x*x + y*y > 0.25*0.25-1e-14);
 //   }
 
   // Write out the file if we can.
@@ -302,7 +302,7 @@ testMwithHoles()
   set<int> usedKeys;
   const int ixmax = 2 << 10;
   const int ixmax2 = ixmax*ixmax;
-  CHECK(ixmax2 < RAND_MAX);
+  POLY_CHECK(ixmax2 < RAND_MAX);
   const double dx = 2.0/ixmax;
   int i = rand() % ixmax2;
   double x, y;
@@ -349,7 +349,7 @@ testBounded()
   set<int> used;
   const int ixmax = 1 << 14;
   const int imax = ixmax*ixmax;
-  ASSERT(imax < RAND_MAX);
+  POLY_ASSERT(imax < RAND_MAX);
   int ix, iy, iran;
   double x, y;
   for (int i = 0; i < N; ++i)
@@ -373,7 +373,7 @@ testBounded()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, low, high, mesh);
-  CHECK(mesh.cells.size() == generators.size()/2);
+  POLY_CHECK(mesh.cells.size() == generators.size()/2);
 
   // Write out the file if we can.
 #if HAVE_SILO
@@ -397,7 +397,7 @@ testUnbounded()
   set<int> used;
   const int ixmax = 1 << 14;
   const int imax = ixmax*ixmax;
-  ASSERT(imax < RAND_MAX);
+  POLY_ASSERT(imax < RAND_MAX);
   int ix, iy, iran;
   double x, y;
   for (int i = 0; i < N; ++i)
@@ -425,7 +425,7 @@ testUnbounded()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, mesh);
-  CHECK(mesh.cells.size() == N);
+  POLY_CHECK(mesh.cells.size() == N);
 
   // Write out the file if we can.
 #if HAVE_SILO
