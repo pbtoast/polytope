@@ -18,7 +18,9 @@
 #include "deleteCells.hh"
 #include "bisectSearch.hh"
 #include "polytope_serialize.hh"
+#include "polytope_parallel_utilities.hh"
 #include "mortonOrderIndices.hh"
+#include "checkDistributedTessellation.hh"
 
 using namespace std;
 using std::min;
@@ -26,137 +28,6 @@ using std::max;
 using std::abs;
 
 namespace {  // We hide internal functions in an anonymous namespace
-
-//------------------------------------------------------------------------------
-// Hide dimensional specializations.
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType> struct DimensionTraits {};
-
-// 2D
-template<typename RealType>
-struct DimensionTraits<2, RealType> {
-  typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
-  typedef polytope::Point2<CoordHash> Point;
-
-  static ConvexHull convexHull(const vector<RealType>& points, 
-                               const RealType* low,
-                               const RealType& dx) { 
-    return ConvexHull(polytope::convexHull_2d(points, low, dx), points);
-  }
-  static Point constructPoint(const RealType* ri,
-                              const RealType* rlow,
-                              const RealType& dx,
-                              const size_t i) {
-    return Point(ri[0], ri[1], 
-                 rlow[0], rlow[1], 
-                 dx, i);
-  }
-  static Point faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
-                            const unsigned iface,
-                            const RealType* rlow,
-                            const RealType& dx) {
-    POLY_ASSERT(iface < mesh.faces.size());
-    POLY_ASSERT(mesh.faces[iface].size() == 2);
-    RealType pface[2];
-    const unsigned n1 = mesh.faces[iface][0], n2 = mesh.faces[iface][1];
-    POLY_ASSERT(n1 < mesh.nodes.size()/2);
-    POLY_ASSERT(n2 < mesh.nodes.size()/2);
-    pface[0] = 0.5*(mesh.nodes[2*n1]     + mesh.nodes[2*n2]);
-    pface[1] = 0.5*(mesh.nodes[2*n1 + 1] + mesh.nodes[2*n2 + 1]);
-    return constructPoint(pface, rlow, dx, iface);
-  }
-  static RealType maxLength(const RealType* low, const RealType* high) {
-    return std::max(high[0] - low[0], high[1] - low[1]);
-  }
-  static vector<RealType> extractCoords(const vector<RealType>& allCoords,
-                                        const vector<unsigned>& indices) {
-    vector<RealType> result;
-    result.reserve(2*indices.size());
-    for (vector<unsigned>::const_iterator itr = indices.begin();
-         itr != indices.end();
-         ++itr) {
-      const unsigned i = *itr;
-      POLY_ASSERT(i < allCoords.size()/2);
-      result.push_back(allCoords[2*i]);
-      result.push_back(allCoords[2*i + 1]);
-    }
-    return result;
-  }
-};
-
-// 3D
-template<typename RealType>
-struct DimensionTraits<3, RealType> {
-  typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
-  typedef polytope::Point3<CoordHash> Point;
-
-  static ConvexHull convexHull(const vector<RealType>& points, 
-                               const RealType* low,
-                               const RealType& dx) { 
-    return ConvexHull(polytope::convexHull_3d(points, low, dx), points);
-  }
-  static Point constructPoint(const RealType* ri,
-                              const RealType* rlow,
-                              const RealType& dx,
-                              const size_t i) {
-    return Point(ri[0], ri[1], ri[2], 
-                 rlow[0], rlow[1], rlow[2],
-                 dx, i);
-  }
-  static Point faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
-                            const unsigned iface,
-                            const RealType* rlow,
-                            const RealType& dx) {
-    POLY_ASSERT(iface < mesh.faces.size());
-    const unsigned nnodes = mesh.faces[iface].size();
-    POLY_ASSERT(nnodes >= 3);
-    RealType pface[3] = {0.0, 0.0, 0.0};
-    unsigned ni;
-    for (typename vector<unsigned>::const_iterator itr = mesh.faces[iface].begin();
-         itr != mesh.faces[iface].end();
-         ++itr) {
-      ni = mesh.faces[iface][*itr];
-      pface[0] += mesh.nodes[3*ni];
-      pface[1] += mesh.nodes[3*ni + 1];
-      pface[2] += mesh.nodes[3*ni + 2];
-    }
-    pface[0] /= nnodes;
-    pface[1] /= nnodes;
-    pface[2] /= nnodes;
-    return constructPoint(pface, rlow, dx, iface);
-  }
-  static RealType maxLength(const RealType* low, const RealType* high) {
-    return std::max(std::max(high[0] - low[0], high[1] - low[1]), high[2] - low[2]);
-  }
-  static vector<RealType> extractCoords(const vector<RealType>& allCoords,
-                                        const vector<unsigned>& indices) {
-    vector<RealType> result;
-    result.reserve(3*indices.size());
-    for (vector<unsigned>::const_iterator itr = indices.begin();
-         itr != indices.end();
-         ++itr) {
-      const unsigned i = *itr;
-      POLY_ASSERT(i < allCoords.size()/3);
-      result.push_back(allCoords[3*i]);
-      result.push_back(allCoords[3*i + 1]);
-      result.push_back(allCoords[3*i + 2]);
-    }
-    return result;
-  }
-};
-
-// Traits to handle mapping RealType -> MPI data type.
-template<typename RealType> struct DataTypeTraits;
-
-template<> struct DataTypeTraits<float> { 
-  static MPI_Datatype MpiDataType() { return MPI_FLOAT; }
-};
-
-template<> struct DataTypeTraits<double> { 
-  static MPI_Datatype MpiDataType() { return MPI_DOUBLE; }
-};
 
 //------------------------------------------------------------------------------
 // Comparator to compare std::pair's by their first or second element.
@@ -310,8 +181,10 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
   }
   POLY_ASSERT(generators.size() == points.size());
-  POLY_ASSERT(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0);
-  POLY_ASSERT(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1);
+  POLY_ASSERT2(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0,
+               "Min element out of range: " << *min_element(generators.begin(), generators.end()));
+  POLY_ASSERT2(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1,
+               "Max element out of range: " << *max_element(generators.begin(), generators.end()));
 
   // We can skip a lot of work if there's only one domain!
   vector<unsigned> gen2domain(nlocal, rank);
@@ -764,6 +637,12 @@ computeDistributedTessellation(const vector<RealType>& points,
     vector<MPI_Status> sendStatus(sendRequests.size());
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
   }
+
+  // Post-conditions.
+#ifndef NDEBUG
+  const string msg = checkDistributedTessellation(mesh);
+  POLY_ASSERT2(msg == "ok", msg);
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -811,12 +690,7 @@ computeBoundingBox(const vector<RealType>& points,
   // Find the local min & max.
   switch (mType) {
   case unbounded:
-    for (unsigned i = 0; i != n; ++i) {
-      for (unsigned j = 0; j != Dimension; ++j) {
-        rlow[j] =  min(rlow[j],  points[Dimension*i + j]);
-        rhigh[j] = max(rhigh[j], points[Dimension*i + j]);
-      }
-    }
+    polytope::computeBoundingBox<Dimension, RealType>(points, false, rlow, rhigh);
     break;
 
   case box:
@@ -848,10 +722,8 @@ computeBoundingBox(const vector<RealType>& points,
 
   // Find the global results.
   for (unsigned j = 0; j != Dimension; ++j) {
-    RealType tmp = rlow[j];
-    MPI_Allreduce(&tmp, &rlow[j], 1, DataTypeTraits<RealType>::MpiDataType(), MPI_MIN, MPI_COMM_WORLD);
-    tmp = rhigh[j];
-    MPI_Allreduce(&tmp, &rhigh[j], 1, DataTypeTraits<RealType>::MpiDataType(), MPI_MAX, MPI_COMM_WORLD);
+    rlow[j] = allReduce(rlow[j], MPI_MIN, MPI_COMM_WORLD);
+    rhigh[j] = allReduce(rhigh[j], MPI_MAX, MPI_COMM_WORLD);
   }
 }
 
