@@ -151,7 +151,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point Point;
   typedef KeyTraits::Key Key;
-  const double degeneracy = 1.0e-8;
+  const double degeneracy = 5.0e-7;
   
   // Parallel configuration.
   int rank, numProcs;
@@ -452,8 +452,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
     const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/KeyTraits::maxKey1d;
 
-    // Sort the shared elements by Morton ordering.  This should make the ordering consistent
-    // on all domains without communication.
+    // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
     for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
 
@@ -469,9 +468,6 @@ computeDistributedTessellation(const vector<RealType>& points,
       sort(nodePoints.begin(), nodePoints.end());
       for (unsigned i = 0; i != mesh.sharedNodes[idomain].size(); ++i) mesh.sharedNodes[idomain][i] = nodePoints[i].index;
 
-      // vector<Key> nodeKeys = mortonOrderIndices(nodePoints);
-      // sortByKeys(mesh.sharedNodes[idomain], nodeKeys);
-
       // Faces.
       vector<Point> facePoints;
       for (vector<unsigned>::const_iterator itr = mesh.sharedFaces[idomain].begin();
@@ -482,9 +478,6 @@ computeDistributedTessellation(const vector<RealType>& points,
                                                                                           dx));
       sort(facePoints.begin(), facePoints.end());
       for (unsigned i = 0; i != mesh.sharedFaces[idomain].size(); ++i) mesh.sharedFaces[idomain][i] = facePoints[i].index;
-
-      // vector<Key> faceKeys = mortonOrderIndices(facePoints);
-      // sortByKeys(mesh.sharedFaces[idomain], faceKeys);
     }
   }
 
@@ -681,7 +674,6 @@ computeBoundingBox(const vector<RealType>& points,
                    RealType* rlow,
                    RealType* rhigh) const {
 
-  const unsigned n = points.size() / Dimension;
   for (unsigned i = 0; i != Dimension; ++i) {
     rlow[i] = numeric_limits<RealType>::max();
     rhigh[i] = (numeric_limits<RealType>::is_signed ? -rlow[i] : numeric_limits<RealType>::min());

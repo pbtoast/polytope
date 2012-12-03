@@ -9,6 +9,10 @@
 #include <sstream>
 #include <algorithm>
 
+#include "polytope.hh"
+#include "Point.hh"
+#include "polytope_parallel_utilities.hh"
+
 extern "C" {
 #include "mpi.h"
 }
