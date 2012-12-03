@@ -13,6 +13,8 @@ extern "C" {
 }
 
 #include "KeyTraits.hh"
+#include "convexHull_2d.hh"
+#include "convexHull_3d.hh"
 
 namespace polytope {
 
