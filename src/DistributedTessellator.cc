@@ -450,7 +450,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/KeyTraits::maxKey1d;
+    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
 
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
@@ -634,7 +634,8 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Post-conditions.
 #ifndef NDEBUG
   const string msg = checkDistributedTessellation(mesh);
-  POLY_ASSERT2(msg == "ok", msg);
+  if (msg != "ok" and rank == 0) cerr << msg;
+  POLY_ASSERT(msg == "ok");
 #endif
 }
 

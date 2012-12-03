@@ -38,8 +38,6 @@ int main(int argc, char** argv) {
 
   const double x1 = 0.0, y1 = 0.0;
   const double x2 = 1.0, y2 = 1.0;
-  const double degeneracy = 1.0e-8;
-  const double lx = (x2 - x1), ly = (y2 - y1);
 
   // Figure out our parallel configuration.
   int rank, numProcs;
