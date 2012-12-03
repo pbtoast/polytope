@@ -151,7 +151,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point Point;
   typedef KeyTraits::Key Key;
-  const double degeneracy = 5.0e-7;
+  const double degeneracy = 1.0e-12;
   
   // Parallel configuration.
   int rank, numProcs;

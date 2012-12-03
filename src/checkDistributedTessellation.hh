@@ -275,7 +275,7 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
   // Compute the bounding box for normalizing our coordinates.
   RealType xmin[Dimension], xmax[Dimension];
   computeBoundingBox<Dimension, RealType>(mesh.nodes, true, xmin, xmax);
-  const RealType dxhash = Traits::maxLength(xmin, xmax)/KeyTraits::maxKey1d;
+  const RealType dxhash = Traits::maxLength(xmin, xmax)/(1LL << 34);
 
   // First check that all processors agree about who is talking to whom.
   for (unsigned sendProc = 0; sendProc != numDomains; ++sendProc) {
