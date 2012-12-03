@@ -111,13 +111,15 @@ struct DimensionTraits<2, RealType> {
                             const RealType& dx) {
     POLY_ASSERT(iface < mesh.faces.size());
     POLY_ASSERT(mesh.faces[iface].size() == 2);
-    RealType pface[2];
     const unsigned n1 = mesh.faces[iface][0], n2 = mesh.faces[iface][1];
     POLY_ASSERT(n1 < mesh.nodes.size()/2);
     POLY_ASSERT(n2 < mesh.nodes.size()/2);
-    pface[0] = 0.5*(mesh.nodes[2*n1]     + mesh.nodes[2*n2]);
-    pface[1] = 0.5*(mesh.nodes[2*n1 + 1] + mesh.nodes[2*n2 + 1]);
-    return constructPoint(pface, rlow, dx, iface);
+    const Point pn1 = constructPoint(&mesh.nodes[2*n1], rlow, dx, n1);
+    const Point pn2 = constructPoint(&mesh.nodes[2*n2], rlow, dx, n2);
+    const Point result((pn1.x >> 1) + (pn2.x >> 1),
+                       (pn1.y >> 1) + (pn2.y >> 1),
+                       iface);
+    return result;
   }
   static RealType maxLength(const RealType* low, const RealType* high) {
     return std::max(high[0] - low[0], high[1] - low[1]);
