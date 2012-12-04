@@ -3,6 +3,12 @@
 #include <iostream>
 #include <cstdlib>
 
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
+
 namespace polytope
 {
 

@@ -11,12 +11,17 @@
 #include <stdlib.h>
 #include <limits>
 #include <sstream>
-#include "mpi.h"
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
 #include "checkDistributedTessellation.hh"
 #include "Point.hh"
+
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
 
 using namespace std;
 
