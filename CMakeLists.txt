@@ -81,12 +81,12 @@ else()
 endif ()
 
 # If HDF5 is here, look for Silo.
-if (${HDF5_FOUND})
+if (${USE_SILO} EQUAL 1 AND ${HDF5_FOUND})
   find_package(Silo)
   if (${SILO_FOUND})
     include_directories("${SILO_INCLUDE_DIRS}")
-#   FIXME: For now, we assume libsiloh5 lives with libhdf5.
-#    link_directories("${SILO_LIBRARY_DIRS}")
+#         FIXME: For now, we assume libsiloh5 lives with libhdf5.
+#         link_directories("${SILO_LIBRARY_DIRS}")
     set (HAVE_SILO true)
     message("-- Found silo files ${SILO_INCLUDE_DIRS}")
   else ()
@@ -95,7 +95,7 @@ if (${HDF5_FOUND})
 else ()
   set(SILO_FOUND false)
   set (HAVE_SILO false)
-    message("-- Silo not found.  Skipping.")
+  message("-- Silo not found.  Skipping.")
 endif ()
 
 # Enable Triangle if triangle.h and triangle.c are found.

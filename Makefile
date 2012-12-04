@@ -8,6 +8,7 @@ CC         = not-set
 CXX        = not-set
 prefix     = not-set
 boost_root = not-set
+use_silo   = 1
 
 # This proxies everything to the builddir cmake.
 
@@ -70,6 +71,9 @@ endif
 ifneq ($(boost_root), not-set)
   CONFIG_FLAGS += -DBOOST_ROOT=$(boost_root)
 endif
+
+# Choose to build silo or not if available
+CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
 
 # Special considerations for specific systems.
 ifeq ($(systype), Darwin)

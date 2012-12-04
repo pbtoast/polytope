@@ -8,9 +8,14 @@
 #include <stdlib.h>
 #include <limits>
 #include <sstream>
-#include "mpi.h"
 
 #include "polytope.hh"
+
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
 
 #define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
@@ -153,6 +158,7 @@ int main(int argc, char** argv) {
 //     for (unsigned i = 0; i != nx*nx; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
 //     POLY_CHECK(mesh.faces.size() == 2*nx*(nx + 1));
 
+#if HAVE_SILO
     // Blago!
     {
       vector<double> r2(mesh.cells.size(), rank);
@@ -163,6 +169,7 @@ int main(int argc, char** argv) {
       polytope::SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
     }
     // Blago!
+#endif
   }
 
   cout << "PASS" << endl;

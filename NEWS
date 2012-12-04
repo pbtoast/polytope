@@ -1,4 +1,20 @@
 --------------------------------------------------------------------------------
+Release 0.5.2
+
+More bugfixes for the most part:
+
+- Adding a parallel consistency checking method (checkDistributedTessellation)
+  that performs fairly extensive (and potentially expensive) checking of the
+  parallel data structures.
+
+- Trying to make the DistributedTessellator more robust, but at least with our
+  one fully functioning serial Tessellator (Triangle) we still get occasionally
+  bad parallel structures.  The problem is that the tessellation is not 100%
+  reproducible with the same generator positions in different orders.
+
+- Adding some new make configuration options, like use_silo=0/1.
+
+--------------------------------------------------------------------------------
 Release 0.5.1
 
 Minor bugfix release:

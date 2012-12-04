@@ -11,10 +11,15 @@
 #include <stdlib.h>
 #include <limits>
 #include <sstream>
-#include "mpi.h"
 
 #include "polytope.hh"
 #include "Point.hh"
+
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
 
 #define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 
@@ -166,6 +171,7 @@ int main(int argc, char** argv) {
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
+#if HAVE_SILO
     // Blago!
     {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
@@ -180,6 +186,7 @@ int main(int argc, char** argv) {
       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
     }
     // Blago!
+#endif
 
     // Check the global sizes.
     POLY_CHECK(nnodesGlobal == (nx + 1)*(nx + 1));
