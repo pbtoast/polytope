@@ -32,7 +32,7 @@ public:
   DistributedTessellator(Tessellator<Dimension, RealType>* serialTessellator,
                          bool assumeControl = true,
                          bool buildCommunicationInfo = false);
-  ~DistributedTessellator();
+  virtual ~DistributedTessellator();
 
   // Note the DistributedTesselator doesn't know which of the boundary treatments
   // are supported by the underlying serial Tessellator, so it's up to the user
@@ -87,7 +87,7 @@ public:
   //! hell associated with elaborate inheritance hierarchies.
   virtual bool handlesPLCs() const { return mSerialTessellator->handlesPLCs(); }
 
-private:
+protected:
   // Define an enum to keep track of which type of tessellation is currently
   // being called.
   enum TessellationType {
@@ -106,8 +106,8 @@ private:
 
   // Internal method that implements the parallel algorithm -- called by
   // each of the three ways we support doing tessellations.
-  void computeDistributedTessellation(const std::vector<RealType>& points,
-                                      Tessellation<Dimension, RealType>& mesh) const;
+  virtual void computeDistributedTessellation(const std::vector<RealType>& points,
+                                              Tessellation<Dimension, RealType>& mesh) const;
 
   // Internal wrapper for doing a tessellation depending on the internal
   // value of mType.
@@ -120,6 +120,7 @@ private:
                           RealType* rlow,
                           RealType* rhigh) const;
 
+private:
   // Forbidden methods.
   DistributedTessellator();
   DistributedTessellator(const DistributedTessellator&);
