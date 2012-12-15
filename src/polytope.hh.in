@@ -22,4 +22,5 @@
 
 #if HAVE_MPI
 #include "DistributedTessellator.hh"
+#include "SerialDistributedTessellator.hh"
 #endif

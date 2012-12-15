@@ -16,7 +16,8 @@ if (TETGEN_FOUND)
 endif ()
 
 if (USE_MPI EQUAL 1)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} DistributedTessellator.cc)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} DistributedTessellator.cc 
+                                                 SerialDistributedTessellator.cc)
 endif()
 
 add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)

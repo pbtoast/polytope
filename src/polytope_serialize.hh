@@ -78,8 +78,9 @@ struct Serializer<std::vector<std::vector<T> > > {
                               const std::vector<char>::const_iterator& endItr) {
     unsigned n;
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(value[i], bufItr, endItr);
+    const unsigned n0 = value.size();
+    value.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(value[n0 + i], bufItr, endItr);
   }
 };
 
