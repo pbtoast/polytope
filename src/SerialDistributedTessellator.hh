@@ -45,8 +45,8 @@ protected:
 private:
   // Forbidden methods.
   SerialDistributedTessellator();
-  SerialDistributedTessellator(const DistributedTessellator&);
-  SerialDistributedTessellator& operator=(const DistributedTessellator&);
+  SerialDistributedTessellator(const SerialDistributedTessellator&);
+  SerialDistributedTessellator& operator=(const SerialDistributedTessellator&);
 };
 
 }
