@@ -39,6 +39,21 @@ struct ExtractKey {
   }
 };
 
+//------------------------------------------------------------------------------
+// Helper to look up the owner rank for a given cell index.
+//------------------------------------------------------------------------------
+unsigned
+ownerRank(const unsigned icell,
+          const vector<unsigned>& genProcOffsets) {
+  POLY_ASSERT(genProcOffsets.size() > 1);
+  POLY_ASSERT(icell < genProcOffsets.back());
+  const vector<unsigned>::const_iterator offItr = upper_bound(genProcOffsets.begin(),
+                                                              genProcOffsets.end(),
+                                                              icell);
+  POLY_ASSERT(offItr > genProcOffsets.begin() and offItr < genProcOffsets.end());
+  return distance(genProcOffsets.begin(), offItr) - 1U;
+}
+
 } // end anonymous namespace
 
 namespace polytope {
@@ -71,13 +86,6 @@ SerialDistributedTessellator<Dimension, RealType>::
 computeDistributedTessellation(const vector<RealType>& points,
                                Tessellation<Dimension, RealType>& mesh) const {
 
-  // Some spiffy shorthand typedefs.
-  typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
-  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point Point;
-  typedef KeyTraits::Key Key;
-  const double degeneracy = 1.0e-12;
-  
   // Parallel configuration.
   int rank, numProcs;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -86,7 +94,6 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Get the full global set of generators from everyone.
   vector<RealType> generators;
   vector<unsigned> genProcOffsets(1, 0);
-  const unsigned nlocal = points.size() / Dimension;
   {
     vector<char> localBuffer;
     serialize(points, localBuffer);
@@ -122,11 +129,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         for (set<unsigned>::const_iterator otherCellItr = nodeCells[*nodeItr].begin();
              otherCellItr != nodeCells[*nodeItr].end();
              ++otherCellItr) {
-          const vector<unsigned>::iterator offItr = lower_bound(genProcOffsets.begin(),
-                                                                genProcOffsets.end(),
-                                                                *otherCellItr);
-          POLY_ASSERT(offItr < genProcOffsets.end());
-          const unsigned otherRank = distance(genProcOffsets.begin(), offItr);
+          const unsigned otherRank = ownerRank(*otherCellItr, genProcOffsets);
           if (otherRank != rank) sharedNodes[otherRank].push_back(*nodeItr);
         }
       }
@@ -159,11 +162,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         const unsigned otherCell = (positiveID(mesh.faceCells[iface][0]) == icell ?
                                     positiveID(mesh.faceCells[iface][1]) :
                                     positiveID(mesh.faceCells[iface][0]));
-        const vector<unsigned>::iterator offItr = lower_bound(genProcOffsets.begin(),
-                                                              genProcOffsets.end(),
-                                                              otherCell);
-        POLY_ASSERT(offItr < genProcOffsets.end());
-        const unsigned otherRank = distance(genProcOffsets.begin(), offItr);
+        const unsigned otherRank = ownerRank(otherCell, genProcOffsets);
         if (otherRank != rank) {
           const vector<unsigned>::iterator procItr = lower_bound(mesh.neighborDomains.begin(),
                                                                  mesh.neighborDomains.end(),
