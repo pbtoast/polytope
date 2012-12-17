@@ -46,7 +46,12 @@ if (TRIANGLE_FOUND)
     add_executable(test_DistributedTriangle test_DistributedTriangle.cc)
     add_test(test_DistributedTriangle test_DistributedTriangle)
     target_link_libraries(test_DistributedTriangle polytope)
+    add_executable(test_SerialDistributedTriangle test_SerialDistributedTriangle.cc)
+    add_test(test_SerialDistributedTriangle test_SerialDistributedTriangle)
+    target_link_libraries(test_SerialDistributedTriangle polytope)
     set_tests_properties(test_DistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+    set_tests_properties(test_SerialDistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
                          WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
   endif()
 endif()

@@ -177,6 +177,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   }
 
   // Sort the mesh shared faces in global index order.
+  cerr << "Sizes : " << mesh.neighborDomains.size() << " " << mesh.sharedNodes.size() << " " << mesh.sharedFaces.size() << endl;
   for (unsigned j = 0; j != mesh.sharedFaces.size(); ++j) {
     sort(mesh.sharedFaces[j].begin(), mesh.sharedFaces[j].end());
     POLY_ASSERT(unique(mesh.sharedFaces[j].begin(), mesh.sharedFaces[j].end()) == mesh.sharedFaces[j].end());
