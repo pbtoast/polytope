@@ -55,10 +55,10 @@ struct Serializer<std::vector<T> > {
   static void deserializeImpl(std::vector<T>& value, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n;
+    unsigned n, n0 = value.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[i], bufItr, endItr);
+    value.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[n0 + i], bufItr, endItr);
   }
 };
 
@@ -68,7 +68,7 @@ struct Serializer<std::vector<std::vector<T> > > {
 
   static void serializeImpl(const std::vector<std::vector<T> >& value, 
                             std::vector<char>& buffer) {
-    const unsigned n = value.size();
+    unsigned n = value.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
     for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::serializeImpl(value[i], buffer);
   }
@@ -76,9 +76,8 @@ struct Serializer<std::vector<std::vector<T> > > {
   static void deserializeImpl(std::vector<std::vector<T> >& value, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n;
+    unsigned n, n0 = value.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    const unsigned n0 = value.size();
     value.resize(n0 + n);
     for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(value[n0 + i], bufItr, endItr);
   }
@@ -98,10 +97,10 @@ struct Serializer<std::vector<std::vector<std::vector<T> > > > {
   static void deserializeImpl(std::vector<std::vector<std::vector<T> > >& value, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n;
+    unsigned n, n0 = value.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::deserializeImpl(value[i], bufItr, endItr);
+    value.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::deserializeImpl(value[n0 + i], bufItr, endItr);
   }
 };
 

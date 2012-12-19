@@ -115,6 +115,24 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Do the global tessellation.
   this->tessellationWrapper(generators, mesh);
 
+  // // Blago!
+  // for (unsigned j = 0; j != numProcs; ++j) {
+  //   if (j == rank) {
+  //     vector<double> r2(mesh.cells.size(), rank);
+  //     for (unsigned i = 0; i != numProcs; ++i) {
+  //       fill(r2.begin() + genProcOffsets[i],
+  //            r2.begin() + genProcOffsets[i+1],
+  //            i);
+  //     }
+  //     map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  //     cellFields["domain"] = &r2[0];
+  //     cerr << "Writing serial mesh with " << mesh.cells.size() << endl;
+  //     polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_SerialDistributedTessellator_global_mesh");
+  //   }
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  // }
+  // // Blago!
+
   // Find the set of node we share with other processors.
   vector<set<unsigned> > nodeCells = mesh.computeNodeCells();
   map<unsigned, vector<unsigned> > sharedNodes;
@@ -187,6 +205,17 @@ computeDistributedTessellation(const vector<RealType>& points,
        mask.begin() + genProcOffsets[rank + 1],
        1);
   deleteCells(mesh, mask);
+
+  // // Blago!
+  // {
+  //   vector<double> r2(mesh.cells.size(), rank);
+  //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  //   cellFields["domain"] = &r2[0];
+  //   cerr << "Writing final mesh with " << mesh.cells.size() << endl;
+  //   polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_SerialDistributedTessellator_final_mesh");
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  // }
+  // // Blago!
 
   // Post-conditions.
 #ifndef NDEBUG
