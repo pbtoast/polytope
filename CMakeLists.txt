@@ -170,6 +170,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 # If we're parallel we have a few extra install items.
 if (USE_MPI EQUAL 1)
   install (FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
+                 "${PROJECT_SOURCE_DIR}/src/SerialDistributedTessellator.hh" 
                  "${PROJECT_SOURCE_DIR}/src/checkDistributedTessellation.hh" 
            DESTINATION include/polytope)
 endif ()
