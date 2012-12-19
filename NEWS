@@ -1,4 +1,13 @@
 --------------------------------------------------------------------------------
+Release 0.5.3
+
+Introducing the SerialDistributedTessellator, which should produce reliable
+tessellations in parallel because it reduces all generators to all processors,
+builds the global tessellation, and then culls down to each domains owned cells.
+This is obviously not a good solution for scaling, but will be a useful check
+on the DistributedTessellator.
+
+--------------------------------------------------------------------------------
 Release 0.5.2
 
 More bugfixes for the most part:
