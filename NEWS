@@ -1,4 +1,16 @@
 --------------------------------------------------------------------------------
+Release 0.5.4
+
+Minor bugfixes:
+
+- Upping required Boost version to 1.51 since we get incorrect geometries with
+  the Triangle tessellator using 1.50.
+
+- Pulling the requirement of throwing the -fPIC compile flag out to all compilers
+  rather than just GNU.  Not sure if this will be portable in all cases yet, but
+  we definitely need this in the instance of intel icpc.
+
+--------------------------------------------------------------------------------
 Release 0.5.3
 
 Introducing the SerialDistributedTessellator, which should produce reliable
