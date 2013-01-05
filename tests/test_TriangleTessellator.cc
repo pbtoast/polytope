@@ -68,14 +68,15 @@ test2x2Box()
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
   triangle.tessellate(generators, generators, box, mesh);
+  
   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1));
   POLY_CHECK(mesh.cells.size() == nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
   {
-    POLY_CHECK(mesh.cells[i].size() == 4);
+     POLY_CHECK(mesh.cells[i].size() == 4);
   }
   POLY_CHECK(mesh.faces.size() == 2*nx*(nx + 1));
-
+  
   // Write out the file if we can.
 #if HAVE_SILO
   vector<double> index(mesh.cells.size());
@@ -451,15 +452,32 @@ main(int argc, char** argv)
 #if HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
-
+  
+  cout << "2x2 Box...";
   test2x2Box();
-  testCircle();
-  testDonut();
-  testMwithHoles();
-  testBounded(); 
-  testUnbounded();
-
   cout << "PASS" << endl;
+  
+  cout << "Circle...";
+  testCircle();
+  cout << "PASS" << endl;
+  
+  cout << "Donut...";
+  testDonut();
+  cout << "PASS" << endl;
+  
+  cout << "Bounded...";
+  testBounded(); 
+  cout << "PASS" << endl;
+  
+  cout << "Unbounded...";
+  testUnbounded();
+  cout << "PASS" << endl;
+  
+  cout << "MwithHoles...";
+  testMwithHoles();
+  cout << "PASS" << endl;
+  
+  cout << endl << "ALL PASS" << endl;
 
 #if HAVE_MPI
   MPI_Finalize();

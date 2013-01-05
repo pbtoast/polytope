@@ -58,7 +58,7 @@ checkConsistentCommInfo(const std::string& label,
 
   typedef typename polytope::DimensionTraits<Dimension, RealType>::Point Point;
 
-  std::string result = "ok";
+  std::string result = "";
 
   // Go over all domains!
   for (unsigned sendProc = 0; sendProc != numDomains; ++sendProc) {
@@ -98,7 +98,7 @@ checkConsistentCommInfo(const std::string& label,
       POLY_ASSERT(itr == buffer.end());
 
       // If we're the receive processor, do we agree?
-      if (rank == recvProc and result == "ok") {
+      if (rank == recvProc and result == "") {
         std::vector<unsigned>::const_iterator neighbItr = find(neighborDomains.begin(), neighborDomains.end(), sendProc);
         if (neighbItr == neighborDomains.end()) {
           std::stringstream os;
@@ -112,7 +112,7 @@ checkConsistentCommInfo(const std::string& label,
             result = os.str();
           } else {
             unsigned i = 0;
-            while (i != nother and result == "ok") {
+            while (i != nother and result == "") {
               if (recvHashes[i] != hashes[sharedIDs[kk][i]]) {
                 std::stringstream os;
                 os << "Domain " << sendProc << " -> " << rank << " disagree about shared hashes." << std::endl;
@@ -128,11 +128,13 @@ checkConsistentCommInfo(const std::string& label,
       }
     }
 
+    if (result != "") std::cout << result << std::endl;
+
     // Globally reduce the message so far.
     result = reduceToMaxString(result, rank, numDomains);
-    if (result != "ok") return label + " : " + result;
+    if (result != "") return label + " : " + result;
   }
-
+  
   // That's it.
   return result;
 }
@@ -153,7 +155,7 @@ checkAllSharedElementsFound(const std::string& label,
 
   typedef typename polytope::DimensionTraits<Dimension, RealType>::Point Point;
 
-  std::string result = "ok";
+  std::string result = "";
 
   // Create the reverse mapping of hashes to local IDs.
   std::map<Point, unsigned> hash2id;
@@ -190,7 +192,7 @@ checkAllSharedElementsFound(const std::string& label,
       std::vector<unsigned>::const_iterator neighbItr = find(neighborDomains.begin(), neighborDomains.end(), sendProc);
 
       // Did we erroneously entirely miss this neighbor?
-      if (result == "ok" and
+      if (result == "" and
           neighbItr == neighborDomains.end() and commonHashes.size() > 0) {
         std::stringstream os;
         os << "Domain " << sendProc << " should be sending to " << rank << ", but " << rank << " is missing it.";
@@ -198,7 +200,7 @@ checkAllSharedElementsFound(const std::string& label,
       }
 
       // Do we erroneously list intersections with this neighbor?
-      if (result == "ok" and 
+      if (result == "" and 
           doNotAllowEmptySets and neighbItr != neighborDomains.end() and commonHashes.size() == 0) {
         std::stringstream os;
         os << "Domain " << sendProc << " is  sending to " << rank << ", but there are no common hashes.";
@@ -206,12 +208,12 @@ checkAllSharedElementsFound(const std::string& label,
       }
 
       // The rest of our tests only apply if there are common hashes.
-      if (result == "ok" and
+      if (result == "" and
           neighbItr != neighborDomains.end() and commonHashes.size() > 0) {
         const unsigned k = std::distance(neighborDomains.begin(), neighbItr);
         
         // Did we find the right number of common points?
-        if (result == "ok" and
+        if (result == "" and
             sharedIDs[k].size() != commonHashes.size()) {
           std::stringstream os;
           os << "Domain " << sendProc << " shares " << commonHashes.size()
@@ -221,7 +223,7 @@ checkAllSharedElementsFound(const std::string& label,
         }
 
         // Are the correct set of hashes present?
-        if (result == "ok") {
+        if (result == "") {
           std::vector<Point> myHashes;
           for (std::vector<unsigned>::const_iterator itr = sharedIDs[k].begin();
                itr != sharedIDs[k].end();
@@ -243,7 +245,7 @@ checkAllSharedElementsFound(const std::string& label,
 
     // Globally reduce the message so far.
     result = reduceToMaxString(result, rank, numDomains);
-    if (result != "ok") return label + " : " + result;
+    if (result != "") return label + " : " + result;
   }
 
   // That's it.
@@ -273,7 +275,7 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
   MPI_Comm_size(MPI_COMM_WORLD, &numDomains);
 
   // Prepare our result optimistically.
-  std::string result = "ok";
+  std::string result = "";
 
   // Compute the bounding box for normalizing our coordinates.
   RealType xmin[Dimension], xmax[Dimension];
@@ -303,8 +305,8 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
   for (unsigned i = 0; i != numNodes; ++i) nodeHashes.push_back(Traits::constructPoint(&mesh.nodes[Dimension*i], xmin, dxhash, i));
 
   // Check the communicated nodes.
-  if (result == "ok") result = checkConsistentCommInfo<Dimension, RealType>("Node", rank, numDomains, nodeHashes, mesh.neighborDomains, mesh.sharedNodes);
-  if (result == "ok") result = checkAllSharedElementsFound<Dimension, RealType>("Node", rank, numDomains, nodeHashes, mesh.neighborDomains, mesh.sharedNodes, true);
+  if (result == "") result = checkConsistentCommInfo<Dimension, RealType>("Node", rank, numDomains, nodeHashes, mesh.neighborDomains, mesh.sharedNodes);
+  if (result == "") result = checkAllSharedElementsFound<Dimension, RealType>("Node", rank, numDomains, nodeHashes, mesh.neighborDomains, mesh.sharedNodes, true);
 
   // Something weird about hashing the faces, so I'm suspending those checks for now.
 
@@ -317,6 +319,7 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
   // if (result == "ok") result = checkConsistentCommInfo<Dimension, RealType>("Face", rank, numDomains, faceHashes, mesh.neighborDomains, mesh.sharedFaces);
   // if (result == "ok") result = checkAllSharedElementsFound<Dimension, RealType>("Face", rank, numDomains, faceHashes, mesh.neighborDomains, mesh.sharedFaces, false);
 
+  if( result == "" ) result = "ok";
   return result;
 }
 
