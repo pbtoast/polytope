@@ -476,7 +476,6 @@ tessellate(const vector<RealType>& points,
 
   // Walk each generator and build up it's unique nodes and faces.
   mesh.cells.resize(numGenerators);
-  bool inside;
   CoordHash minR, thpt;
   IntPoint X;
   map<IntPoint, int> point2node;
@@ -545,7 +544,6 @@ tessellate(const vector<RealType>& points,
       X = IntPoint(points[2*i], points[2*i+1],
                    clow[0], clow[1],
                    cdx);
-      inside = boost::geometry::within(X, cellIntersections[j]);
       minR = numeric_limits<CoordHash>::max();
       j = 0;
       for (j = 0; j != cellIntersections.size(); ++j) {
