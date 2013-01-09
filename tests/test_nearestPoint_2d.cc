@@ -44,11 +44,12 @@ int main(int argc, char** argv) {
   // Test some points.
   const double tol = 1.0e-10;
 
-  // {
-  //   double p[2] = {-10.0, -10.0}, answer[2] = {-5.0, -5.0}, result[2];
-  //   nearestPoint(p, numVertices, vertices, plc, result);
-  //   POLY_CHECK((polytope::geometry::distance<2, double>(result, answer) < tol));
-  // }
+  {
+    double p[2] = {-10.0, -10.0}, answer[2] = {-5.0, -5.0}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2((polytope::geometry::distance<2, double>(result, answer) < tol),
+                result[0] << " " << result[1] << " : " << dist);
+  }
 
   {
     double p[2] = {-10.0, 0.0}, answer[2] = {-5.0, 0.0}, result[2];
@@ -57,11 +58,12 @@ int main(int argc, char** argv) {
                 result[0] << " " << result[1] << " : " << dist);
   }
 
-  // {
-  //   double p[2] = {1.0, 0.25}, answer[2] = {1.0, 0.25}, result[2];
-  //   nearestPoint(p, numVertices, vertices, plc, result);
-  //   POLY_CHECK((polytope::geometry::distance<2, double>(result, answer) < tol));
-  // }
+  {
+    double p[2] = {1.0, 0.25}, answer[2] = {1.0, 0.25}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2((polytope::geometry::distance<2, double>(result, answer) < tol),
+                result[0] << " " << result[1] << " : " << dist);
+  }
 
   cout << "PASS" << endl;
   return 0;
