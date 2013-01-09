@@ -9,8 +9,7 @@
 
 #include "polytope.hh"
 #include "nearestPoint.hh"
-
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 
@@ -29,9 +28,10 @@ int main(int argc, char** argv) {
                           1.0, -1.0,
                           1.0,  1.0,
                          -1.0,  1.0};
-  PLC<2, double> plc;
+  polytope::PLC<2, double> plc;
   plc.facets.resize(4);
   plc.holes.resize(1);
+  plc.holes[0].resize(4);
   for (unsigned i = 0; i != 4; ++i) {
     plc.facets[i].resize(2);
     plc.facets[i][0] = i;
@@ -43,10 +43,25 @@ int main(int argc, char** argv) {
 
   // Test some points.
   const double tol = 1.0e-10;
-  double[2] p = {-10.0, -10.0}, result[2], answer[2];
-  nearestPoint(p, numVertices, vertices, plc, result);
-  answer = {-5.0, -5.0};
-  POLY_CHECK(distance<2, double>(result, answer) < tol);
+
+  // {
+  //   double p[2] = {-10.0, -10.0}, answer[2] = {-5.0, -5.0}, result[2];
+  //   nearestPoint(p, numVertices, vertices, plc, result);
+  //   POLY_CHECK((polytope::geometry::distance<2, double>(result, answer) < tol));
+  // }
+
+  {
+    double p[2] = {-10.0, 0.0}, answer[2] = {-5.0, 0.0}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2((polytope::geometry::distance<2, double>(result, answer) < tol),
+                result[0] << " " << result[1] << " : " << dist);
+  }
+
+  // {
+  //   double p[2] = {1.0, 0.25}, answer[2] = {1.0, 0.25}, result[2];
+  //   nearestPoint(p, numVertices, vertices, plc, result);
+  //   POLY_CHECK((polytope::geometry::distance<2, double>(result, answer) < tol));
+  // }
 
   cout << "PASS" << endl;
   return 0;
