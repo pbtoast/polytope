@@ -56,7 +56,7 @@ template<int Dimension, typename RealType> struct DotFunctor;
 template<typename RealType> 
 struct DotFunctor<2, RealType> {
   static RealType impl(const RealType* a, const RealType* b) {
-    return a[0]*b[0] + a[1]+b[1];
+    return a[0]*b[0] + a[1]*b[1];
   }
 };
 
@@ -64,7 +64,7 @@ struct DotFunctor<2, RealType> {
 template<typename RealType> 
 struct DotFunctor<3, RealType> {
   static RealType impl(const RealType* a, const RealType* b) {
-    return a[0]*b[0] + a[1]+b[1] + a[2]*b[2];
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
   }
 };
 
