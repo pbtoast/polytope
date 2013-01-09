@@ -19,6 +19,13 @@ target_link_libraries(test_convexHull_3d polytope)
 set_tests_properties(test_convexHull_3d PROPERTIES PASS_REGULAR_EXPRESSION PASS
                      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 
+# nearestPoint 2D test.
+add_executable(test_nearestPoint_2d test_nearestPoint_2d.cc)
+add_test(test_nearestPoint_2d test_nearestPoint_2d)
+target_link_libraries(test_nearestPoint_2d polytope)
+set_tests_properties(test_nearestPoint_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+
 # Voro++ 2D tessellator.
 add_executable(test1_VoroPP_2d test1_VoroPP_2d.cc)
 add_test(test1_VoroPP_2d test1_VoroPP_2d)
