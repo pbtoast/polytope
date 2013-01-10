@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
   srand(10489592);
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 50; nx != 51; ++nx) {
+  for (unsigned nx = 40; nx != 75; ++nx) {
     if (rank == 0) cout << "Testing nx=" << nx << endl;
 
     // Create the seed positions for each domain.  Note we rely on this sequence
@@ -96,8 +96,10 @@ int main(int argc, char** argv) {
         }
       }
     }
-
-    //cout << "Proc " << rank << " has " << generators.size()/2 << " generators" << endl;
+    
+    
+    unsigned numGen = generators.size()/2;
+    POLY_CHECK2( numGen > 2, "Processor " << rank << " only has " << numGen << " generators. This is not enough to tessellate!");
 
     // Create the tessellation.
     double xmin[2] = { x1, y1 };
@@ -191,6 +193,7 @@ int main(int argc, char** argv) {
     //    }
     // }
 
+    
     // for (unsigned iproc = 0; iproc != mesh.neighborDomains.size(); ++iproc ){
     //    unsigned otherProc = mesh.neighborDomains[iproc];
     //    for (std::vector<unsigned>::const_iterator nodeItr = mesh.sharedNodes[iproc].begin();
@@ -200,21 +203,33 @@ int main(int argc, char** argv) {
     //            << mesh.nodes[2*(*nodeItr)+1] << " ) " << endl;
     //    }
     // }
-
-    // Blago!
-    {
-      vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
-      for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
-      for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
-      map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-      cellFields["domain"] = &r2[0];
-      nodeFields["ownNodes"] = &rownNodes[0];
-      faceFields["ownFaces"] = &rownFaces[0];
-      ostringstream os;
-      os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
-    }
-    // Blago!
+    
+    // for (unsigned iproc = 0; iproc < numProcs; ++iproc){
+    //    if( rank == iproc ){
+    //       cout << endl << "DOMAIN " << iproc << endl;
+    //       for (unsigned i = 0; i < mesh.nodes.size()/2; ++i ){
+    //          cout << i << ":   ( " << mesh.nodes[2*i  ] 
+    //               << " , " << mesh.nodes[2*i+1] << " ) " << endl;
+    //       }
+    //    }
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    // }
+    
+    
+    // // Blago!
+    // {
+    //   vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
+    //   for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
+    //   for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
+    //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+    //   cellFields["domain"] = &r2[0];
+    //   nodeFields["ownNodes"] = &rownNodes[0];
+    //   faceFields["ownFaces"] = &rownFaces[0];
+    //   ostringstream os;
+    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+    //   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+    // }
+    // // Blago!
 
     // Check the global sizes.
     POLY_CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));
@@ -224,7 +239,10 @@ int main(int argc, char** argv) {
 
     // We can delegate checking the correctness of the parallel data structures to a helper method.
     const string parCheck = checkDistributedTessellation(mesh);
-    //POLY_CHECK2(parCheck == "ok", parCheck);
+    POLY_CHECK2(parCheck == "ok", parCheck);
+
+
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   cout << "PASS" << endl;
