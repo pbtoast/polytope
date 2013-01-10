@@ -74,13 +74,24 @@ if (TRIANGLE_FOUND)
     add_executable(test_DistributedTriangle test_DistributedTriangle.cc)
     add_test(test_DistributedTriangle test_DistributedTriangle)
     target_link_libraries(test_DistributedTriangle polytope)
+    set_tests_properties(test_DistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
     add_executable(test_SerialDistributedTriangle test_SerialDistributedTriangle.cc)
     add_test(test_SerialDistributedTriangle test_SerialDistributedTriangle)
     target_link_libraries(test_SerialDistributedTriangle polytope)
-    set_tests_properties(test_DistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
     set_tests_properties(test_SerialDistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
                          WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+    add_executable(test_FailedCommunication test_FailedCommunication.cc)
+    add_test(test_FailedCommunication test_FailedCommunication)
+    target_link_libraries(test_FailedCommunication polytope)
+    set_tests_properties(test_FailedCommunication PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+    add_executable(test_DistributedRandomPoints test_DistributedRandomPoints.cc)
+    add_test(test_DistributedRandomPoints test_DistributedRandomPoints)
+    target_link_libraries(test_DistributedRandomPoints polytope)
+    set_tests_properties(test_DistributedRandomPoints PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+    
   endif()
 endif()
 
