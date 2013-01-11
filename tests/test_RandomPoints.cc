@@ -8,6 +8,7 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 using namespace polytope;
@@ -38,10 +39,7 @@ void outputResult(Tessellator<2,double>& tessellator,
    generators.randomPoints( nPoints );
 
    Tessellation<2,double> mesh;
-   tessellator.tessellate(generators.mGenerators,
-			  boundary.mGens,
-			  boundary.mPLC,
-			  mesh);
+   tessellate2D(generators.mPoints,boundary,tessellator,mesh);
    POLY_ASSERT( mesh.cells.size() == nPoints );
    
 #if HAVE_SILO
@@ -54,24 +52,6 @@ void outputResult(Tessellator<2,double>& tessellator,
    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
                                           faceFields, cellFields, name);
 #endif
-}
-
-
-// -----------------------------------------------------------------------
-// tessellate
-// -----------------------------------------------------------------------
-void tessellate(Boundary2D<double>& boundary,
-                Generators<2,double>& generators,
-                Tessellator<2,double>& tessellator,
-                Tessellation<2,double>& mesh)
-{
-   if( tessellator.handlesPLCs() ){
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mGens, boundary.mPLC, mesh);
-   }else{
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mLow, boundary.mHigh, mesh);
-   }
 }
 
 
@@ -90,7 +70,7 @@ void testBoundary(Boundary2D<double>& boundary,
       cout << nPoints << " points...";
 
       generators.randomPoints( nPoints );      
-      tessellate(boundary,generators,tessellator,mesh);
+      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
 
       POLY_ASSERT( mesh.cells.size() == nPoints );
       cout << "PASS" << endl;

@@ -8,9 +8,9 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
+#include "polytope_test_utilities.hh"
 
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; return; } //exit(-1); }
-#define POLY_CHECK2(x) if (!(x)) { cout << "FAIL: "; return false; }
+#define POLY_CHECK_BOOL(x) if (!(x)) { cout << "FAIL: "; return false; }
 
 using namespace std;
 using namespace polytope;
@@ -44,6 +44,7 @@ double minLength(Tessellation<2,double>& mesh)
       double len = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
       faceLength = min( faceLength, sqrt(len) );
    }
+   return faceLength;
 }
 
 // -----------------------------------------------------------------------
@@ -51,36 +52,19 @@ double minLength(Tessellation<2,double>& mesh)
 // -----------------------------------------------------------------------
 bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 {
-   POLY_CHECK2(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
-   POLY_CHECK2(mesh.cells.size()   == nx*ny );
-   POLY_CHECK2(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
-   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK2(mesh.cells[i].size() == 4);
+   POLY_CHECK_BOOL(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
+   POLY_CHECK_BOOL(mesh.cells.size()   == nx*ny );
+   POLY_CHECK_BOOL(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
+   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK_BOOL(mesh.cells[i].size() == 4);
    
    std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
    for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
    {
-      POLY_CHECK2( (nodeCells[i].size() == 4) ||
-                   (nodeCells[i].size() == 2) ||
-                   (nodeCells[i].size() == 1) );
+      POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
+                       (nodeCells[i].size() == 2) ||
+                       (nodeCells[i].size() == 1) );
    }
    return true;
-}
-
-// -----------------------------------------------------------------------
-// tessellate
-// -----------------------------------------------------------------------
-void tessellate(Boundary2D<double>& boundary,
-                Generators<2,double>& generators,
-                Tessellator<2,double>& tessellator,
-                Tessellation<2,double>& mesh)
-{
-   if( tessellator.handlesPLCs() ){
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mGens, boundary.mPLC, mesh);
-   }else{
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mLow, boundary.mHigh, mesh);
-   }
 }
 
 // -----------------------------------------------------------------------
@@ -105,7 +89,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       generators.cartesianPoints( nxny );         // reset locations
       generators.perturb( epsilon );              // perturb
       Tessellation<2,double> mesh;
-      tessellate(boundary,generators,tessellator,mesh);
+      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
       bool isCartesian = checkIfCartesian(mesh,nx,nx);
       if( isCartesian ){ 
          cout << "PASS" << endl; 

@@ -8,6 +8,7 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 using namespace polytope;
@@ -19,7 +20,26 @@ inline std::string to_string(const T& t){
    ss << t;
    return ss.str();
 }
-// -------------------------------------------------------------------- //
+// //
+// double computeArea( Tessellation<2,double>& mesh )
+// {
+//    double area = 0.0;
+//    std::vector<std::set<unsigned> > cellToNodes = mesh.computeCellToNodes();
+//    for (unsigned icell = mesh.cells.begin(); 
+//         icell != mesh.cells.end();
+//         ++icell){
+//       std::vector<double> nodeCell;
+//       for (std::set<unsigned>::const_iterator nodeItr = cellToNodes[icell].begin();
+//            nodeItr != cellToNodes[icell].end(); ++nodeItr){
+//          unsigned inode = *nodeItr;
+//          nodeCell.push_back( mesh.nodes[2*inode  ] );
+//          nodeCell.push_back( mesh.nodes[2*inode+1] );
+//       }
+//       area += cellArea( nodeCell );
+//    }
+//    return area;
+// }
+// // -------------------------------------------------------------------- //
 double cellArea(std::vector<double> x, std::vector<double> y )
 {
    double  area=0.0;
@@ -67,17 +87,15 @@ void testBoundary(Boundary2D<double>& boundary,
    Generators<2,double> generators( boundary );
    unsigned nPoints = 1;
    Tessellation<2,double> mesh;
-   for( unsigned n = 0; n < 3; ++n ){
+   cout << "Area of boundary = " << boundary.mArea << endl;
+   for( unsigned n = 0; n < 4; ++n ){
       POLY_ASSERT( mesh.empty() );
       nPoints = nPoints * 10;
       cout << nPoints << " points...";
 
       generators.randomPoints( nPoints );
       
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mGens,
-                             boundary.mPLC,
-                             mesh);
+      tessellate2D(generators.mPoints, boundary, tessellator, mesh);
 
       double area = tessellationArea( mesh );
       cout << "Area of tessellation = " << area << endl;

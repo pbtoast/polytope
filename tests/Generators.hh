@@ -10,19 +10,30 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 
+// We use the Boost.Geometry library to determine if generators lie inside boundary
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+
 using namespace std;
 using namespace polytope;
+
 
 //------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 class Generators
 {
 public:
+   // ------------- Some handy typedefs for Boost.Geometry --------------- //
+   typedef boost::geometry::model::point<RealType, Dimension, boost::geometry::cs::cartesian>
+      BGpoint;
+   typedef boost::geometry::model::polygon<BGpoint,false> 
+      BGpolygon;
+   
    // -------------- Public member variables and routines ---------------- //
 
    // Number of generators
    unsigned nPoints;
-   vector<RealType> mGenerators;
+   vector<RealType> mPoints;
    Boundary2D<RealType>& mBoundary;
    
    
@@ -31,7 +42,7 @@ public:
    //------------------------------------------------------------------------
    Generators(Boundary2D<RealType>& boundary):
       nPoints(0),
-      mGenerators(0),
+      mPoints(0),
       mBoundary(boundary) {};
 
    ~Generators() {};
@@ -42,7 +53,7 @@ public:
    //------------------------------------------------------------------------
    void randomPoints(unsigned nGenerators)
    {
-      mGenerators.clear();
+      mPoints.clear();
       nPoints = nGenerators;
 
       mBoundary.getBoundingBox();
@@ -50,19 +61,19 @@ public:
       POLY_ASSERT( mBoundary.mHigh != 0 );
       
       for (unsigned iter = 0; iter < nGenerators; ++iter ){
-         RealType pos[Dimension];
+         std::vector<RealType> pos(Dimension,0);
          bool inside = false;
-         while( !inside )
-         {
+         while( !inside ){
             for (unsigned n = 0; n < Dimension; ++n){
                pos[n] = (mBoundary.mHigh[n]-mBoundary.mLow[n]) * 
                   RealType(::random())/RAND_MAX + mBoundary.mLow[n];
             }
-            inside = mBoundary.testInside( pos );
+            inside = boost::geometry::within( makePoint(pos),
+                                              mBoundary.mBGboundary );
          }
-         mGenerators.insert( mGenerators.end(), pos, pos + Dimension );
+         mPoints.insert( mPoints.end(), pos.begin(), pos.end() );
       }
-      POLY_ASSERT( mGenerators.size()/Dimension == nGenerators );
+      POLY_ASSERT( mPoints.size()/Dimension == nGenerators );
    }
 
    
@@ -71,7 +82,7 @@ public:
    //------------------------------------------------------------------------
    void cartesianPoints(vector<unsigned> nCellsPerDimension)
    {
-      mGenerators.clear();
+      mPoints.clear();
       POLY_ASSERT( nCellsPerDimension.size() == Dimension );
 
       mBoundary.getBoundingBox();
@@ -83,7 +94,7 @@ public:
       }else{
          cartesian3D( nCellsPerDimension[0], nCellsPerDimension[1], nCellsPerDimension[2] );
       }
-      nPoints = mGenerators.size()/Dimension;
+      nPoints = mPoints.size()/Dimension;
    }
     
 
@@ -92,7 +103,7 @@ public:
    //------------------------------------------------------------------------
    void radialPoints(const unsigned nr)
    {
-      mGenerators.clear();
+      mPoints.clear();
       POLY_ASSERT( Dimension == 2 );
       RealType maxDistance;
       mBoundary.getBoundingRadius( maxDistance );
@@ -105,18 +116,18 @@ public:
          // This is supposed to befloor(2*pi*i), however 2*floor(pi)*i=6*i 
          // is found to work better
          unsigned nArcs = 6*i;
-         RealType* pos;
+         std::vector<RealType> pos(2,0);
          for( unsigned j = 0; j != nArcs; ++j ){
             RealType theta = 2*M_PI*j/nArcs;
             pos[0] = mBoundary.mCenter[0] + rad*cos(theta);
             pos[1] = mBoundary.mCenter[1] + rad*sin(theta);
-            if( mBoundary.testInside( pos ) ){
-               mGenerators.push_back( pos[0] );
-               mGenerators.push_back( pos[1] );
+            if( boost::geometry::within( makePoint(pos), mBoundary.mBGboundary) ){
+               mPoints.push_back( pos[0] );
+               mPoints.push_back( pos[1] );
             }
          }
       }
-      nPoints = mGenerators.size()/Dimension;
+      nPoints = mPoints.size()/Dimension;
    }
    
    
@@ -125,10 +136,11 @@ public:
    //------------------------------------------------------------------------
    void addGenerator(RealType& pos)
    {
-      POLY_ASSERT( mBoundary.testInside( pos ) );
-      for( unsigned n=0; n < Dimension; ++n ){
-         mGenerators.push_back( pos[n] );
-      }
+      std::vector<RealType> point;
+      for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
+      bool inside = boost::geometry::within( makePoint(pos), mBoundary.mBGboundary );
+      POLY_ASSERT( inside );
+      mPoints.insert( mPoints.end(), point.begin(), point.end() );
    }
 
    //------------------------------------------------------------------------
@@ -139,15 +151,15 @@ public:
       RealType x, y;
       RealType dx = (mBoundary.mHigh[0] - mBoundary.mLow[0]) / nx;
       RealType dy = (mBoundary.mHigh[1] - mBoundary.mLow[1]) / ny;
-      RealType pos[2];
+      std::vector<RealType> pos;
       for (unsigned iy = 0; iy != ny; ++iy){
          y = mBoundary.mLow[1] + (iy + 0.5)*dy;
          for (unsigned ix = 0; ix != nx; ++ix){
             x = mBoundary.mLow[0] + (ix + 0.5)*dx;
             pos[0] = x;   pos[1] = y;
-            if( mBoundary.testInside( pos ) ){
-               mGenerators.push_back( x );
-               mGenerators.push_back( y );
+            if( boost::geometry::within( makePoint(pos), mBoundary.mBGboundary) ){
+               mPoints.push_back( x );
+               mPoints.push_back( y );
             }
          }
       }
@@ -168,9 +180,9 @@ public:
             y = mBoundary.mLow[1] + (iy + 0.5)*dy;
             for (unsigned ix = 0; ix != nx; ++ix){
                x = mBoundary.mLow[0] + (ix + 0.5)*dx;
-               mGenerators.push_back( x );
-               mGenerators.push_back( y );
-               mGenerators.push_back( z );
+               mPoints.push_back( x );
+               mPoints.push_back( y );
+               mPoints.push_back( z );
             }
          }
       }
@@ -181,12 +193,30 @@ public:
    //------------------------------------------------------------------------
    void perturb(RealType epsilon)
    {
-      for (unsigned i = 0; i < mGenerators.size()/Dimension; ++i){
+      for (unsigned i = 0; i < mPoints.size()/Dimension; ++i){
          for (unsigned n = 0; n < Dimension; ++n){
-            mGenerators[n*i] += epsilon*( RealType(::random())/RAND_MAX - 0.5 );
+            mPoints[n*i] += epsilon*( RealType(::random())/RAND_MAX - 0.5 );
          }
       }
    }
+
+   //------------------------------------------------------------------------
+   // Create a Boost.Geometry point from a std::vector of data depending on
+   // the dimension of the problem. There really should be an easier way
+   //------------------------------------------------------------------------
+   BGpoint makePoint(std::vector<RealType> pointIn)
+   {
+      BGpoint pointOut;
+      POLY_ASSERT( pointIn.size() >= 2 );
+      boost::geometry::set<0>(pointOut, pointIn[0]);
+      boost::geometry::set<1>(pointOut, pointIn[1]);
+      // if( Dimension == 3 ){
+      //    POLY_ASSERT( pointIn.size() == 3 );
+      //    boost::geometry::set<2>(pointOut, pointIn[2]);
+      // }
+      return pointOut;  
+   }
+
 };
 
 

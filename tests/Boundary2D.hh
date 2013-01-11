@@ -9,6 +9,10 @@
 
 #include "polytope.hh"
 
+// We use the Boost.Geometry library to handle polygon intersections and such.
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+
 using namespace std;
 using namespace polytope;
 
@@ -17,20 +21,30 @@ template<typename RealType>
 class Boundary2D
 {
 public:
+   // ------------- Some handy typedefs for Boost.Geometry --------------- //
+   typedef boost::geometry::model::point<RealType, 2, boost::geometry::cs::cartesian>
+      BGpoint;
+   typedef boost::geometry::model::polygon<BGpoint,false> 
+      BGpolygon;
+   typedef boost::geometry::model::ring<BGpoint,false>
+      BGring;
+
    // -------------- Public member variables and routines ---------------- //
    
    // Number of dimensions
-   unsigned nDims;
+   unsigned Dimension;
    
    // Piecewise linear construct to define the boundary facets + holes
    PLC<2, RealType> mPLC;
    // Vector of generators to define the boundary
-   vector<RealType> mGens;
+   std::vector<RealType> mPLCpoints;
    // Prescribed center of the computational domain
-   RealType mCenter[2];
+   std::vector<RealType> mCenter;
    // Ranges of bounding box
-   RealType mLow[2], mHigh[2];
-
+   RealType mLow[2], mHigh[2], mArea;
+   
+   BGpolygon mBGboundary;
+   
    
    // Define enum to keep track fo the type of boundary called for
    enum BoundaryType{
@@ -52,10 +66,9 @@ public:
    // Constructor, destructor
    //------------------------------------------------------------------------
    Boundary2D():
-      nDims(2),
-      mLow(),
-      mHigh(),
-      mCenter(),
+      Dimension(2),
+      //mLow(0),
+      //mHigh(0),
       mType(box)
    {
    };
@@ -65,7 +78,7 @@ public:
    void clear()
    {
       mPLC.clear();
-      mGens.clear();
+      mPLCpoints.clear();
       mCenter(0);
       mLow(0);
       mHigh(0);
@@ -76,6 +89,8 @@ public:
    //------------------------------------------------------------------------
    void computeDefaultBoundary(int bType)
    {
+      mCenter = std::vector<RealType>(Dimension,0);
+      
       switch(bType){
       case box:
          this->unitSquare();
@@ -103,6 +118,8 @@ public:
          break;
       }
       getBoundingBox();
+      boostMyBoundary();
+      mArea = boost::geometry::area( mBGboundary );
    }
 
 
@@ -116,10 +133,10 @@ public:
       const RealType y1 = mCenter[1] - 0.5;
       const RealType y2 = mCenter[1] + 0.5;
       
-      mGens.push_back( x1 );   mGens.push_back( y1 );
-      mGens.push_back( x2 );   mGens.push_back( y1 );
-      mGens.push_back( x2 );   mGens.push_back( y2 );
-      mGens.push_back( x1 );   mGens.push_back( y2 );
+      mPLCpoints.push_back( x1 );   mPLCpoints.push_back( y1 );
+      mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y1 );
+      mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y2 );
+      mPLCpoints.push_back( x1 );   mPLCpoints.push_back( y2 );
       
       mPLC.facets.resize(4);
       for (unsigned f = 0; f < 4; ++f)
@@ -144,16 +161,16 @@ public:
          RealType theta = 2.0*M_PI*b/(Nb+1);
          RealType x = mCenter[0] + cos(theta);
          RealType y = mCenter[1] + sin(theta);
-         mGens.push_back(x);
-         mGens.push_back(y);
+         mPLCpoints.push_back(x);
+         mPLCpoints.push_back(y);
       }
 
       // Facets.
       mPLC.facets.resize(Nb); 
       for (unsigned f = 0; f < Nb; ++f)
       {
-         unsigned fBegin =  mGens.size()/2 - Nb + f;
-         unsigned fEnd   = (mGens.size()/2 - Nb + f + 1) % Nb;
+         unsigned fBegin =  mPLCpoints.size()/2 - Nb + f;
+         unsigned fEnd   = (mPLCpoints.size()/2 - Nb + f + 1) % Nb;
          mPLC.facets[f].resize(2);
          mPLC.facets[f][0] = fBegin;
          mPLC.facets[f][1] = fEnd;
@@ -171,28 +188,28 @@ public:
       POLY_ASSERT2( innerRadius > 0, "Must provide a positive inner radius" );
       POLY_ASSERT2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
 
-      mPLC.holes = vector< vector< vector<int> > >(1);
+      mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);
       // The outer circle
       unitCircle();
       
       // Inner circle.
-      unsigned Nb = mGens.size()/2;
+      unsigned Nb = mPLCpoints.size()/2;
       unsigned Nh = Nb;
       for (unsigned b = 0; b < Nh; ++b)
       {
          RealType theta = 2.0*M_PI*(1.0 - RealType(b)/RealType(Nb+1));
          RealType x = mCenter[0] + innerRadius*cos(theta);
          RealType y = mCenter[1] + innerRadius*sin(theta);
-         mGens.push_back(x);
-         mGens.push_back(y);
+         mPLCpoints.push_back(x);
+         mPLCpoints.push_back(y);
       }
 
       // Facets on the inner circle
       mPLC.holes[0].resize(Nh);
       for (unsigned f = 0; f < Nh; ++f)
       {
-         unsigned fBegin = mGens.size()/2 - Nh + f;
-         unsigned fEnd   = mGens.size()/2 - Nh + (f + 1) % Nh;
+         unsigned fBegin = mPLCpoints.size()/2 - Nh + f;
+         unsigned fEnd   = mPLCpoints.size()/2 - Nh + (f + 1) % Nh;
          mPLC.holes[0][f].resize(2);
          mPLC.holes[0][f][0] = fBegin;
          mPLC.holes[0][f][1] = fEnd;
@@ -208,14 +225,14 @@ public:
    void MWithHoles()
    {
       // Outer boundary of the M-shape
-      mGens.push_back(0.0); mGens.push_back(0.0);
-      mGens.push_back(2.0); mGens.push_back(0.0);
-      mGens.push_back(2.0); mGens.push_back(2.0);
-      mGens.push_back(1.0); mGens.push_back(1.0);
-      mGens.push_back(0.0); mGens.push_back(2.0);
+      mPLCpoints.push_back(0.0); mPLCpoints.push_back(0.0);
+      mPLCpoints.push_back(2.0); mPLCpoints.push_back(0.0);
+      mPLCpoints.push_back(2.0); mPLCpoints.push_back(2.0);
+      mPLCpoints.push_back(1.0); mPLCpoints.push_back(1.0);
+      mPLCpoints.push_back(0.0); mPLCpoints.push_back(2.0);
 
-      int nSides = mGens.size()/2;
-      mPLC.facets.resize( nSides, vector<int>(2) );
+      int nSides = mPLCpoints.size()/2;
+      mPLC.facets.resize( nSides, std::vector<int>(2) );
       for (unsigned i = 0; i != nSides; ++i )
       {
          mPLC.facets[i][0] = i;
@@ -225,18 +242,18 @@ public:
       int nHoles = 2;
       
       // Square hole #1
-      mGens.push_back(0.25); mGens.push_back(0.25);
-      mGens.push_back(0.25); mGens.push_back(0.75);
-      mGens.push_back(0.75); mGens.push_back(0.75);
-      mGens.push_back(0.75); mGens.push_back(0.25);
+      mPLCpoints.push_back(0.25); mPLCpoints.push_back(0.25);
+      mPLCpoints.push_back(0.25); mPLCpoints.push_back(0.75);
+      mPLCpoints.push_back(0.75); mPLCpoints.push_back(0.75);
+      mPLCpoints.push_back(0.75); mPLCpoints.push_back(0.25);
       
       // Square hole #2
-      mGens.push_back(1.25); mGens.push_back(0.25);
-      mGens.push_back(1.25); mGens.push_back(0.75);
-      mGens.push_back(1.75); mGens.push_back(0.75);
-      mGens.push_back(1.75); mGens.push_back(0.25);
+      mPLCpoints.push_back(1.25); mPLCpoints.push_back(0.25);
+      mPLCpoints.push_back(1.25); mPLCpoints.push_back(0.75);
+      mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.75);
+      mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.25);
 
-      mPLC.holes.resize(nHoles, vector<vector<int> >(4, vector<int>(nHoles)));
+      mPLC.holes.resize(nHoles, std::vector<std::vector<int> >(4, std::vector<int>(nHoles)));
       for (unsigned i = 0; i != 4; ++i)
       {
          mPLC.holes[0][i][0] = nSides + i;
@@ -261,8 +278,8 @@ public:
          RealType rad = 2.0 + 0.5*sin(12.0* M_PI*RealType(i)/(RealType(Nsides)-1.0));
          RealType x = rad * sin(M_PI*RealType(i)/(RealType(Nsides)-1.0));
          RealType y = rad * cos(M_PI*RealType(i)/(RealType(Nsides)-1.0));
-         mGens.push_back( x );
-         mGens.push_back( y );
+         mPLCpoints.push_back( x );
+         mPLCpoints.push_back( y );
       }
 
       // Connect the boundary facets
@@ -285,7 +302,6 @@ public:
    {
       // The outer boundary
       unitCircle();
-      int Nb = mGens.size()/2;
       
       RealType theta0 = 2*M_PI/nPoints;
       RealType outerRadius = 0.75;
@@ -296,22 +312,22 @@ public:
       {
          // For the pointy bits of the star
          theta = M_PI/2 - p*theta0;
-         mGens.push_back( mCenter[0] + outerRadius*cos(theta) );
-         mGens.push_back( mCenter[1] + outerRadius*sin(theta) );
+         mPLCpoints.push_back( mCenter[0] + outerRadius*cos(theta) );
+         mPLCpoints.push_back( mCenter[1] + outerRadius*sin(theta) );
          
          // For the concave bits of the star
          theta = M_PI/2 - p*theta0 - theta0/2.0;
-         mGens.push_back( mCenter[0] + innerRadius*cos(theta) );
-         mGens.push_back( mCenter[1] + innerRadius*sin(theta) );
+         mPLCpoints.push_back( mCenter[0] + innerRadius*cos(theta) );
+         mPLCpoints.push_back( mCenter[1] + innerRadius*sin(theta) );
       }
       
       // Facets on the inner circle
-      mPLC.holes = vector< vector< vector<int> > >(1);      
+      mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);      
       mPLC.holes[0].resize(2*nPoints);
       for (unsigned f = 0; f < 2*nPoints; ++f)
       {
-         unsigned fBegin = mGens.size()/2 - 2*nPoints + f;
-         unsigned fEnd   = mGens.size()/2 - 2*nPoints + ((f + 1) % (2*nPoints));
+         unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
+         unsigned fEnd   = mPLCpoints.size()/2 - 2*nPoints + ((f + 1) % (2*nPoints));
          mPLC.holes[0][f].resize(2);
          mPLC.holes[0][f][0] = fBegin;
          mPLC.holes[0][f][1] = fEnd;
@@ -343,16 +359,16 @@ public:
          RealType theta = 2.0*M_PI*b/(Nb+1);
          RealType x = z*cos(theta) - cos(2*theta);
          RealType y = z*sin(theta) - sin(2*theta);
-         mGens.push_back(x);
-         mGens.push_back(y);
+         mPLCpoints.push_back(x);
+         mPLCpoints.push_back(y);
       }
 
       // Facets.
       mPLC.facets.resize(Nb); 
       for (unsigned f = 0; f < Nb; ++f)
       {
-         unsigned fBegin =  mGens.size()/2 - Nb + f;
-         unsigned fEnd   = (mGens.size()/2 - Nb + f + 1) % Nb;
+         unsigned fBegin =  mPLCpoints.size()/2 - Nb + f;
+         unsigned fEnd   = (mPLCpoints.size()/2 - Nb + f + 1) % Nb;
          mPLC.facets[f].resize(2);
          mPLC.facets[f][0] = fBegin;
          mPLC.facets[f][1] = fEnd;
@@ -380,8 +396,8 @@ public:
    // {
    //    RealType x = pos[0];
    //    RealType y = pos[1];
-   //    POLY_ASSERT( mGens.size() > 0 );
-   //    //const unsigned nSides = mGens.size()/2;
+   //    POLY_ASSERT( mPLCpoints.size() > 0 );
+   //    //const unsigned nSides = mPLCpoints.size()/2;
    //    const unsigned nSides = mPLC.facets.size();
    //    unsigned j = nSides - 1;
    //    bool isInside = false;
@@ -389,13 +405,13 @@ public:
    //    {
    //       unsigned ix = 2*i  ,  jx = 2*j;
    //       unsigned iy = 2*i+1,  jy = 2*j+1;  
-   //       if( (mGens[2*i+1] <  y && mGens[2*j+1] >= y ||
-   //            mGens[2*j+1] <  y && mGens[2*i+1] >= y) &&
-   //           (mGens[2*i  ] <= x || mGens[2*j  ] <= x) )
+   //       if( (mPLCpoints[2*i+1] <  y && mPLCpoints[2*j+1] >= y ||
+   //            mPLCpoints[2*j+1] <  y && mPLCpoints[2*i+1] >= y) &&
+   //           (mPLCpoints[2*i  ] <= x || mPLCpoints[2*j  ] <= x) )
    //       {
-   //          isInside ^= ( mGens[2*i] + ( y            - mGens[2*i+1] ) /
-   //                                     ( mGens[2*j+1] - mGens[2*i+1] ) *
-   //                                     ( mGens[2*j  ] - mGens[2*i  ] ) < x );
+   //          isInside ^= ( mPLCpoints[2*i] + ( y            - mPLCpoints[2*i+1] ) /
+   //                                     ( mPLCpoints[2*j+1] - mPLCpoints[2*i+1] ) *
+   //                                     ( mPLCpoints[2*j  ] - mPLCpoints[2*i  ] ) < x );
    //       }
    //       j = i;
    //    }
@@ -417,7 +433,7 @@ public:
       RealType x = pos[0];
       RealType y = pos[1];
       unsigned offset = 0;
-      POLY_ASSERT( mGens.size() > 0 );
+      POLY_ASSERT( mPLCpoints.size() > 0 );
       const unsigned nSides = mPLC.facets.size();
       bool isInside = inside(x,y,nSides,offset);
       
@@ -432,7 +448,7 @@ public:
    //------------------------------------------------------------------------
    // inside
    // Tests if (x,y) is inside the nSide-sided polygon defined by the ordered
-   // set of points in mGen starting at index 'offset'
+   // set of points in mPLCpoints starting at index 'offset'
    //------------------------------------------------------------------------
    bool inside( const RealType x, const RealType y, 
                 const unsigned nSides ,unsigned& offset )
@@ -443,13 +459,13 @@ public:
       {
 	 unsigned ix = 2*(i+offset),   iy = 2*(i+offset)+1;
 	 unsigned jx = 2*(j+offset),   jy = 2*(j+offset)+1;
-	 if( (mGens[iy] <  y  &&  mGens[jy] >= y  ||
-	      mGens[jy] <  y  &&  mGens[iy] >= y) &&
-	     (mGens[ix] <= x  ||  mGens[jx] <= x) )
+	 if( (mPLCpoints[iy] <  y  &&  mPLCpoints[jy] >= y  ||
+	      mPLCpoints[jy] <  y  &&  mPLCpoints[iy] >= y) &&
+	     (mPLCpoints[ix] <= x  ||  mPLCpoints[jx] <= x) )
 	 {
-	    isInside ^= ( mGens[ix] + ( y         - mGens[iy] ) /
-                                      ( mGens[jy] - mGens[iy] ) *
-                                      ( mGens[jx] - mGens[ix] ) < x );
+	    isInside ^= ( mPLCpoints[ix] + ( y         - mPLCpoints[iy] ) /
+                                      ( mPLCpoints[jy] - mPLCpoints[iy] ) *
+                                      ( mPLCpoints[jx] - mPLCpoints[ix] ) < x );
 	 }
 	 j = i;
       }
@@ -463,14 +479,19 @@ public:
    //------------------------------------------------------------------------
    // getBoundingBox
    // Get the maximal L-infinity norm of the boundary generator set
-   // NOTE: method is general to 2D or 3D. nDims is set to 2 here
+   // NOTE: method is general to 2D or 3D. Dimension is set to 2 here
    //------------------------------------------------------------------------
    void getBoundingBox()
    {
-      for (unsigned i = 0; i < mGens.size()/nDims; ++i ){
-         for (unsigned n = 0; n < nDims; ++n ){
-            mLow [n] = min( mLow [n], mGens[nDims*i+n] );
-            mHigh[n] = max( mHigh[n], mGens[nDims*i+n] );
+      for (unsigned n = 0; n < Dimension; ++n){
+         mLow[n]  =   numeric_limits<RealType>::max();
+         mHigh[n] =  (numeric_limits<RealType>::is_signed ? -mLow[n] : 
+                      numeric_limits<RealType>::min());
+      }
+      for (unsigned i = 0; i < mPLCpoints.size()/Dimension; ++i ){
+         for (unsigned n = 0; n < Dimension; ++n ){
+            mLow [n] = min( mLow [n], mPLCpoints[Dimension*i+n] );
+            mHigh[n] = max( mHigh[n], mPLCpoints[Dimension*i+n] );
          }
       }
    }
@@ -479,21 +500,68 @@ public:
    //------------------------------------------------------------------------
    // getBoundingCircle
    // Get the maximal L-2 norm of the boundary generator set about center pt
-   // NOTE: method is general to 2D or 3D. nDims is set to 2 here
+   // NOTE: method is general to 2D or 3D. Dimension is set to 2 here
    //------------------------------------------------------------------------
    void getBoundingRadius(RealType& radius)
    {
       POLY_ASSERT( mCenter != 0 );
       radius = 0;
-      for (unsigned i = 0; i < mGens.size()/nDims; ++i ){
+      for (unsigned i = 0; i < mPLCpoints.size()/Dimension; ++i ){
          RealType distance = 0;
-         for (unsigned n = 0; n < nDims; ++n ){
-            distance += (mGens[nDims*i+n] - mCenter[n]) *
-               (mGens[nDims*i+n] - mCenter[n]);
+         for (unsigned n = 0; n < Dimension; ++n ){
+            distance += (mPLCpoints[Dimension*i+n] - mCenter[n]) *
+               (mPLCpoints[Dimension*i+n] - mCenter[n]);
          }
          radius = max( radius, sqrt( distance ) );
       }
-   } 
+   }
+
+
+   //------------------------------------------------------------------------
+   // BGmyBoundary
+   // Store the boundary info as a Boost.Geometry polygon
+   //------------------------------------------------------------------------
+   void boostMyBoundary()
+   {
+      int i,j;
+      std::vector<BGpoint> boundaryPoints;
+      BGpoint point;
+      boost::geometry::assign_zero(point);
+      boundaryPoints.reserve(mPLC.facets.size() + 1);
+      i = mPLC.facets[0][0];
+      boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
+      for (j = 0; j != mPLC.facets.size(); ++j){
+         POLY_ASSERT(mPLC.facets[j].size() == 2);
+         i = mPLC.facets[j][1];
+         boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
+      }
+      POLY_ASSERT(boundaryPoints.size() == mPLC.facets.size() + 1);
+      //POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
+      boost::geometry::assign(mBGboundary, BGring(boundaryPoints.begin(),
+                                                  boundaryPoints.end()));
+
+      const unsigned nHoles = mPLC.holes.size();
+      if( nHoles > 0 ){
+         typename BGpolygon::inner_container_type& holes = mBGboundary.inners();
+         holes.resize(nHoles);
+         for (unsigned ihole = 0; ihole != nHoles; ++ihole){
+            boundaryPoints = std::vector<BGpoint>();
+            boundaryPoints.reserve(mPLC.holes[ihole].size() + 1);
+            i = mPLC.holes[ihole][0][0];
+            boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
+            for (j = 0; j != mPLC.holes[ihole].size(); ++j){
+               POLY_ASSERT( mPLC.holes[ihole][j].size() == 2 );
+               i = mPLC.holes[ihole][j][1];
+               boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
+            }
+            POLY_ASSERT(boundaryPoints.size() == mPLC.holes[ihole].size() + 1 );
+            //POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
+            boost::geometry::assign(holes[ihole], BGring(boundaryPoints.begin(),
+                                                         boundaryPoints.end()));
+         }
+      }
+   }
+
 };
 
 #endif

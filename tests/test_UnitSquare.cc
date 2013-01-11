@@ -8,8 +8,7 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
-
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 using namespace polytope;
@@ -35,23 +34,6 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 }
 
 // -----------------------------------------------------------------------
-// tessellate
-// -----------------------------------------------------------------------
-void tessellate(Boundary2D<double>& boundary,
-                Generators<2,double>& generators,
-                Tessellator<2,double>& tessellator,
-                Tessellation<2,double>& mesh)
-{
-   if( tessellator.handlesPLCs() ){
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mGens, boundary.mPLC, mesh);
-   }else{
-      tessellator.tessellate(generators.mGenerators,
-                             boundary.mLow, boundary.mHigh, mesh);
-   }
-}
-
-// -----------------------------------------------------------------------
 // generateMesh
 // -----------------------------------------------------------------------
 void generateMesh(Tessellator<2,double>& tessellator)
@@ -68,7 +50,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       std::vector<unsigned> nxny(2,nx);
       generators.cartesianPoints( nxny );
       Tessellation<2,double> mesh;
-      tessellate(boundary,generators,tessellator,mesh);
+      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
       
       // CHECKS:
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
