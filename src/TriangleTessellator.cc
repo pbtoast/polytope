@@ -11,6 +11,7 @@
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TriangleTessellator.hh.
 #include "convexHull_2d.hh"
+#include "nearestPoint.hh"
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
@@ -227,9 +228,6 @@ tessellate(const vector<RealType>& points,
   typedef boost::geometry::model::polygon<realBGpoint, // point type
                                           false>       // clockwise
     realBGpolygon;
-  typedef boost::geometry::model::ring<realBGpoint,    // point type
-                                       false>          // clockwise
-     realBGring;
   
   
   typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
@@ -241,6 +239,8 @@ tessellate(const vector<RealType>& points,
   // Find the range of the generator points.
   const unsigned numGenerators = points.size()/2;
   const unsigned numPLCpoints = PLCpoints.size()/2;
+  RealType vertices[2*numPLCpoints];
+  for( unsigned i=0; i<PLCpoints.size(); ++i) vertices[i] = PLCpoints[i];
   RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
   RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
   int i, j;
@@ -409,16 +409,6 @@ tessellate(const vector<RealType>& points,
   }
 
 
-  // // Blago!
-  // realBoundaryPoints.reserve(4);
-  // realBoundaryPoints.push_back(realBGpoint(low[0] ,low[1] ));
-  // realBoundaryPoints.push_back(realBGpoint(high[0],low[1] ));
-  // realBoundaryPoints.push_back(realBGpoint(high[0],high[1]));
-  // realBoundaryPoints.push_back(realBGpoint(low[0] ,high[1]));
-  // boost::geometry::assign(realBoundary, realBGring(realBoundaryPoints.begin(),realBoundaryPoints.end()));
-  // // Blago!
-
-
 
   // Build the polygon representing our boundaries.
   BGpolygon boundary;
@@ -429,7 +419,6 @@ tessellate(const vector<RealType>& points,
     const unsigned numBoundaryPoints = exteriorEdges.size();
     vector<IntPoint> boundaryPoints;
     vector<EdgeHash> boundaryEdgeOrder;
-    vector<realBGpoint> realBoundaryPoints;
     boundaryEdgeOrder.push_back(exteriorEdges.front());
     exteriorEdges.pop_front();
     
@@ -438,14 +427,13 @@ tessellate(const vector<RealType>& points,
     boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
                                       clow[0], clow[1],
                                       cdx));
-    realBoundaryPoints.reserve(numBoundaryPoints + 1);
-    realBoundaryPoints.push_back(realBGpoint(points[2*i], points[2*i+1]));
+    boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     
     i = boundaryEdgeOrder.front().second;
     boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
                                       clow[0], clow[1],
                                       cdx));
-    realBoundaryPoints.push_back(realBGpoint(points[2*i], points[2*i+1]));
+    boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     while (exteriorEdges.size() > 0) {
       list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
                                              MatchEitherPairValue<int>(i));
@@ -456,7 +444,7 @@ tessellate(const vector<RealType>& points,
       boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
                                         clow[0], clow[1],
                                         cdx));
-      realBoundaryPoints.push_back(realBGpoint(points[2*i], points[2*i+1]));
+      boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     }
     POLY_ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
     POLY_ASSERT(MatchEitherPairValue<int>(boundaryEdgeOrder.front().first)(boundaryEdgeOrder.back()));
@@ -467,13 +455,12 @@ tessellate(const vector<RealType>& points,
   } else {
     // Copy the PLC provided boundary information into a Boost.Geometry polygon.
     vector<IntPoint> boundaryPoints;
-    vector<realBGpoint> realBoundaryPoints;
     boundaryPoints.reserve(geometry.facets.size() + 1);
     i = geometry.facets[0][0];
     boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                       clow[0], clow[1],
                                       cdx));
-    realBoundaryPoints.push_back(realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+    boost::geometry::append( realBoundary, realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
 
     for (j = 0; j != geometry.facets.size(); ++j) {
       POLY_ASSERT(geometry.facets[j].size() == 2);
@@ -481,7 +468,7 @@ tessellate(const vector<RealType>& points,
       boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                         clow[0], clow[1],
                                         cdx));
-      realBoundaryPoints.push_back(realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+      boost::geometry::append( realBoundary, realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
     }
     POLY_ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
     POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -492,6 +479,8 @@ tessellate(const vector<RealType>& points,
     if (numHoles > 0) {
       typename BGpolygon::inner_container_type& holes = boundary.inners();
       holes.resize(numHoles);
+      typename realBGpolygon::inner_container_type& realHoles = realBoundary.inners();
+      realHoles.resize(numHoles);
       for (k = 0; k != numHoles; ++k) {
         boundaryPoints = vector<IntPoint>();
         boundaryPoints.reserve(geometry.holes[k].size() + 1);
@@ -499,14 +488,14 @@ tessellate(const vector<RealType>& points,
         boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                           clow[0], clow[1],
                                           cdx));
-        realBoundaryPoints.push_back(realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+        boost::geometry::append( realHoles[k], realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         for (j = 0; j != geometry.holes[k].size(); ++j) {
           POLY_ASSERT(geometry.holes[k][j].size() == 2);
           i =  geometry.holes[k][j][1];
           boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
                                             clow[0], clow[1],
                                             cdx));
-          realBoundaryPoints.push_back(realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
+          boost::geometry::append( realHoles[k], realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         }
         POLY_ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
         POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
@@ -624,7 +613,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
 
   // Fill in the mesh nodes.
-  realBGpoint node;
+  RealType node[2];
   mesh.nodes = vector<RealType>(2*point2node.size());
   for (typename map<IntPoint, int>::const_iterator itr = point2node.begin();
        itr != point2node.end();
@@ -632,22 +621,25 @@ tessellate(const vector<RealType>& points,
     const IntPoint& p = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
-    node = realBGpoint( p.realx(clow[0],cdx) , p.realy(clow[1],cdx) );
+    node = { p.realx(clow[0],cdx) , p.realy(clow[1],cdx) };
     
-    bool inside = boost::geometry::within(node, realBoundary);
-    // if( !inside ) boost::geometry::nearest_neighbor(node, realBoundary, node, node );
+    // Check if nodes are inside boundary (either bounding box or PLC, if defined)
+    bool inside = boost::geometry::within(realBGpoint(node[0],node[1]), realBoundary);
+    if( !inside ){
+       RealType result[2];
+       RealType dist = nearestPoint( node, numPLCpoints, vertices, geometry, result );
+       // Check the node has not moved more than 2 quantized mesh spacings. NOTE: this is
+       // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*cdx, 
+       // but nodes will fail this strict of a test.
+       POLY_ASSERT( dist < 2*cdx );
+       node[0] = result[0];
+       node[1] = result[1];
+    }
     
-    RealType x = boost::geometry::get<0>(node);
-    RealType y = boost::geometry::get<1>(node);
-
-    // POLY_ASSERT( x >= low[0] && x <= high[0] );
-    // POLY_ASSERT( y >= low[1] && y <= high[1] );
-    
-    mesh.nodes[2*i]   = ( x < low[0]  ? low[0]  : 
-                          x > high[0] ? high[0] : x );
-    mesh.nodes[2*i+1] = ( y < low[1]  ? low[1]  :
-                          y > high[1] ? high[1] : y );
-    // cerr << "Node " << i << " @ (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i+1] << ") " << p << endl;
+    POLY_ASSERT( node[0] >= low[0] && node[0] <= high[0] );
+    POLY_ASSERT( node[1] >= low[1] && node[1] <= high[1] );
+    mesh.nodes[2*i]   = node[0];
+    mesh.nodes[2*i+1] = node[1];
   }
   
   // Fill in the mesh faces.

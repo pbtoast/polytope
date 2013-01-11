@@ -67,10 +67,9 @@ public:
    //------------------------------------------------------------------------
    Boundary2D():
       Dimension(2),
-      //mLow(0),
-      //mHigh(0),
       mType(box)
    {
+      mCenter = std::vector<RealType>(Dimension,0);
    };
 
    ~Boundary2D() {};
@@ -82,6 +81,14 @@ public:
       mCenter(0);
       mLow(0);
       mHigh(0);
+      boost::geometry::clear(mBGboundary);
+   }
+
+   void finalize()
+   {
+      getBoundingBox();
+      boostMyBoundary();
+      mArea = boost::geometry::area( mBGboundary );
    }
    
    //------------------------------------------------------------------------
@@ -89,7 +96,7 @@ public:
    //------------------------------------------------------------------------
    void computeDefaultBoundary(int bType)
    {
-      mCenter = std::vector<RealType>(Dimension,0);
+      //mCenter = std::vector<RealType>(Dimension,0);
       
       switch(bType){
       case box:
@@ -117,9 +124,8 @@ public:
          this->cardioidWithHole();
          break;
       }
-      getBoundingBox();
-      boostMyBoundary();
-      mArea = boost::geometry::area( mBGboundary );
+
+      this->finalize();
    }
 
 
@@ -146,6 +152,7 @@ public:
          mPLC.facets[f][1] = (f+1) % 4;
       }
       mType = box;
+      this->finalize();
    }
    
    
@@ -176,6 +183,7 @@ public:
          mPLC.facets[f][1] = fEnd;
       }
       mType = circle;
+      this->finalize();
    }
 
    
@@ -188,10 +196,9 @@ public:
       POLY_ASSERT2( innerRadius > 0, "Must provide a positive inner radius" );
       POLY_ASSERT2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
 
-      mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);
       // The outer circle
       unitCircle();
-      
+            
       // Inner circle.
       unsigned Nb = mPLCpoints.size()/2;
       unsigned Nh = Nb;
@@ -205,6 +212,7 @@ public:
       }
 
       // Facets on the inner circle
+      mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);
       mPLC.holes[0].resize(Nh);
       for (unsigned f = 0; f < Nh; ++f)
       {
@@ -215,6 +223,7 @@ public:
          mPLC.holes[0][f][1] = fEnd;
       }
       mType = torus;
+      this->finalize();
    }
 
    
@@ -261,7 +270,8 @@ public:
          mPLC.holes[1][i][0] = nSides + 4 + i;
          mPLC.holes[1][i][1] = nSides + 4 + ((i+1) % 4);
       }
-      mType = mwithholes;  
+      mType = mwithholes;
+      this->finalize();
    }
 
    
@@ -291,6 +301,7 @@ public:
          mPLC.facets[f][1] = (f+1) % Nsides;
       }
       mType = funkystar;
+      this->finalize();
    }
 
    
@@ -334,6 +345,7 @@ public:
       }
 
       mType = circlewithstarhole;
+      this->finalize();
    }
    
    
@@ -374,6 +386,7 @@ public:
          mPLC.facets[f][1] = fEnd;
       }
       mType = cardioid;
+      this->finalize();
    }
 
    
@@ -383,8 +396,9 @@ public:
    //------------------------------------------------------------------------
    void cardioidWithHole()
    {
-      mType = cardioidwithhole;
       cardioidBoundary( 1.0 );
+      mType = cardioidwithhole;
+      this->finalize();
    }
 
    
@@ -523,43 +537,8 @@ public:
    //------------------------------------------------------------------------
    void boostMyBoundary()
    {
-      int i,j;
-      std::vector<BGpoint> boundaryPoints;
-      BGpoint point;
-      boost::geometry::assign_zero(point);
-      boundaryPoints.reserve(mPLC.facets.size() + 1);
-      i = mPLC.facets[0][0];
-      boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
-      for (j = 0; j != mPLC.facets.size(); ++j){
-         POLY_ASSERT(mPLC.facets[j].size() == 2);
-         i = mPLC.facets[j][1];
-         boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
-      }
-      POLY_ASSERT(boundaryPoints.size() == mPLC.facets.size() + 1);
-      //POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
-      boost::geometry::assign(mBGboundary, BGring(boundaryPoints.begin(),
-                                                  boundaryPoints.end()));
-
-      const unsigned nHoles = mPLC.holes.size();
-      if( nHoles > 0 ){
-         typename BGpolygon::inner_container_type& holes = mBGboundary.inners();
-         holes.resize(nHoles);
-         for (unsigned ihole = 0; ihole != nHoles; ++ihole){
-            boundaryPoints = std::vector<BGpoint>();
-            boundaryPoints.reserve(mPLC.holes[ihole].size() + 1);
-            i = mPLC.holes[ihole][0][0];
-            boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
-            for (j = 0; j != mPLC.holes[ihole].size(); ++j){
-               POLY_ASSERT( mPLC.holes[ihole][j].size() == 2 );
-               i = mPLC.holes[ihole][j][1];
-               boundaryPoints.push_back(BGpoint(mPLCpoints[Dimension*i], mPLCpoints[Dimension*i+1]));
-            }
-            POLY_ASSERT(boundaryPoints.size() == mPLC.holes[ihole].size() + 1 );
-            //POLY_ASSERT(boundaryPoints.front() == boundaryPoints.back());
-            boost::geometry::assign(holes[ihole], BGring(boundaryPoints.begin(),
-                                                         boundaryPoints.end()));
-         }
-      }
+      boost::geometry::clear(mBGboundary);
+      mBGboundary = makePolygon( mPLC, mPLCpoints );
    }
 
 };

@@ -151,7 +151,7 @@ public:
       RealType x, y;
       RealType dx = (mBoundary.mHigh[0] - mBoundary.mLow[0]) / nx;
       RealType dy = (mBoundary.mHigh[1] - mBoundary.mLow[1]) / ny;
-      std::vector<RealType> pos;
+      std::vector<RealType> pos(Dimension,0);
       for (unsigned iy = 0; iy != ny; ++iy){
          y = mBoundary.mLow[1] + (iy + 0.5)*dy;
          for (unsigned ix = 0; ix != nx; ++ix){
@@ -206,15 +206,8 @@ public:
    //------------------------------------------------------------------------
    BGpoint makePoint(std::vector<RealType> pointIn)
    {
-      BGpoint pointOut;
-      POLY_ASSERT( pointIn.size() >= 2 );
-      boost::geometry::set<0>(pointOut, pointIn[0]);
-      boost::geometry::set<1>(pointOut, pointIn[1]);
-      // if( Dimension == 3 ){
-      //    POLY_ASSERT( pointIn.size() == 3 );
-      //    boost::geometry::set<2>(pointOut, pointIn[2]);
-      // }
-      return pointOut;  
+      return makePoint2D(pointIn);
+      //return ( Dimension == 2 ? makePoint2D(pointIn) : makePoint3D(pointIn) );
    }
 
 };

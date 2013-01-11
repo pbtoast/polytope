@@ -1,3 +1,11 @@
+// test_Degenerate
+//
+// Tessellate a unit square with 50x50 equally-spaced Cartesian generators,
+// then randomly perturb their positions by +/- epsilon for epsilon increasing
+// from 1e-16 to 1e-7 by factors of 10. Check to see if the resulting
+// tessellation is Cartesian. If not, compute the minimum face length.
+// Test applied to both Triangle and Voro++ 2D tessellators.
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -15,16 +23,6 @@
 using namespace std;
 using namespace polytope;
 
-// -------------------------------------------------------------------- //
-template <class T>
-inline std::string to_string(const T& t){
-   std::stringstream ss;
-   ss << t;
-   return ss.str();
-}
-// -------------------------------------------------------------------- //
-
-
 // -----------------------------------------------------------------------
 // minLength
 // -----------------------------------------------------------------------
@@ -32,11 +30,8 @@ double minLength(Tessellation<2,double>& mesh)
 {
    double faceLength = FLT_MAX;
    for (unsigned iface = 0; iface != mesh.faces.size(); ++iface)
-   // for (std::vector<std::vector<unsigned> >::const_iterator faceItr =
-   //         mesh.faces.begin(); faceItr != mesh.faces.end(); ++faceItr )
    {
       POLY_ASSERT( mesh.faces[iface].size() == 2 );
-      //POLY_ASSERT( faceItr->second.size() == 2 );
       const unsigned inode0 = mesh.faces[iface][0];
       const unsigned inode1 = mesh.faces[iface][1];
       double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
@@ -98,13 +93,14 @@ void generateMesh(Tessellator<2,double>& tessellator)
       }
 
 #if HAVE_SILO
-      std::string name = "test_Degenerate_" + to_string(epsilon);
       vector<double> index( mesh.cells.size());
       for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
       map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
       cellFields["cell_index"] = &index[0];
+      ostringstream os;
+      os << "test_Degenerate_" << epsilon;
       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                             faceFields, cellFields, name);
+                                             faceFields, cellFields, os.str());
 #endif
    }
 }

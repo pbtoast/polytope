@@ -1,3 +1,9 @@
+// test_UnitSquare
+//
+// Mesh a unit square with (nx-by-nx) Cartesian generators for nx in [2,100].
+// Perform checks on the resulting tessellation to see if it is indeed Cartesian.
+// Both Triangle and Voro++ 2D tessellators are tested here.
+
 #include <iostream>
 #include <vector>
 #include <set>

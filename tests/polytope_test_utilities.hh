@@ -7,11 +7,19 @@
 #include "polytope.hh"
 #include "Boundary2D.hh"
 
+// We use the Boost.Geometry library to handle polygon intersections and such.
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
 //------------------------------------------------------------------------------
 #define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 #define POLY_CHECK2(x, msg) if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); }
+
+namespace BG = boost::geometry;
+
+typedef BG::cs::cartesian cart;
 
 //------------------------------------------------------------------------------
 // Define our own local random number generator wrapping the standard srand &
@@ -24,7 +32,7 @@ double random01() {
 //------------------------------------------------------------------------------
 // Wrapper to tessellate a 2D boundary for both VoroPP_2D and Triangle
 //------------------------------------------------------------------------------
-template<typename RealType>
+template <typename RealType>
 void tessellate2D(std::vector<RealType>& points,
                   Boundary2D<RealType>& boundary,
                   Tessellator<2,RealType>& tessellator,
@@ -35,6 +43,113 @@ void tessellate2D(std::vector<RealType>& points,
       tessellator.tessellate(points, boundary.mLow, boundary.mHigh, mesh);
    }
 }
+
+//------------------------------------------------------------------------------
+// Make a 2D Boost.Geometry point
+//------------------------------------------------------------------------------
+template <typename RealType>
+BG::model::point<RealType,2,cart> makePoint2D( std::vector<RealType>& position ){
+   POLY_ASSERT( position.size() == 2 );
+   BG::model::point<RealType,2,cart> point;
+   BG::set<0>(point, position[0]);
+   BG::set<1>(point, position[1]);
+   return point;
+}
+
+//------------------------------------------------------------------------------
+// Make a 3D Boost.Geometry point
+//------------------------------------------------------------------------------
+template <typename RealType>
+BG::model::point<RealType,3,cart> makePoint3D( std::vector<RealType>& position ){
+   POLY_ASSERT( position.size() == 3 );
+   BG::model::point<RealType,3,cart> point;
+   BG::set<0>(point, position[0]);
+   BG::set<1>(point, position[1]);
+   BG::set<2>(point, position[2]);
+   return point;
+}
+
+//------------------------------------------------------------------------------
+// Make a Boost.Geometry polygon from a concatenated vector of (x,y) points
+//------------------------------------------------------------------------------
+template <typename RealType>
+BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
+makePolygon( std::vector<RealType>& points )
+{
+   typedef BG::model::point<RealType,2,cart> RealPoint;
+   BG::model::polygon<RealPoint,false> polygon;
+   for( unsigned i = 0; i < points.size()/2; ++i ){
+      BG::append( polygon, RealPoint(points[2*i],points[2*i+1]) );
+   }
+   BG::append( polygon, RealPoint(points[0],points[1]) );
+   return polygon;
+}
+
+//------------------------------------------------------------------------------
+// Make a Boost.Geometry polygon from a PLC and its point list
+//------------------------------------------------------------------------------
+template <typename RealType>
+BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
+makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints )
+{
+   typedef BG::model::point<RealType,2,cart> RealPoint;
+   typedef BG::model::polygon<RealPoint,false> BGpolygon;
+   
+   unsigned i,j;
+   BGpolygon polygon;
+   // Walk the facets and add the first node
+   for (j = 0; j != PLC.facets.size(); ++j){
+      POLY_ASSERT( PLC.facets[j].size() == 2 );
+      i = PLC.facets[j][0];
+      BG::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) );
+   }
+   i = PLC.facets[0][0];
+   BG::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) ); //Close the polygon
+   
+   // Walk the facets composing each hole and add the first node
+   const unsigned nHoles = PLC.holes.size();
+   if( nHoles > 0 ){
+      typename BGpolygon::inner_container_type& holes = polygon.inners();
+      holes.resize(nHoles);
+      for (unsigned ihole = 0; ihole != nHoles; ++ihole){
+         for (j = 0; j != PLC.holes[ihole].size(); ++j){
+            POLY_ASSERT( PLC.holes[ihole][j].size() == 2 );
+            i = PLC.holes[ihole][j][0];
+            BG::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );
+         }
+         i = PLC.holes[ihole][0][0];
+         BG::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );  //Close the polygon
+      }
+   }
+   return polygon;
+}
+
+//------------------------------------------------------------------------------
+// Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
+//------------------------------------------------------------------------------
+template <typename RealType>
+RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ){
+   typedef BG::model::point<RealType,2,cart> RealPoint;
+   RealType area = 0;
+   for (unsigned i = 0; i != mesh.cells.size(); ++i){
+      std::vector<RealType> nodeCell;
+      for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
+           faceItr != mesh.cells[i].end(); ++faceItr){
+         const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+         POLY_ASSERT(iface < mesh.faceCells.size());
+         POLY_ASSERT(mesh.faces[iface].size() == 2);
+         const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
+         nodeCell.push_back( mesh.nodes[2*inode  ] );
+         nodeCell.push_back( mesh.nodes[2*inode+1] );
+      }
+      BG::model::polygon<RealPoint,false> cellPolygon = makePolygon( nodeCell );
+      area += BG::area( cellPolygon );
+      nodeCell.clear();
+   }
+   return area;
+}
+
+
 
 
 #endif

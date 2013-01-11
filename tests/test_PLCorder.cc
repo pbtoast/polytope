@@ -1,3 +1,9 @@
+// test_PLCorder
+//
+// Tests different orderings of the PLC facets when handing the boundary geometry
+// to the tessellator. Spoiler alert: only a sequential, counterclockwise ordered
+// PLC is valid. The other orderings fail, though not always at an assertion.
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -11,15 +17,6 @@
 
 using namespace std;
 using namespace polytope;
-
-// -------------------------------------------------------------------- //
-template <class T>
-inline std::string to_string(const T& t){
-   std::stringstream ss;
-   ss << t;
-   return ss.str();
-}
-// -------------------------------------------------------------------- //
 
 // -----------------------------------------------------------------------
 // checkCartesianMesh
@@ -40,6 +37,9 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
    }
 }
 
+// -----------------------------------------------------------------------
+// Different PLC orderings
+// -----------------------------------------------------------------------
 PLC<2,double> makePLC( int order )
 {
    PLC<2,double> box;
@@ -88,8 +88,7 @@ PLC<2,double> makePLC( int order )
 }
 
 //------------------------------------------------------------------------
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
+// the test
 //------------------------------------------------------------------------
 int 
 main(int argc, char** argv) 
@@ -107,21 +106,11 @@ main(int argc, char** argv)
   
   Tessellation<2, double> mesh;
   TriangleTessellator<double> triangle;
-  PLC<2,double> box = makePLC( 4 );
+  PLC<2,double> box = makePLC( 0 );
   triangle.tessellate(generators, generators, box, mesh);
   checkCartesianMesh( mesh, 2, 2 );
+  cout << "PASS" << endl;
   
-  // for (unsigned i = 0; i != PLCs.size(); ++i )
-//   {
-//      cout << "PLC Ordering " << i+1 << "...";
-//      Tessellation<2, double> mesh;
-//      TriangleTessellator<double> triangle;
-//      PLC<2,double> box = makePLC( i );
-//      triangle.tessellate(generators, generators, box, mesh);
-//      checkCartesianMesh( mesh, 2, 2 );
-//      cout << "PASS" << endl;
-//   }
-
 #if HAVE_MPI
   MPI_Finalize();
 #endif
