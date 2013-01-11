@@ -1,4 +1,26 @@
 --------------------------------------------------------------------------------
+Release 0.5.5
+
+changeset:
+  199:caa54ad70b77
+
+More bugfixes:
+
+- DistributedTessellator passes its tests now. Added second adjacency loop to
+  catch any neighboring domains that see each other on the full mesh but not
+  necessarily on the hull mesh. tests/test_FailedCommunicaton illustrates how
+  this can happen.
+
+- TriangleTessellator now checks that all tessellation nodes lie inside the
+  boundary. Nodes outside are moved to the boundary using the new nearestPoint
+  routine, provided the node does not move a distance greater than some
+  geometric tolerance.
+
+- Added several new tests for the 2D serial and distributed tessellators. New
+  routines in polytope_test_utilities and new classes aid in designing further
+  tests.
+
+--------------------------------------------------------------------------------
 Release 0.5.4
 
 Minor bugfixes:
