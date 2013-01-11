@@ -1,3 +1,8 @@
+// test_DistributedRandomPoints
+//
+// For a given default boundary in Boundary2D.hh, we generate N randomly-
+// distributed points and arbitrarily assign them to processors.
+
 #include <numeric>
 #include <iostream>
 #include <vector>
@@ -17,15 +22,6 @@
 
 using namespace std;
 using namespace polytope;
-
-
-//------------------------------------------------------------------------------
-// Compute the square of the distance.
-//------------------------------------------------------------------------------
-double distance2(const double x1, const double y1,
-                 const double x2, const double y2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
-}
 
 
 //------------------------------------------------------------------------------
@@ -68,10 +64,6 @@ int main(int argc, char** argv) {
       (new polytope::TriangleTessellator<double>(), true, true);
    distTest.tessellate(myGenerators, boundary.mPLCpoints, boundary.mPLC, mesh);
 
-   // double xmin[2] = { -1.0, -1.0 };
-   // double xmax[2] = {  1.0,  1.0 };
-   // distTest.tessellate(myGenerators, xmin, xmax, mesh);
-   
    // Do some sanity checks on the stuff in the shared info.
    unsigned numNeighborDomains = mesh.neighborDomains.size();
    unsigned ncells = mesh.cells.size();

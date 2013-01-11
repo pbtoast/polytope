@@ -1,3 +1,11 @@
+// test_RandomPoints
+//
+// Stress test for meshing complicated PLC boundaries with/without holes.
+// Iterate over each of the default boundaries defined in Boundary2D.hh
+// and tessellate using N randomly-distributed generators for N=10,100,1000.
+// Can test both Triangle and Voro++ 2D tessellators. Voro++ has been
+// commented out since it currently lacks PLC capabilities.
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -12,17 +20,6 @@
 
 using namespace std;
 using namespace polytope;
-
-// -------------------------------------------------------------------- //
-template <class T>
-inline std::string to_string(const T& t){
-   std::stringstream ss;
-   ss << t;
-   return ss.str();
-}
-// -------------------------------------------------------------------- //
-
-
 
 // -----------------------------------------------------------------------
 // outputResult
@@ -43,14 +40,14 @@ void outputResult(Tessellator<2,double>& tessellator,
    POLY_ASSERT( mesh.cells.size() == nPoints );
    
 #if HAVE_SILO
-   std::string name = "test_RandomPoints_boundary" + 
-      to_string(bType) + "_" + to_string(nPoints) + "points";
    vector<double> index( mesh.cells.size());
    for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
    cellFields["cell_index"] = &index[0];
+   ostringstream os;
+   os << "test_RandomPoints_boundary_" << bType << "_" << nPoints << "points";
    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, name);
+                                          faceFields, cellFields, os.str());
 #endif
 }
 
@@ -74,22 +71,19 @@ void testBoundary(Boundary2D<double>& boundary,
 
       POLY_ASSERT( mesh.cells.size() == nPoints );
       cout << "PASS" << endl;
-// #if HAVE_SILO
-//       std::string name = "test_RandomPoints_boundary" 
-//          + to_string(boundary.mType) + "_" + to_string(nPoints) + "points";
-//       vector<double> index( mesh.cells.size());
-//       for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-//       map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-//       cellFields["cell_index"] = &index[0];
-//       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-//                                              faceFields, cellFields, name);
-// #endif
+#if HAVE_SILO
+      vector<double> index( mesh.cells.size());
+      for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
+      map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+      cellFields["cell_index"] = &index[0];
+      ostringstream os;
+      os << "test_RandomPoints_boundary_" << boundary.mType << "_" << nPoints << "_points";
+      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+                                             faceFields, cellFields, os.str());
+#endif
       mesh.clear();   
    }
 }
-
-
-
 
 // -----------------------------------------------------------------------
 // testAllBoundaries
@@ -104,8 +98,6 @@ void testAllBoundaries(Tessellator<2,double>& tessellator)
    }
 }
 
-
-
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
@@ -119,16 +111,11 @@ int main(int argc, char** argv)
    TriangleTessellator<double> triangle;
    testAllBoundaries(triangle);
    
-   cout << "\nVoro 2D Tessellator:\n" << endl;
-   VoroPP_2d<double> voro;
-   testAllBoundaries(voro);
-   
-   // int nPoints = 1;
-   // for (int i=0; i<4; ++i){
-   //    nPoints = nPoints*10;
-   //    outputResult(triangle,3,nPoints);
-   // }
-   
+   // NOTE: Voro++ currently lacks PLC boundary capabilities
+   //
+   // cout << "\nVoro 2D Tessellator:\n" << endl;
+   // VoroPP_2d<double> voro;
+   // testAllBoundaries(voro);
 
 #if HAVE_MPI
    MPI_Finalize();
