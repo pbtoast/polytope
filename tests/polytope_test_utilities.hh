@@ -4,6 +4,9 @@
 #ifndef __polytope_test_utilities__
 #define __polytope_test_utilities__
 
+#include "polytope.hh"
+#include "Boundary2D.hh"
+
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
 //------------------------------------------------------------------------------
@@ -17,5 +20,21 @@
 double random01() {
   return double(rand())/RAND_MAX;
 }
+
+//------------------------------------------------------------------------------
+// Wrapper to tessellate a 2D boundary for both VoroPP_2D and Triangle
+//------------------------------------------------------------------------------
+template<typename RealType>
+void tessellate2D(std::vector<RealType>& points,
+                  Boundary2D<RealType>& boundary,
+                  Tessellator<2,RealType>& tessellator,
+                  Tessellation<2,RealType>& mesh){
+   if( tessellator.handlesPLCs() ){
+      tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+   }else{
+      tessellator.tessellate(points, boundary.mLow, boundary.mHigh, mesh);
+   }
+}
+
 
 #endif

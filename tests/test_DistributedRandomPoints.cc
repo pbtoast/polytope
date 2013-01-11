@@ -20,6 +20,15 @@ using namespace polytope;
 
 
 //------------------------------------------------------------------------------
+// Compute the square of the distance.
+//------------------------------------------------------------------------------
+double distance2(const double x1, const double y1,
+                 const double x2, const double y2) {
+  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
+}
+
+
+//------------------------------------------------------------------------------
 // The test itself.
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
@@ -28,7 +37,7 @@ int main(int argc, char** argv) {
    MPI_Init(&argc, &argv);
 
    // Seed the random number generator the same on all processes.
-   srand(10489592);
+   srand(10489591);
    
    // Figure out our parallel configuration.
    int rank, numProcs;
@@ -36,13 +45,12 @@ int main(int argc, char** argv) {
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
    // Initialize the bounding PLC
-   int bType = 1;
+   int bType = 2;
    Boundary2D<double> boundary;
-   //boundary.mCenter = {0.5,0.5};
    boundary.computeDefaultBoundary( bType );
    
    // Generate random points on all processors
-   unsigned N = 100;
+   unsigned N = 800;
    Generators<2,double> generators( boundary );
    generators.randomPoints( N );
    
@@ -50,19 +58,19 @@ int main(int argc, char** argv) {
    vector<double> myGenerators;
    for (unsigned i = 0; i < N; ++i){
       if( i%numProcs == rank ){
-         myGenerators.push_back( generators.mGenerators[2*i]   );
-         myGenerators.push_back( generators.mGenerators[2*i+1] );
+         myGenerators.push_back( generators.mPoints[2*i]   );
+         myGenerators.push_back( generators.mPoints[2*i+1] );
       }
    }
    
    polytope::Tessellation<2, double> mesh;
    polytope::DistributedTessellator<2, double> distTest
       (new polytope::TriangleTessellator<double>(), true, true);
-   //distTest.tessellate(myGenerators, boundary.mGens, boundary.mPLC, mesh);
+   distTest.tessellate(myGenerators, boundary.mPLCpoints, boundary.mPLC, mesh);
 
-   double xmin[2] = { -1.0, -1.0 };
-   double xmax[2] = {  1.0,  1.0 };
-   distTest.tessellate(myGenerators, xmin, xmax, mesh);
+   // double xmin[2] = { -1.0, -1.0 };
+   // double xmax[2] = {  1.0,  1.0 };
+   // distTest.tessellate(myGenerators, xmin, xmax, mesh);
    
    // Do some sanity checks on the stuff in the shared info.
    unsigned numNeighborDomains = mesh.neighborDomains.size();

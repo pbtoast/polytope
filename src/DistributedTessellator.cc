@@ -158,34 +158,40 @@ computeDistributedTessellation(const vector<RealType>& points,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-  // Compute the bounding box for normalizing our coordinates.
-  RealType rlow[Dimension], rhigh[Dimension], genLow[Dimension];
-  this->computeBoundingBox(points, rlow, rhigh);
-  RealType fscale = 0;
-  for (unsigned i = 0; i != Dimension; ++i) {
-    fscale = max(fscale, rhigh[i] - rlow[i]);
-    genLow[i] = RealType(0.0);
-  }
-  POLY_ASSERT(fscale > 0);
-  fscale = 1.0/fscale;
-
-  // Our goal is to build up the necessary set of generators to completely 
-  // specify the tessellation for all the points passed on this processor.
-  // Start by copying the input set in normalized coordinates.
   const unsigned nlocal = points.size() / Dimension;
-  vector<RealType> generators;
-  generators.reserve(points.size());
-  for (unsigned i = 0; i != nlocal; ++i) {
-    for (unsigned j = 0; j != Dimension; ++j) {
-      generators.push_back((points[Dimension*i + j] - rlow[j])*fscale);
-    }
-  }
+
+  // Compute the bounding box for normalizing our coordinates.
+  RealType rlow[Dimension], rhigh[Dimension]; //, genLow[Dimension];
+  this->computeBoundingBox(points, rlow, rhigh);
   
-  POLY_ASSERT(generators.size() == points.size());
-  POLY_ASSERT2(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0,
-               "Min element out of range: " << *min_element(generators.begin(), generators.end()));
-  POLY_ASSERT2(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1,
-               "Max element out of range: " << *max_element(generators.begin(), generators.end()));
+  // Copy points to generator vector
+  vector<RealType> generators;
+  copy(points.begin(), points.end(), back_inserter(generators));
+  
+  // RealType fscale = 0;
+  // for (unsigned i = 0; i != Dimension; ++i) {
+  //   fscale = max(fscale, rhigh[i] - rlow[i]);
+  //   genLow[i] = RealType(0.0);
+  // }
+  // POLY_ASSERT(fscale > 0);
+  // fscale = 1.0/fscale;
+
+  // // Our goal is to build up the necessary set of generators to completely 
+  // // specify the tessellation for all the points passed on this processor.
+  // // Start by copying the input set in normalized coordinates.
+  // vector<RealType> generators;
+  // generators.reserve(points.size());
+  // for (unsigned i = 0; i != nlocal; ++i) {
+  //   for (unsigned j = 0; j != Dimension; ++j) {
+  //     generators.push_back((points[Dimension*i + j] - rlow[j])*fscale);
+  //   }
+  // }
+
+  // POLY_ASSERT(generators.size() == points.size());
+  // POLY_ASSERT2(nlocal == 0 or *min_element(generators.begin(), generators.end()) >= 0,
+  //              "Min element out of range: " << *min_element(generators.begin(), generators.end()));
+  // POLY_ASSERT2(nlocal == 0 or *max_element(generators.begin(), generators.end()) <= 1,
+  //              "Max element out of range: " << *max_element(generators.begin(), generators.end()));
 
   // We can skip a lot of work if there's only one domain!
   vector<unsigned> gen2domain(nlocal, rank);
@@ -195,7 +201,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     vector<ConvexHull> domainHulls; // (numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
-      const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, genLow, degeneracy);
+      const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
       vector<char> localBuffer;
       serialize(localHull, localBuffer);
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -264,6 +270,7 @@ computeDistributedTessellation(const vector<RealType>& points,
           
           // Now the nodes of the hulls adjacent to our own. This second layer of adjacency
           // catches neighbors on the full mesh that may not be neighbors on the hull mesh
+          // without adding a second communication step
           for (set<unsigned>::const_iterator nodeItr2 = hullCellToNodes[*cellItr1].begin();
                nodeItr2 != hullCellToNodes[*cellItr1].end(); ++nodeItr2){
             for (set<unsigned>::const_iterator cellItr2 = hullNodeCells[*nodeItr2].begin();
@@ -378,14 +385,16 @@ computeDistributedTessellation(const vector<RealType>& points,
   }
   POLY_ASSERT(gen2domain.size() == generators.size()/Dimension);
 
-  // Denormalize the generator positions.
-  const unsigned ntotal = generators.size() / Dimension;
-  POLY_ASSERT(ntotal >= nlocal);
-  for (unsigned i = 0; i != ntotal; ++i) {
-    for (unsigned j = 0; j != Dimension; ++j) {
-      generators[Dimension*i + j] = generators[Dimension*i + j]/fscale + rlow[j];
-    }
-  }
+  // // Denormalize the generator positions.
+  // const unsigned ntotal = generators.size() / Dimension;
+  // POLY_ASSERT(ntotal >= nlocal);
+  // for (unsigned i = 0; i != ntotal; ++i) {
+  //   for (unsigned j = 0; j != Dimension; ++j) {
+  //     generators[Dimension*i + j] = generators[Dimension*i + j]/fscale + rlow[j];
+  //   }
+  // }
+  
+
 
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
@@ -799,6 +808,7 @@ computeBoundingBox(const vector<RealType>& points,
 
   case plc:
     POLY_ASSERT(mPLCptr != 0);
+    POLY_ASSERT(mPLCpointsPtr != 0);
     for (vector<vector<int> >::const_iterator facetItr = mPLCptr->facets.begin();
          facetItr != mPLCptr->facets.end();
          ++facetItr) {
@@ -807,11 +817,14 @@ computeBoundingBox(const vector<RealType>& points,
            ++iItr) {
         const unsigned i = *iItr;
         for (unsigned j = 0; j != Dimension; ++j) {
-          rlow[j] =  min(rlow[j],  points[Dimension*i + j]);
-          rhigh[j] = max(rhigh[j], points[Dimension*i + j]);
+          // rlow[j] =  min(rlow[j],  points[Dimension*i + j]);
+          // rhigh[j] = max(rhigh[j], points[Dimension*i + j]);
+          rlow[j]  = min(rlow[j],  (*mPLCpointsPtr)[Dimension*i + j]);
+          rhigh[j] = max(rhigh[j], (*mPLCpointsPtr)[Dimension*i + j]);
         }
       }
     }
+
     break;
   }
 

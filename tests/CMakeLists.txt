@@ -68,7 +68,13 @@ if (TRIANGLE_FOUND)
   target_link_libraries(test_PLCorder polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
   set_tests_properties(test_PLCorder PROPERTIES PASS_REGULAR_EXPRESSION PASS
                        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+  add_executable(test_Area test_Area.cc)
+  add_test(test_Area test_Area)
+  target_link_libraries(test_Area polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
+  set_tests_properties(test_Area PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 
+  
   # Distributed Triangle tessellator.
   if (USE_MPI EQUAL 1)
     add_executable(test_DistributedTriangle test_DistributedTriangle.cc)
