@@ -20,6 +20,12 @@
 #include "Boundary2D.hh"
 #include "Generators.hh"
 
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
+
 using namespace std;
 using namespace polytope;
 
