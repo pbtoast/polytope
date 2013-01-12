@@ -18,6 +18,12 @@
 #include "Generators.hh"
 #include "polytope_test_utilities.hh"
 
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
+
 #define POLY_CHECK_BOOL(x) if (!(x)) { cout << "FAIL: "; return false; }
 
 using namespace std;
@@ -113,9 +119,8 @@ void generateMesh(Tessellator<2,double>& tessellator)
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
-
 
 #if HAVE_TRIANGLE
    cout << "\nTriangle Tessellator:\n" << endl;
@@ -128,7 +133,7 @@ int main(int argc, char** argv)
    generateMesh(voro);
 
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
    return 0;
 }

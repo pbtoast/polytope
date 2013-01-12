@@ -24,6 +24,12 @@
 #include "polytope_test_utilities.hh"
 #include "Generators.hh"
 
+#if HAVE_MPI
+extern "C" {
+#include "mpi.h"
+}
+#endif
+
 using namespace std;
 using namespace polytope;
 
@@ -74,7 +80,7 @@ void testAllBoundaries(Tessellator<2,double>& tessellator)
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
    cout << "\nTriangle Tessellator:\n" << endl;
@@ -82,7 +88,7 @@ int main(int argc, char** argv)
    testAllBoundaries(triangle);
    
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
    return 0;
 }
