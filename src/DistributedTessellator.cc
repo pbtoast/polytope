@@ -7,7 +7,9 @@
 #include <map>
 #include <list>
 #include <limits>
+// extern "C" {
 #include "mpi.h"
+// }
 
 #include "polytope.hh"
 #include "Point.hh"

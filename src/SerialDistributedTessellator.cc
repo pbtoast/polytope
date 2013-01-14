@@ -5,7 +5,9 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+// extern "C" {
 #include "mpi.h"
+// }
 
 #include "polytope.hh"
 #include "deleteCells.hh"

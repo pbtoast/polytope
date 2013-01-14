@@ -4,9 +4,9 @@
 #include <cstdlib>
 
 #if HAVE_MPI
-extern "C" {
+// extern "C" {
 #include "mpi.h"
-}
+// }
 #endif
 
 namespace polytope

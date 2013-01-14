@@ -8,9 +8,9 @@
 #include <vector>
 #include <limits>
 
-extern "C" {
+// extern "C" {
 #include "mpi.h"
-}
+// }
 
 #include "KeyTraits.hh"
 #include "convexHull_2d.hh"
