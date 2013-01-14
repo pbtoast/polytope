@@ -13,9 +13,9 @@
 #include "Point.hh"
 #include "polytope_parallel_utilities.hh"
 
-extern "C" {
+// extern "C" {
 #include "mpi.h"
-}
+// }
 
 namespace { // unnamed
 

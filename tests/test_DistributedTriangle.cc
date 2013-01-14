@@ -18,9 +18,9 @@
 #include "Point.hh"
 
 #if HAVE_MPI
-extern "C" {
+// extern "C" {
 #include "mpi.h"
-}
+// }
 #endif
 
 using namespace std;

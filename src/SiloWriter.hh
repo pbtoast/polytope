@@ -4,7 +4,9 @@
 #if HAVE_SILO
 
 #if HAVE_MPI
+// extern "C" {
 #include <mpi.h>
+// }
 #else
 #define MPI_Comm int
 #define MPI_COMM_WORLD 0

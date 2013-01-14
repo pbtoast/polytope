@@ -32,17 +32,18 @@ add_test(test1_VoroPP_2d test1_VoroPP_2d)
 target_link_libraries(test1_VoroPP_2d polytope)
 set_tests_properties(test1_VoroPP_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
                      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-add_executable(test_UnitSquare test_UnitSquare.cc)
-add_test(test_UnitSquare test_UnitSquare)
-target_link_libraries(test_UnitSquare polytope)
-set_tests_properties(test_UnitSquare PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-add_executable(test_Degenerate test_Degenerate.cc)
-add_test(test_Degenerate test_Degenerate)
-target_link_libraries(test_Degenerate polytope)
-set_tests_properties(test_Degenerate PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-
+if (Boost_FOUND)     
+  add_executable(test_UnitSquare test_UnitSquare.cc)
+  add_test(test_UnitSquare test_UnitSquare)
+  target_link_libraries(test_UnitSquare polytope)
+  set_tests_properties(test_UnitSquare PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+  add_executable(test_Degenerate test_Degenerate.cc)
+  add_test(test_Degenerate test_Degenerate)
+  target_link_libraries(test_Degenerate polytope)
+  set_tests_properties(test_Degenerate PROPERTIES PASS_REGULAR_EXPRESSION PASS
+                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+endif ()
 
 # Voro++ 3D tessellator.
 add_executable(test1_VoroPP_3d test1_VoroPP_3d.cc)

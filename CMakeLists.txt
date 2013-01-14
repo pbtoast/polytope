@@ -29,9 +29,15 @@ endif ()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SYS_FLAGS}")
 
 # General compiler flags.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -ansi")
+endif ()
+if (CMAKE_CXX_COMPILER_ID STREQUAL "XL")
+  set(USING_XLC true)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qPIC")
+else ()
+  set(USING_XLC false)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif ()
 
 # Figure out MPI.
@@ -48,6 +54,10 @@ endif ()
 # set(Boost_DEBUG 1)
 set(Boost_ADDITIONAL_VERSIONS "1.51")
 find_package(Boost "1.51")
+if (USING_XLC) 
+  set(Boost_FOUND false)
+  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
+endif()
 if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
   message("-- Found BOOST installation at ${Boost_INCLUDE_DIR}")
@@ -100,9 +110,11 @@ else ()
 endif ()
 
 # Enable Triangle if triangle.h and triangle.c are found.
+# We disable this on IBM xlC since Boost.Geometry does not compile correctly there for now.
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 if (EXISTS ${CWD}/src/triangle.h AND 
-    EXISTS ${CWD}/src/triangle.c)
+    EXISTS ${CWD}/src/triangle.c AND
+    Boost_FOUND)
   set(TRIANGLE_FOUND true)
   set(HAVE_TRIANGLE true)
 else()

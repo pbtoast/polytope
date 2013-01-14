@@ -8,8 +8,10 @@
 #include "silo.h"
 
 #if HAVE_MPI
+// extern "C" {
 #include "mpi.h"
 #include "pmpio.h"
+// }
 #endif
 
 #include "SiloUtils.hh"
