@@ -1,4 +1,18 @@
 --------------------------------------------------------------------------------
+Release 0.5.6
+
+changeset:
+  202:53fca806b57f
+
+Bugfixes for specific platforms.  
+
+1.  Build and test correctly on Mac OS/X with clang++.
+
+2.  Build (but nearly useless) on IBM xlC.  xlC does not handle Boost.Geometry
+    correctly, so we have disabled all code employing Boost.Geometry on that
+    platform, which means the TriangleTessellator is not available.
+
+--------------------------------------------------------------------------------
 Release 0.5.5
 
 changeset:
