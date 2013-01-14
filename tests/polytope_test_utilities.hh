@@ -5,11 +5,14 @@
 #define __polytope_test_utilities__
 
 #include "polytope.hh"
-#include "Boundary2D.hh"
+
+template<typename RealType> class Boundary2D;
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
+
+namespace polytope {
 
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
@@ -149,7 +152,6 @@ RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ){
    return area;
 }
 
-
-
+}
 
 #endif

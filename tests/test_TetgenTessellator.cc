@@ -37,60 +37,63 @@ int main() {
     }
   }
 
-  // Create the piecewise linear complex representing the box. Note that 
-  // the box consists of facets that are defined by their connections to 
-  // generating points.
-  PLC<3, double> box;
+  // // Create the piecewise linear complex representing the box. Note that 
+  // // the box consists of facets that are defined by their connections to 
+  // // generating points.
+  // PLC<3, double> box;
 
-  // 6 facets
-  box.facets.resize(6);
+  // // 6 facets
+  // box.facets.resize(6);
 
-  // facet 0 -- bottom face.
-  box.facets[0].resize(4);
-  box.facets[0][0] = 0; 
-  box.facets[0][1] = nx-1;
-  box.facets[0][2] = nx*nx-1;
-  box.facets[0][3] = nx*(nx-1);
+  // // facet 0 -- bottom face.
+  // box.facets[0].resize(4);
+  // box.facets[0][0] = 0; 
+  // box.facets[0][1] = nx-1;
+  // box.facets[0][2] = nx*nx-1;
+  // box.facets[0][3] = nx*(nx-1);
 
-  // facet 1 -- top face.
-  box.facets[1].resize(4);
-  box.facets[1][0] = nx*nx*(nx-1);
-  box.facets[1][1] = nx*nx*(nx-1) + nx-1;
-  box.facets[1][2] = nx*nx*(nx-1) + nx*nx-1;
-  box.facets[1][3] = nx*nx*(nx-1) + nx*(nx-1);
+  // // facet 1 -- top face.
+  // box.facets[1].resize(4);
+  // box.facets[1][0] = nx*nx*(nx-1);
+  // box.facets[1][1] = nx*nx*(nx-1) + nx-1;
+  // box.facets[1][2] = nx*nx*(nx-1) + nx*nx-1;
+  // box.facets[1][3] = nx*nx*(nx-1) + nx*(nx-1);
 
-  // facet 2 -- left face.
-  box.facets[2].resize(4);
-  box.facets[2][0] = box.facets[0][0];
-  box.facets[2][1] = box.facets[1][0];
-  box.facets[2][2] = box.facets[1][3];
-  box.facets[2][3] = box.facets[0][3];
+  // // facet 2 -- left face.
+  // box.facets[2].resize(4);
+  // box.facets[2][0] = box.facets[0][0];
+  // box.facets[2][1] = box.facets[1][0];
+  // box.facets[2][2] = box.facets[1][3];
+  // box.facets[2][3] = box.facets[0][3];
 
-  // facet 3 -- right face.
-  box.facets[2].resize(4);
-  box.facets[2][0] = box.facets[0][1];
-  box.facets[2][1] = box.facets[1][1];
-  box.facets[2][2] = box.facets[1][2];
-  box.facets[2][3] = box.facets[0][2];
+  // // facet 3 -- right face.
+  // box.facets[2].resize(4);
+  // box.facets[2][0] = box.facets[0][1];
+  // box.facets[2][1] = box.facets[1][1];
+  // box.facets[2][2] = box.facets[1][2];
+  // box.facets[2][3] = box.facets[0][2];
 
-  // facet 4 -- front face.
-  box.facets[4].resize(4);
-  box.facets[4][0] = box.facets[0][0];
-  box.facets[4][1] = box.facets[0][1];
-  box.facets[4][2] = box.facets[1][1];
-  box.facets[4][3] = box.facets[1][0];
+  // // facet 4 -- front face.
+  // box.facets[4].resize(4);
+  // box.facets[4][0] = box.facets[0][0];
+  // box.facets[4][1] = box.facets[0][1];
+  // box.facets[4][2] = box.facets[1][1];
+  // box.facets[4][3] = box.facets[1][0];
 
-  // facet 5 -- back face.
-  box.facets[5].resize(4);
-  box.facets[5][0] = box.facets[0][3];
-  box.facets[5][1] = box.facets[0][2];
-  box.facets[5][2] = box.facets[1][2];
-  box.facets[5][3] = box.facets[1][3];
+  // // facet 5 -- back face.
+  // box.facets[5].resize(4);
+  // box.facets[5][0] = box.facets[0][3];
+  // box.facets[5][1] = box.facets[0][2];
+  // box.facets[5][2] = box.facets[1][2];
+  // box.facets[5][3] = box.facets[1][3];
+
+  // Define the box.
+  double low[3] = {x1, y1, z1}, high[3] = {x2, y2, z2};
 
   // Create the tessellation.
   Tessellation<3, double> mesh;
   TetgenTessellator<double> Tetgen;
-  Tetgen.tessellate(generators, box, mesh);
+  Tetgen.tessellate(generators, low, high, mesh);
   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 

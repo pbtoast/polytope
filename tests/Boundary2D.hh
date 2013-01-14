@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include "polytope.hh"
+#include "polytope_test_utilities.hh"
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
@@ -473,8 +474,8 @@ public:
       {
 	 unsigned ix = 2*(i+offset),   iy = 2*(i+offset)+1;
 	 unsigned jx = 2*(j+offset),   jy = 2*(j+offset)+1;
-	 if( (mPLCpoints[iy] <  y  &&  mPLCpoints[jy] >= y  ||
-	      mPLCpoints[jy] <  y  &&  mPLCpoints[iy] >= y) &&
+	 if( ((mPLCpoints[iy] <  y  &&  mPLCpoints[jy] >= y)  ||
+	      (mPLCpoints[jy] <  y  &&  mPLCpoints[iy] >= y)) &&
 	     (mPLCpoints[ix] <= x  ||  mPLCpoints[jx] <= x) )
 	 {
 	    isInside ^= ( mPLCpoints[ix] + ( y         - mPLCpoints[iy] ) /
@@ -538,7 +539,7 @@ public:
    void boostMyBoundary()
    {
       boost::geometry::clear(mBGboundary);
-      mBGboundary = makePolygon( mPLC, mPLCpoints );
+      mBGboundary = makePolygon<RealType>( mPLC, mPLCpoints );
    }
 
 };
