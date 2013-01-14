@@ -29,13 +29,19 @@ class TetgenTessellator: public Tessellator<3, RealType>
   void tessellate(const std::vector<RealType>& points,
                   Tessellation<3, RealType>& mesh) const;
 
-  // Tessellate obeying the given boundaries.
+  // Tessellate with a bounding box representing the boundaries.
   void tessellate(const std::vector<RealType>& points,
-                  const PLC<3, RealType>& geometry,
+                  RealType* low,
+                  RealType* high,
                   Tessellation<3, RealType>& mesh) const;
 
+  // // Tessellate obeying the given boundaries.
+  // void tessellate(const std::vector<RealType>& points,
+  //                 const PLC<3, RealType>& geometry,
+  //                 Tessellation<3, RealType>& mesh) const;
+
   // This Tessellator handles PLCs!
-  bool handlesPLCs() const { return true; }
+  bool handlesPLCs() const { return false; }
 
 };
 

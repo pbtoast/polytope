@@ -12,7 +12,7 @@ if (TRIANGLE_FOUND)
 endif()
 
 if (TETGEN_FOUND)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc tetgen.cxx)
 endif ()
 
 if (USE_MPI EQUAL 1)

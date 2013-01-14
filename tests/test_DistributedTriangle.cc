@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
     xproc.reserve(numProcs);
     yproc.reserve(numProcs);
     for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
-      xproc.push_back(x1 + random01()*(x2 - x1));
-      yproc.push_back(y1 + random01()*(y2 - y1));
+      xproc.push_back(x1 + polytope::random01()*(x2 - x1));
+      yproc.push_back(y1 + polytope::random01()*(y2 - y1));
     }
 
     // Create the local generators.  Note this is not efficient in a couple of ways!  

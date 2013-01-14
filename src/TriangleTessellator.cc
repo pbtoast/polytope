@@ -621,7 +621,8 @@ tessellate(const vector<RealType>& points,
     const IntPoint& p = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
-    node = { p.realx(clow[0],cdx) , p.realy(clow[1],cdx) };
+    node[0] = p.realx(clow[0],cdx);
+    node[1] = p.realy(clow[1],cdx);
     
     // Check if nodes are inside boundary (either bounding box or PLC, if defined)
     bool inside = boost::geometry::within(realBGpoint(node[0],node[1]), realBoundary);
