@@ -12,7 +12,12 @@ if (TRIANGLE_FOUND)
 endif()
 
 if (TETGEN_FOUND)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc tetgen.cxx)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
+  add_library(tetgen tetgen.cxx)
+  set(TETGEN_LIB tetgen)
+  set_target_properties(${TETGEN_LIB} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY")
+else ()
+  set(TETGEN_LIB "")
 endif ()
 
 if (USE_MPI EQUAL 1)
@@ -21,7 +26,7 @@ if (USE_MPI EQUAL 1)
 endif()
 
 add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
-target_link_libraries(polytope voro_2d voro_3d ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
+target_link_libraries(polytope voro_2d voro_3d ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
 
 # Library install targets
-install (TARGETS polytope DESTINATION lib)
+install (TARGETS polytope ${TETGEN_LIB} DESTINATION lib)
