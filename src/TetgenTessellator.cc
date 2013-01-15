@@ -7,9 +7,9 @@
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 
-// // Pull in tetgen stuff.
-// #define TETLIBRARY
-// #include "tetgen.cxx" 
+// Pull in tetgen stuff.
+#define TETLIBRARY
+#include "tetgen.h"
 
 namespace polytope {
 
@@ -91,46 +91,82 @@ computeCircumcenter(double* A, double* B, double* C, double* D, double* X) {
 //------------------------------------------------------------------------------
 // Default constructor.
 //------------------------------------------------------------------------------
-template<typename RealType>
-TetgenTessellator<RealType>::
+TetgenTessellator::
 TetgenTessellator():
-  Tessellator<3, RealType>() {
+  Tessellator<3, double>() {
 }
 
 //------------------------------------------------------------------------------
 // Destructor.
 //------------------------------------------------------------------------------
-template<typename RealType>
-TetgenTessellator<RealType>::
+TetgenTessellator::
 ~TetgenTessellator() {
 }
 
 //------------------------------------------------------------------------------
 // Unbounded tessellation.
 //------------------------------------------------------------------------------
-template<typename RealType>
 void
-TetgenTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           Tessellation<3, RealType>& mesh) const {
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           Tessellation<3, double>& mesh) const {
 }
 
 //------------------------------------------------------------------------------
 // Tessellate within a bounding box.
 //------------------------------------------------------------------------------
-template<typename RealType>
 void
-TetgenTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           RealType* low,
-           RealType* high,
-           Tessellation<3, RealType>& mesh) const {
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           double* low,
+           double* high,
+           Tessellation<3, double>& mesh) const {
 
+  // Pre-conditions.
+  POLY_ASSERT(not points.empty());
+  POLY_ASSERT(points.size() % 3 == 0);
+
+  // Normalize coordinates in the input box.
+  const unsigned numPoints = points.size() / 3;
+  vector<double> generators;
+  generators.reserve(3*(numPoints + 8));
+  double box[3] = {high[0] - low[0],
+                   high[1] - low[1],
+                   high[2] - low[2]};
+  POLY_ASSERT(box[0] > 0.0 and box[1] > 0.0 and box[2] > 0.0);
+  for (unsigned i = 0; i != points.size(); ++i) {
+    const unsigned j = i % 3;
+    generators.push_back((points[i] - low[j])/box[j]);
+    POLY_ASSERT(generators.back() >= 0.0 and generators.back() <= 1.0);
+  }
+  POLY_ASSERT(generators.size() == points.size());
+
+  // Add the boundary points to the generator list.
+  generators.push_back(0.0); generators.push_back(0.0); generators.push_back(0.0);
+  generators.push_back(1.0); generators.push_back(0.0); generators.push_back(0.0);
+  generators.push_back(1.0); generators.push_back(1.0); generators.push_back(0.0);
+  generators.push_back(0.0); generators.push_back(1.0); generators.push_back(0.0);
+  generators.push_back(0.0); generators.push_back(0.0); generators.push_back(1.0);
+  generators.push_back(1.0); generators.push_back(0.0); generators.push_back(1.0);
+  generators.push_back(1.0); generators.push_back(1.0); generators.push_back(1.0);
+  generators.push_back(0.0); generators.push_back(1.0); generators.push_back(1.0);
+  POLY_ASSERT(generators.size() == 3*(numPoints + 8));
+
+  // Build the input to tetgen.
+  tetgenio tetgen_in;
+  tetgen_in.firstnumber = 0;
+  tetgen_in.mesh_dim = 3;
+  tetgen_in.pointlist = &generators.front();
+  tetgen_in.pointattributelist = 0;
+  tetgen_in.pointmtrlist = 0;
+  tetgen_in.pointmarkerlist = 0;
+  tetgen_in.numberofpoints = generators.size() / 3;
+  tetgen_in.numberofpointattributes = 0;
+  tetgen_in.numberofpointmtrs = 0;
+
+  // Do the tetrahedralization.
+  tetgenio tetgen_out;
+  tetrahedralize((char*)"q", &tetgen_in, &tetgen_out);
 }
-
-//------------------------------------------------------------------------------
-// Explicit instantiation.
-//------------------------------------------------------------------------------
-template class TetgenTessellator<double>;
 
 }

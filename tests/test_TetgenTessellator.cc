@@ -92,8 +92,8 @@ int main() {
 
   // Create the tessellation.
   Tessellation<3, double> mesh;
-  TetgenTessellator<double> Tetgen;
-  Tetgen.tessellate(generators, low, high, mesh);
+  TetgenTessellator tetgen;
+  tetgen.tessellate(generators, low, high, mesh);
   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
