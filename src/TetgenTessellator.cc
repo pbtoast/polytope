@@ -86,6 +86,28 @@ computeCircumcenter(double* A, double* B, double* C, double* D, double* X) {
   X[2] = 0.5*Dz/a;
 }
 
+//------------------------------------------------------------------------------
+// An implementation of the map specialized to help constructing counters.
+// This thing just overloads the index operator to start the count at zero
+// for new key values.
+//------------------------------------------------------------------------------
+template<typename Key, 
+         typename Comparator = std::less<Key> >
+class CounterMap: public std::map<Key, unsigned> {
+public:
+  CounterMap(): std::map<Key, unsigned>() {}
+  virtual ~CounterMap() {}
+  unsigned& operator[](const Key& key) {
+    typename std::map<Key, unsigned>::iterator itr = this->find(key);
+    if (itr == this->end()) {
+      std::map<Key, unsigned>::operator[](key) = 0U;
+      itr = this->find(key);
+    }
+    POLY_ASSERT(itr != this->end());
+    return itr->second;
+  }
+};
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -126,10 +148,16 @@ tessellate(const vector<double>& points,
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
 
+  typedef int64_t CoordHash;
+  typedef double RealType;
+  typedef set<int> FaceHash;
+  typedef Point3<CoordHash> IntPoint;
+  typedef Point2<RealType> RealPoint;
+
   // Normalize coordinates in the input box.
-  const unsigned numPoints = points.size() / 3;
+  const unsigned numGenerators = points.size() / 3;
   vector<double> generators;
-  generators.reserve(3*(numPoints + 8));
+  generators.reserve(3*(numGenerators + 8));
   double box[3] = {high[0] - low[0],
                    high[1] - low[1],
                    high[2] - low[2]};
@@ -150,7 +178,7 @@ tessellate(const vector<double>& points,
   generators.push_back(1.0); generators.push_back(0.0); generators.push_back(1.0);
   generators.push_back(1.0); generators.push_back(1.0); generators.push_back(1.0);
   generators.push_back(0.0); generators.push_back(1.0); generators.push_back(1.0);
-  POLY_ASSERT(generators.size() == 3*(numPoints + 8));
+  POLY_ASSERT(generators.size() == 3*(numGenerators + 8));
 
   // Build the input to tetgen.
   tetgenio tetgen_in;
@@ -166,9 +194,32 @@ tessellate(const vector<double>& points,
 
   // Do the tetrahedralization.
   tetgenio tetgen_out;
-  tetrahedralize((char*)"q", &tetgen_in, &tetgen_out);
+  tetrahedralize((char*)"qV", &tetgen_in, &tetgen_out);
+
+  // Make sure we got something.
+  if (tetgen_out.numberoftetrahedra == 0)
+    error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
+  if (tetgen_out.numberofpoints != generators.size()/3) {
+    char err[1024];
+    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
+             tetgen_out.numberofpoints, (int)numGenerators);
+    error(err);
+  }
 
   // Find the circumcenters of each tetrahedron.
+  RealType  clow[3] = { numeric_limits<RealType>::max(),  
+                        numeric_limits<RealType>::max(),
+                        numeric_limits<RealType>::max()};
+  RealType chigh[3] = {-numeric_limits<RealType>::max(), 
+                       -numeric_limits<RealType>::max(),
+                       -numeric_limits<RealType>::max()};
+  CounterMap<FaceHash> faceCounter;
+  vector<RealPoint> circumcenters(tetgen_out.numberoftetrahedra);
+  map<int, set<int> > gen2tet;
+  map<int, set<int> > neighbors;
+  unsigned p1, p2, p3, p4;
+  for (unsigned i = 0; i != tetgen_out.numberoftetrahedra; ++i) {
+  }
 }
 
 }
