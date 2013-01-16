@@ -18,9 +18,9 @@
 
 namespace polytope {
 
-class TetgenTessellator: public Tessellator<3, double> 
-{
+class TetgenTessellator: public Tessellator<3, double> {
   public:
+  typedef double RealType;
 
   // Constructor, destructor.
   TetgenTessellator();
@@ -36,14 +36,14 @@ class TetgenTessellator: public Tessellator<3, double>
                   double* high,
                   Tessellation<3, double>& mesh) const;
 
-  // // Tessellate obeying the given boundaries.
-  // void tessellate(const std::vector<double>& points,
-  //                 const PLC<3, double>& geometry,
-  //                 Tessellation<3, double>& mesh) const;
+  // Tessellate obeying the given boundaries.
+  void tessellate(const std::vector<double>& points,
+                  const std::vector<double>& PLCpoints,
+                  const PLC<3, double>& geometry,
+                  Tessellation<3, double>& mesh) const;
 
   // This Tessellator handles PLCs!
-  bool handlesPLCs() const { return false; }
-
+  bool handlesPLCs() const { return true; }
 };
 
 }

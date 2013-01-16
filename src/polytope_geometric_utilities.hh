@@ -6,6 +6,11 @@
 //------------------------------------------------------------------------------
 #include <limits>
 
+#if USE_MPI
+#include "mpi.h"
+#include "polytope_parallel_utilities.hh"
+#endif
+
 namespace polytope {
 namespace geometry {
 
@@ -100,6 +105,38 @@ closestPointOnSegment2D(const RealType* point,
     result[0] = s1[0] + ptest*shat[0];
     result[1] = s1[1] + ptest*shat[1];
   }
+}
+
+//------------------------------------------------------------------------------
+// Find the global bounding box for a set of coordinates.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+void
+computeBoundingBox(const std::vector<RealType>& pos,
+                   const bool globalReduce,
+                   RealType* xmin,
+                   RealType* xmax) {
+   POLY_ASSERT(pos.size() % Dimension == 0);
+   for (unsigned j = 0; j != Dimension; ++j) {
+      xmin[j] = std::numeric_limits<RealType>::max();
+      xmax[j] = (std::numeric_limits<RealType>::is_signed ? -xmin[j] : std::numeric_limits<RealType>::min());
+   }
+   const unsigned n = pos.size()/Dimension;
+   for (unsigned i = 0; i != n; ++i) {
+      for (unsigned j = 0; j != Dimension; ++j) {
+         xmin[j] = std::min(xmin[j], pos[Dimension*i + j]);
+         xmax[j] = std::max(xmax[j], pos[Dimension*i + j]);
+      }
+   }
+#if USE_MPI
+   if (globalReduce) {
+     for (unsigned j = 0; j != Dimension; ++j) {
+       xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);
+       xmax[j] = allReduce(xmax[j], MPI_MIN, MPI_COMM_WORLD);
+     }
+   }
+#endif
 }
 
 }

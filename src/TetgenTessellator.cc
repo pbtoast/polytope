@@ -6,6 +6,7 @@
 #include <map>
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
+#include "Point.hh"
 
 // Pull in tetgen stuff.
 #define TETLIBRARY
@@ -132,6 +133,8 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            Tessellation<3, double>& mesh) const {
+  PLC<3, double> geometry;
+  this->tessellate(points, points, geometry, mesh);
 }
 
 //------------------------------------------------------------------------------
@@ -143,83 +146,95 @@ tessellate(const vector<double>& points,
            double* low,
            double* high,
            Tessellation<3, double>& mesh) const {
+  ReducedPLC<3, double> box = this->boundingBox(low, high);
+  this->tessellate(points, box.points, box, mesh);
+}
+
+//------------------------------------------------------------------------------
+// Tessellate within a PLC boundary.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           const vector<double>& PLCpoints,
+           const PLC<3, double>& geometry,
+           Tessellation<3, double>& mesh) const {
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
 
   typedef int64_t CoordHash;
-  typedef double RealType;
   typedef set<int> FaceHash;
   typedef Point3<CoordHash> IntPoint;
-  typedef Point2<RealType> RealPoint;
+  typedef Point3<RealType> RealPoint;
 
-  // Normalize coordinates in the input box.
-  const unsigned numGenerators = points.size() / 3;
-  vector<double> generators;
-  generators.reserve(3*(numGenerators + 8));
-  double box[3] = {high[0] - low[0],
-                   high[1] - low[1],
-                   high[2] - low[2]};
-  POLY_ASSERT(box[0] > 0.0 and box[1] > 0.0 and box[2] > 0.0);
-  for (unsigned i = 0; i != points.size(); ++i) {
-    const unsigned j = i % 3;
-    generators.push_back((points[i] - low[j])/box[j]);
-    POLY_ASSERT(generators.back() >= 0.0 and generators.back() <= 1.0);
-  }
-  POLY_ASSERT(generators.size() == points.size());
+  // // Normalize coordinates in the input box.
+  // vector<double> generators;
+  // const unsigned numGenerators = points.size() / 3;
+  // generators.reserve(3*(numGenerators + 8));
+  // double box[3] = {high[0] - low[0],
+  //                  high[1] - low[1],
+  //                  high[2] - low[2]};
+  // POLY_ASSERT(box[0] > 0.0 and box[1] > 0.0 and box[2] > 0.0);
+  // for (unsigned i = 0; i != points.size(); ++i) {
+  //   const unsigned j = i % 3;
+  //   generators.push_back((points[i] - low[j])/box[j]);
+  //   POLY_ASSERT(generators.back() >= 0.0 and generators.back() <= 1.0);
+  // }
+  // POLY_ASSERT(generators.size() == points.size());
 
-  // Add the boundary points to the generator list.
-  generators.push_back(0.0); generators.push_back(0.0); generators.push_back(0.0);
-  generators.push_back(1.0); generators.push_back(0.0); generators.push_back(0.0);
-  generators.push_back(1.0); generators.push_back(1.0); generators.push_back(0.0);
-  generators.push_back(0.0); generators.push_back(1.0); generators.push_back(0.0);
-  generators.push_back(0.0); generators.push_back(0.0); generators.push_back(1.0);
-  generators.push_back(1.0); generators.push_back(0.0); generators.push_back(1.0);
-  generators.push_back(1.0); generators.push_back(1.0); generators.push_back(1.0);
-  generators.push_back(0.0); generators.push_back(1.0); generators.push_back(1.0);
-  POLY_ASSERT(generators.size() == 3*(numGenerators + 8));
+  // // Add the boundary points to the generator list.
+  // generators.push_back(0.0); generators.push_back(0.0); generators.push_back(0.0);
+  // generators.push_back(1.0); generators.push_back(0.0); generators.push_back(0.0);
+  // generators.push_back(1.0); generators.push_back(1.0); generators.push_back(0.0);
+  // generators.push_back(0.0); generators.push_back(1.0); generators.push_back(0.0);
+  // generators.push_back(0.0); generators.push_back(0.0); generators.push_back(1.0);
+  // generators.push_back(1.0); generators.push_back(0.0); generators.push_back(1.0);
+  // generators.push_back(1.0); generators.push_back(1.0); generators.push_back(1.0);
+  // generators.push_back(0.0); generators.push_back(1.0); generators.push_back(1.0);
+  // POLY_ASSERT(generators.size() == 3*(numGenerators + 8));
 
-  // Build the input to tetgen.
-  tetgenio tetgen_in;
-  tetgen_in.firstnumber = 0;
-  tetgen_in.mesh_dim = 3;
-  tetgen_in.pointlist = &generators.front();
-  tetgen_in.pointattributelist = 0;
-  tetgen_in.pointmtrlist = 0;
-  tetgen_in.pointmarkerlist = 0;
-  tetgen_in.numberofpoints = generators.size() / 3;
-  tetgen_in.numberofpointattributes = 0;
-  tetgen_in.numberofpointmtrs = 0;
+  // // Build the input to tetgen.
+  // tetgenio tetgen_in;
+  // tetgen_in.firstnumber = 0;
+  // tetgen_in.mesh_dim = 3;
+  // tetgen_in.pointlist = &generators.front();
+  // tetgen_in.pointattributelist = 0;
+  // tetgen_in.pointmtrlist = 0;
+  // tetgen_in.pointmarkerlist = 0;
+  // tetgen_in.numberofpoints = generators.size() / 3;
+  // tetgen_in.numberofpointattributes = 0;
+  // tetgen_in.numberofpointmtrs = 0;
 
-  // Do the tetrahedralization.
-  tetgenio tetgen_out;
-  tetrahedralize((char*)"qV", &tetgen_in, &tetgen_out);
+  // // Do the tetrahedralization.
+  // tetgenio tetgen_out;
+  // tetrahedralize((char*)"qV", &tetgen_in, &tetgen_out);
 
-  // Make sure we got something.
-  if (tetgen_out.numberoftetrahedra == 0)
-    error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
-  if (tetgen_out.numberofpoints != generators.size()/3) {
-    char err[1024];
-    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
-             tetgen_out.numberofpoints, (int)numGenerators);
-    error(err);
-  }
+  // // Make sure we got something.
+  // if (tetgen_out.numberoftetrahedra == 0)
+  //   error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
+  // if (tetgen_out.numberofpoints != generators.size()/3) {
+  //   char err[1024];
+  //   snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
+  //            tetgen_out.numberofpoints, (int)numGenerators);
+  //   error(err);
+  // }
 
-  // Find the circumcenters of each tetrahedron.
-  RealType  clow[3] = { numeric_limits<RealType>::max(),  
-                        numeric_limits<RealType>::max(),
-                        numeric_limits<RealType>::max()};
-  RealType chigh[3] = {-numeric_limits<RealType>::max(), 
-                       -numeric_limits<RealType>::max(),
-                       -numeric_limits<RealType>::max()};
-  CounterMap<FaceHash> faceCounter;
-  vector<RealPoint> circumcenters(tetgen_out.numberoftetrahedra);
-  map<int, set<int> > gen2tet;
-  map<int, set<int> > neighbors;
-  unsigned p1, p2, p3, p4;
-  for (unsigned i = 0; i != tetgen_out.numberoftetrahedra; ++i) {
-  }
+  // // Find the circumcenters of each tetrahedron.
+  // RealType  clow[3] = { numeric_limits<RealType>::max(),  
+  //                       numeric_limits<RealType>::max(),
+  //                       numeric_limits<RealType>::max()};
+  // RealType chigh[3] = {-numeric_limits<RealType>::max(), 
+  //                      -numeric_limits<RealType>::max(),
+  //                      -numeric_limits<RealType>::max()};
+  // CounterMap<FaceHash> faceCounter;
+  // vector<RealPoint> circumcenters(tetgen_out.numberoftetrahedra);
+  // map<int, set<int> > gen2tet;
+  // map<int, set<int> > neighbors;
+  // unsigned p1, p2, p3, p4;
+  // for (unsigned i = 0; i != tetgen_out.numberoftetrahedra; ++i) {
+  // }
 }
 
 }

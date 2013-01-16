@@ -796,7 +796,7 @@ computeBoundingBox(const vector<RealType>& points,
   // Find the local min & max.
   switch (mType) {
   case unbounded:
-    polytope::computeBoundingBox<Dimension, RealType>(points, false, rlow, rhigh);
+    geometry::computeBoundingBox<Dimension, RealType>(points, false, rlow, rhigh);
     break;
 
   case box:
