@@ -11,6 +11,7 @@
 
 #include "polytope.hh"
 #include "Point.hh"
+#include "polytope_geometric_utilities.hh"
 #include "polytope_parallel_utilities.hh"
 
 // extern "C" {
@@ -279,7 +280,7 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
 
   // Compute the bounding box for normalizing our coordinates.
   RealType xmin[Dimension], xmax[Dimension];
-  computeBoundingBox<Dimension, RealType>(mesh.nodes, true, xmin, xmax);
+  geometry::computeBoundingBox<Dimension, RealType>(mesh.nodes, true, xmin, xmax);
   const RealType dxhash = Traits::maxLength(xmin, xmax)/(1LL << 34);
 
   // First check that all processors agree about who is talking to whom.
