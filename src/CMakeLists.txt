@@ -4,7 +4,7 @@ if (SILO_FOUND)
 endif()
 
 # By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc predicates.cc convexHull_3d.cc KeyTraits.cc)
+set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc convexHull_3d.cc KeyTraits.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (TRIANGLE_FOUND)
@@ -13,7 +13,7 @@ endif()
 
 if (TETGEN_FOUND)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
-  add_library(tetgen tetgen.cxx)
+  add_library(tetgen tetgen.cxx predicates.cc)
   set(TETGEN_LIB tetgen)
   set_target_properties(${TETGEN_LIB} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY")
 else ()

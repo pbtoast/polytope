@@ -54,8 +54,8 @@ det4(double A11, double A12, double A13, double A14,
 
 //------------------------------------------------------------------------
 // This function computes the circumcenter of a tetrahedron with vertices
-// A = (Ax, Ay), B = (Bx, By), C = (Cx, Cy), and D = (Dx, Dy), and places 
-// the result in X.
+// A = (Ax, Ay, Az), B = (Bx, By, Bz), C = (Cx, Cy, Cz), and D = (Dx, Dy, Dz),
+// and places the result in X.
 //------------------------------------------------------------------------
 void 
 computeCircumcenter(double* A, double* B, double* C, double* D, double* X) {
@@ -167,6 +167,8 @@ tessellate(const vector<double>& points,
   // Do the tetrahedralization.
   tetgenio tetgen_out;
   tetrahedralize((char*)"q", &tetgen_in, &tetgen_out);
+
+  // Find the circumcenters of each tetrahedron.
 }
 
 }
