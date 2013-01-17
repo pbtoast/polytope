@@ -109,14 +109,34 @@ public:
   }
 };
 
+//------------------------------------------------------------------------------
+// Increment the given position by 
+//------------------------------------------------------------------------------
+void
+incrementPosition(Point3<double>& val,
+                  const vector<double>& points,
+                  const vector<int>& indices) {
+  Point3<double> xi(0.0, 0.0, 0.0);
+  for (unsigned k = 0; k != indices.size(); ++k) {
+    const unsigned i = indices[k];
+    POLY_ASSERT(i < points.size()/3);
+    xi.x += points[3*i];
+    xi.y += points[3*i + 1];
+    xi.z += points[3*i + 2];
+  }
+  xi /= indices.size();
+  val += xi;
+}
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
 // Default constructor.
 //------------------------------------------------------------------------------
 TetgenTessellator::
-TetgenTessellator():
-  Tessellator<3, double>() {
+TetgenTessellator(const bool directComputation):
+  Tessellator<3, double>(),
+  mDirectComputation(directComputation) {
 }
 
 //------------------------------------------------------------------------------
@@ -159,6 +179,120 @@ tessellate(const vector<double>& points,
            const vector<double>& PLCpoints,
            const PLC<3, double>& geometry,
            Tessellation<3, double>& mesh) const {
+  if (mDirectComputation) {
+    this->computeDirectVoronoi(points, PLCpoints, geometry, mesh);
+  } else {
+    this->computeDualOfTetrahedralization(points, PLCpoints, geometry, mesh);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Internal method to build the tessellation directly using Tetgen's native 
+// Voronoi capability.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+computeDirectVoronoi(const vector<double>& points,
+                     const vector<double>& PLCpoints,
+                     const PLC<3, double>& geometry,
+                     Tessellation<3, double>& mesh) const {
+
+  // Pre-conditions.
+  POLY_ASSERT(not points.empty());
+  POLY_ASSERT(points.size() % 3 == 0);
+
+  typedef int64_t CoordHash;
+  typedef set<int> FaceHash;
+  typedef Point3<CoordHash> IntPoint;
+  typedef Point3<RealType> RealPoint;
+
+  // Compute the normalized generators.
+  RealType low[3], high[3];
+  const unsigned numGenerators = points.size() / 3;
+  vector<double> generators = this->computeNormalizedPoints(points, PLCpoints, low, high);
+
+  // Build the input to tetgen.
+  tetgenio in;
+  in.firstnumber = 0;
+  in.mesh_dim = 3;
+  in.pointlist = &generators.front();
+  in.pointattributelist = 0;
+  in.pointmtrlist = 0;
+  in.pointmarkerlist = 0;
+  in.numberofpoints = generators.size() / 3;
+  in.numberofpointattributes = 0;
+  in.numberofpointmtrs = 0;
+
+  // Copy the PLC boundary info to the tetgen input.
+  vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
+  for (unsigned ifacet = 0; ifacet != geometry.facets.size(); ++ifacet) {
+    POLY_ASSERT(geometry.facets[ifacet].size() >= 3);
+    plcFacetPolygons[ifacet].numberofvertices = geometry.facets[ifacet].size();
+    plcFacetPolygons[ifacet].vertexlist = const_cast<int*>(&geometry.facets[ifacet].front());
+  }
+  unsigned nfacets = plcFacetPolygons.size();
+  vector<RealPoint> holeCentroids(geometry.holes.size(), RealPoint(0.0, 0.0, 0.0));
+  for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
+    plcFacetPolygons.resize(nfacets + geometry.holes[ihole].size());
+    for (unsigned ifacet = 0; ifacet != geometry.holes[ihole].size(); ++ifacet) {
+      POLY_ASSERT(geometry.holes[ihole][ifacet].size() >= 3);
+      plcFacetPolygons[nfacets + ifacet].numberofvertices = geometry.holes[ihole][ifacet].size();
+      plcFacetPolygons[nfacets + ifacet].vertexlist = const_cast<int*>(&geometry.holes[ihole][ifacet].front());
+      incrementPosition(holeCentroids[ihole], PLCpoints, geometry.holes[ihole][ifacet]);
+    }
+    holeCentroids[ihole] /= RealType(geometry.holes[ihole].size());
+    nfacets = plcFacetPolygons.size();
+  }
+  POLY_ASSERT(nfacets == plcFacetPolygons.size());
+  vector<tetgenio::facet> plcFacets(nfacets);
+  for (unsigned ifacet = 0; ifacet != nfacets; ++ifacet) {
+    in.init(&plcFacets[ifacet]);
+    plcFacets[ifacet].polygonlist = &plcFacetPolygons[ifacet];
+    plcFacets[ifacet].numberofpolygons = 1;
+  }
+  in.numberoffacets = nfacets;
+  in.facetlist = &plcFacets.front();
+
+  // Do the tetrahedralization.
+  tetgenio out;
+  tetrahedralize((char*)"vV", &in, &out);
+
+  // Make sure we got something.
+  if (out.numberoftetrahedra == 0)
+    error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
+  if (out.numberofpoints != generators.size()/3) {
+    char err[1024];
+    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
+             out.numberofpoints, (int)numGenerators);
+    error(err);
+  }
+
+  // // Find the circumcenters of each tetrahedron.
+  // RealType  clow[3] = { numeric_limits<RealType>::max(),  
+  //                       numeric_limits<RealType>::max(),
+  //                       numeric_limits<RealType>::max()};
+  // RealType chigh[3] = {-numeric_limits<RealType>::max(), 
+  //                      -numeric_limits<RealType>::max(),
+  //                      -numeric_limits<RealType>::max()};
+  // CounterMap<FaceHash> faceCounter;
+  // vector<RealPoint> circumcenters(out.numberoftetrahedra);
+  // map<int, set<int> > gen2tet;
+  // map<int, set<int> > neighbors;
+  // unsigned p1, p2, p3, p4;
+  // for (unsigned i = 0; i != out.numberoftetrahedra; ++i) {
+  // }
+}
+
+//------------------------------------------------------------------------------
+// Internal method to build the tessellation by first doing the 
+// tetrahedralization, and then computing the dual.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+computeDualOfTetrahedralization(const vector<double>& points,
+                                const vector<double>& PLCpoints,
+                                const PLC<3, double>& geometry,
+                                Tessellation<3, double>& mesh) const {
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
@@ -196,28 +330,28 @@ tessellate(const vector<double>& points,
   // POLY_ASSERT(generators.size() == 3*(numGenerators + 8));
 
   // // Build the input to tetgen.
-  // tetgenio tetgen_in;
-  // tetgen_in.firstnumber = 0;
-  // tetgen_in.mesh_dim = 3;
-  // tetgen_in.pointlist = &generators.front();
-  // tetgen_in.pointattributelist = 0;
-  // tetgen_in.pointmtrlist = 0;
-  // tetgen_in.pointmarkerlist = 0;
-  // tetgen_in.numberofpoints = generators.size() / 3;
-  // tetgen_in.numberofpointattributes = 0;
-  // tetgen_in.numberofpointmtrs = 0;
+  // tetgenio in;
+  // in.firstnumber = 0;
+  // in.mesh_dim = 3;
+  // in.pointlist = &generators.front();
+  // in.pointattributelist = 0;
+  // in.pointmtrlist = 0;
+  // in.pointmarkerlist = 0;
+  // in.numberofpoints = generators.size() / 3;
+  // in.numberofpointattributes = 0;
+  // in.numberofpointmtrs = 0;
 
   // // Do the tetrahedralization.
-  // tetgenio tetgen_out;
-  // tetrahedralize((char*)"qV", &tetgen_in, &tetgen_out);
+  // tetgenio out;
+  // tetrahedralize((char*)"qV", &in, &out);
 
   // // Make sure we got something.
-  // if (tetgen_out.numberoftetrahedra == 0)
+  // if (out.numberoftetrahedra == 0)
   //   error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
-  // if (tetgen_out.numberofpoints != generators.size()/3) {
+  // if (out.numberofpoints != generators.size()/3) {
   //   char err[1024];
   //   snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
-  //            tetgen_out.numberofpoints, (int)numGenerators);
+  //            out.numberofpoints, (int)numGenerators);
   //   error(err);
   // }
 
@@ -229,12 +363,27 @@ tessellate(const vector<double>& points,
   //                      -numeric_limits<RealType>::max(),
   //                      -numeric_limits<RealType>::max()};
   // CounterMap<FaceHash> faceCounter;
-  // vector<RealPoint> circumcenters(tetgen_out.numberoftetrahedra);
+  // vector<RealPoint> circumcenters(out.numberoftetrahedra);
   // map<int, set<int> > gen2tet;
   // map<int, set<int> > neighbors;
   // unsigned p1, p2, p3, p4;
-  // for (unsigned i = 0; i != tetgen_out.numberoftetrahedra; ++i) {
+  // for (unsigned i = 0; i != out.numberoftetrahedra; ++i) {
   // }
+}
+
+//------------------------------------------------------------------------------
+// Access the internal attribute to compute directly or not.
+//------------------------------------------------------------------------------
+bool
+TetgenTessellator::
+directComputation() const {
+  return mDirectComputation;
+}
+
+void
+TetgenTessellator::
+directComputation(const bool x) {
+  mDirectComputation = x;
 }
 
 }

@@ -115,8 +115,8 @@ inline
 void
 computeBoundingBox(const std::vector<RealType>& pos,
                    const bool globalReduce,
-                   RealType* xmin,
-                   RealType* xmax) {
+                   RealType xmin[Dimension],
+                   RealType xmax[Dimension]) {
    POLY_ASSERT(pos.size() % Dimension == 0);
    for (unsigned j = 0; j != Dimension; ++j) {
       xmin[j] = std::numeric_limits<RealType>::max();

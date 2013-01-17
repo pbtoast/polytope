@@ -19,31 +19,55 @@
 namespace polytope {
 
 class TetgenTessellator: public Tessellator<3, double> {
-  public:
+public:
+  //-------------------- Public interface --------------------
   typedef double RealType;
 
   // Constructor, destructor.
-  TetgenTessellator();
+  TetgenTessellator(const bool directComputation = true);
   ~TetgenTessellator();
 
   // Tessellate the given generators.
-  void tessellate(const std::vector<double>& points,
-                  Tessellation<3, double>& mesh) const;
+  void tessellate(const std::vector<RealType>& points,
+                  Tessellation<3, RealType>& mesh) const;
 
   // Tessellate with a bounding box representing the boundaries.
-  void tessellate(const std::vector<double>& points,
-                  double* low,
-                  double* high,
-                  Tessellation<3, double>& mesh) const;
+  void tessellate(const std::vector<RealType>& points,
+                  RealType* low,
+                  RealType* high,
+                  Tessellation<3, RealType>& mesh) const;
 
   // Tessellate obeying the given boundaries.
-  void tessellate(const std::vector<double>& points,
-                  const std::vector<double>& PLCpoints,
-                  const PLC<3, double>& geometry,
-                  Tessellation<3, double>& mesh) const;
+  void tessellate(const std::vector<RealType>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<3, RealType>& geometry,
+                  Tessellation<3, RealType>& mesh) const;
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
+
+  // Attributes.
+  bool directComputation() const;
+  void directComputation(const bool x);
+
+private:
+  //-------------------- Private interface --------------------
+  bool mDirectComputation;
+
+  // Internal method to compute the tessellation directly.
+  void computeDirectVoronoi(const std::vector<RealType>& points,
+                            const std::vector<RealType>& PLCpoints,
+                            const PLC<3, RealType>& geometry,
+                            Tessellation<3, RealType>& mesh) const;
+
+  // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
+  void computeDualOfTetrahedralization(const std::vector<RealType>& points,
+                                       const std::vector<RealType>& PLCpoints,
+                                       const PLC<3, RealType>& geometry,
+                                       Tessellation<3, RealType>& mesh) const;
+
+  // Forbidden methods.
+  TetgenTessellator();
 };
 
 }
