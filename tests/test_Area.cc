@@ -36,13 +36,14 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // testBoundary
 // -----------------------------------------------------------------------
-void testBoundary(Boundary2D<double>& boundary,
-                  Tessellator<2,double>& tessellator)
+double testBoundary(Boundary2D<double>& boundary,
+                    Tessellator<2,double>& tessellator)
 {
    Generators<2,double> generators( boundary );
    unsigned nPoints = 1;
    Tessellation<2,double> mesh;
    cout << "Area of boundary = " << boundary.mArea << endl;
+   double result = 0.0;
    for( unsigned n = 0; n < 4; ++n ){
       POLY_ASSERT( mesh.empty() );
       nPoints = nPoints * 10;
@@ -51,26 +52,32 @@ void testBoundary(Boundary2D<double>& boundary,
       generators.randomPoints( nPoints );
       tessellate2D(generators.mPoints, boundary, tessellator, mesh);
 
-      double area = computeTessellationArea( mesh );
-      cout << "   Area  = " << area << endl;
-      cout << "   Error = " << boundary.mArea - area << endl;
+      const double area = computeTessellationArea( mesh );
+      const double fracerr = std::abs(boundary.mArea - area)/boundary.mArea;
+      result = std::max(result, fracerr);
+      cout << "              Area  = " << area << endl;
+      cout << "              Error = " << boundary.mArea - area << endl;
+      cout << "   Fractional error = " << fracerr << endl;
 
       mesh.clear();   
    }
+   return result;
 }
 
 
 // -----------------------------------------------------------------------
 // testAllBoundaries
 // -----------------------------------------------------------------------
-void testAllBoundaries(Tessellator<2,double>& tessellator)
+double testAllBoundaries(Tessellator<2,double>& tessellator)
 {
+   double result = 0.0;
    for (int bid = 0; bid < 7; ++bid){
       cout << endl << "Testing boundary type " << bid << endl;
       Boundary2D<double> boundary;
       boundary.computeDefaultBoundary(bid);
-      testBoundary( boundary, tessellator );
+      result = std::max(result, testBoundary( boundary, tessellator ));
    }
+   return result;
 }
 
 
@@ -83,10 +90,17 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
-   cout << "\nTriangle Tessellator:\n" << endl;
-   TriangleTessellator<double> triangle;
-   testAllBoundaries(triangle);
+  cout << "\nTriangle Tessellator:\n" << endl;
+  TriangleTessellator<double> triangle;
+  const double maxError = testAllBoundaries(triangle);
    
+  const double tol = 0.1;
+  if (maxError > tol) {
+     cout << "FAIL" << endl;
+  } else {
+     cout << "PASS" << endl;
+  }
+
 #if HAVE_MPI
   MPI_Finalize();
 #endif

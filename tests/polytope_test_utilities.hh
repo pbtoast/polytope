@@ -8,9 +8,11 @@
 
 template<typename RealType> class Boundary2D;
 
+#if Boost_FOUND
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
+#endif
 
 namespace polytope {
 
@@ -20,9 +22,10 @@ namespace polytope {
 #define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
 #define POLY_CHECK2(x, msg) if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); }
 
+#if Boost_FOUND
 namespace BG = boost::geometry;
-
 typedef BG::cs::cartesian cart;
+#endif
 
 //------------------------------------------------------------------------------
 // Define our own local random number generator wrapping the standard srand &
@@ -47,6 +50,7 @@ void tessellate2D(std::vector<RealType>& points,
    }
 }
 
+#if Boost_FOUND
 //------------------------------------------------------------------------------
 // Make a 2D Boost.Geometry point
 //------------------------------------------------------------------------------
@@ -151,6 +155,7 @@ RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ){
    }
    return area;
 }
+#endif
 
 }
 

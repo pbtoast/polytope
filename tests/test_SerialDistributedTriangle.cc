@@ -178,6 +178,7 @@ int main(int argc, char** argv) {
 //     }
 
     // Blago!
+#if USE_SILO
     {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
       for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
@@ -190,6 +191,7 @@ int main(int argc, char** argv) {
       os << "test_SerialDistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
     }
+#endif
     // Blago!
 
     // Check the global sizes.
