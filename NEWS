@@ -1,4 +1,13 @@
 --------------------------------------------------------------------------------
+Release 0.5.7
+
+changeset:
+  210:3928f2ed1913
+
+Fixes to compile on IBM xlC platforms in a fairly broken (i.e., no
+Boost.Geometry) way.
+
+--------------------------------------------------------------------------------
 Release 0.5.6
 
 changeset:
