@@ -119,6 +119,7 @@ int main(int argc, char** argv) {
    }
     
    // Blago!
+#if USE_SILO
    vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
    for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
    for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
@@ -129,8 +130,8 @@ int main(int argc, char** argv) {
    ostringstream os;
    os << "test_DistributedRandomPoints_" << bType << "_boundary_" << numProcs << "domains";
    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+#endif
    // Blago!
-
 
    // We can delegate checking the correctness of the parallel data structures to a helper method.
    const string parCheck = checkDistributedTessellation(mesh);

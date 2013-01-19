@@ -65,6 +65,10 @@ else ()
   message("-- Unable to find required package BOOST.")
 endif ()
 
+if (Boost_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBoost_FOUND=1")
+endif()
+
 # Find HDF5.
 set(HDF5_USE_STATIC_LIBRARIES true)
 find_package(HDF5)
@@ -88,6 +92,7 @@ if (${HDF5_FOUND})
   list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
   message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
 else()
+  set(HDF5_LIBRARIES "")
   set(HAVE_HDF5 false)
 endif ()
 
@@ -106,6 +111,7 @@ if (${USE_SILO} EQUAL 1 AND ${HDF5_FOUND})
 else ()
   set(SILO_FOUND false)
   set (HAVE_SILO false)
+  set(SILO_LIBRARIES "")
   message("-- Silo not found.  Skipping.")
 endif ()
 
