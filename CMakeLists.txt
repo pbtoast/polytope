@@ -183,6 +183,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/Point.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
          DESTINATION include/polytope)
