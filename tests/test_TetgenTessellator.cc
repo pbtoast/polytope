@@ -53,67 +53,68 @@ int main() {
   //     0--------1             
   //
   // Create the vertices for our bounding surface.
-  vector<double> PLCpoints(3*8);
-  PLCpoints[3*0+0] = x1; PLCpoints[3*0+1] = y1; PLCpoints[3*0+2] = z2;
-  PLCpoints[3*1+0] = x2; PLCpoints[3*1+1] = y1; PLCpoints[3*1+2] = z2;
-  PLCpoints[3*2+0] = x1; PLCpoints[3*2+1] = y2; PLCpoints[3*2+2] = z2;
-  PLCpoints[3*3+0] = x2; PLCpoints[3*3+1] = y2; PLCpoints[3*3+2] = z2;
-  PLCpoints[3*4+0] = x1; PLCpoints[3*4+1] = y1; PLCpoints[3*4+2] = z1;
-  PLCpoints[3*5+0] = x2; PLCpoints[3*5+1] = y1; PLCpoints[3*5+2] = z1;
-  PLCpoints[3*6+0] = x1; PLCpoints[3*6+1] = y2; PLCpoints[3*6+2] = z1;
-  PLCpoints[3*7+0] = x2; PLCpoints[3*7+1] = y2; PLCpoints[3*7+2] = z1;
+  // vector<double> PLCpoints(3*8);
+  // PLCpoints[3*0+0] = x1; PLCpoints[3*0+1] = y1; PLCpoints[3*0+2] = z2;
+  // PLCpoints[3*1+0] = x2; PLCpoints[3*1+1] = y1; PLCpoints[3*1+2] = z2;
+  // PLCpoints[3*2+0] = x1; PLCpoints[3*2+1] = y2; PLCpoints[3*2+2] = z2;
+  // PLCpoints[3*3+0] = x2; PLCpoints[3*3+1] = y2; PLCpoints[3*3+2] = z2;
+  // PLCpoints[3*4+0] = x1; PLCpoints[3*4+1] = y1; PLCpoints[3*4+2] = z1;
+  // PLCpoints[3*5+0] = x2; PLCpoints[3*5+1] = y1; PLCpoints[3*5+2] = z1;
+  // PLCpoints[3*6+0] = x1; PLCpoints[3*6+1] = y2; PLCpoints[3*6+2] = z1;
+  // PLCpoints[3*7+0] = x2; PLCpoints[3*7+1] = y2; PLCpoints[3*7+2] = z1;
 
-  // 6 facets
-  PLC<3, double> box;
-  box.facets.resize(6);
+  // // 6 facets
+  // PLC<3, double> box;
+  // box.facets.resize(6);
 
-  // facet 0 -- bottom face.
-  box.facets[0].resize(4);
-  box.facets[0][0] = 0;
-  box.facets[0][1] = 4;
-  box.facets[0][2] = 5;
-  box.facets[0][3] = 1;
+  // // facet 0 -- bottom face.
+  // box.facets[0].resize(4);
+  // box.facets[0][0] = 0;
+  // box.facets[0][1] = 4;
+  // box.facets[0][2] = 5;
+  // box.facets[0][3] = 1;
 
-  // facet 1 -- top face.
-  box.facets[1].resize(4);
-  box.facets[1][0] = 2;
-  box.facets[1][1] = 3;
-  box.facets[1][2] = 7;
-  box.facets[1][3] = 6;
+  // // facet 1 -- top face.
+  // box.facets[1].resize(4);
+  // box.facets[1][0] = 2;
+  // box.facets[1][1] = 3;
+  // box.facets[1][2] = 7;
+  // box.facets[1][3] = 6;
 
-  // facet 2 -- left face.
-  box.facets[2].resize(4);
-  box.facets[2][0] = 0;
-  box.facets[2][1] = 2;
-  box.facets[2][2] = 6;
-  box.facets[2][3] = 4;
+  // // facet 2 -- left face.
+  // box.facets[2].resize(4);
+  // box.facets[2][0] = 0;
+  // box.facets[2][1] = 2;
+  // box.facets[2][2] = 6;
+  // box.facets[2][3] = 4;
 
-  // facet 3 -- right face.
-  box.facets[2].resize(4);
-  box.facets[2][0] = 1;
-  box.facets[2][1] = 5;
-  box.facets[2][2] = 7;
-  box.facets[2][3] = 3;
+  // // facet 3 -- right face.
+  // box.facets[3].resize(4);
+  // box.facets[3][0] = 1;
+  // box.facets[3][1] = 5;
+  // box.facets[3][2] = 7;
+  // box.facets[3][3] = 3;
 
-  // facet 4 -- front face.
-  box.facets[4].resize(4);
-  box.facets[4][0] = 0;
-  box.facets[4][1] = 1;
-  box.facets[4][2] = 3;
-  box.facets[4][3] = 2;
+  // // facet 4 -- front face.
+  // box.facets[4].resize(4);
+  // box.facets[4][0] = 0;
+  // box.facets[4][1] = 1;
+  // box.facets[4][2] = 3;
+  // box.facets[4][3] = 2;
 
-  // facet 5 -- back face.
-  box.facets[5].resize(4);
-  box.facets[5][0] = 5;
-  box.facets[5][1] = 4;
-  box.facets[5][2] = 6;
-  box.facets[5][3] = 7;
+  // // facet 5 -- back face.
+  // box.facets[5].resize(4);
+  // box.facets[5][0] = 5;
+  // box.facets[5][1] = 4;
+  // box.facets[5][2] = 6;
+  // box.facets[5][3] = 7;
 
   // Create the tessellation.
   Tessellation<3, double> mesh;
   TetgenTessellator tetgen(true);
-  tetgen.tessellate(generators, PLCpoints, box, mesh);
-  POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(nx + 1)*(nx + 1));
+  double low[3] = {x1, y1, z1}, high[3] = {x2, y2, z2};
+  tetgen.tessellate(generators, low, high, mesh);
+  POLY_CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
   for (unsigned i = 0; i != nx*nx; ++i) 
   {

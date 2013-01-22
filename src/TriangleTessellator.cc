@@ -121,15 +121,6 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// Hash two node indices uniquely to represent an edge.
-//------------------------------------------------------------------------------
-std::pair<int, int>
-hashEdge(const int i, const int j) {
-  POLY_ASSERT(i != j);
-  return i < j ? std::make_pair(i, j) : std::make_pair(j, i);
-}
-
-//------------------------------------------------------------------------------
 // Predicate to check if either element of a std::pair matches the given value.
 //------------------------------------------------------------------------------
 template<typename T>
@@ -138,23 +129,6 @@ struct MatchEitherPairValue {
   MatchEitherPairValue(const T& x): mval(x) {}
   bool operator()(const std::pair<T, T>& x) const { return (x.first == mval or x.second == mval); }
 };
-
-//------------------------------------------------------------------------------
-// Update the map of thingies to unique indices.
-//------------------------------------------------------------------------------
-template<typename Key>
-int
-addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
-  const typename map<Key, int>::const_iterator itr = key2id.find(key);
-  int result;
-  if (itr == key2id.end()) {
-    result = key2id.size();
-    key2id[key] = result;
-  } else {
-    result = itr->second;
-  }
-  return result;
-}
 
 } // end anonymous namespace
 
@@ -356,9 +330,9 @@ tessellate(const vector<RealType>& points,
     qindex = delaunay.trianglelist[3*i + 1];
     rindex = delaunay.trianglelist[3*i + 2];
     if (pindex < numGenerators and qindex < numGenerators and rindex < numGenerators) {
-      ++edgeCounter[hashEdge(pindex, qindex)];
-      ++edgeCounter[hashEdge(qindex, rindex)];
-      ++edgeCounter[hashEdge(rindex, pindex)];
+      ++edgeCounter[internal::hashEdge(pindex, qindex)];
+      ++edgeCounter[internal::hashEdge(qindex, rindex)];
+      ++edgeCounter[internal::hashEdge(rindex, pindex)];
     }
     computeCircumcenter(&delaunay.pointlist[2*pindex],
                         &delaunay.pointlist[2*qindex],
@@ -598,10 +572,10 @@ tessellate(const vector<RealType>& points,
       const IntPoint& pX1 = *itr;
       const IntPoint& pX2 = *(itr + 1);
       POLY_ASSERT(*itr != *(itr + 1));
-      j = addKeyToMap(pX1, point2node);
-      k = addKeyToMap(pX2, point2node);
+      j = internal::addKeyToMap(pX1, point2node);
+      k = internal::addKeyToMap(pX2, point2node);
       POLY_ASSERT(j != k);
-      iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
+      iedge = internal::addKeyToMap(internal::hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
       // cerr << "Cell " << i << " adding edge " << iedge << " : " << pX1 << " " << pX2 << " : (" 

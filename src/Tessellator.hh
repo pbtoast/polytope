@@ -249,24 +249,26 @@ class Tessellator
   //! Return a normalized set of coordinates, also returning the bounding low/high points.
   std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,
                                                 const std::vector<RealType>& PLCpoints,
+                                                const bool computeBounds,
                                                 RealType* low,
                                                 RealType* high) const
   {
     POLY_ASSERT(points.size() % Dimension == 0);
-    double low1[Dimension], high1[Dimension], boxInv[Dimension];
-    geometry::computeBoundingBox<Dimension, RealType>(points, true, low1, high1);
-    geometry::computeBoundingBox<Dimension, RealType>(PLCpoints, true, low, high);
-    for (unsigned j = 0; j != Dimension; ++j)
-    {
-      low[j] = std::min(low[j], low1[j]);
-      high[j] = std::max(high[j], high1[j]);
-      POLY_ASSERT(low[j] < high[j]);
-      boxInv[j] = 1.0/std::max(1e-30, high[j] - low[j]);
+    if (computeBounds) {
+      double low1[Dimension], high1[Dimension];
+      geometry::computeBoundingBox<Dimension, RealType>(points, true, low1, high1);
+      geometry::computeBoundingBox<Dimension, RealType>(PLCpoints, true, low, high);
+      for (unsigned j = 0; j != Dimension; ++j) {
+        low[j] = std::min(low[j], low1[j]);
+        high[j] = std::max(high[j], high1[j]);
+        POLY_ASSERT(low[j] < high[j]);
+      }
     }
+    double boxInv[Dimension];
+    for (unsigned j = 0; j != Dimension; ++j) boxInv[j] = 1.0/std::max(1e-30, high[j] - low[j]);
     const unsigned n = points.size();
     std::vector<RealType> result(n);
-    for (unsigned i = 0; i != n; ++i)
-    {
+    for (unsigned i = 0; i != n; ++i) {
       const unsigned j = i % Dimension;
       result[i] = (points[i] - low[j])*boxInv[j];
       POLY_ASSERT(result[i] >= 0.0 and result[i] <= 1.0);
