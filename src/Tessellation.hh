@@ -63,6 +63,11 @@ class Tessellation
   //! viewed from the "positive" (outside) direction. 
   std::vector<std::vector<unsigned> > faces;
 
+  //! An array of node indices which are the "free" or unbound nodes 
+  //! for unbounded tessellations.  These nodes terminate on a spherical
+  //! surface that represents the rays going out to infinity.
+  std::vector<unsigned> infNodes;
+
   //! An array of cell indices for each face, i.e., the cells that share
   //! the face.
   //! For a given cell there will be either 1 or 2 cells -- the cases with 1
@@ -176,6 +181,11 @@ class Tessellation
       }
       s << ")" << std::endl;
     }
+
+    s << mesh.infNodes.size() << " infinite surface nodes:" << std::endl;
+    for (int i = 0; i != mesh.infNodes.size(); ++i) s << " " << mesh.infNodes[i];
+    s << std::endl;
+
     return s;
   }
 

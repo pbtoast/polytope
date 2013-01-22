@@ -2,6 +2,7 @@
 //
 // Put common includes for polytope here that you don't necessarily 
 // want exposed in the public interface.
+#include <map>
 
 // An POLY_ASSERT macro, if one isn't already defined.
 #ifndef POLY_ASSERT
@@ -24,10 +25,54 @@ void internal_abort();
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
     polytope::internal_abort(); \
   }
+#define POLY_BEGIN_CONTRACT_SCOPE if (false) { while(false)
+#define POLY_END_CONTRACT_SCOPE } while(false)
 #else
 #define POLY_ASSERT(x)
 #define POLY_ASSERT2(x, msg)
+#define POLY_BEGIN_CONTRACT_SCOPE 
+#define POLY_END_CONTRACT_SCOPE 
 #endif
+
+namespace internal {
+
+//------------------------------------------------------------------------------
+// Update the map of thingies to unique indices.
+//------------------------------------------------------------------------------
+template<typename Key>
+int
+addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
+  const typename std::map<Key, int>::const_iterator itr = key2id.find(key);
+  int result;
+  if (itr == key2id.end()) {
+    result = key2id.size();
+    key2id[key] = result;
+  } else {
+    result = itr->second;
+  }
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Hash two node indices uniquely to represent an edge.
+//------------------------------------------------------------------------------
+inline
+std::pair<int, int>
+hashEdge(const int i, const int j) {
+  POLY_ASSERT(i != j);
+  return i < j ? std::make_pair(i, j) : std::make_pair(j, i);
+}
+
+//------------------------------------------------------------------------------
+// Return the positive index.
+//------------------------------------------------------------------------------
+inline
+int
+positiveID(const int x) {
+  return x >= 0 ? x : ~x;
+}
+
+}
 
 }
 

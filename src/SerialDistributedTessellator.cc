@@ -16,20 +16,12 @@
 #include "checkDistributedTessellation.hh"
 
 using namespace std;
+using namespace polytope::internal;
 using std::min;
 using std::max;
 using std::abs;
 
 namespace {  // We hide internal functions in an anonymous namespace
-
-//------------------------------------------------------------------------------
-// Return the positive index.
-//------------------------------------------------------------------------------
-inline
-int
-positiveID(const int x) {
-  return x >= 0 ? x : ~x;
-}
 
 //------------------------------------------------------------------------------
 // Extract the key values from a std::map.
