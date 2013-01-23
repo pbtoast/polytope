@@ -82,28 +82,6 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// An implementation of the map specialized to help constructing counters.
-// This thing just overloads the index operator to start the count at zero
-// for new key values.
-//------------------------------------------------------------------------------
-template<typename Key, 
-         typename Comparator = std::less<Key> >
-class CounterMap: public std::map<Key, unsigned> {
-public:
-  CounterMap(): std::map<Key, unsigned>() {}
-  virtual ~CounterMap() {}
-  unsigned& operator[](const Key& key) {
-    typename std::map<Key, unsigned>::iterator itr = this->find(key);
-    if (itr == this->end()) {
-      std::map<Key, unsigned>::operator[](key) = 0U;
-      itr = this->find(key);
-    }
-    POLY_ASSERT(itr != this->end());
-    return itr->second;
-  }
-};
-
-//------------------------------------------------------------------------------
 // An implementation of the map specialized for testing true/false.
 // If tested with a key that does not exist, it is initialized as false.
 //------------------------------------------------------------------------------
@@ -320,7 +298,7 @@ tessellate(const vector<RealType>& points,
   // associated with each generator.
   RealType  clow[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
   RealType chigh[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
-  CounterMap<EdgeHash> edgeCounter;
+  internal::CounterMap<EdgeHash> edgeCounter;
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
   map<int, set<int> > gen2tri;
   map<int, set<int> > neighbors;
@@ -366,7 +344,7 @@ tessellate(const vector<RealType>& points,
   BoolMap<EdgeHash> exteriorEdgeTest;
   list<EdgeHash> exteriorEdges;
   vector<vector<EdgeHash> > exteriorEdgesOfGen(numGenerators);
-  for (typename CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
+  for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
        itr != edgeCounter.end();
        ++itr) {
     POLY_ASSERT(itr->second == 1 or itr->second == 2);

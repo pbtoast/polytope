@@ -443,19 +443,15 @@ computeCellCentroid(const Tessellation<Dimension, RealType>& mesh,
     std::copy(faceNodes.begin(), faceNodes.end(), std::back_inserter(uniqueNodes));
   }
 
-  // Now reduce to the unique vertices.  We also don't want any of the negative values,
-  // since those are just pointers into the mesh.rays array.
+  // Now reduce to the unique vertices.
   std::sort(uniqueNodes.begin(), uniqueNodes.end());
-  std::vector<unsigned>::iterator beginItr = std::lower_bound(uniqueNodes.begin(), uniqueNodes.end(), 0);
   std::vector<unsigned>::iterator endItr = std::unique(uniqueNodes.begin(), uniqueNodes.end());
-  for (std::vector<unsigned>::iterator itr = beginItr;
-       itr != endItr;
-       ++itr) {
+  for (std::vector<unsigned>::iterator itr = uniqueNodes.begin(); itr != endItr; ++itr) {
     i = *itr;
-    POLY_ASSERT(i < mesh.nodes.size()/Dimension);
+    POLY_ASSERT2(i < mesh.nodes.size()/Dimension, i << " " << mesh.nodes.size()/Dimension);
     for (j = 0; j != Dimension; ++j) ccent[j] += mesh.nodes[Dimension*i + j];
   }
-  const unsigned n = std::distance(beginItr, endItr);
+  const unsigned n = std::distance(uniqueNodes.begin(), endItr);
   POLY_ASSERT(n > 0);
   for (j = 0; j != Dimension; ++j) ccent[j] /= n;
 }

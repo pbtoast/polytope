@@ -54,6 +54,28 @@ addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
 }
 
 //------------------------------------------------------------------------------
+// An implementation of the map specialized to help constructing counters.
+// This thing just overloads the index operator to start the count at zero
+// for new key values.
+//------------------------------------------------------------------------------
+template<typename Key, 
+         typename Comparator = std::less<Key> >
+class CounterMap: public std::map<Key, unsigned> {
+public:
+  CounterMap(): std::map<Key, unsigned>() {}
+  virtual ~CounterMap() {}
+  unsigned& operator[](const Key& key) {
+    typename std::map<Key, unsigned>::iterator itr = this->find(key);
+    if (itr == this->end()) {
+      std::map<Key, unsigned>::operator[](key) = 0U;
+      itr = this->find(key);
+    }
+    POLY_ASSERT(itr != this->end());
+    return itr->second;
+  }
+};
+
+//------------------------------------------------------------------------------
 // Hash two node indices uniquely to represent an edge.
 //------------------------------------------------------------------------------
 inline
