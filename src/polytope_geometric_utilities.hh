@@ -304,13 +304,16 @@ rayPlaneIntersection(const RealType* p_ray,
 //------------------------------------------------------------------------------
 template<typename RealType> 
 bool
-rayPlaneIntersection(const RealType* p_ray,
-                     const RealType* n_ray,
-                     const RealType* p_sphere,
-                     const RealType r_sphere,
-                     const RealType& tol,
-                     RealType* result) {
-  POLY_ASSERT((distance<3, RealType>(p_ray, p_sphere) <= r_sphere));
+raySphereIntersection(const RealType* p_ray,
+                      const RealType* n_ray,
+                      const RealType* p_sphere,
+                      const RealType r_sphere,
+                      const RealType& tol,
+                      RealType* result) {
+  POLY_ASSERT2((distance<3, RealType>(p_ray, p_sphere) <= r_sphere), 
+               "(" << p_ray[0] << " " << p_ray[1] << " " << p_ray[2] 
+               << ") (" << p_sphere[0] << " " << p_sphere[1] << " " << p_sphere[2] << ")" << " : " 
+               << (distance<3, RealType>(p_ray, p_sphere)) << " " << r_sphere);
   POLY_ASSERT(std::abs(n_ray[0]*n_ray[0] + n_ray[1]*n_ray[1] + n_ray[2]*n_ray[2] - 1.0) < 1.0e-10);
   const RealType rs0[3] = {p_ray[0] - p_sphere[0],
                            p_ray[1] - p_sphere[1],
