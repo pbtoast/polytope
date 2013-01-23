@@ -116,36 +116,55 @@ incrementPosition(Point3<double>& val,
 void
 sortFaceEdges(std::vector<std::pair<int, int> >& edges) {
   typedef std::pair<int, int> EdgeHash;
+  if (edges.size() > 1) {
 
-  // Invert the mapping, from nodes to edges.
-  const unsigned nedges = edges.size();
-  std::map<int, std::vector<EdgeHash> > nodes2edges;
-  internal::CounterMap<int> nodeUseCount;
-  for (unsigned i = 0; i != nedges; ++i) {
-    nodes2edges[edges[i].first].push_back(edges[i]);
-    nodes2edges[edges[i].second].push_back(edges[i]);
-    ++nodeUseCount[edges[i].first];
-    ++nodeUseCount[edges[i].second];
+    // Invert the mapping, from nodes to edges.
+    const unsigned nedges = edges.size();
+    std::map<int, std::vector<EdgeHash> > nodes2edges;
+    internal::CounterMap<int> nodeUseCount;
+    for (unsigned i = 0; i != nedges; ++i) {
+      nodes2edges[edges[i].first].push_back(edges[i]);
+      nodes2edges[edges[i].second].push_back(edges[i]);
+      ++nodeUseCount[edges[i].first];
+      ++nodeUseCount[edges[i].second];
+    }
+
+    cerr << "Input edges :";
+    for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
+    cerr << endl << "nodes2edges: " << endl;
+    for (map<int, vector<EdgeHash> >::const_iterator itr = nodes2edges.begin();
+         itr != nodes2edges.end();
+         ++itr) {
+      cerr << itr->first << " : ";
+      for (unsigned i = 0; i != itr->second.size(); ++i) cerr << " (" << itr->second[i].first << " " << itr->second[i].second << ")";
+      cerr << endl;
+    }
+    cerr << "nodeUseCount: " << endl;
+    for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
+         itr != nodeUseCount.end();
+         ++itr) {
+      cerr << "   " << itr->first << " : " << itr->second << endl;
+    }
+
+    // Look for any edges with one one node in the set.  There can be at most
+    // two such edges, representing the two ends of the chain.
+    internal::CounterMap<int>::const_iterator 
+      minUseNodeItr = std::min_element(nodeUseCount.begin(), nodeUseCount.end());
+    POLY_ASSERT(minUseNodeItr != nodeUseCount.end());
+    int lastNode = minUseNodeItr->first;
+
+    // Walk the edges.
+    std::vector<EdgeHash> newEdges;
+    while (newEdges.size() < edges.size()) {
+      POLY_ASSERT(nodes2edges[lastNode].size() > 0);
+      newEdges.push_back(nodes2edges[lastNode].back());
+      nodes2edges[lastNode].pop_back();
+      lastNode = (newEdges.back().first == lastNode ? newEdges.back().second : newEdges.back().first);
+    }
+
+    // Copy back to the input and we're done.
+    edges = newEdges;
   }
-
-  // Look for any edges with one one node in the set.  There can be at most
-  // two such edges, representing the two ends of the chain.
-  internal::CounterMap<int>::const_iterator 
-    minUseNodeItr = std::min_element(nodeUseCount.begin(), nodeUseCount.end());
-  POLY_ASSERT(minUseNodeItr != nodeUseCount.end());
-  int lastNode = minUseNodeItr->first;
-
-  // Walk the edges.
-  std::vector<EdgeHash> newEdges;
-  while (newEdges.size() < edges.size()) {
-    POLY_ASSERT(nodes2edges[lastNode].size() > 0);
-    newEdges.push_back(nodes2edges[lastNode].back());
-    nodes2edges[lastNode].pop_back();
-    lastNode = (newEdges.back().first == lastNode ? newEdges.back().second : newEdges.back().first);
-  }
-
-  // Copy back to the input and we're done.
-  edges = newEdges;
 }
 
 } // end anonymous namespace
@@ -231,11 +250,13 @@ tessellate(const vector<double>& points,
                                             true,
                                             vlow,
                                             vhigh);
-  const RealType rinf = 10.0*max(abs(vlow[0]), 
-                                 max(abs(vlow[1]), 
-                                     max(abs(vlow[2]),
-                                         max(vhigh[0],
-                                             max(vhigh[1], vhigh[2])))));
+  vlow[0] = min(vlow[0], low[0]); vlow[1] = min(vlow[1], low[1]); vlow[2] = min(vlow[2], low[2]);
+  vhigh[0] = max(vhigh[0], high[0]); vhigh[1] = max(vhigh[1], high[1]); vhigh[2] = max(vhigh[2], high[2]);
+  const RealType vbox[3] = {vhigh[0] - vlow[0], vhigh[1] - vlow[1], vhigh[2] - vlow[2]};
+  const RealType rinf = 2.0*max(vbox[0], max(vbox[1], vbox[2]));
+  const RealType vboxc[3] = {0.5*(vlow[0] + vhigh[0]), 0.5*(vlow[1] + vhigh[1]), 0.5*(vlow[2] + vhigh[2])};
+  vlow[0] = vboxc[0] - rinf; vlow[1] = vboxc[1] - rinf; vlow[2] = vboxc[2] - rinf;
+  vhigh[0] = vboxc[0] + rinf; vhigh[1] = vboxc[1] + rinf; vhigh[2] = vboxc[2] + rinf;
 
   // Read out the vertices, converting to quantized (hashed) positions and
   // building the map of hash -> node ID.
@@ -243,7 +264,10 @@ tessellate(const vector<double>& points,
   // degeneracies is necessary!
   map<IntPoint, int> point2node;
   for (i = 0; i != out.numberofvpoints; ++i) {
-    IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i + 1], out.vpointlist[3*i + 2], 0.0, 0.0, 0.0, degeneracy);
+    POLY_ASSERT(out.vpointlist[3*i  ] >= vlow[0] and out.vpointlist[3*i  ] <= vhigh[0]);
+    POLY_ASSERT(out.vpointlist[3*i+1] >= vlow[1] and out.vpointlist[3*i+1] <= vhigh[1]);
+    POLY_ASSERT(out.vpointlist[3*i+2] >= vlow[2] and out.vpointlist[3*i+2] <= vhigh[2]);
+    IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i+1], out.vpointlist[3*i+2], vlow[0], vlow[1], vlow[2], degeneracy);
     internal::addKeyToMap(p, point2node);
     cerr << "   ----> (" << out.vpointlist[3*i] << " " << out.vpointlist[3*i + 1] << " " << out.vpointlist[3*i + 2] << ") " << p << " " << point2node[p] << endl;
   }
@@ -265,7 +289,7 @@ tessellate(const vector<double>& points,
   // nodes!
   int v1, v2;
   unsigned n1, n2;
-  RealType origin[3] = {0.0, 0.0, 0.0}, ray_sph_int[3];
+  RealType ray_sph_int[3];
   vector<EdgeHash> edges;
   edges.reserve(out.numberofvedges);
   mesh.infNodes = vector<unsigned>();
@@ -275,25 +299,28 @@ tessellate(const vector<double>& points,
     v2 = vedge.v2;
     POLY_ASSERT2(v1 >= 0 and v1 < out.numberofvpoints, i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
     POLY_ASSERT2(v2 == -1 or (v2 >= 0 and v2 < out.numberofvpoints), i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
-    IntPoint p1(out.vpointlist[3*v1], out.vpointlist[3*v1+1], out.vpointlist[3*v1+2], 0.0, 0.0, 0.0, degeneracy);
+    IntPoint p1(out.vpointlist[3*v1], out.vpointlist[3*v1+1], out.vpointlist[3*v1+2], vlow[0], vlow[1], vlow[2], degeneracy);
     POLY_ASSERT(point2node.find(p1) != point2node.end());
     n1 = point2node[p1];
     if (v2 == -1) {
       // This edge is a ray, so we construct a node on the rinf spherical surface
       // to hook to.
-      geometry::rayPlaneIntersection(&mesh.nodes[3*n1],
-                                     out.vedgelist[i].vnormal,
-                                     origin,
-                                     rinf,
-                                     degeneracy,
-                                     ray_sph_int);
-      IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], 0.0, 0.0, 0.0, degeneracy);
+      geometry::raySphereIntersection(&mesh.nodes[3*n1],
+                                      out.vedgelist[i].vnormal,
+                                      vboxc,
+                                      rinf,
+                                      degeneracy,
+                                      ray_sph_int);
+      POLY_ASSERT(ray_sph_int[0] >= vlow[0] and ray_sph_int[0] <= vhigh[0]);
+      POLY_ASSERT(ray_sph_int[1] >= vlow[1] and ray_sph_int[1] <= vhigh[1]);
+      POLY_ASSERT(ray_sph_int[2] >= vlow[2] and ray_sph_int[2] <= vhigh[2]);
+      IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], vlow[0], vlow[1], vlow[2], degeneracy);
       k = internal::addKeyToMap(p1, point2node);
       n2 = k;
       if (k == point2node.size() - 1) mesh.infNodes.push_back(k);
       cerr << " ---> new inf point (" << ray_sph_int[0] << " " << ray_sph_int[1] << " " << ray_sph_int[2] << ") " << p1 << " " << k << endl;
     } else {
-      IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], 0.0, 0.0, 0.0, degeneracy);
+      IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], vlow[0], vlow[1], vlow[2], degeneracy);
       POLY_ASSERT(point2node.find(p2) != point2node.end());
       n2 = point2node[p2];
     }
