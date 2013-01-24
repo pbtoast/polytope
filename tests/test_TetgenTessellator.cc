@@ -168,28 +168,30 @@ void plcBoundedTessellation(const vector<double>& generators) {
 int main() {
 
   // Create the generators.
-  vector<double> generators;
-  const int nx = 2;
   const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
   const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
-  const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2-z1)/nx;
   unsigned ix, iy, iz;
   double xi, yi, zi;
-  for (iz = 0; iz != nx; ++iz) {
-    zi = z1 + (iz + 0.5)*dz;
-    for (iy = 0; iy != nx; ++iy) {
-      yi = y1 + (iy + 0.5)*dy;
-      for (ix = 0; ix != nx; ++ix) {
-        xi = x1 + (ix + 0.5)*dx;
-        generators.push_back(xi);
-        generators.push_back(yi);
-        generators.push_back(zi);
+  for (int nx = 2; nx != 10; ++nx) {
+    cout << "============================== nx = " << nx << " ==============================" << endl;
+    vector<double> generators;
+    const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2 - z1)/nx;
+    for (iz = 0; iz != nx; ++iz) {
+      zi = z1 + (iz + 0.5)*dz;
+      for (iy = 0; iy != nx; ++iy) {
+        yi = y1 + (iy + 0.5)*dy;
+        for (ix = 0; ix != nx; ++ix) {
+          xi = x1 + (ix + 0.5)*dx;
+          generators.push_back(xi);
+          generators.push_back(yi);
+          generators.push_back(zi);
+        }
       }
     }
-  }
 
-  // Unbounded test.
-  unboundedTessellation(nx, generators);
+    // Unbounded test.
+    unboundedTessellation(nx, generators);
+  }
 
   cout << "PASS" << endl;
   return 0;
