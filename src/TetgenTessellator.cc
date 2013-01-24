@@ -133,26 +133,26 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
       ++nodeUseCount[edges[i].second];
     }
 
-    // BLAGO!
-    cerr << "Input edges :";
-    for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
-    cerr << endl << "nodes2edges: " << endl;
-    for (std::map<int, std::set<EdgeHash> >::const_iterator itr = nodes2edges.begin();
-         itr != nodes2edges.end();
-         ++itr) {
-      cerr << itr->first << " : ";
-      for (std::set<EdgeHash>::const_iterator eitr = itr->second.begin();
-           eitr != itr->second.end();
-           ++eitr) cerr << " (" << eitr->first << " " << eitr->second << ")";
-      cerr << endl;
-    }
-    cerr << "nodeUseCount: " << endl;
-    for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
-         itr != nodeUseCount.end();
-         ++itr) {
-      cerr << "   " << itr->first << " : " << itr->second << endl;
-    }
-    // BLAGO!
+    // // BLAGO!
+    // cerr << "Input edges :";
+    // for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
+    // cerr << endl << "nodes2edges: " << endl;
+    // for (std::map<int, std::set<EdgeHash> >::const_iterator itr = nodes2edges.begin();
+    //      itr != nodes2edges.end();
+    //      ++itr) {
+    //   cerr << itr->first << " : ";
+    //   for (std::set<EdgeHash>::const_iterator eitr = itr->second.begin();
+    //        eitr != itr->second.end();
+    //        ++eitr) cerr << " (" << eitr->first << " " << eitr->second << ")";
+    //   cerr << endl;
+    // }
+    // cerr << "nodeUseCount: " << endl;
+    // for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
+    //      itr != nodeUseCount.end();
+    //      ++itr) {
+    //   cerr << "   " << itr->first << " : " << itr->second << endl;
+    // }
+    // // BLAGO!
 
     // Look for any edges with one one node in the set.  There can be at most
     // two such edges, representing the two ends of the chain.  We will put 
@@ -168,8 +168,9 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
         POLY_ASSERT((nodeUseCount[edges[i].first] == 1 and nodeUseCount[edges[i].second] == 2) or
                     (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1));
         orderedEdges.push_back(edges[i]);
+        nodes2edges[edges[i].first].erase(edges[i]);
+        nodes2edges[edges[i].second].erase(edges[i]);
         lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
-        nodes2edges[lastNode].erase(orderedEdges.back());
         hangingNodes = true;
       }
     }
@@ -184,23 +185,24 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
                   orderedEdges.back().second);
     } else {
       lastNode = edges[0].first;
-      orderedEdges.push_back(edges[0]);
-      nodes2edges[lastNode].erase(edges[0]);
+      // orderedEdges.push_back(edges[0]);
+      // nodes2edges[lastNode].erase(edges[0]);
     }
 
     // Walk the remaining edges
     while (orderedEdges.size() != nedges) {
       POLY_ASSERT(nodes2edges[lastNode].size() > 0);
       orderedEdges.push_back(*nodes2edges[lastNode].begin());
-      nodes2edges[lastNode].erase(orderedEdges.back());
+      nodes2edges[orderedEdges.back().first].erase(orderedEdges.back());
+      nodes2edges[orderedEdges.back().second].erase(orderedEdges.back());
       lastNode = (orderedEdges.back().first == lastNode ? orderedEdges.back().second : orderedEdges.back().first);
     }
     
-    // BLAGO!
-    cerr << "Sorted edges : ";
-    for (i = 0; i != nedges; ++i) cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
-    cerr << endl;
-    // BLAGO!
+    // // BLAGO!
+    // cerr << "Sorted edges : ";
+    // for (i = 0; i != nedges; ++i) cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
+    // cerr << endl;
+    // // BLAGO!
 
     // Read the nodes in order.
     if (hangingNodes) {
@@ -212,7 +214,6 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
     }
     for (; i != nedges; ++i) {
       j = (i + 1) % nedges;
-      cerr << "Looking at " << i << " " << j << endl;
       POLY_ASSERT(orderedEdges[i].first == orderedEdges[j].first or
                   orderedEdges[i].first == orderedEdges[j].second or
                   orderedEdges[i].second == orderedEdges[j].first or
