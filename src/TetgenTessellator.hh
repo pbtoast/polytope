@@ -24,7 +24,7 @@ public:
   typedef double RealType;
 
   // Constructor, destructor.
-  TetgenTessellator(const bool directComputation = true);
+  TetgenTessellator();
   ~TetgenTessellator();
 
   // Tessellate the given generators (unbounded).
@@ -65,9 +65,6 @@ private:
   //                                      const std::vector<RealType>& PLCpoints,
   //                                      const PLC<3, RealType>& geometry,
   //                                      Tessellation<3, RealType>& mesh) const;
-
-  // Forbidden methods.
-  TetgenTessellator();
 };
 
 }

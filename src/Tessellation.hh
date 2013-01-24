@@ -22,6 +22,7 @@ class Tessellation
     nodes(),
     cells(),
     faces(),
+    infNodes(),
     faceCells(),
     convexHull() {}
 
@@ -31,6 +32,7 @@ class Tessellation
     nodes.clear();
     cells.clear();
     faces.clear();
+    infNodes.clear();
     faceCells.clear();
     convexHull.clear();
   }
@@ -40,7 +42,7 @@ class Tessellation
   bool empty() const
   {
     return nodes.empty() and cells.empty() and faces.empty() and 
-           faceCells.empty() and convexHull.empty();
+      infNodes.empty() and faceCells.empty() and convexHull.empty();
   }
 
   //! An array of (Dimension*numNodes) values containing components of 

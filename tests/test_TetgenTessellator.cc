@@ -5,37 +5,91 @@
 #include <cassert>
 
 #include "polytope.hh"
-
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 using namespace polytope;
 
-int main() {
+//------------------------------------------------------------------------------
+// unbounded.
+//------------------------------------------------------------------------------
+void unboundedTessellation(const unsigned nx,
+                           const vector<double>& generators) {
 
-  // Create the generators.
-  vector<double> generators;
-  const int nx = 2;
-  const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
-  const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
-  const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2-z1)/nx;
-  unsigned ix, iy, iz;
-  double xi, yi, zi;
-  for (iz = 0; iz != nx; ++iz) 
-  {
-    zi = z1 + (iz + 0.5)*dz;
-    for (iy = 0; iy != nx; ++iy) 
-    {
-      yi = y1 + (iy + 0.5)*dy;
-      for (ix = 0; ix != nx; ++ix) 
-      {
-        xi = x1 + (ix + 0.5)*dx;
-        generators.push_back(xi);
-        generators.push_back(yi);
-        generators.push_back(zi);
-      }
+  // Create the tessellation.
+  Tessellation<3, double> mesh;
+  TetgenTessellator tetgen;
+  tetgen.tessellate(generators, mesh);
+
+  // Write out the file if we can.
+// #if HAVE_SILO
+//   vector<double> r2(nx*nx*nx, 1.0);
+//   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+//   cellFields["data"] = &r2[0];
+//   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
+// #endif
+
+  // Check for validity.
+  const unsigned nx1 = nx - 1;
+  POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1 + 6*nx1*nx1);
+  POLY_CHECK(mesh.cells.size() == nx*nx*nx);
+  POLY_CHECK2(mesh.infNodes.size() == 6*nx1*nx1, mesh.infNodes.size());
+  for (unsigned i = 0; i != nx*nx*nx; ++i) {
+    const unsigned 
+      ix = i % nx,
+      iy = (i / nx) % nx,
+      iz = i / (nx*nx);
+    const unsigned ntouch = (unsigned(ix == 0 or ix == nx1) + 
+                             unsigned(iy == 0 or iy == nx1) + 
+                             unsigned(iz == 0 or iz == nx1));
+    if (ntouch == 3) {
+      // Corner cell.
+      POLY_CHECK(mesh.cells[i].size() == 3);
+    } else if (ntouch == 2) {
+      // Along one of the edges of the volume.
+      POLY_CHECK(mesh.cells[i].size() == 4);
+    } else if (ntouch == 1) {
+      // Along one of teh faces of the volume.
+      POLY_CHECK(mesh.cells[i].size() == 5);
+    } else {
+      // Interior, fully bounded cell.
+      POLY_CHECK(mesh.cells[i].size() == 6);
     }
   }
+}
+
+// //------------------------------------------------------------------------------
+// // bounded by a box.
+// //------------------------------------------------------------------------------
+// void boxBoundedTessellation(const vector<double>& generators) {
+
+//   // Create the tessellation.
+//   Tessellation<3, double> mesh;
+//   TetgenTessellator tetgen(true);
+//   double low[3] = {x1, y1, z1}, high[3] = {x2, y2, z2};
+//   tetgen.tessellate(generators, low, high, mesh);
+//   POLY_CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
+//   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
+//   for (unsigned i = 0; i != nx*nx; ++i) 
+//   {
+//     POLY_CHECK(mesh.cells[i].size() == 6);
+//   }
+//   POLY_CHECK(mesh.faces.size() == 2*nx*nx*(nx + 1));
+
+//   // Write out the file if we can.
+// #if HAVE_SILO
+//   vector<double> r2(nx*nx*nx, 1.0);
+//   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+//   cellFields["data"] = &r2[0];
+//   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
+// #endif
+
+// }
+
+//------------------------------------------------------------------------------
+// bounded by a PLC.
+//------------------------------------------------------------------------------
+void plcBoundedTessellation(const vector<double>& generators) {
 
   // Create the piecewise linear complex representing the box. Note that 
   // the box consists of facets that are defined by their connections to 
@@ -109,26 +163,33 @@ int main() {
   // box.facets[5][2] = 6;
   // box.facets[5][3] = 7;
 
-  // Create the tessellation.
-  Tessellation<3, double> mesh;
-  TetgenTessellator tetgen(true);
-  double low[3] = {x1, y1, z1}, high[3] = {x2, y2, z2};
-  tetgen.tessellate(generators, low, high, mesh);
-  POLY_CHECK(mesh.nodes.size()/3 == (nx + 1)*(nx + 1)*(nx + 1));
-  POLY_CHECK(mesh.cells.size() == nx*nx*nx);
-  for (unsigned i = 0; i != nx*nx; ++i) 
-  {
-    POLY_CHECK(mesh.cells[i].size() == 6);
-  }
-  POLY_CHECK(mesh.faces.size() == 2*nx*nx*(nx + 1));
+}
 
-//   // Write out the file if we can.
-// #if HAVE_SILO
-//   vector<double> r2(nx*nx*nx, 1.0);
-//   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-//   cellFields["data"] = &r2[0];
-//   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
-// #endif
+int main() {
+
+  // Create the generators.
+  vector<double> generators;
+  const int nx = 2;
+  const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
+  const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
+  const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2-z1)/nx;
+  unsigned ix, iy, iz;
+  double xi, yi, zi;
+  for (iz = 0; iz != nx; ++iz) {
+    zi = z1 + (iz + 0.5)*dz;
+    for (iy = 0; iy != nx; ++iy) {
+      yi = y1 + (iy + 0.5)*dy;
+      for (ix = 0; ix != nx; ++ix) {
+        xi = x1 + (ix + 0.5)*dx;
+        generators.push_back(xi);
+        generators.push_back(yi);
+        generators.push_back(zi);
+      }
+    }
+  }
+
+  // Unbounded test.
+  unboundedTessellation(nx, generators);
 
   cout << "PASS" << endl;
   return 0;
