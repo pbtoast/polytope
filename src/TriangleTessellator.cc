@@ -579,14 +579,20 @@ tessellate(const vector<RealType>& points,
     // Check if nodes are inside boundary (either bounding box or PLC, if defined)
     bool inside = boost::geometry::within(realBGpoint(node[0],node[1]), realBoundary);
     if( !inside ){
-       RealType result[2];
-       RealType dist = nearestPoint( node, numPLCpoints, vertices, geometry, result );
-       // Check the node has not moved more than 2 quantized mesh spacings. NOTE: this is
-       // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*cdx, 
-       // but nodes will fail this strict of a test.
-       POLY_ASSERT( dist < 2*cdx );
-       node[0] = result[0];
-       node[1] = result[1];
+       if (geometry.empty()) {
+         node[0] = max(low[0], min(high[0], node[0]));
+         node[1] = max(low[1], min(high[1], node[1]));
+       } else {
+         RealType result[2];
+         RealType dist = nearestPoint( node, numPLCpoints, vertices, geometry, result );
+         // Check the node has not moved more than 2 quantized mesh spacings. NOTE: this is
+         // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*cdx, 
+         // but nodes will fail this strict of a test.
+         POLY_ASSERT2( dist < 2*cdx, 
+                       dist << " " << 2*cdx << " : (" << node[0] << " " << node[1] << ") (" << result[0] << " " << result[1] << ")\n" << geometry);
+         node[0] = result[0];
+         node[1] = result[1];
+       }
     }
     
     POLY_ASSERT( node[0] >= low[0] && node[0] <= high[0] );
