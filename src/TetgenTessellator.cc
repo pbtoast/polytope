@@ -113,58 +113,124 @@ incrementPosition(Point3<double>& val,
 // Sort a set of edges around a face so that sequential edges share nodes.
 // We account for one break in the chain, representing an unbounded surface.
 //------------------------------------------------------------------------------
-void
-sortFaceEdges(std::vector<std::pair<int, int> >& edges) {
+std::vector<unsigned>
+computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
   typedef std::pair<int, int> EdgeHash;
-  if (edges.size() > 1) {
+  std::vector<unsigned> result;
+
+  const unsigned nedges = edges.size();
+  if (nedges > 1) {
 
     // Invert the mapping, from nodes to edges.
-    const unsigned nedges = edges.size();
     std::map<int, std::vector<EdgeHash> > nodes2edges;
     internal::CounterMap<int> nodeUseCount;
-    for (unsigned i = 0; i != nedges; ++i) {
+    unsigned i, j;
+    for (i = 0; i != nedges; ++i) {
       nodes2edges[edges[i].first].push_back(edges[i]);
       nodes2edges[edges[i].second].push_back(edges[i]);
       ++nodeUseCount[edges[i].first];
       ++nodeUseCount[edges[i].second];
     }
 
-    cerr << "Input edges :";
-    for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
-    cerr << endl << "nodes2edges: " << endl;
-    for (map<int, vector<EdgeHash> >::const_iterator itr = nodes2edges.begin();
-         itr != nodes2edges.end();
-         ++itr) {
-      cerr << itr->first << " : ";
-      for (unsigned i = 0; i != itr->second.size(); ++i) cerr << " (" << itr->second[i].first << " " << itr->second[i].second << ")";
-      cerr << endl;
-    }
-    cerr << "nodeUseCount: " << endl;
-    for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
-         itr != nodeUseCount.end();
-         ++itr) {
-      cerr << "   " << itr->first << " : " << itr->second << endl;
-    }
+    // // BLAGO!
+    // cerr << "Input edges :";
+    // for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
+    // cerr << endl << "nodes2edges: " << endl;
+    // for (map<int, vector<EdgeHash> >::const_iterator itr = nodes2edges.begin();
+    //      itr != nodes2edges.end();
+    //      ++itr) {
+    //   cerr << itr->first << " : ";
+    //   for (unsigned i = 0; i != itr->second.size(); ++i) cerr << " (" << itr->second[i].first << " " << itr->second[i].second << ")";
+    //   cerr << endl;
+    // }
+    // cerr << "nodeUseCount: " << endl;
+    // for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
+    //      itr != nodeUseCount.end();
+    //      ++itr) {
+    //   cerr << "   " << itr->first << " : " << itr->second << endl;
+    // }
+    // // BLAGO!
 
     // Look for any edges with one one node in the set.  There can be at most
-    // two such edges, representing the two ends of the chain.
-    internal::CounterMap<int>::const_iterator 
-      minUseNodeItr = std::min_element(nodeUseCount.begin(), nodeUseCount.end());
-    POLY_ASSERT(minUseNodeItr != nodeUseCount.end());
-    int lastNode = minUseNodeItr->first;
+    // two such edges, representing the two ends of the chain.  We will put 
+    // the edges with those nodes first in the ordering, so that all remaining
+    // edges should naturally hook together.
+    std::vector<EdgeHash> orderedEdges;
+    orderedEdges.reserve(nedges);
+    int lastNode;
+    bool hangingNodes = false;
+    for (i = 0; i != nedges; ++i) {
+      if (nodeUseCount[edges[i].first] == 1 or
+          nodeUseCount[edges[i].second] == 1) {
+        POLY_ASSERT((nodeUseCount[edges[i].first] == 1 and nodeUseCount[edges[i].second] == 2) or
+                    (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1));
+        orderedEdges.push_back(edges[i]);
+        lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
+        hangingNodes = true;
+      }
+    }
+    POLY_ASSERT(orderedEdges.size() == 0 or orderedEdges.size() == 2);
 
-    // Walk the edges.
-    std::vector<EdgeHash> newEdges;
-    while (newEdges.size() < edges.size()) {
-      POLY_ASSERT(nodes2edges[lastNode].size() > 0);
-      newEdges.push_back(nodes2edges[lastNode].back());
+    // Pick a node to start the chain.
+    if (hangingNodes) {
+      POLY_ASSERT(nodeUseCount[orderedEdges.back().first] == 2 or
+                  nodeUseCount[orderedEdges.back().second] == 2);
+      lastNode = (nodeUseCount[orderedEdges.back().first] == 2 ? 
+                  orderedEdges.back().first :
+                  orderedEdges.back().second);
+    } else {
+      lastNode = nodeUseCount.begin()->first;
+      orderedEdges.push_back(nodes2edges[lastNode].back());
       nodes2edges[lastNode].pop_back();
-      lastNode = (newEdges.back().first == lastNode ? newEdges.back().second : newEdges.back().first);
     }
 
-    // Copy back to the input and we're done.
-    edges = newEdges;
+    // Walk the remaining edges
+    while (orderedEdges.size() != nedges) {
+      POLY_ASSERT(nodes2edges[lastNode].size() > 0);
+      orderedEdges.push_back(nodes2edges[lastNode].back());
+      nodes2edges[lastNode].pop_back();
+      lastNode = (orderedEdges.back().first == lastNode ? orderedEdges.back().second : orderedEdges.back().first);
+    }
+    
+    // Read the nodes in order.
+    if (hangingNodes) {
+      result.push_back((edges[0].first == edges[1].first or edges[0].first == edges[1].second) ?
+                       edges[0].second :
+                       edges[0].first);
+      i = 1;
+      j = (i + 1) % nedges;
+      result.push_back((edges[i].first == edges[j].first or edges[i].first == edges[j].second) ?
+                       edges[i].second :
+                       edges[i].first);
+    } else {
+      i = 0;
+    }
+    for (; i != nedges; ++i) {
+      j = (i + 1) % nedges;
+      POLY_ASSERT(edges[i].first == edges[j].first or
+                  edges[i].first == edges[j].second or
+                  edges[i].second == edges[j].first or
+                  edges[i].second == edges[j].second);
+      result.push_back((edges[i].first == edges[j].first or edges[i].first == edges[j].second) ? 
+                       edges[i].first : 
+                       edges[i].second);
+    }
+    POLY_ASSERT2((hangingNodes and result.size() == nedges + 1) or
+                 ((not hangingNodes) and result.size() == nedges), result.size());
+      
+
+  } else {
+
+    // There are either one or no edges, so the solution is pretty simple.
+    if (nedges == 1) {
+      result.push_back(edges[0].first);
+      result.push_back(edges[0].second);
+    }
+
   }
+
+  // That's it.
+  return result;
 }
 
 } // end anonymous namespace
@@ -173,7 +239,7 @@ sortFaceEdges(std::vector<std::pair<int, int> >& edges) {
 // Default constructor.
 //------------------------------------------------------------------------------
 TetgenTessellator::
-TetgenTessellator(const bool directComputation):
+TetgenTessellator():
   Tessellator<3, double>() {
 }
 
@@ -198,7 +264,6 @@ tessellate(const vector<double>& points,
 
   typedef int64_t CoordHash;
   typedef pair<int, int> EdgeHash;
-  typedef set<int> FaceHash;
   typedef Point3<CoordHash> IntPoint;
   typedef Point3<RealType> RealPoint;
   const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
@@ -218,7 +283,8 @@ tessellate(const vector<double>& points,
   tetgenio in;
   in.firstnumber = 0;
   in.mesh_dim = 3;
-  in.pointlist = &generators.front();
+  in.pointlist = new double[generators.size()];
+  copy(&generators.front(), &generators.front() + generators.size(), in.pointlist);
   in.pointattributelist = 0;
   in.pointmtrlist = 0;
   in.pointmarkerlist = 0;
@@ -269,7 +335,7 @@ tessellate(const vector<double>& points,
     POLY_ASSERT(out.vpointlist[3*i+2] >= vlow[2] and out.vpointlist[3*i+2] <= vhigh[2]);
     IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i+1], out.vpointlist[3*i+2], vlow[0], vlow[1], vlow[2], degeneracy);
     internal::addKeyToMap(p, point2node);
-    cerr << "   ----> (" << out.vpointlist[3*i] << " " << out.vpointlist[3*i + 1] << " " << out.vpointlist[3*i + 2] << ") " << p << " " << point2node[p] << endl;
+    // cerr << "   ----> (" << out.vpointlist[3*i] << " " << out.vpointlist[3*i + 1] << " " << out.vpointlist[3*i + 2] << ") " << p << " " << point2node[p] << endl;
   }
 
   // Read the normalized mesh node positions.
@@ -278,9 +344,9 @@ tessellate(const vector<double>& points,
        itr != point2node.end();
        ++itr) {
     i = itr->second;
-    mesh.nodes[3*i  ] = itr->first.realx(0.0, degeneracy);
-    mesh.nodes[3*i+1] = itr->first.realy(0.0, degeneracy);
-    mesh.nodes[3*i+2] = itr->first.realz(0.0, degeneracy);
+    mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
+    mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
+    mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
   }
 
   // Read the Tetgen voro edges, creating our "infinte" surface nodes for
@@ -315,10 +381,15 @@ tessellate(const vector<double>& points,
       POLY_ASSERT(ray_sph_int[1] >= vlow[1] and ray_sph_int[1] <= vhigh[1]);
       POLY_ASSERT(ray_sph_int[2] >= vlow[2] and ray_sph_int[2] <= vhigh[2]);
       IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], vlow[0], vlow[1], vlow[2], degeneracy);
-      k = internal::addKeyToMap(p1, point2node);
-      n2 = k;
-      if (k == point2node.size() - 1) mesh.infNodes.push_back(k);
-      cerr << " ---> new inf point (" << ray_sph_int[0] << " " << ray_sph_int[1] << " " << ray_sph_int[2] << ") " << p1 << " " << k << endl;
+      k = point2node.size();
+      n2 = internal::addKeyToMap(p1, point2node);
+      if (k != point2node.size()) {
+        mesh.infNodes.push_back(n2);
+        mesh.nodes.push_back(p1.realx(vlow[0], degeneracy));
+        mesh.nodes.push_back(p1.realy(vlow[1], degeneracy));
+        mesh.nodes.push_back(p1.realz(vlow[2], degeneracy));
+        // cerr << " ---> new inf point (" << ray_sph_int[0] << " " << ray_sph_int[1] << " " << ray_sph_int[2] << ") " << p1 << " " << n2 << endl;
+      }
     } else {
       IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], vlow[0], vlow[1], vlow[2], degeneracy);
       POLY_ASSERT(point2node.find(p2) != point2node.end());
@@ -332,6 +403,20 @@ tessellate(const vector<double>& points,
   }
   POLY_ASSERT(edges.size() == out.numberofvedges);
 
+  // Add any of our new "inf" nodes to the mesh node list.
+  const unsigned nold = mesh.nodes.size()/3;
+  mesh.nodes.resize(3*point2node.size());
+  for (map<IntPoint, int>::const_iterator itr = point2node.begin();
+       itr != point2node.end();
+       ++itr) {
+    i = itr->second;
+    if (i >= nold) {
+      mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
+      mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
+      mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
+    }
+  }
+
   // Create the faces, checking for degeneracies here too.
   map<unsigned, int> faceMap;
   mesh.faces.reserve(out.numberofvfacets);
@@ -341,8 +426,6 @@ tessellate(const vector<double>& points,
     const tetgenio::vorofacet& vfacet = out.vfacetlist[i];
     ne = vfacet.elist[0];
     POLY_ASSERT(ne >= 2);
-    vector<unsigned> faceNodes;
-    faceNodes.reserve(ne);
     vector<EdgeHash> faceEdges;
     faceEdges.reserve(ne);
     for (k = 0; k != ne; ++k) {
@@ -351,25 +434,13 @@ tessellate(const vector<double>& points,
       if (edges[ie].first >= 0) faceEdges.push_back(edges[ie]); // Exclude degenerate edges.
     }
 
-    // Reduce to the unique edges, and sort them edges into a connected chain.    
+    // Reduce to the unique edges, and extrac the nodes ringing the face.
     sort(faceEdges.begin(), faceEdges.end());
     faceEdges.erase(unique(faceEdges.begin(), faceEdges.end()), faceEdges.end());
-    sortFaceEdges(faceEdges);
+    const vector<unsigned> faceNodes = computeSortedFaceNodes(faceEdges);
 
-    // Now walk the ordered edges and put their nodes in this face.
-    ne = faceEdges.size();
-    if (ne > 1) {
-      for (k = 0; k != ne - 1; ++k) {
-        POLY_ASSERT(faceEdges[k].first == faceEdges[k+1].first or
-                    faceEdges[k].first == faceEdges[k+1].second or
-                    faceEdges[k].second == faceEdges[k+1].first or
-                    faceEdges[k].second == faceEdges[k+1].second);
-        faceNodes.push_back((faceEdges[k].first == faceEdges[k+1].first or
-                             faceEdges[k].first == faceEdges[k+1].second) ?
-                            faceEdges[k].first :
-                            faceEdges[k].second);
-      }
-      POLY_ASSERT(faceNodes.size() > 2);
+    // Are there enough nodes to constitute a non-degenerate face?
+    if (faceNodes.size() > 2) {
       faceMap[i] = mesh.faces.size();
       mesh.faces.push_back(faceNodes);
 

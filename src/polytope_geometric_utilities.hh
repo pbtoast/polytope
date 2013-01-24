@@ -161,15 +161,21 @@ cross(const RealType* a, const RealType* b, RealType* c) {
 template<int Dimension, typename RealType>
 bool
 collinear(const RealType* a, const RealType* b, const RealType* c, const RealType tol) {
-  RealType ba[Dimension], cb[Dimension], bamag2, cbmag2;
+  RealType ab[Dimension], ac[Dimension], abmag = 0.0, acmag = 0.0;
   for (unsigned j = 0; j != Dimension; ++j) {
-    ba[j] = b[j] - a[j];
-    cb[j] = c[j] - b[j];
-    bamag2 += ba[j]*ba[j];
-    cbmag2 += cb[j]*cb[j];
+    ab[j] = b[j] - a[j];
+    ac[j] = c[j] - a[j];
+    abmag += ab[j]*ab[j];
+    acmag += ac[j]*ac[j];
   }
-  if (bamag2 < tol or cbmag2 < tol) return true;
-  return std::abs(std::abs(dot<Dimension, RealType>(ba, cb)) - std::sqrt(bamag2*cbmag2)) < tol;
+  if (abmag < tol or acmag < tol) return true;
+  abmag = std::sqrt(abmag);
+  acmag = std::sqrt(acmag);
+  for (unsigned j = 0; j != Dimension; ++j) {
+    ab[j] /= abmag;
+    ac[j] /= acmag;
+  }
+  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
 }
 
 //------------------------------------------------------------------------------
@@ -485,9 +491,9 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
     fcent[1] += mesh.nodes[3*ni+1];
     fcent[2] += mesh.nodes[3*ni+2];
     if (verts.size() < 2 or
-        (verts.size() == 2 and not collinear<3, RealType>(&mesh.nodes[verts[0]],
-                                                          &mesh.nodes[verts[1]],
-                                                          &mesh.nodes[ni],
+        (verts.size() == 2 and not collinear<3, RealType>(&mesh.nodes[3*verts[0]],
+                                                          &mesh.nodes[3*verts[1]],
+                                                          &mesh.nodes[3*ni],
                                                           degeneracy))) verts.push_back(ni);
   }
   POLY_ASSERT(n > 0);
