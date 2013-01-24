@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <map>
+#include <set>
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
@@ -122,34 +123,36 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
   if (nedges > 1) {
 
     // Invert the mapping, from nodes to edges.
-    std::map<int, std::vector<EdgeHash> > nodes2edges;
+    std::map<int, std::set<EdgeHash> > nodes2edges;
     internal::CounterMap<int> nodeUseCount;
     unsigned i, j;
     for (i = 0; i != nedges; ++i) {
-      nodes2edges[edges[i].first].push_back(edges[i]);
-      nodes2edges[edges[i].second].push_back(edges[i]);
+      nodes2edges[edges[i].first].insert(edges[i]);
+      nodes2edges[edges[i].second].insert(edges[i]);
       ++nodeUseCount[edges[i].first];
       ++nodeUseCount[edges[i].second];
     }
 
-    // // BLAGO!
-    // cerr << "Input edges :";
-    // for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
-    // cerr << endl << "nodes2edges: " << endl;
-    // for (map<int, vector<EdgeHash> >::const_iterator itr = nodes2edges.begin();
-    //      itr != nodes2edges.end();
-    //      ++itr) {
-    //   cerr << itr->first << " : ";
-    //   for (unsigned i = 0; i != itr->second.size(); ++i) cerr << " (" << itr->second[i].first << " " << itr->second[i].second << ")";
-    //   cerr << endl;
-    // }
-    // cerr << "nodeUseCount: " << endl;
-    // for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
-    //      itr != nodeUseCount.end();
-    //      ++itr) {
-    //   cerr << "   " << itr->first << " : " << itr->second << endl;
-    // }
-    // // BLAGO!
+    // BLAGO!
+    cerr << "Input edges :";
+    for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
+    cerr << endl << "nodes2edges: " << endl;
+    for (std::map<int, std::set<EdgeHash> >::const_iterator itr = nodes2edges.begin();
+         itr != nodes2edges.end();
+         ++itr) {
+      cerr << itr->first << " : ";
+      for (std::set<EdgeHash>::const_iterator eitr = itr->second.begin();
+           eitr != itr->second.end();
+           ++eitr) cerr << " (" << eitr->first << " " << eitr->second << ")";
+      cerr << endl;
+    }
+    cerr << "nodeUseCount: " << endl;
+    for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
+         itr != nodeUseCount.end();
+         ++itr) {
+      cerr << "   " << itr->first << " : " << itr->second << endl;
+    }
+    // BLAGO!
 
     // Look for any edges with one one node in the set.  There can be at most
     // two such edges, representing the two ends of the chain.  We will put 
@@ -166,6 +169,7 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
                     (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1));
         orderedEdges.push_back(edges[i]);
         lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
+        nodes2edges[lastNode].erase(orderedEdges.back());
         hangingNodes = true;
       }
     }
@@ -179,41 +183,43 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
                   orderedEdges.back().first :
                   orderedEdges.back().second);
     } else {
-      lastNode = nodeUseCount.begin()->first;
-      orderedEdges.push_back(nodes2edges[lastNode].back());
-      nodes2edges[lastNode].pop_back();
+      lastNode = edges[0].first;
+      orderedEdges.push_back(edges[0]);
+      nodes2edges[lastNode].erase(edges[0]);
     }
 
     // Walk the remaining edges
     while (orderedEdges.size() != nedges) {
       POLY_ASSERT(nodes2edges[lastNode].size() > 0);
-      orderedEdges.push_back(nodes2edges[lastNode].back());
-      nodes2edges[lastNode].pop_back();
+      orderedEdges.push_back(*nodes2edges[lastNode].begin());
+      nodes2edges[lastNode].erase(orderedEdges.back());
       lastNode = (orderedEdges.back().first == lastNode ? orderedEdges.back().second : orderedEdges.back().first);
     }
     
+    // BLAGO!
+    cerr << "Sorted edges : ";
+    for (i = 0; i != nedges; ++i) cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
+    cerr << endl;
+    // BLAGO!
+
     // Read the nodes in order.
     if (hangingNodes) {
-      result.push_back((edges[0].first == edges[1].first or edges[0].first == edges[1].second) ?
-                       edges[0].second :
-                       edges[0].first);
+      result.push_back(nodeUseCount[orderedEdges[0].first] == 1 ? orderedEdges[0].first : orderedEdges[0].second);
+      result.push_back(nodeUseCount[orderedEdges[1].first] == 1 ? orderedEdges[1].first : orderedEdges[1].second);
       i = 1;
-      j = (i + 1) % nedges;
-      result.push_back((edges[i].first == edges[j].first or edges[i].first == edges[j].second) ?
-                       edges[i].second :
-                       edges[i].first);
     } else {
       i = 0;
     }
     for (; i != nedges; ++i) {
       j = (i + 1) % nedges;
-      POLY_ASSERT(edges[i].first == edges[j].first or
-                  edges[i].first == edges[j].second or
-                  edges[i].second == edges[j].first or
-                  edges[i].second == edges[j].second);
-      result.push_back((edges[i].first == edges[j].first or edges[i].first == edges[j].second) ? 
-                       edges[i].first : 
-                       edges[i].second);
+      cerr << "Looking at " << i << " " << j << endl;
+      POLY_ASSERT(orderedEdges[i].first == orderedEdges[j].first or
+                  orderedEdges[i].first == orderedEdges[j].second or
+                  orderedEdges[i].second == orderedEdges[j].first or
+                  orderedEdges[i].second == orderedEdges[j].second);
+      result.push_back((orderedEdges[i].first == orderedEdges[j].first or orderedEdges[i].first == orderedEdges[j].second) ? 
+                       orderedEdges[i].first : 
+                       orderedEdges[i].second);
     }
     POLY_ASSERT2((hangingNodes and result.size() == nedges + 1) or
                  ((not hangingNodes) and result.size() == nedges), result.size());
