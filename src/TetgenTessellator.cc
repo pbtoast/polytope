@@ -652,17 +652,59 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   // Create the quantized circumcenters, and the map from the (possibly) degenerate
   // circumcenters to their unique IDs.
   map<IntPoint, int> circ2id;
-  map<int, int> tet2id;
+  map<int, vector<unsigned> > tet2ids;
   for (i = 0; i != out.numberoftetrahedra; ++i) {
     IntPoint ip(circumcenters[i].x, circumcenters[i].y, circumcenters[i].z,
                 clow[0], clow[1], clow[2], cdx);
     j = internal::addKeyToMap(ip, circ2id);
-    tet2id[i] = j;
+    tet2ids[i].push_back(j);
   }
 
-  // Copy the quantized nodes to the final tessellation.  Note we may be adding more yet
-  // for unbounded rays emerging from the surface!
-  unsigned numNodes = tet2id.size();
+  // Look for any surface facets we need to project unbounded rays through.
+  {
+    bool test;
+    RealPoint fcent, fhat, ab, ac, pinf;
+    for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
+         facetItr != facet2tets.end();
+         ++facetItr) {
+      const TetFacetHash& facet = facetItr->first;
+      const vector<unsigned>& tets = facetItr->second;
+      if (tets.size() == 1) {
+        i = tets[0];
+        POLY_ASSERT(i < numGenerators);
+        test = geometry::computeTriangleCircumcenter3d(&out.pointlist[3*facet.x],
+                                                       &out.pointlist[3*facet.y],
+                                                       &out.pointlist[3*facet.z],
+                                                       &fcent.x);
+        POLY_ASSERT(test);
+        fhat = fcent;
+        fhat -= circumcenters[i];
+        if (geometry::dot<3, RealType>(&fcent.x, &fcent.x) <= degeneracy) {
+          ab.x = out.pointlist[3*facet.y]   - out.pointlist[3*facet.x];
+          ab.y = out.pointlist[3*facet.y+1] - out.pointlist[3*facet.x+1];
+          ab.z = out.pointlist[3*facet.y+2] - out.pointlist[3*facet.x+2];
+          ac.x = out.pointlist[3*facet.z]   - out.pointlist[3*facet.x];
+          ac.y = out.pointlist[3*facet.z+1] - out.pointlist[3*facet.x+1];
+          ac.z = out.pointlist[3*facet.z+2] - out.pointlist[3*facet.x+2];
+          geometry::cross<3, RealType>(&ab.x, &ac.x, &fhat.x);
+        }
+        geometry::unitVector<3, RealType>(&fhat.x);
+        test = geometry::raySphereIntersection(&circumcenters[i].x,
+                                               &fcent.x,
+                                               cboxc,
+                                               rinf,
+                                               1.0e-10,
+                                               &pinf.x);
+        POLY_ASSERT(test);
+        IntPoint ip(pinf.x, pinf.y, pinf.z, clow[0], clow[1], clow[2], cdx);
+        j = internal::addKeyToMap(ip, circ2id);
+        tet2ids[i].push_back(j);
+      }
+    }
+  }
+
+  // Copy the quantized nodes to the final tessellation.
+  const unsigned numNodes = circ2id.size();
   mesh.nodes.resize(3*numNodes);
   for (map<IntPoint, int>::const_iterator itr = circ2id.begin();
        itr != circ2id.end();
@@ -673,8 +715,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     mesh.nodes[3*i+1] = itr->first.realy(clow[1], cdx);
     mesh.nodes[3*i+2] = itr->first.realz(clow[2], cdx);
   }
-
-
 
   // Rescale the mesh node positions for the input geometry.
   for (i = 0; i != mesh.nodes.size(); ++i) {
