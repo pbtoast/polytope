@@ -63,24 +63,6 @@ using std::abs;
 
 namespace {
 
-//------------------------------------------------------------------------
-// This function computes the circumcenter of a triangle with vertices
-// A = (Ax, Ay), B = (Bx, By), and C = (Cx, Cy), and places the result 
-// in X.
-//------------------------------------------------------------------------
-void 
-computeCircumcenter(double* A, double* B, double* C, double* X)
-{
-  // This solution was taken from Wikipedia's entry:
-  // http://en.wikipedia.org/wiki/Circumscribed_circle
-  double D = 2.0*(A[0]*(B[1]-C[1]) + B[0]*(C[1]-A[1]) + C[0]*(A[1]-B[1]));
-  X[0] = ((A[0]*A[0] + A[1]*A[1])*(B[1]-C[1]) + (B[0]*B[0] + B[1]*B[1])*(C[1]-A[1]) + 
-          (C[0]*C[0] + C[1]*C[1])*(A[1]-B[1]))/D;
-  X[1] = ((A[0]*A[0] + A[1]*A[1])*(C[0]-B[0]) + (B[0]*B[0] + B[1]*B[1])*(A[0]-C[0]) + 
-          (C[0]*C[0] + C[1]*C[1])*(B[0]-A[0]))/D;
-}
-//------------------------------------------------------------------------
-
 //------------------------------------------------------------------------------
 // An implementation of the map specialized for testing true/false.
 // If tested with a key that does not exist, it is initialized as false.
@@ -312,10 +294,10 @@ tessellate(const vector<RealType>& points,
       ++edgeCounter[internal::hashEdge(qindex, rindex)];
       ++edgeCounter[internal::hashEdge(rindex, pindex)];
     }
-    computeCircumcenter(&delaunay.pointlist[2*pindex],
-                        &delaunay.pointlist[2*qindex],
-                        &delaunay.pointlist[2*rindex],
-                        &circumcenters[i].x);
+    geometry::computeCircumcenter2d(&delaunay.pointlist[2*pindex],
+                                    &delaunay.pointlist[2*qindex],
+                                    &delaunay.pointlist[2*rindex],
+                                    &circumcenters[i].x);
     gen2tri[pindex].insert(i);
     gen2tri[qindex].insert(i);
     gen2tri[rindex].insert(i);

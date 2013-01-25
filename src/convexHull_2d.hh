@@ -126,13 +126,13 @@ convexHull_2d(const std::vector<RealType>& points,
            zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
     result[k++] = i;
   }
-  if (!(k >= 4)) {
-    std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
-    std::cerr << "Unique:" << std::endl;
-    for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
-    std::cerr << "Input:" << std::endl;
-    for (unsigned i = 0; i != n; ++i) std::cerr << "  --> " << points[2*i] << " " << points[2*i+1] << std::endl;
-  }
+  // if (!(k >= 4)) {
+  //   std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
+  //   std::cerr << "Unique:" << std::endl;
+  //   for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
+  //   std::cerr << "Input:" << std::endl;
+  //   for (unsigned i = 0; i != n; ++i) std::cerr << "  --> " << points[2*i] << " " << points[2*i+1] << std::endl;
+  // }
   POLY_ASSERT(k >= 4);
   POLY_ASSERT(result.front() == result.back());
 

@@ -152,7 +152,7 @@ struct CrossFunctor<3, RealType> {
 template<int Dimension, typename RealType>
 void
 cross(const RealType* a, const RealType* b, RealType* c) {
-  return CrossFunctor<Dimension, RealType>::impl(a, b, c);
+  CrossFunctor<Dimension, RealType>::impl(a, b, c);
 }
 
 //------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ computeBoundingBox(const RealType* pos,
    if (globalReduce) {
      for (unsigned j = 0; j != Dimension; ++j) {
        xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);
-       xmax[j] = allReduce(xmax[j], MPI_MIN, MPI_COMM_WORLD);
+       xmax[j] = allReduce(xmax[j], MPI_MAX, MPI_COMM_WORLD);
      }
    }
 #endif
@@ -510,6 +510,131 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   ac[2] = mesh.nodes[3*verts[2]+2] - mesh.nodes[3*verts[0]+2];
   cross<3, RealType>(ab, ac, fhat);
   unitVector<3, RealType>(fhat);
+}
+
+//------------------------------------------------------------------------------
+// This function computes the circumcenter of a triangle with vertices
+// A = (Ax, Ay), B = (Bx, By), and C = (Cx, Cy), and places the result 
+// in X.
+//------------------------------------------------------------------------------
+inline
+void 
+computeCircumcenter2d(double* A, double* B, double* C, double* X) {
+  // This solution was taken from Wikipedia's entry:
+  // http://en.wikipedia.org/wiki/Circumscribed_circle
+  double D = 2.0*(A[0]*(B[1]-C[1]) + B[0]*(C[1]-A[1]) + C[0]*(A[1]-B[1]));
+  X[0] = ((A[0]*A[0] + A[1]*A[1])*(B[1]-C[1]) + (B[0]*B[0] + B[1]*B[1])*(C[1]-A[1]) + 
+          (C[0]*C[0] + C[1]*C[1])*(A[1]-B[1]))/D;
+  X[1] = ((A[0]*A[0] + A[1]*A[1])*(C[0]-B[0]) + (B[0]*B[0] + B[1]*B[1])*(A[0]-C[0]) + 
+          (C[0]*C[0] + C[1]*C[1])*(B[0]-A[0]))/D;
+}
+
+//------------------------------------------------------------------------
+// This function computes the determinant of the 3x3 matrix A with 
+// the given 9 coefficients.
+//------------------------------------------------------------------------
+inline
+double 
+det3(double A11, double A12, double A13,
+     double A21, double A22, double A23,
+     double A31, double A32, double A33) {
+  return A11*(A22*A33-A32*A23) - A12*(A21*A33-A31*A23) + A13*(A21*A31-A31*A22);
+}
+
+//------------------------------------------------------------------------
+// This function computes the determinant of the 4x4 matrix A with 
+// the given 16 coefficients.
+//------------------------------------------------------------------------
+inline
+double 
+det4(double A11, double A12, double A13, double A14,
+     double A21, double A22, double A23, double A24,
+     double A31, double A32, double A33, double A34,
+     double A41, double A42, double A43, double A44) {
+  double det31 = det3(A22, A23, A24,
+                      A32, A33, A34,
+                      A42, A43, A44);
+  double det32 = det3(A21, A23, A24,
+                      A31, A33, A34,
+                      A41, A43, A44);
+  double det33 = det3(A21, A22, A24,
+                      A31, A32, A34,
+                      A41, A42, A44);
+  double det34 = det3(A21, A22, A23,
+                      A31, A32, A33,
+                      A41, A42, A43);
+  return A11*det31 - A12*det32 + A13*det33 - A14*det34;
+}
+
+//------------------------------------------------------------------------
+// This function computes the circumcenter of a tetrahedron with vertices
+// A = (Ax, Ay, Az), B = (Bx, By, Bz), C = (Cx, Cy, Cz), and D = (Dx, Dy, Dz).
+// The result is returned in X.
+//------------------------------------------------------------------------
+inline
+void
+computeCircumcenter3d(double* A, double* B, double* C, double* D, double* X) {
+  // This solution was taken from 
+  // http://mathworld.wolfram.com/Circumsphere.html.
+  double r12 = A[0]*A[0] + A[1]*A[1] + A[2]*A[2];
+  double r22 = B[0]*B[0] + B[1]*B[1] + B[2]*B[2];
+  double r32 = C[0]*C[0] + C[1]*C[1] + C[2]*C[2];
+  double r42 = D[0]*D[0] + D[1]*D[1] + D[2]*D[2];
+  double a = det4(A[0], A[1], A[2], 1.0,
+                  B[0], B[1], B[2], 1.0,
+                  C[0], C[1], C[2], 1.0,
+                  D[0], D[1], D[2], 1.0);
+  double Dx = det4(r12, A[1], A[2], 1.0,
+                   r22, B[1], B[2], 1.0,
+                   r32, C[1], C[2], 1.0,
+                   r42, D[1], D[2], 1.0);
+  double Dy = det4(r12, A[0], A[2], 1.0,
+                   r22, B[0], B[2], 1.0,
+                   r32, C[0], C[2], 1.0,
+                   r42, D[0], D[2], 1.0);
+  double Dz = det4(r12, A[0], A[1], 1.0,
+                   r22, B[0], B[1], 1.0,
+                   r32, C[0], C[1], 1.0,
+                   r42, D[0], D[1], 1.0);
+  POLY_ASSERT(a != 0.0);
+  X[0] = 0.5*Dx/a;
+  X[1] = 0.5*Dy/a;
+  X[2] = 0.5*Dz/a;
+}
+
+//------------------------------------------------------------------------------
+// Compute the circumcenter of a triangle in 3D.
+// Same argument conventions as above.
+// Based on the form presented at
+// http://en.wikipedia.org/wiki/Circumscribed_circle
+//------------------------------------------------------------------------------
+inline
+bool
+computeTriangleCircumcenter3d(double* A, double* B, double* C, double* X) {
+  const double degeneracy = 1.0e-10;
+  if (collinear<3, double>(A, B, C, degeneracy)) return false;
+  
+  const double a[3] = {A[0] - C[0], 
+                       A[1] - C[1], 
+                       A[2] - C[2]};
+  const double b[3] = {B[0] - C[0],
+                       B[1] - C[1],
+                       B[2] - C[2]};
+  const double
+    a2 = a[0]*a[0] + a[1]*a[1] + a[2]*a[2],
+    b2 = b[0]*b[0] + b[1]*b[1] + b[2]*b[2];
+  const double c[3] = {a2*b[0] - b2*a[0],
+                       a2*b[1] - b2*a[1],
+                       a2*b[2] - b2*a[2]};
+  double d[3], e[3];
+  cross<3, double>(a, b, d);
+  cross<3, double>(c, d, e);
+  const double d2 = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+  POLY_ASSERT(d2 > 0.0);
+  X[0] = 0.5*e[0]/d2 + C[0];
+  X[1] = 0.5*e[1]/d2 + C[1];
+  X[2] = 0.5*e[2]/d2 + C[2];
+  return true;
 }
 
 }

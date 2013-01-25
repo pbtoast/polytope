@@ -22,92 +22,32 @@ using std::abs;
 
 namespace {
 
-//------------------------------------------------------------------------
-// This function computes the determinant of the 3x3 matrix A with 
-// the given 9 coefficients.
-//------------------------------------------------------------------------
-double 
-det3(double A11, double A12, double A13,
-     double A21, double A22, double A23,
-     double A31, double A32, double A33) {
-  return A11*(A22*A33-A32*A23) - A12*(A21*A33-A31*A23) + A13*(A21*A31-A31*A22);
-}
-
-//------------------------------------------------------------------------
-// This function computes the determinant of the 4x4 matrix A with 
-// the given 16 coefficients.
-//------------------------------------------------------------------------
-double 
-det4(double A11, double A12, double A13, double A14,
-     double A21, double A22, double A23, double A24,
-     double A31, double A32, double A33, double A34,
-     double A41, double A42, double A43, double A44) {
-  double det31 = det3(A22, A23, A24,
-                      A32, A33, A34,
-                      A42, A43, A44);
-  double det32 = det3(A21, A23, A24,
-                      A31, A33, A34,
-                      A41, A43, A44);
-  double det33 = det3(A21, A22, A24,
-                      A31, A32, A34,
-                      A41, A42, A44);
-  double det34 = det3(A21, A22, A23,
-                      A31, A32, A33,
-                      A41, A42, A43);
-  return A11*det31 - A12*det32 + A13*det33 - A14*det34;
-}
-
-//------------------------------------------------------------------------
-// This function computes the circumcenter of a tetrahedron with vertices
-// A = (Ax, Ay, Az), B = (Bx, By, Bz), C = (Cx, Cy, Cz), and D = (Dx, Dy, Dz),
-// and places the result in X.
-//------------------------------------------------------------------------
-void 
-computeCircumcenter(double* A, double* B, double* C, double* D, double* X) {
-  // This solution was taken from 
-  // http://mathworld.wolfram.com/Circumsphere.html.
-  double r12 = A[0]*A[0] + A[1]*A[1] + A[2]*A[2];
-  double r22 = B[0]*B[0] + B[1]*B[1] + B[2]*B[2];
-  double r32 = C[0]*C[0] + C[1]*C[1] + C[2]*C[2];
-  double r42 = D[0]*D[0] + D[1]*D[1] + D[2]*D[2];
-  double a = det4(A[0], A[1], A[2], 1.0,
-                  B[0], B[1], B[2], 1.0,
-                  C[0], C[1], C[2], 1.0,
-                  D[0], D[1], D[2], 1.0);
-  double Dx = det4(r12, A[1], A[2], 1.0,
-                   r22, B[1], B[2], 1.0,
-                   r32, C[1], C[2], 1.0,
-                   r42, D[1], D[2], 1.0);
-  double Dy = det4(r12, A[0], A[2], 1.0,
-                   r22, B[0], B[2], 1.0,
-                   r32, C[0], C[2], 1.0,
-                   r42, D[0], D[2], 1.0);
-  double Dz = det4(r12, A[0], A[1], 1.0,
-                   r22, B[0], B[1], 1.0,
-                   r32, C[0], C[1], 1.0,
-                   r42, D[0], D[1], 1.0);
-  X[0] = 0.5*Dx/a;
-  X[1] = 0.5*Dy/a;
-  X[2] = 0.5*Dz/a;
-}
-
 //------------------------------------------------------------------------------
-// Increment the given position by 
+// Borrow the Point3 type as a tuple to create 3 node facets hashes.
 //------------------------------------------------------------------------------
-void
-incrementPosition(Point3<double>& val,
-                  const vector<double>& points,
-                  const vector<int>& indices) {
-  Point3<double> xi(0.0, 0.0, 0.0);
-  for (unsigned k = 0; k != indices.size(); ++k) {
-    const unsigned i = indices[k];
-    POLY_ASSERT(i < points.size()/3);
-    xi.x += points[3*i];
-    xi.y += points[3*i + 1];
-    xi.z += points[3*i + 2];
+Point3<unsigned>
+hashFacet(const unsigned i, const unsigned j, const unsigned k) {
+  typedef Point3<unsigned> Tuple3;
+  POLY_ASSERT(i != j and i != k and j != k);
+  if (i < j and i < k) {
+    if (j < k) {
+      return Tuple3(i, j, k);
+    } else {
+      return Tuple3(i, k, j);
+    }
+  } else if (j < i and j < k) {
+    if (i < k) {
+      return Tuple3(j, i, k);
+    } else {
+      return Tuple3(j, k, i);
+    }
+  } else {
+    if (i < j) {
+      return Tuple3(k, i, j);
+    } else {
+      return Tuple3(k, j, i);
+    }
   }
-  xi /= indices.size();
-  val += xi;
 }
 
 //------------------------------------------------------------------------------
@@ -243,11 +183,12 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
-// Default constructor.
+// Constructor.
 //------------------------------------------------------------------------------
 TetgenTessellator::
-TetgenTessellator():
-  Tessellator<3, double>() {
+TetgenTessellator(const bool directComputation):
+  Tessellator<3, double>(),
+  mDirectComputation(directComputation) {
 }
 
 //------------------------------------------------------------------------------
@@ -264,6 +205,71 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            Tessellation<3, double>& mesh) const {
+  if (mDirectComputation) {
+    this->computeVoronoiNatively(points, mesh);
+  } else {
+    this->computeVoronoiThroughTetrahedralization(points, mesh);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Tessellate within a bounding box.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           double* low,
+           double* high,
+           Tessellation<3, double>& mesh) const {
+
+  // Pre-conditions.
+  POLY_ASSERT(not points.empty());
+  POLY_ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(low[0] < high[0] and
+              low[1] < high[1] and
+              low[2] < high[2]);
+
+  // Start by creating the unbounded tessellation.
+  this->tessellate(points, mesh);
+}
+
+  // // Copy the PLC boundary info to the tetgen input.
+  // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
+  // for (unsigned ifacet = 0; ifacet != geometry.facets.size(); ++ifacet) {
+  //   POLY_ASSERT(geometry.facets[ifacet].size() >= 3);
+  //   plcFacetPolygons[ifacet].numberofvertices = geometry.facets[ifacet].size();
+  //   plcFacetPolygons[ifacet].vertexlist = const_cast<int*>(&geometry.facets[ifacet].front());
+  // }
+  // unsigned nfacets = plcFacetPolygons.size();
+  // vector<RealPoint> holeCentroids(geometry.holes.size(), RealPoint(0.0, 0.0, 0.0));
+  // for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
+  //   plcFacetPolygons.resize(nfacets + geometry.holes[ihole].size());
+  //   for (unsigned ifacet = 0; ifacet != geometry.holes[ihole].size(); ++ifacet) {
+  //     POLY_ASSERT(geometry.holes[ihole][ifacet].size() >= 3);
+  //     plcFacetPolygons[nfacets + ifacet].numberofvertices = geometry.holes[ihole][ifacet].size();
+  //     plcFacetPolygons[nfacets + ifacet].vertexlist = const_cast<int*>(&geometry.holes[ihole][ifacet].front());
+  //     incrementPosition(holeCentroids[ihole], PLCpoints, geometry.holes[ihole][ifacet]);
+  //   }
+  //   holeCentroids[ihole] /= RealType(geometry.holes[ihole].size());
+  //   nfacets = plcFacetPolygons.size();
+  // }
+  // POLY_ASSERT(nfacets == plcFacetPolygons.size());
+  // vector<tetgenio::facet> plcFacets(nfacets);
+  // for (unsigned ifacet = 0; ifacet != nfacets; ++ifacet) {
+  //   in.init(&plcFacets[ifacet]);
+  //   plcFacets[ifacet].polygonlist = &plcFacetPolygons[ifacet];
+  //   plcFacets[ifacet].numberofpolygons = 1;
+  // }
+  // in.numberoffacets = nfacets;
+  // in.facetlist = &plcFacets.front();
+
+//------------------------------------------------------------------------------
+// Compute the unbouded tessellation using Tetgen's directo Voronoi computation.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+computeVoronoiNatively(const vector<double>& points,
+                       Tessellation<3, double>& mesh) const {
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
@@ -299,7 +305,7 @@ tessellate(const vector<double>& points,
   in.numberofpointattributes = 0;
   in.numberofpointmtrs = 0;
 
-  // Do the tetrahedralization.
+  // Do the tetgen tessellation.
   tetgenio out;
   tetrahedralize((char*)"vV", &in, &out);
 
@@ -501,54 +507,181 @@ tessellate(const vector<double>& points,
 }
 
 //------------------------------------------------------------------------------
-// Tessellate within a bounding box.
+// Use tetgen to compute the Delaunay tetrathedralization, and do the dual 
+// ourselves.  This is the way Tetgen is more commonly used, so maybe safer.
 //------------------------------------------------------------------------------
 void
 TetgenTessellator::
-tessellate(const vector<double>& points,
-           double* low,
-           double* high,
-           Tessellation<3, double>& mesh) const {
+computeVoronoiThroughTetrahedralization(const vector<double>& points,
+                                        Tessellation<3, double>& mesh) const {
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
-  POLY_ASSERT(low[0] < high[0] and
-              low[1] < high[1] and
-              low[2] < high[2]);
 
-  // Start by creating the unbounded tessellation.
-  this->tessellate(points, mesh);
+  typedef int64_t CoordHash;
+  typedef pair<int, int> EdgeHash;
+  typedef Point3<CoordHash> IntPoint;
+  typedef Point3<RealType> RealPoint;
+  typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
+  const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
+  const double degeneracy = 1.0e-12;
+
+  // Compute the normalized generators.
+  RealType low[3], high[3], box[3];
+  const unsigned numGenerators = points.size() / 3;
+  vector<double> generators = this->computeNormalizedPoints(points, points, true, low, high);
+  unsigned i, j, k;
+  for (j = 0; j != 3; ++j) {
+    box[j] = high[j] - low[j];
+    POLY_ASSERT(box[j] > 0.0);
+  }
+
+  // Build the input to tetgen.
+  tetgenio in;
+  in.firstnumber = 0;
+  in.mesh_dim = 3;
+  in.pointlist = new double[generators.size()];
+  copy(&generators.front(), &generators.front() + generators.size(), in.pointlist);
+  in.pointattributelist = 0;
+  in.pointmtrlist = 0;
+  in.pointmarkerlist = 0;
+  in.numberofpoints = generators.size() / 3;
+  in.numberofpointattributes = 0;
+  in.numberofpointmtrs = 0;
+
+  // Do the tetrahedralization.
+  tetgenio out;
+  tetrahedralize((char*)"V", &in, &out);
+
+  // Make sure we got something.
+  if (out.numberoftetrahedra == 0)
+    error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
+  if (out.numberofpoints != generators.size()/3) {
+    char err[1024];
+    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
+             out.numberofpoints, (int)numGenerators);
+    error(err);
+  }
+
+  cerr << "Finished tetgen." << endl;
+
+  // Compute the circumcenters of the tetrahedra, and the set of tets associated
+  // with each generator.
+  RealType clow[3], chigh[3], X[3];
+  vector<RealPoint> circumcenters(out.numberoftetrahedra);
+  unsigned a, b, c, d;
+  EdgeHash ab, ac, ad, bc, bd, cd;
+  TetFacetHash abc, abd, bcd, acd;
+  map<TetFacetHash, vector<unsigned> > facet2tets;      // Tets which share a facet.
+  vector<vector<EdgeHash> > gen2edges(numGenerators);   // Edges from each generator.
+  map<EdgeHash, set<unsigned> > edge2tets;              // Tets which share a given edge.
+  for (i = 0; i != out.numberoftetrahedra; ++i) {
+    a = out.tetrahedronlist[4*i];
+    b = out.tetrahedronlist[4*i+1];
+    c = out.tetrahedronlist[4*i+2];
+    d = out.tetrahedronlist[4*i+3];
+    POLY_ASSERT(a < numGenerators);
+    POLY_ASSERT(b < numGenerators);
+    POLY_ASSERT(c < numGenerators);
+    POLY_ASSERT(d < numGenerators);
+    geometry::computeCircumcenter3d(&out.pointlist[3*a],
+                                    &out.pointlist[3*b],
+                                    &out.pointlist[3*c],
+                                    &out.pointlist[3*d],
+                                    &circumcenters[i].x);
+    ab = internal::hashEdge(a, b);
+    ac = internal::hashEdge(a, c);
+    ad = internal::hashEdge(a, d);
+    bc = internal::hashEdge(b, c);
+    bd = internal::hashEdge(b, d);
+    cd = internal::hashEdge(c, d);
+    abc = hashFacet(a, b, c);
+    abd = hashFacet(a, b, d);
+    bcd = hashFacet(b, c, d);
+    acd = hashFacet(a, c, d);
+    facet2tets[abc].push_back(i);
+    facet2tets[abd].push_back(i);
+    facet2tets[bcd].push_back(i);
+    facet2tets[acd].push_back(i);
+    gen2edges[i].push_back(ab);
+    gen2edges[i].push_back(ac);
+    gen2edges[i].push_back(ad);
+    gen2edges[i].push_back(bc);
+    gen2edges[i].push_back(bd);
+    gen2edges[i].push_back(cd);
+    edge2tets[ab].insert(i);
+    edge2tets[ac].insert(i);
+    edge2tets[ad].insert(i);
+    edge2tets[bc].insert(i);
+    edge2tets[bd].insert(i);
+    edge2tets[cd].insert(i);
+    clow[0] = min(clow[0], circumcenters.back().x);
+    clow[1] = min(clow[1], circumcenters.back().y);
+    clow[2] = min(clow[2], circumcenters.back().z);
+    chigh[0] = max(chigh[0], circumcenters.back().x);
+    chigh[1] = max(chigh[1], circumcenters.back().y);
+    chigh[2] = max(chigh[2], circumcenters.back().z);
+  }
+  POLY_BEGIN_CONTRACT_SCOPE;
+  {
+    for (map<TetFacetHash, vector<unsigned> >::const_iterator itr = facet2tets.begin();
+         itr != facet2tets.end();
+         ++itr) POLY_ASSERT(itr->second.size() == 1 or itr->second.size() == 2);
+    POLY_ASSERT(gen2edges.size() == numGenerators);
+    for (unsigned i = 0; i != numGenerators; ++i) POLY_ASSERT(gen2edges[i].size() >= 3);
+    for (map<EdgeHash, set<unsigned> >::const_iterator itr = edge2tets.begin();
+         itr != edge2tets.end();
+         ++itr) POLY_ASSERT(itr->second.size() >= 1);
+    POLY_ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1] and clow[2] < chigh[2]);
+  }
+  POLY_END_CONTRACT_SCOPE;
+
+  // The bounding box for the circumcenters, useful for quantizing those pups.
+  clow[0] = min(clow[0], low[0]); clow[1] = min(clow[1], low[1]); clow[2] = min(clow[2], low[2]);
+  chigh[0] = max(chigh[0], high[0]); chigh[1] = max(chigh[1], high[1]); chigh[2] = max(chigh[2], high[2]);
+  const RealType cbox[3]  = {chigh[0] - clow[0], chigh[1] - clow[1], chigh[2] - clow[2]};
+  const RealType cboxsize = 2.0*max(cbox[0], max(cbox[1], cbox[2]));
+  const RealType cdx = max(degeneracy, cboxsize/coordMax);
+
+  // Any surface facets create new "infinite" or "unbounded" rays, which originate at
+  // the tet circumcenter and pass through the circumcenter of the triangular facet.
+  const RealType rinf = 2.0*cboxsize;
+  const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]), 0.5*(clow[1] + chigh[1]), 0.5*(clow[2] + chigh[2])};
+
+  // Create the quantized circumcenters, and the map from the (possibly) degenerate
+  // circumcenters to their unique IDs.
+  map<IntPoint, int> circ2id;
+  map<int, int> tet2id;
+  for (i = 0; i != out.numberoftetrahedra; ++i) {
+    IntPoint ip(circumcenters[i].x, circumcenters[i].y, circumcenters[i].z,
+                clow[0], clow[1], clow[2], cdx);
+    j = internal::addKeyToMap(ip, circ2id);
+    tet2id[i] = j;
+  }
+
+  // Copy the quantized nodes to the final tessellation.  Note we may be adding more yet
+  // for unbounded rays emerging from the surface!
+  unsigned numNodes = tet2id.size();
+  mesh.nodes.resize(3*numNodes);
+  for (map<IntPoint, int>::const_iterator itr = circ2id.begin();
+       itr != circ2id.end();
+       ++itr) {
+    POLY_ASSERT(itr->second >= 0 and itr->second < numNodes);
+    i = itr->second;
+    mesh.nodes[3*i  ] = itr->first.realx(clow[0], cdx);
+    mesh.nodes[3*i+1] = itr->first.realy(clow[1], cdx);
+    mesh.nodes[3*i+2] = itr->first.realz(clow[2], cdx);
+  }
+
+
+
+  // Rescale the mesh node positions for the input geometry.
+  for (i = 0; i != mesh.nodes.size(); ++i) {
+    j = i % 3;
+    mesh.nodes[i] = low[j] + mesh.nodes[i]*box[j];
+  }
+
 }
-
-  // // Copy the PLC boundary info to the tetgen input.
-  // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
-  // for (unsigned ifacet = 0; ifacet != geometry.facets.size(); ++ifacet) {
-  //   POLY_ASSERT(geometry.facets[ifacet].size() >= 3);
-  //   plcFacetPolygons[ifacet].numberofvertices = geometry.facets[ifacet].size();
-  //   plcFacetPolygons[ifacet].vertexlist = const_cast<int*>(&geometry.facets[ifacet].front());
-  // }
-  // unsigned nfacets = plcFacetPolygons.size();
-  // vector<RealPoint> holeCentroids(geometry.holes.size(), RealPoint(0.0, 0.0, 0.0));
-  // for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
-  //   plcFacetPolygons.resize(nfacets + geometry.holes[ihole].size());
-  //   for (unsigned ifacet = 0; ifacet != geometry.holes[ihole].size(); ++ifacet) {
-  //     POLY_ASSERT(geometry.holes[ihole][ifacet].size() >= 3);
-  //     plcFacetPolygons[nfacets + ifacet].numberofvertices = geometry.holes[ihole][ifacet].size();
-  //     plcFacetPolygons[nfacets + ifacet].vertexlist = const_cast<int*>(&geometry.holes[ihole][ifacet].front());
-  //     incrementPosition(holeCentroids[ihole], PLCpoints, geometry.holes[ihole][ifacet]);
-  //   }
-  //   holeCentroids[ihole] /= RealType(geometry.holes[ihole].size());
-  //   nfacets = plcFacetPolygons.size();
-  // }
-  // POLY_ASSERT(nfacets == plcFacetPolygons.size());
-  // vector<tetgenio::facet> plcFacets(nfacets);
-  // for (unsigned ifacet = 0; ifacet != nfacets; ++ifacet) {
-  //   in.init(&plcFacets[ifacet]);
-  //   plcFacets[ifacet].polygonlist = &plcFacetPolygons[ifacet];
-  //   plcFacets[ifacet].numberofpolygons = 1;
-  // }
-  // in.numberoffacets = nfacets;
-  // in.facetlist = &plcFacets.front();
 
 }

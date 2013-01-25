@@ -24,7 +24,7 @@ public:
   typedef double RealType;
 
   // Constructor, destructor.
-  TetgenTessellator();
+  TetgenTessellator(const bool directComputation = false);
   ~TetgenTessellator();
 
   // Tessellate the given generators (unbounded).
@@ -46,25 +46,24 @@ public:
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return false; }
 
-  // // Attributes.
-  // bool directComputation() const;
-  // void directComputation(const bool x);
+  // Attributes.
+  bool directComputation() const { return mDirectComputation; }
+  void directComputation(const bool x) { mDirectComputation = x; }
 
 private:
   //-------------------- Private interface --------------------
-  // bool mDirectComputation;
+  bool mDirectComputation;
 
-  // // Internal method to compute the tessellation directly.
-  // void computeDirectVoronoi(const std::vector<RealType>& points,
-  //                           const std::vector<RealType>& PLCpoints,
-  //                           const PLC<3, RealType>& geometry,
-  //                           Tessellation<3, RealType>& mesh) const;
+  // Internal method to compute the tessellation directly.
+  void computeVoronoiNatively(const std::vector<RealType>& points,
+                              Tessellation<3, RealType>& mesh) const;
 
-  // // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
-  // void computeDualOfTetrahedralization(const std::vector<RealType>& points,
-  //                                      const std::vector<RealType>& PLCpoints,
-  //                                      const PLC<3, RealType>& geometry,
-  //                                      Tessellation<3, RealType>& mesh) const;
+  // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
+  void computeVoronoiThroughTetrahedralization(const std::vector<RealType>& points,
+                                               Tessellation<3, RealType>& mesh) const;
+
+  // Forbidden methods.
+  TetgenTessellator();
 };
 
 }
