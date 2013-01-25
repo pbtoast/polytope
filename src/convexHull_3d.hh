@@ -339,7 +339,7 @@ convexHull_3d(const std::vector<RealType>& points,
     plc.facets.back().push_back(faces[i][0]);
     plc.facets.back().push_back(faces[i][1]);
     plc.facets.back().push_back(faces[i][2]);
-    convexHull_helpers::faceCentroid(points, faces[i], xc, yc, zc);
+    // convexHull_helpers::faceCentroid(points, faces[i], xc, yc, zc);
     // std::cerr << "  -----> " << faces[i][0] << " " << faces[i][1] << " " << faces[i][2] << " : (" << xc << " " << yc << " " << zc << ")" << std::endl;
   }
   return plc;
