@@ -48,6 +48,7 @@ struct Point2 {
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
   Point2& operator+=(const Point2& rhs) { x += rhs.x; y += rhs.y; return *this; }
   Point2& operator-=(const Point2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+  Point2& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; return *this; }
   Point2& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; return *this; }
 };
 
@@ -118,6 +119,7 @@ struct Point3 {
   template<typename RealType> RealType realz(const RealType& zmin, const RealType& dz) const { return static_cast<RealType>(z*dz) + zmin; }
   Point3& operator+=(const Point3& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
   Point3& operator-=(const Point3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
+  Point3& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
   Point3& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
 };
 

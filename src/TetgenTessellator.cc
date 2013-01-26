@@ -13,6 +13,11 @@
 #define TETLIBRARY
 #include "tetgen.h"
 
+// Returns (positive, 0.0, negative) if pd is (below, coplanar, above) the plane
+// (pa, pb, pc), where above is defined such that (pa, pb, pc) is counter-clockwise.
+// This puppy is defined in predicates.cc
+extern double orient3d(double* pa, double* pb, double* pc, double* pd);
+
 namespace polytope {
 
 using namespace std;
@@ -280,7 +285,7 @@ computeVoronoiNatively(const vector<double>& points,
   typedef Point3<CoordHash> IntPoint;
   typedef Point3<RealType> RealPoint;
   const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
-  const double degeneracy = 1.0e-12;
+  const double degeneracy = 1.0/coordMax;
 
   // Compute the normalized generators.
   RealType low[3], high[3], box[3];
@@ -434,7 +439,7 @@ computeVoronoiNatively(const vector<double>& points,
   map<unsigned, int> faceMap;
   mesh.faces.reserve(out.numberofvfacets);
   mesh.faceCells.resize(out.numberofvfacets);
-  int ne, ie, ie_last;
+  int ne, ie;
   for (i = 0; i != out.numberofvfacets; ++i) {
     const tetgenio::vorofacet& vfacet = out.vfacetlist[i];
     ne = vfacet.elist[0];
@@ -466,7 +471,6 @@ computeVoronoiNatively(const vector<double>& points,
       faceMap[i] = -1;
     }
   }
-  const unsigned nfaces = mesh.faces.size();
   POLY_ASSERT(faceMap.size() == out.numberofvfacets);
 
   // Read out the cell structure as collections of faces.
@@ -661,45 +665,69 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   }
 
   // Look for any surface facets we need to project unbounded rays through.
-  {
-    bool test;
-    RealPoint fcent, fhat, ab, ac, pinf;
-    for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
-         facetItr != facet2tets.end();
-         ++facetItr) {
-      const TetFacetHash& facet = facetItr->first;
-      const vector<unsigned>& tets = facetItr->second;
-      if (tets.size() == 1) {
-        i = tets[0];
-        POLY_ASSERT(i < numGenerators);
-        test = geometry::computeTriangleCircumcenter3d(&out.pointlist[3*facet.x],
-                                                       &out.pointlist[3*facet.y],
-                                                       &out.pointlist[3*facet.z],
-                                                       &fcent.x);
-        POLY_ASSERT(test);
-        fhat = fcent;
-        fhat -= circumcenters[i];
-        if (geometry::dot<3, RealType>(&fcent.x, &fcent.x) <= degeneracy) {
-          ab.x = out.pointlist[3*facet.y]   - out.pointlist[3*facet.x];
-          ab.y = out.pointlist[3*facet.y+1] - out.pointlist[3*facet.x+1];
-          ab.z = out.pointlist[3*facet.y+2] - out.pointlist[3*facet.x+2];
-          ac.x = out.pointlist[3*facet.z]   - out.pointlist[3*facet.x];
-          ac.y = out.pointlist[3*facet.z+1] - out.pointlist[3*facet.x+1];
-          ac.z = out.pointlist[3*facet.z+2] - out.pointlist[3*facet.x+2];
-          geometry::cross<3, RealType>(&ab.x, &ac.x, &fhat.x);
-        }
-        geometry::unitVector<3, RealType>(&fhat.x);
-        test = geometry::raySphereIntersection(&circumcenters[i].x,
-                                               &fcent.x,
-                                               cboxc,
-                                               rinf,
-                                               1.0e-10,
-                                               &pinf.x);
-        POLY_ASSERT(test);
-        IntPoint ip(pinf.x, pinf.y, pinf.z, clow[0], clow[1], clow[2], cdx);
-        j = internal::addKeyToMap(ip, circ2id);
-        tet2ids[i].push_back(j);
+  bool test;
+  RealPoint fhat, tetcent, test_point, a_b, a_c, pinf;
+  for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
+       facetItr != facet2tets.end();
+       ++facetItr) {
+    const TetFacetHash& facet = facetItr->first;
+    const vector<unsigned>& tets = facetItr->second;
+    if (tets.size() == 1) {
+      i = tets[0];
+      POLY_ASSERT(i < out.numberoftetrahedra);
+      a = out.tetrahedronlist[4*i];
+      b = out.tetrahedronlist[4*i+1];
+      c = out.tetrahedronlist[4*i+2];
+      d = out.tetrahedronlist[4*i+3];
+      POLY_ASSERT(a < numGenerators);
+      POLY_ASSERT(b < numGenerators);
+      POLY_ASSERT(c < numGenerators);
+      POLY_ASSERT(d < numGenerators);
+      geometry::computeTetCentroid(&out.pointlist[3*a],
+                                   &out.pointlist[3*b],
+                                   &out.pointlist[3*c],
+                                   &out.pointlist[3*d],
+                                   &tetcent.x);
+
+      // We need the ray unit vector.
+      test = geometry::computeTriangleCircumcenter3d(&out.pointlist[3*facet.x],
+                                                     &out.pointlist[3*facet.y],
+                                                     &out.pointlist[3*facet.z],
+                                                     &fhat.x);
+      POLY_ASSERT(test);
+      fhat -= circumcenters[i];
+
+      // Check for the special case of the tet circumcenter coplanar with the facet.
+      if (abs(geometry::dot<3, RealType>(&fhat.x, &fhat.x)) < degeneracy) {
+        // Yep, it's in the plane.  Just project the ray out orthogonally to the facet.
+        a_b.x = out.pointlist[3*facet.y]   - out.pointlist[3*facet.x];
+        a_b.y = out.pointlist[3*facet.y+1] - out.pointlist[3*facet.x+1];
+        a_b.z = out.pointlist[3*facet.y+2] - out.pointlist[3*facet.x+2];
+        a_c.x = out.pointlist[3*facet.z]   - out.pointlist[3*facet.x];
+        a_c.y = out.pointlist[3*facet.z+1] - out.pointlist[3*facet.x+1];
+        a_c.z = out.pointlist[3*facet.z+2] - out.pointlist[3*facet.x+2];
+        geometry::cross<3, RealType>(&a_b.x, &a_c.x, &fhat.x);
       }
+      geometry::unitVector<3, RealType>(&fhat.x);
+
+      // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
+      POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > degeneracy);
+      copy(&out.pointlist[3*facet.x], &out.pointlist[3*facet.x] + 3, &test_point.x);
+      test_point += fhat;
+      if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
+          orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &test_point.x) > 0.0) fhat *= -1.0;
+
+      // Now we can compute the point where this ray intersects the surrounding "inf" sphere.
+      test = geometry::raySphereIntersection(&circumcenters[i].x,
+                                             &fhat.x,
+                                             cboxc,
+                                             rinf,
+                                             1.0e-10,
+                                             &pinf.x);
+      POLY_ASSERT(test);
+      IntPoint ip(pinf.x, pinf.y, pinf.z, clow[0], clow[1], clow[2], cdx);
+      j = internal::addKeyToMap(ip, circ2id);
+      tet2ids[i].push_back(j);
     }
   }
 
@@ -715,6 +743,8 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     mesh.nodes[3*i+1] = itr->first.realy(clow[1], cdx);
     mesh.nodes[3*i+2] = itr->first.realz(clow[2], cdx);
   }
+
+  // Build the faces corresponding to each tet edge.
 
   // Rescale the mesh node positions for the input geometry.
   for (i = 0; i != mesh.nodes.size(); ++i) {

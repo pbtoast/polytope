@@ -477,7 +477,7 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   POLY_ASSERT(fi < mesh.faces.size());
   const unsigned n = mesh.faces[fi].size();
   POLY_ASSERT(n >= 3);
-  unsigned i, j, ni, nj;
+  unsigned i, ni;
   std::vector<unsigned> verts;
   const double degeneracy = 1.0e-10;
 
@@ -635,6 +635,29 @@ computeTriangleCircumcenter3d(double* A, double* B, double* C, double* X) {
   X[1] = 0.5*e[1]/d2 + C[1];
   X[2] = 0.5*e[2]/d2 + C[2];
   return true;
+}
+
+//------------------------------------------------------------------------------
+// Compute the centroid of a triangle in 3D.
+//------------------------------------------------------------------------------
+inline
+void
+computeTriangleCentroid3d(double* A, double* B, double* C, double* X) {
+  X[0] = (A[0] + B[0] + C[0])/3.0;
+  X[1] = (A[1] + B[1] + C[1])/3.0;
+  X[2] = (A[2] + B[2] + C[2])/3.0;
+}
+
+//------------------------------------------------------------------------------
+// Compute the centroid of a tetrahedron in 3D.
+//------------------------------------------------------------------------------
+inline
+void
+computeTetCentroid(double* A, double* B, double* C, double* D, double* X) {
+  X[0] = 0.25*(A[0] + B[0] + C[0] + D[0]);
+  X[1] = 0.25*(A[1] + B[1] + C[1] + D[1]);
+  X[2] = 0.25*(A[2] + B[2] + C[2] + D[2]);
+  X[3] = 0.25*(A[3] + B[3] + C[3] + D[3]);
 }
 
 }
