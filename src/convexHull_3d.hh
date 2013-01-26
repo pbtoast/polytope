@@ -332,7 +332,7 @@ convexHull_3d(const std::vector<RealType>& points,
 
   // Read out the data to the PLC and we're done.
   PLC<3, RealType> plc;
-  RealType xc, yc, zc;
+  // RealType xc, yc, zc;
   for (i = 0; i != faces.size(); ++i) {
     POLY_ASSERT(faces[i].size() == 3);
     plc.facets.push_back(std::vector<int>());
