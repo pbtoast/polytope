@@ -18,7 +18,7 @@ void unboundedTessellation(const unsigned nx,
 
   // Create the tessellation.
   Tessellation<3, double> mesh;
-  TetgenTessellator tetgen(true);
+  TetgenTessellator tetgen(false);
   tetgen.tessellate(generators, mesh);
 
   // Write out the file if we can.
@@ -172,7 +172,7 @@ int main() {
   const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
   unsigned ix, iy, iz;
   double xi, yi, zi;
-  for (int nx = 2; nx != 50; ++nx) {
+  for (int nx = 2; nx != 30; ++nx) {
     cout << "============================== nx = " << nx << " ==============================" << endl;
     vector<double> generators;
     const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2 - z1)/nx;

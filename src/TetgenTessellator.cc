@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <limits>
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
@@ -85,7 +86,7 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
     // for (std::map<int, std::set<EdgeHash> >::const_iterator itr = nodes2edges.begin();
     //      itr != nodes2edges.end();
     //      ++itr) {
-    //   cerr << itr->first << " : ";
+    //   cerr << "   " << itr->first << " : ";
     //   for (std::set<EdgeHash>::const_iterator eitr = itr->second.begin();
     //        eitr != itr->second.end();
     //        ++eitr) cerr << " (" << eitr->first << " " << eitr->second << ")";
@@ -183,6 +184,35 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
 
   // That's it.
   return result;
+}
+
+//------------------------------------------------------------------------------
+// Given an array of 4 integers and 2 unique values, find the other two.
+//------------------------------------------------------------------------------
+void
+findOtherTetIndices(const int* indices,
+                    const int a,
+                    const int b,
+                    int& c,
+                    int& d) {
+  POLY_ASSERT(a == indices[0] or a == indices[1] or a == indices[2] or a == indices[3]);
+  POLY_ASSERT(b == indices[0] or b == indices[1] or b == indices[2] or b == indices[3]);
+  POLY_ASSERT(indices[0] != indices[1] and indices[0] != indices[2] and indices[0] != indices[3] and
+                                           indices[1] != indices[2] and indices[1] != indices[3] and
+                                                                        indices[2] != indices[3]);
+  if (a != indices[0] and b != indices[0]) {
+    c = indices[0];
+    d = (a != indices[1] and b != indices[1] ? indices[1] :
+         a != indices[2] and b != indices[2] ? indices[2] :
+         indices[3]);
+  } else if (a != indices[1] and b != indices[1]) {
+    c = indices[1];
+    d = (a != indices[2] and b != indices[2] ? indices[2] :
+         indices[3]);
+  } else {
+    c = indices[2];
+    d = indices[3];
+  }
 }
 
 } // end anonymous namespace
@@ -511,7 +541,7 @@ computeVoronoiNatively(const vector<double>& points,
 }
 
 //------------------------------------------------------------------------------
-// Use tetgen to compute the Delaunay tetrathedralization, and do the dual 
+// Use tetgen to compute the Delaunay tetrahedralization, and do the dual 
 // ourselves.  This is the way Tetgen is more commonly used, so maybe safer.
 //------------------------------------------------------------------------------
 void
@@ -568,17 +598,16 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     error(err);
   }
 
-  cerr << "Finished tetgen." << endl;
-
   // Compute the circumcenters of the tetrahedra, and the set of tets associated
   // with each generator.
-  RealType clow[3], chigh[3], X[3];
+  RealType clow[3] = {numeric_limits<RealType>::max(), numeric_limits<RealType>::max(), numeric_limits<RealType>::max()},
+          chigh[3] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()},
+           X[3];
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
-  unsigned a, b, c, d;
+  int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
   TetFacetHash abc, abd, bcd, acd;
   map<TetFacetHash, vector<unsigned> > facet2tets;      // Tets which share a facet.
-  vector<vector<EdgeHash> > gen2edges(numGenerators);   // Edges from each generator.
   map<EdgeHash, set<unsigned> > edge2tets;              // Tets which share a given edge.
   for (i = 0; i != out.numberoftetrahedra; ++i) {
     a = out.tetrahedronlist[4*i];
@@ -608,12 +637,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     facet2tets[abd].push_back(i);
     facet2tets[bcd].push_back(i);
     facet2tets[acd].push_back(i);
-    gen2edges[i].push_back(ab);
-    gen2edges[i].push_back(ac);
-    gen2edges[i].push_back(ad);
-    gen2edges[i].push_back(bc);
-    gen2edges[i].push_back(bd);
-    gen2edges[i].push_back(cd);
     edge2tets[ab].insert(i);
     edge2tets[ac].insert(i);
     edge2tets[ad].insert(i);
@@ -632,8 +655,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     for (map<TetFacetHash, vector<unsigned> >::const_iterator itr = facet2tets.begin();
          itr != facet2tets.end();
          ++itr) POLY_ASSERT(itr->second.size() == 1 or itr->second.size() == 2);
-    POLY_ASSERT(gen2edges.size() == numGenerators);
-    for (unsigned i = 0; i != numGenerators; ++i) POLY_ASSERT(gen2edges[i].size() >= 3);
     for (map<EdgeHash, set<unsigned> >::const_iterator itr = edge2tets.begin();
          itr != edge2tets.end();
          ++itr) POLY_ASSERT(itr->second.size() >= 1);
@@ -648,25 +669,27 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   const RealType cboxsize = 2.0*max(cbox[0], max(cbox[1], cbox[2]));
   const RealType cdx = max(degeneracy, cboxsize/coordMax);
 
+  // Create the quantized circumcenters, and the map from the (possibly) degenerate
+  // circumcenters to their unique IDs.
+  map<IntPoint, int> circ2id;
+  map<int, unsigned> tet2id;
+  for (i = 0; i != out.numberoftetrahedra; ++i) {
+    IntPoint ip(circumcenters[i].x, circumcenters[i].y, circumcenters[i].z,
+                clow[0], clow[1], clow[2], cdx);
+    j = internal::addKeyToMap(ip, circ2id);
+    tet2id[i] = j;
+  }
+
   // Any surface facets create new "infinite" or "unbounded" rays, which originate at
   // the tet circumcenter and pass through the circumcenter of the triangular facet.
   const RealType rinf = 2.0*cboxsize;
   const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]), 0.5*(clow[1] + chigh[1]), 0.5*(clow[2] + chigh[2])};
 
-  // Create the quantized circumcenters, and the map from the (possibly) degenerate
-  // circumcenters to their unique IDs.
-  map<IntPoint, int> circ2id;
-  map<int, vector<unsigned> > tet2ids;
-  for (i = 0; i != out.numberoftetrahedra; ++i) {
-    IntPoint ip(circumcenters[i].x, circumcenters[i].y, circumcenters[i].z,
-                clow[0], clow[1], clow[2], cdx);
-    j = internal::addKeyToMap(ip, circ2id);
-    tet2ids[i].push_back(j);
-  }
-
   // Look for any surface facets we need to project unbounded rays through.
   bool test;
   RealPoint fhat, tetcent, test_point, a_b, a_c, pinf;
+  map<TetFacetHash, unsigned> facet2id;
+  mesh.infNodes = vector<unsigned>();
   for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
        facetItr != facet2tets.end();
        ++facetItr) {
@@ -726,8 +749,11 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                              &pinf.x);
       POLY_ASSERT(test);
       IntPoint ip(pinf.x, pinf.y, pinf.z, clow[0], clow[1], clow[2], cdx);
+      k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
-      tet2ids[i].push_back(j);
+      POLY_ASSERT(facet2id.find(facet) == facet2id.end());
+      facet2id[facet] = j;
+      if (k != circ2id.size()) mesh.infNodes.push_back(j);
     }
   }
 
@@ -745,6 +771,102 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   }
 
   // Build the faces corresponding to each tet edge.
+  int iface;
+  RealPoint ehat, f1, f2;
+  map<EdgeHash, int> faceMap;
+  mesh.faces.reserve(edge2tets.size());
+  mesh.cells = vector<vector<int> >(numGenerators);
+  TetFacetHash lastFacet;
+  unsigned ii, jj, kk;
+  for (map<EdgeHash, set<unsigned> >::const_iterator edgeItr = edge2tets.begin();
+       edgeItr != edge2tets.end();
+       ++edgeItr) {
+    const EdgeHash& ehash = edgeItr->first;
+    const set<unsigned>& tets = edgeItr->second;
+    a = ehash.first;
+    b = ehash.second;
+    POLY_ASSERT(a < numGenerators);
+    POLY_ASSERT(b < numGenerators);
+
+    set<EdgeHash> meshEdges;
+    for (set<unsigned>::const_iterator tetItr = tets.begin();
+         tetItr != tets.end();
+         ++tetItr) {
+      i = *tetItr;
+      POLY_ASSERT(i < out.numberoftetrahedra);
+      POLY_ASSERT(tet2id.find(i) != tet2id.end());
+      ii = tet2id[i];
+
+      // Look for edges with adjacent tets.
+      findOtherTetIndices(&out.tetrahedronlist[4*i], a, b, c, d);
+      abc = hashFacet(a, b, c);
+      abd = hashFacet(a, b, d);
+
+      // Is abc a surface facet?
+      if (facet2tets[abc].size() == 1) {
+        POLY_ASSERT(facet2tets[abc][0] == i);
+        POLY_ASSERT(facet2id.find(abc) != facet2id.end());
+        jj = facet2id[abc];
+        POLY_ASSERT(jj != ii);
+        meshEdges.insert(internal::hashEdge(ii, jj));
+      } else {
+        POLY_ASSERT(facet2tets[abc].size() == 2 and facet2tets[abc][0] == i or facet2tets[abc][1] == i);
+        k = (facet2tets[abc][0] == i ? facet2tets[abc][1] : facet2tets[abc][0]);
+        jj = tet2id[k];
+        if (jj != ii) meshEdges.insert(internal::hashEdge(ii, jj));
+      }
+
+      // Is abd a surface facet?
+      if (facet2tets[abd].size() == 1) {
+        POLY_ASSERT(facet2tets[abd][0] == i);
+        POLY_ASSERT(facet2id.find(abd) != facet2id.end());
+        jj = facet2id[abd];
+        POLY_ASSERT(jj != ii);
+        meshEdges.insert(internal::hashEdge(ii, jj));
+      } else {
+        POLY_ASSERT(facet2tets[abd].size() == 2 and facet2tets[abd][0] == i or facet2tets[abd][1] == i);
+        k = (facet2tets[abd][0] == i ? facet2tets[abd][1] : facet2tets[abd][0]);
+        jj = tet2id[k];
+        if (jj != ii) meshEdges.insert(internal::hashEdge(ii, jj));
+      }
+    }
+
+    // Get the face sorted nodes.
+    const vector<unsigned> faceNodes = computeSortedFaceNodes(vector<EdgeHash>(meshEdges.begin(), meshEdges.end()));
+    if (faceNodes.size() > 2) {
+      iface = mesh.faces.size();
+      mesh.faces.push_back(faceNodes);
+      mesh.faceCells.push_back(vector<int>());
+
+      // Check the orientation of the face -- we want counter-clockwise
+      // ordering viewed from outside the cell.
+      POLY_ASSERT((not geometry::collinear<3, RealType>(&mesh.nodes[3*faceNodes[0]],
+                                                        &mesh.nodes[3*faceNodes[1]],
+                                                        &mesh.nodes[3*faceNodes[2]],
+                                                        degeneracy)));
+      ehat.x = generators[3*b]   - generators[3*a];
+      ehat.y = generators[3*b+1] - generators[3*a+1];
+      ehat.z = generators[3*b+2] - generators[3*a+2];
+      f1.x = mesh.nodes[3*faceNodes[1]]   - mesh.nodes[3*faceNodes[0]];
+      f1.y = mesh.nodes[3*faceNodes[1]+1] - mesh.nodes[3*faceNodes[0]+1];
+      f1.z = mesh.nodes[3*faceNodes[1]+2] - mesh.nodes[3*faceNodes[0]+2];
+      f2.x = mesh.nodes[3*faceNodes[2]]   - mesh.nodes[3*faceNodes[0]];
+      f2.y = mesh.nodes[3*faceNodes[2]+1] - mesh.nodes[3*faceNodes[0]+1];
+      f2.z = mesh.nodes[3*faceNodes[2]+2] - mesh.nodes[3*faceNodes[0]+2];
+      geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
+      if (geometry::dot<3, RealType>(&ehat.x, &fhat.x) > 0.0) {
+        mesh.cells[a].push_back(iface);
+        mesh.cells[b].push_back(~iface);
+        mesh.faceCells[iface].push_back(a);
+        mesh.faceCells[iface].push_back(~int(b));
+      } else {
+        mesh.cells[a].push_back(~iface);
+        mesh.cells[b].push_back(iface);
+        mesh.faceCells[iface].push_back(~int(a));
+        mesh.faceCells[iface].push_back(b);
+      }
+    }
+  }
 
   // Rescale the mesh node positions for the input geometry.
   for (i = 0; i != mesh.nodes.size(); ++i) {
