@@ -11,7 +11,8 @@
 #include <set>
 #include <stdint.h>
 
-#include "polytope.hh"
+#include "PLC.hh"
+#include "polytope_internal.hh"
 #include "Point.hh"
 
 namespace polytope {
