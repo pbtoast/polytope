@@ -15,6 +15,7 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "Point.hh"
 
 namespace polytope {
 
@@ -52,6 +53,13 @@ public:
 
 private:
   //-------------------- Private interface --------------------
+  typedef int64_t CoordHash;
+  typedef std::pair<int, int> EdgeHash;
+  typedef Point3<CoordHash> IntPoint;
+  typedef Point3<RealType> RealPoint;
+  static CoordHash coordMax;
+  static RealType degeneracy;
+
   bool mDirectComputation;
 
   // Internal method to compute the tessellation directly.

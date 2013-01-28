@@ -346,7 +346,15 @@ raySphereIntersection(const RealType* p_ray,
 
 //------------------------------------------------------------------------------
 // Find the closest point of intersection for ray and a box.
-// Return true if there was an intersection, false if not.
+// Returns an int indicating which plane is intersected:
+// -1 : no intersection
+//  0 : x = xmin plane
+//  1 : x = xmax plane
+//  2 : y = ymin plane
+//  3 : y = ymax plane
+//  4 : z = zmin plane
+//  5 : z = zmax plane
+//
 // Arguments:
 //   p_ray : point origin of ray.
 //   n_ray : unit normal in direction of ray.
@@ -356,7 +364,7 @@ raySphereIntersection(const RealType* p_ray,
 //  result : the intersection point (if one is possible).
 //------------------------------------------------------------------------------
 template<typename RealType> 
-bool
+int
 rayBoxIntersection(RealType* p_ray,
                    RealType* n_ray,
                    RealType* box_min,
@@ -365,73 +373,71 @@ rayBoxIntersection(RealType* p_ray,
                    RealType* result) {
 
   // Prepare.
-  bool found1 = false;
+  int iplane = -1;
   RealType dist, minDist = std::numeric_limits<RealType>::max(), candidate[3], n_plane[3];
 
   // x=xmin plane.
   n_plane[0] = 1.0; n_plane[1] = 0.0; n_plane[2] = 0.0;
   if (rayPlaneIntersection(p_ray, n_ray, box_min, n_plane, tol, candidate)) {
-    found1 = true;
+    iplane = 0;
     dist = distance<3, RealType>(p_ray, candidate);
-    if (dist < minDist) {
-      minDist = dist;
-      std::copy(candidate, candidate + 3, result);
-    }
+    minDist = dist;
+    result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
   }
 
   // x=xmax plane.
   if (rayPlaneIntersection(p_ray, n_ray, box_max, n_plane, tol, candidate)) {
-    found1 = true;
     dist = distance<3, RealType>(p_ray, candidate);
     if (dist < minDist) {
+      iplane = 1;
       minDist = dist;
-      std::copy(candidate, candidate + 3, result);
+      result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
     }
   }
 
   // y=ymin plane.
   n_plane[0] = 0.0; n_plane[1] = 1.0; n_plane[2] = 0.0;
   if (rayPlaneIntersection(p_ray, n_ray, box_min, n_plane, tol, candidate)) {
-    found1 = true;
     dist = distance<3, RealType>(p_ray, candidate);
     if (dist < minDist) {
+      iplane = 2;
       minDist = dist;
-      std::copy(candidate, candidate + 3, result);
+      result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
     }
   }
 
   // y=ymax plane.
   if (rayPlaneIntersection(p_ray, n_ray, box_max, n_plane, tol, candidate)) {
-    found1 = true;
     dist = distance<3, RealType>(p_ray, candidate);
     if (dist < minDist) {
+      iplane = 3;
       minDist = dist;
-      std::copy(candidate, candidate + 3, result);
+      result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
     }
   }
 
   // z=zmin plane.
   n_plane[0] = 0.0; n_plane[1] = 0.0; n_plane[2] = 1.0;
   if (rayPlaneIntersection(p_ray, n_ray, box_min, n_plane, tol, candidate)) {
-    found1 = true;
     dist = distance<3, RealType>(p_ray, candidate);
     if (dist < minDist) {
+      iplane = 4;
       minDist = dist;
-      std::copy(candidate, candidate + 3, result);
+      result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
     }
   }
 
   // z=zmax plane.
   if (rayPlaneIntersection(p_ray, n_ray, box_max, n_plane, tol, candidate)) {
-    found1 = true;
     dist = distance<3, RealType>(p_ray, candidate);
     if (dist < minDist) {
+      iplane = 5;
       minDist = dist;
-      std::copy(candidate, candidate + 3, result);
+      result[0] = candidate[0]; result[1] = candidate[1]; result[2] = candidate[2];
     }
   }
 
-  return found1;
+  return iplane;
 }
 
 //------------------------------------------------------------------------------

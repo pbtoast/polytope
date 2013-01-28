@@ -266,37 +266,59 @@ tessellate(const vector<double>& points,
 
   // Start by creating the unbounded tessellation.
   this->tessellate(points, mesh);
-}
 
-  // // Copy the PLC boundary info to the tetgen input.
-  // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
-  // for (unsigned ifacet = 0; ifacet != geometry.facets.size(); ++ifacet) {
-  //   POLY_ASSERT(geometry.facets[ifacet].size() >= 3);
-  //   plcFacetPolygons[ifacet].numberofvertices = geometry.facets[ifacet].size();
-  //   plcFacetPolygons[ifacet].vertexlist = const_cast<int*>(&geometry.facets[ifacet].front());
-  // }
-  // unsigned nfacets = plcFacetPolygons.size();
-  // vector<RealPoint> holeCentroids(geometry.holes.size(), RealPoint(0.0, 0.0, 0.0));
-  // for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
-  //   plcFacetPolygons.resize(nfacets + geometry.holes[ihole].size());
-  //   for (unsigned ifacet = 0; ifacet != geometry.holes[ihole].size(); ++ifacet) {
-  //     POLY_ASSERT(geometry.holes[ihole][ifacet].size() >= 3);
-  //     plcFacetPolygons[nfacets + ifacet].numberofvertices = geometry.holes[ihole][ifacet].size();
-  //     plcFacetPolygons[nfacets + ifacet].vertexlist = const_cast<int*>(&geometry.holes[ihole][ifacet].front());
-  //     incrementPosition(holeCentroids[ihole], PLCpoints, geometry.holes[ihole][ifacet]);
-  //   }
-  //   holeCentroids[ihole] /= RealType(geometry.holes[ihole].size());
-  //   nfacets = plcFacetPolygons.size();
-  // }
-  // POLY_ASSERT(nfacets == plcFacetPolygons.size());
-  // vector<tetgenio::facet> plcFacets(nfacets);
-  // for (unsigned ifacet = 0; ifacet != nfacets; ++ifacet) {
-  //   in.init(&plcFacets[ifacet]);
-  //   plcFacets[ifacet].polygonlist = &plcFacetPolygons[ifacet];
-  //   plcFacets[ifacet].numberofpolygons = 1;
-  // }
-  // in.numberoffacets = nfacets;
-  // in.facetlist = &plcFacets.front();
+  // Flag all the inf nodes in a fast lookup array.
+  unsigned nnodes = mesh.nodes.size()/3;
+  int i, j, k, j0, k0, jplane, kplane;
+  vector<unsigned> infNodeFlags(nnodes, 0);
+  for (i = 0; i != mesh.infNodes.size(); ++i) infNodeFlags[mesh.infNodes[i]] = 1;
+
+  // Find the faces with "inf" nodes, and close them with edges along the
+  // bounding box.
+  RealPoint ray_hat;
+  unsigned nfaces = mesh.faces.size();
+  for (i = 0; i != nfaces; ++i) {
+    vector<unsigned>& faceNodes = mesh.faces[i];
+    j = 0;
+    while (j < faceNodes.size() and infNodeFlags[faceNodes[j]] == 0) ++j;
+    if (j < faceNodes.size()) {
+
+      // Yep, this face has inf nodes.  There should be two of 'em.
+      k = (j + 1) % faceNodes.size();
+      j0 = (j - 1) % faceNodes.size(); 
+      k0 = (k - 1) % faceNodes.size(); 
+      POLY_ASSERT(infNodeFlags[faceNodes[j]] == 1 and
+                  infNodeFlags[faceNodes[k]] == 1 and
+                  infNodeFlags[faceNodes[j0]] == 0 and
+                  infNodeFlags[faceNodes[k0]] == 0);
+      ray_hat.x = mesh.nodes[3*j]   - mesh.nodes[3*j0];
+      ray_hat.y = mesh.nodes[3*j+1] - mesh.nodes[3*j0+1];
+      ray_hat.z = mesh.nodes[3*j+2] - mesh.nodes[3*j0+2];
+      geometry::unitVector<3, RealType>(&ray_hat.x);
+      jplane = geometry::rayBoxIntersection(&mesh.nodes[3*j0],
+                                            &ray_hat.x,
+                                            low,
+                                            high,
+                                            degeneracy,
+                                            &mesh.nodes[3*j]);
+      ray_hat.x = mesh.nodes[3*k]   - mesh.nodes[3*k0];
+      ray_hat.y = mesh.nodes[3*k+1] - mesh.nodes[3*k0+1];
+      ray_hat.z = mesh.nodes[3*k+2] - mesh.nodes[3*k0+2];
+      geometry::unitVector<3, RealType>(&ray_hat.x);
+      kplane = geometry::rayBoxIntersection(&mesh.nodes[3*k0],
+                                            &ray_hat.x,
+                                            low,
+                                            high,
+                                            degeneracy,
+                                            &mesh.nodes[3*k]);
+
+      // // Do we need to introduce a new node for this face?
+      // if (jplane != kplane) {
+      //   POLY_ASSERT(
+    }
+  }
+
+}
 
 //------------------------------------------------------------------------------
 // Compute the unbouded tessellation using Tetgen's directo Voronoi computation.
@@ -309,13 +331,6 @@ computeVoronoiNatively(const vector<double>& points,
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
-
-  typedef int64_t CoordHash;
-  typedef pair<int, int> EdgeHash;
-  typedef Point3<CoordHash> IntPoint;
-  typedef Point3<RealType> RealPoint;
-  const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
-  const double degeneracy = 1.0/coordMax;
 
   // Compute the normalized generators.
   RealType low[3], high[3], box[3];
@@ -875,5 +890,41 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   }
 
 }
+
+//------------------------------------------------------------------------------
+// Static initializations.
+//------------------------------------------------------------------------------
+int64_t TetgenTessellator::coordMax = (1LL << 34);
+double TetgenTessellator::degeneracy = 1.0/TetgenTessellator::coordMax;
+
+  // // Copy the PLC boundary info to the tetgen input.
+  // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
+  // for (unsigned ifacet = 0; ifacet != geometry.facets.size(); ++ifacet) {
+  //   POLY_ASSERT(geometry.facets[ifacet].size() >= 3);
+  //   plcFacetPolygons[ifacet].numberofvertices = geometry.facets[ifacet].size();
+  //   plcFacetPolygons[ifacet].vertexlist = const_cast<int*>(&geometry.facets[ifacet].front());
+  // }
+  // unsigned nfacets = plcFacetPolygons.size();
+  // vector<RealPoint> holeCentroids(geometry.holes.size(), RealPoint(0.0, 0.0, 0.0));
+  // for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
+  //   plcFacetPolygons.resize(nfacets + geometry.holes[ihole].size());
+  //   for (unsigned ifacet = 0; ifacet != geometry.holes[ihole].size(); ++ifacet) {
+  //     POLY_ASSERT(geometry.holes[ihole][ifacet].size() >= 3);
+  //     plcFacetPolygons[nfacets + ifacet].numberofvertices = geometry.holes[ihole][ifacet].size();
+  //     plcFacetPolygons[nfacets + ifacet].vertexlist = const_cast<int*>(&geometry.holes[ihole][ifacet].front());
+  //     incrementPosition(holeCentroids[ihole], PLCpoints, geometry.holes[ihole][ifacet]);
+  //   }
+  //   holeCentroids[ihole] /= RealType(geometry.holes[ihole].size());
+  //   nfacets = plcFacetPolygons.size();
+  // }
+  // POLY_ASSERT(nfacets == plcFacetPolygons.size());
+  // vector<tetgenio::facet> plcFacets(nfacets);
+  // for (unsigned ifacet = 0; ifacet != nfacets; ++ifacet) {
+  //   in.init(&plcFacets[ifacet]);
+  //   plcFacets[ifacet].polygonlist = &plcFacetPolygons[ifacet];
+  //   plcFacets[ifacet].numberofpolygons = 1;
+  // }
+  // in.numberoffacets = nfacets;
+  // in.facetlist = &plcFacets.front();
 
 }
