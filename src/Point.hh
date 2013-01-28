@@ -9,7 +9,7 @@
 #include <iterator>
 
 #include "polytope_serialize.hh"
-#include "polytope.hh"
+#include "polytope_internal.hh"
 
 namespace polytope {
 

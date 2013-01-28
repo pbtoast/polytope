@@ -200,4 +200,12 @@ class Tessellation
 
 }
 
+#else 
+
+// Forward declaration.
+namespace polytope
+{
+  template<int Dimension, typename RealType> class Tessellation;
+}
+
 #endif

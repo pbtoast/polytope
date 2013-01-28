@@ -10,8 +10,11 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <algorithm>
+#include <cmath>
 
-#include "polytope.hh"
+#include "PLC.hh"
+#include "polytope_internal.hh"
 
 namespace polytope {
 
