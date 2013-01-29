@@ -102,6 +102,31 @@ closestPointOnSegment2D(const RealType* point,
   }
 }
 
+//------------------------------------------------------------------------------
+// Determine if the point lies inside unclosed polygon determined by vertices
+//------------------------------------------------------------------------------
+template<typename RealType> 
+bool
+withinPolygon2D(const RealType* point,
+                const unsigned numVertices,
+                const RealType* vertices) {
+   unsigned j = numVertices - 1;
+   bool result = false;
+   for (unsigned i = 0; i < numVertices; ++i ) {
+      if (((vertices[2*i+1] < point[1] && vertices[2*j+1] >= point[1])  ||
+           (vertices[2*j+1] < point[1] && vertices[2*i+1] >= point[1])) &&
+          (vertices[2*i]   <= point[0] || vertices[2*j]   <= point[0]) ) {
+         result ^= ( vertices[2*i] + 
+                     ( point[1]        - vertices[2*i+1] ) /
+                     ( vertices[2*j+1] - vertices[2*i+1] ) *
+                     ( vertices[2*j]   - vertices[2*i]   ) < point[0] );
+      }
+      j = i;
+   }
+   return result;
+}
+
+
 }
 }
 
