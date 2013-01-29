@@ -18,9 +18,7 @@
 #include <boost/geometry/geometries/geometries.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/geometry/multi/geometries/multi_point.hpp>
-
-// Pull in an old Boost.Geometry implementation
-//#include <boostGGL/nearest_neighbor.hpp>
+#include <boost/geometry/multi/geometries/multi_polygon.hpp>
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -78,6 +76,23 @@ computeCircumcenter(double* A, double* B, double* C, double* X)
           (C[0]*C[0] + C[1]*C[1])*(A[1]-B[1]))/D;
   X[1] = ((A[0]*A[0] + A[1]*A[1])*(C[0]-B[0]) + (B[0]*B[0] + B[1]*B[1])*(A[0]-C[0]) + 
           (C[0]*C[0] + C[1]*C[1])*(B[0]-A[0]))/D;
+}
+
+//------------------------------------------------------------------------
+// Union a Boost.Geometry ring with a Boost.Geometry multi_polygon.
+// The resulting multi_polygon is corrected to ensure it conforms to
+// the proper geometric concept.
+//------------------------------------------------------------------------
+void
+createBGUnion( boost::geometry::model::ring<Point2<CoordHash>,false> ring, 
+               boost::geometry::model::multi_polygon<
+               boost::geometry::model::polygon<Point2<CoordHash>,false> >& multiPolygon )
+{
+  boost::geometry::model::multi_polygon<
+    boost::geometry::model::polygon<Point2<CoordHash>,false> > temp;
+  boost::geometry::union_(multiPolygon, ring, temp);
+  boost::geometry::correct(temp);
+  multiPolygon=temp;
 }
 //------------------------------------------------------------------------
 
@@ -156,6 +171,33 @@ addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
   return result;
 }
 
+//------------------------------------------------------------------------------
+// Get the set of map keys
+//------------------------------------------------------------------------------
+template<typename Key, typename T>
+std::set<Key>
+getMapKeys(std::map<Key, T>& mapIn) {
+  typename std::set<Key> result;
+  for (typename std::map<Key, T>::const_iterator itr = mapIn.begin();
+       itr != mapIn.end(); ++itr){
+    result.insert( itr->first );
+  }
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Counts the number of times we recursively call tessellate
+//------------------------------------------------------------------------------
+class RecursionCounter {
+public:
+   inline RecursionCounter() { ++count; }
+   inline ~RecursionCounter() { --count; }
+   inline operator int() const { return count; }
+private:
+   static int count;
+};
+int RecursionCounter::count = 0;
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -209,6 +251,7 @@ tessellate(const vector<RealType>& points,
            const PLC<2, RealType>& geometry,
            Tessellation<2, RealType>& mesh) const 
 {
+  RecursionCounter recursionDepth;
   POLY_ASSERT(!points.empty());
 
   // Make sure we're not modifying an existing tessellation.
@@ -229,9 +272,10 @@ tessellate(const vector<RealType>& points,
                                           false>       // clockwise
     realBGpolygon;
   
-  
   typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
-  const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
+  typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
+
+  const CoordHash coordMax = (1LL << 32); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
   
   triangulateio in, delaunay;
@@ -367,24 +411,33 @@ tessellate(const vector<RealType>& points,
     gen2tri[pindex].insert(i);
     gen2tri[qindex].insert(i);
     gen2tri[rindex].insert(i);
-    neighbors[pindex].insert(qindex);
-    neighbors[pindex].insert(rindex);
-    neighbors[qindex].insert(pindex);
-    neighbors[qindex].insert(rindex);
-    neighbors[rindex].insert(pindex);
-    neighbors[rindex].insert(qindex);
     // cerr << "circumcenter : " << circumcenters[i] << endl;
+    // cerr << delaunay.pointlist[2*pindex]   << " " 
+    //      << delaunay.pointlist[2*pindex+1] << " " 
+    //      << delaunay.pointlist[2*qindex]   << " " 
+    //      << delaunay.pointlist[2*qindex+1] << " " 
+    //      << delaunay.pointlist[2*rindex]   << " " 
+    //      << delaunay.pointlist[2*rindex+1] << " "
+    //      << circumcenters[i].x             << " " 
+    //      << circumcenters[i].y             << endl; 
     clow[0] = min(clow[0], circumcenters[i].x);
     clow[1] = min(clow[1], circumcenters[i].y);
     chigh[0] = max(chigh[0], circumcenters[i].x);
     chigh[1] = max(chigh[1], circumcenters[i].y);
   }
+  
   POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
   POLY_ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1]);
   RealType cbox[2] = {chigh[0] - clow[0], 
                       chigh[1] - clow[1]};
   const double cboxsize = 2.0*max(cbox[0], cbox[1]);
   const double cdx = max(degeneracy, cboxsize/coordMax);
+
+  if( recursionDepth == 1 ){
+     mLow.push_back(clow[0]);  mHigh.push_back(chigh[0]);
+     mLow.push_back(clow[1]);  mHigh.push_back(chigh[1]);
+     mdx = cdx;
+  }
   
   // Flag any generators on the edge of the tessellation.  Here we mean the actual
   // generators, not our added boundary ones.
@@ -408,8 +461,6 @@ tessellate(const vector<RealType>& points,
     }
   }
 
-
-
   // Build the polygon representing our boundaries.
   BGpolygon boundary;
   realBGpolygon realBoundary;
@@ -425,14 +476,12 @@ tessellate(const vector<RealType>& points,
     i = boundaryEdgeOrder.front().first;
     boundaryPoints.reserve(numBoundaryPoints + 1);
     boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
-                                      clow[0], clow[1],
-                                      cdx));
+                                      mLow[0], mLow[1], mdx));
     boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     
     i = boundaryEdgeOrder.front().second;
     boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
-                                      clow[0], clow[1],
-                                      cdx));
+                                      mLow[0], mLow[1], mdx));
     boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     while (exteriorEdges.size() > 0) {
       list<EdgeHash>::iterator itr = find_if(exteriorEdges.begin(), exteriorEdges.end(),
@@ -442,8 +491,7 @@ tessellate(const vector<RealType>& points,
       boundaryEdgeOrder.push_back(*itr);
       exteriorEdges.erase(itr);
       boundaryPoints.push_back(IntPoint(points[2*i], points[2*i+1],
-                                        clow[0], clow[1],
-                                        cdx));
+                                        mLow[0], mLow[1], mdx));
       boost::geometry::append( realBoundary, realBGpoint(points[2*i], points[2*i+1]));
     }
     POLY_ASSERT(boundaryEdgeOrder.size() == numBoundaryPoints);
@@ -458,16 +506,14 @@ tessellate(const vector<RealType>& points,
     boundaryPoints.reserve(geometry.facets.size() + 1);
     i = geometry.facets[0][0];
     boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
-                                      clow[0], clow[1],
-                                      cdx));
+                                      mLow[0], mLow[1], mdx));
     boost::geometry::append( realBoundary, realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
 
     for (j = 0; j != geometry.facets.size(); ++j) {
       POLY_ASSERT(geometry.facets[j].size() == 2);
       i =  geometry.facets[j][1];
       boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
-                                        clow[0], clow[1],
-                                        cdx));
+                                        mLow[0], mLow[1], mdx));
       boost::geometry::append( realBoundary, realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
     }
     POLY_ASSERT(boundaryPoints.size() == geometry.facets.size() + 1);
@@ -486,15 +532,13 @@ tessellate(const vector<RealType>& points,
         boundaryPoints.reserve(geometry.holes[k].size() + 1);
         i = geometry.holes[k][0][0];
         boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
-                                          clow[0], clow[1],
-                                          cdx));
+                                          mLow[0], mLow[1], mdx));
         boost::geometry::append( realHoles[k], realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         for (j = 0; j != geometry.holes[k].size(); ++j) {
           POLY_ASSERT(geometry.holes[k][j].size() == 2);
           i =  geometry.holes[k][j][1];
           boundaryPoints.push_back(IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
-                                            clow[0], clow[1],
-                                            cdx));
+                                            mLow[0], mLow[1], mdx));
           boost::geometry::append( realHoles[k], realBGpoint(PLCpoints[2*i], PLCpoints[2*i+1]));
         }
         POLY_ASSERT(boundaryPoints.size() == geometry.holes[k].size() + 1);
@@ -506,12 +550,16 @@ tessellate(const vector<RealType>& points,
 
   // Walk each generator and build up it's unique nodes and faces.
   mesh.cells.resize(numGenerators);
-  CoordHash minR, thpt;
+  //CoordHash minR, thpt;
   IntPoint X;
+  bool inside;
   map<IntPoint, int> point2node;
+  map<IntPoint, set<int> > point2neighbors;
   map<EdgeHash, int> edgeHash2id;
   map<int, vector<int> > edgeCells;
   map<int, BGring> cellRings;
+  map<int, BGring> cellRingsOrig;
+  map<int, vector<BGring> > orphanage;
   for (i = 0; i != numGenerators; ++i) {
 
     // Add the circumcenters as points for the cell.
@@ -520,12 +568,11 @@ tessellate(const vector<RealType>& points,
          triItr != gen2tri[i].end();
          ++triItr) {
       cellPointSet.insert(IntPoint(circumcenters[*triItr].x, circumcenters[*triItr].y,
-                                   clow[0], clow[1],
-                                   cdx));
-      // cerr << "Cell " << i << " adding circumcenter (" << circumcenters[*triItr].x << " " << circumcenters[*triItr].y << ") "
+                                   mLow[0], mLow[1], mdx));
+      // cerr << "Cell " << i << " adding circumcenter (" 
+      //      << circumcenters[*triItr].x << " " << circumcenters[*triItr].y << ") "
       //      << IntPoint(circumcenters[*triItr].x, circumcenters[*triItr].y,
-      //                  clow[0], clow[1],
-      //                  cdx) << endl;
+      //                  mLow[0], mLow[1], mdx) << endl;
     }
     POLY_ASSERT2(cellPointSet.size() >= 3, cellPointSet.size());
 
@@ -552,9 +599,10 @@ tessellate(const vector<RealType>& points,
     BGmulti_point mpoints(cellPointSet.begin(), cellPointSet.end());
     // for (typename set<IntPoint>::const_iterator itr = cellPointSet.begin();
     //      itr != cellPointSet.end();
-    //      ++itr) mpoints.push_back(RealPoint(itr->realx(clow[0], cdx),
-    //                                         itr->realy(clow[1], cdx)));
+    //      ++itr) mpoints.push_back(RealPoint(itr->realx(mLow[0], mdx),
+    //                                         itr->realy(mLow[1], mdx)));
     boost::geometry::convex_hull(mpoints, cellRings[i]);
+    boost::geometry::convex_hull(mpoints, cellRingsOrig[i]);
 
     // Intersect with the boundary to get the bounded cell.
     // Since for complex boundaries this may return more than one polygon, we find
@@ -567,34 +615,278 @@ tessellate(const vector<RealType>& points,
            << boost::geometry::dsv(mpoints) << endl
            << boost::geometry::dsv(boundary) << endl;
     }
-    POLY_ASSERT(cellIntersections.size() > 0);    
+    POLY_ASSERT(cellIntersections.size() > 0);
     if (cellIntersections.size() == 1) {
       cellRings[i] = cellIntersections[0];
     } else {
       X = IntPoint(points[2*i], points[2*i+1],
-                   clow[0], clow[1],
-                   cdx);
-      minR = numeric_limits<CoordHash>::max();
-      j = 0;
+                   mLow[0], mLow[1], mdx);
+      k = cellIntersections.size();
       for (j = 0; j != cellIntersections.size(); ++j) {
-        thpt = boost::geometry::distance(X, cellIntersections[j]);
-        if (thpt < minR) {
-          k = j;
-          minR = thpt;
-        }
+        inside = boost::geometry::within(X, cellIntersections[j]);
+        if( inside )  k = j;
+        else          orphanage[i].push_back( cellIntersections[j] );
       }
       POLY_ASSERT(k < cellIntersections.size());
       cellRings[i] = cellIntersections[k];
     }
-
-    // Now build the unique mesh nodes and cell info.
+    
+    // Construct the map from node points to neighboring cells
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end() - 1;
          ++itr) {
-      // pX1 = IntPoint(itr->x - clow[0],
-      //                itr->y - clow[1], cdx);
-      // pX2 = IntPoint((itr+1)->x - clow[0],
-      //                (itr+1)->y - clow[1], cdx);
+      // const IntPoint& pX1 = *itr;
+      // const IntPoint& pX2 = *(itr + 1);
+      // POLY_ASSERT(*itr != *(itr + 1));
+      // j = addKeyToMap(pX1, point2node);
+      // k = addKeyToMap(pX2, point2node);
+      // POLY_ASSERT(j != k);
+      // iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
+      // edgeCells[iedge].push_back(j < k ? i : ~i);
+      // mesh.cells[i].push_back(j < k ? iedge : ~iedge);
+
+      std::map<IntPoint, set<int> >::iterator p2nItr = point2neighbors.find(*itr);
+      point2neighbors[*itr].insert(i);
+    }
+    // POLY_ASSERT(mesh.cells[i].size() >= 3);
+  }
+  // POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
+
+  
+  // Build the map from cell to set of neighboring cells  
+  for (i = 0; i != numGenerators; ++i){
+    for (typename BGring::const_iterator itr = cellRings[i].begin();
+         itr != cellRings[i].end() - 1; ++itr) {
+      neighbors[i].insert( point2neighbors[*itr].begin(), point2neighbors[*itr].end() );
+    }
+    neighbors[i].erase(i);
+  }
+  
+  
+  // // Blago!
+  // for (i = 0; i < numGenerators; ++i){
+  //    cerr << "Cell " << i << " has generator neighbors";
+  //    for (std::set<int>::const_iterator nbItr = neighbors[i].begin();
+  //         nbItr != neighbors[i].end(); ++nbItr){
+  //       cerr << " " << *nbItr;
+  //    }
+  //    cerr << endl << orphanage.size() << endl;;
+  // }
+  // // Blago!
+  
+  
+  //*********************** Begin Adoption Algorithm ************************
+  // Intersecting cells with the boundary has created orphaned cell pieces. ("Won't 
+  // somebody please think of the children!?") Make sub-tessellations using the 
+  // generators neighboring the orphaned pieces. Construct a PLC boundary for the 
+  // sub-tessellation by using the geometry obtained by union-ing the orphan 
+  // with its neighboring cells. The way we compute cell neighbors should ensure
+  // that the union gives a contiguous geometry with no holes
+  if( orphanage.size() > 0 && recursionDepth == 1 ){
+    cerr << orphanage.size() << " orphaned cells" << endl;
+    for (std::map<int, std::vector<BGring> >::const_iterator orphanItr = orphanage.begin();
+         orphanItr != orphanage.end(); ++orphanItr){
+      int parent = orphanItr->first;
+      cerr << "Cell " << parent << ":" << endl;
+      for (unsigned iorphan = 0; iorphan != orphanItr->second.size(); ++iorphan){
+        BGring orphan = orphanItr->second[iorphan];
+
+        // Build the neighboring cells of the orphaned chunk
+        std::set<int> orphanNeighbors;
+        std::set<int> orphanNeighborhood;
+        for (typename BGring::const_iterator pointItr = orphan.begin();
+             pointItr != orphan.end() - 1; ++pointItr) {
+          std::map<IntPoint, std::set<int> >::iterator it = point2neighbors.find( *pointItr );
+          if (it != point2neighbors.end()){
+            std::set<int> neighborSet = it->second;
+            for (std::set<int>::const_iterator setItr = neighborSet.begin();
+                 setItr != neighborSet.end(); ++setItr){
+               orphanNeighbors.insert(*setItr);
+               orphanNeighborhood.insert(*setItr);
+               orphanNeighborhood.insert(neighbors[*setItr].begin(), neighbors[*setItr].end());
+            }
+          }
+        }
+        POLY_ASSERT( orphanNeighbors.size() > 0 );
+        POLY_ASSERT( orphanNeighborhood.size() > 0 );
+        
+        
+        // // Blago!
+        // cerr << "Orphaned piece has neighbors";
+        // for( std::set<int>::const_iterator iii = orphanNeighbors.begin();
+        //      iii != orphanNeighbors.end(); ++iii){
+        //   cerr << " " << *iii;
+        // }
+        // cerr << endl << "and neighborhood";
+        // for( std::set<int>::const_iterator iii = orphanNeighborhood.begin();
+        //      iii != orphanNeighborhood.end(); ++iii){
+        //   cerr << " " << *iii;
+        // }
+        // cerr << endl;
+        // // Blago!
+        
+        
+        // If the orphan only has a single neighbor, we can skip a lot of work.
+        // No need to tessellate - simply union the orphan with its neighbor cell.
+        Tessellation<2, RealType> submesh;
+        if (orphanNeighbors.size() > 1){
+          
+          // Compute the sub-tessellation from orphan's neighboring points. Union the
+          // orphan and its immediate neighbors to get the tessellation boundary
+          std::vector<RealType> subpoints;
+          
+          BGmulti_polygon neighborCells;
+          createBGUnion(orphan,neighborCells);          
+          for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+               nbItr != orphanNeighbors.end(); ++nbItr){
+            subpoints.push_back( points[2*(*nbItr)  ] );
+            subpoints.push_back( points[2*(*nbItr)+1] );
+            createBGUnion(cellRings[*nbItr],neighborCells);
+          }
+          POLY_ASSERT2( neighborCells.size() > 0, "Union produced empty set!" );
+          if (neighborCells.size() > 1){
+             cerr << "Blago!" << endl;
+             for (i = 0; i != neighborCells.size(); ++i){
+                cerr << "Sub-polygon " << i << " in the union has bounding ring" << endl;
+                for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
+                     itr != neighborCells[i].outer().end(); ++itr){
+                   cerr << (*itr)
+                        << "(" << (*itr).realx(clow[0],cdx) 
+                        << "," << (*itr).realy(clow[1],cdx) << ")" << endl;
+                }
+                POLY_ASSERT(0);
+             }
+          }
+          
+          BGring boundaryRing = neighborCells[0].outer();
+          
+          // TODO: Make sure union-ing rings that share a common face results in 
+          //       a closed boundary, has no repeated nodes, etc. etc.
+                    
+          // Extract the boundary points from the union
+          //
+          // TODO: Check whether converting the PLC points back to doubles to compute
+          //       the sub-tessellation gives a valid full tessellation after the
+          //       cell adoption loop concludes
+          std::vector<RealType> subPLCpoints;
+          int nSides = 0;
+          for (typename BGring::const_iterator itr = boundaryRing.begin();
+               itr != boundaryRing.end() - 1; ++itr, ++nSides) {
+             subPLCpoints.push_back( (*itr).realx(clow[0],cdx) );
+             subPLCpoints.push_back( (*itr).realy(clow[1],cdx) );
+          }
+
+          // Form the bounding PLC
+          PLC<2, RealType> subPLC;
+          subPLC.facets.resize(nSides, std::vector<int>(2) );
+          for (i = 0; i < nSides; ++i) {
+            subPLC.facets[i][0] = i;
+            subPLC.facets[i][1] = (i+1) % nSides;
+          }
+
+          tessellate(subpoints,subPLCpoints,subPLC,submesh);
+        }
+        
+        // We're only concerned with the cells in the sub-tessellation whose generators
+        // are immediate neighbors of the orphaned chunk. These are the only cells which can
+        // adopt the orphan based on the Voronoi principle of ownership based on "closeness"
+        for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+             nbItr != orphanNeighbors.end(); ++nbItr){
+          std::set<int>::iterator it = orphanNeighbors.find(*nbItr);
+          POLY_ASSERT( it != orphanNeighbors.end() );
+          int subIndex = std::distance(orphanNeighbors.begin(), it);
+          POLY_ASSERT( subIndex < orphanNeighbors.size() );
+          int thisIndex = *it;
+          POLY_ASSERT( thisIndex < numGenerators );
+          
+          BGring thisRing;
+          if( orphanNeighbors.size() > 1 ){
+            // Walk the ordered nodes of the cell and build its boost.geometry ring
+            std::vector<IntPoint> cellBoundary;
+            for (std::vector<int>::const_iterator faceItr = submesh.cells[subIndex].begin();
+                 faceItr != submesh.cells[subIndex].end(); ++faceItr){
+              const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+              POLY_ASSERT(iface < submesh.faceCells.size());
+              POLY_ASSERT(submesh.faces[iface].size() == 2);
+              const unsigned inode = *faceItr < 0 ? submesh.faces[iface][1] : submesh.faces[iface][0];
+              cellBoundary.push_back(IntPoint(submesh.nodes[2*inode  ], 
+                                              submesh.nodes[2*inode+1],
+                                              mLow[0], mLow[1], mdx));
+            }
+            cellBoundary.push_back( cellBoundary[0] );  // Close the ring
+            boost::geometry::assign(thisRing, BGring(cellBoundary.begin(), 
+                                                     cellBoundary.end()) );
+            
+            
+            // // Blago!
+            // cerr << endl << "Cell " << thisIndex << endl;
+            // cerr << endl << "SUBMESH CELL:" << endl;
+            // for (typename BGring::const_iterator itr = thisRing.begin();
+            //      itr != thisRing.end(); ++itr){
+            //    cerr << (*itr).realx(mLow[0],mdx) << " " 
+            //         << (*itr).realy(mLow[1],mdx) << endl;
+            // }
+            // for (typename BGring::const_iterator itr = thisRing.begin();
+            //      itr != thisRing.end(); ++itr){
+            //    cerr << *itr << endl;
+            // }
+            // // Blago!
+
+            
+            // Simplify the resulting ring. Removes points that are within some minimum
+            // distance to their neighbors. Setting distance = 1 merges ring elements
+            // that are within one quantized mesh spacing. This essentially removes
+            // repeated cell nodes having length-zero cell faces.
+            BGring simplifiedRing;
+            boost::geometry::simplify(thisRing, simplifiedRing, 1);
+            thisRing = simplifiedRing;
+          }
+        
+          // If the orphan has only a single neighbor, just compute its union with
+          // that neighbor's cell ring from the full tessellation
+          else{
+             thisRing = orphan;
+          }
+             
+          // Union this new cell ring with the original cell ring from the full tessellation
+          std::vector<BGring> unionRing;
+          boost::geometry::union_( thisRing, cellRings[thisIndex], unionRing );
+          POLY_ASSERT(unionRing.size() == 1);
+          thisRing = unionRing[0];
+
+          // Simplify the final ring. 
+          BGring simplifiedRing;
+          boost::geometry::simplify(thisRing, simplifiedRing, 1);
+          thisRing = simplifiedRing;
+
+        
+          // // Blago!
+          // cerr << endl << "Cell " << thisIndex << endl;
+          // cerr << endl << "FINAL SUBMESH CELL:" << endl;
+          // for (typename BGring::const_iterator itr = thisRing.begin();
+          //      itr != thisRing.end(); ++itr){
+          //    cerr << (*itr).realx(mLow[0],mdx) << " " 
+          //         << (*itr).realy(mLow[1],mdx) << endl;
+          // }
+          // for (typename BGring::const_iterator itr = thisRing.begin();
+          //      itr != thisRing.end(); ++itr){
+          //    cerr << *itr << endl;
+          // }
+          // // Blago!
+
+
+          cellRings[thisIndex] = thisRing;
+        }
+      }
+    }
+  }
+  //*********************** End Adoption Algorithm ************************
+
+  // Now build the unique mesh nodes and cell info.
+  for (i = 0; i != numGenerators; ++i) { 
+    for (typename BGring::const_iterator itr = cellRings[i].begin();
+         itr != cellRings[i].end() - 1;
+         ++itr) {
       const IntPoint& pX1 = *itr;
       const IntPoint& pX2 = *(itr + 1);
       POLY_ASSERT(*itr != *(itr + 1));
@@ -604,13 +896,11 @@ tessellate(const vector<RealType>& points,
       iedge = addKeyToMap(hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
-      // cerr << "Cell " << i << " adding edge " << iedge << " : " << pX1 << " " << pX2 << " : (" 
-      //      << pX1.realx(clow[0], cdx) << " " << pX1.realy(clow[1], cdx) << ") ("
-      //      << pX2.realx(clow[0], cdx) << " " << pX2.realy(clow[1], cdx) << ")" << endl;
     }
     POLY_ASSERT(mesh.cells[i].size() >= 3);
   }
   POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
+
 
   // Fill in the mesh nodes.
   RealType node[2];
@@ -621,24 +911,28 @@ tessellate(const vector<RealType>& points,
     const IntPoint& p = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
-    node[0] = p.realx(clow[0],cdx);
-    node[1] = p.realy(clow[1],cdx);
+    node[0] = p.realx(mLow[0],mdx);
+    node[1] = p.realy(mLow[1],mdx);
     
     // Check if nodes are inside boundary (either bounding box or PLC, if defined)
     bool inside = boost::geometry::within(realBGpoint(node[0],node[1]), realBoundary);
-    if( !inside ){
+    if( !inside && !geometry.empty() ){
        RealType result[2];
        RealType dist = nearestPoint( node, numPLCpoints, vertices, geometry, result );
-       // Check the node has not moved more than 2 quantized mesh spacings. NOTE: this is
-       // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*cdx, 
+       // Check the node has not moved more than 2.5 quantized mesh spacings. NOTE: this is
+       // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*mdx, 
        // but nodes will fail this strict of a test.
-       POLY_ASSERT( dist < 2*cdx );
+       POLY_ASSERT2( dist < 2.5*mdx, "Computed mesh node that is a distance "
+                     << dist/mdx << "*dx outside the boundary");
+       
        node[0] = result[0];
        node[1] = result[1];
     }
     
-    POLY_ASSERT( node[0] >= low[0] && node[0] <= high[0] );
-    POLY_ASSERT( node[1] >= low[1] && node[1] <= high[1] );
+    POLY_ASSERT2( node[0] >= low[0] && node[0] <= high[0],
+                  "Node (" << node[0] << "," << node[1] << ") outside bounding box" );
+    POLY_ASSERT2( node[1] >= low[1] && node[1] <= high[1],
+                  "Node (" << node[0] << "," << node[1] << ") outside bounding box" );
     mesh.nodes[2*i]   = node[0];
     mesh.nodes[2*i+1] = node[1];
   }

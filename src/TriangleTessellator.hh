@@ -47,6 +47,11 @@ class TriangleTessellator: public Tessellator<2, RealType>
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
 
+  private:
+  mutable std::vector<RealType> mLow;
+  mutable std::vector<RealType> mHigh;
+  mutable RealType mdx;
+
 };
 
 }

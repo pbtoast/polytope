@@ -43,7 +43,7 @@ void testBoundary(Boundary2D<double>& boundary,
    unsigned nPoints = 1;
    Tessellation<2,double> mesh;
    cout << "Area of boundary = " << boundary.mArea << endl;
-   for( unsigned n = 0; n < 4; ++n ){
+   for( unsigned n = 0; n < 3; ++n ){
       POLY_ASSERT( mesh.empty() );
       nPoints = nPoints * 10;
       cout << nPoints << " points..." << endl;

@@ -17,9 +17,7 @@
 #include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 using namespace std;
