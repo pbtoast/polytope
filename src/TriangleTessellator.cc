@@ -370,8 +370,9 @@ tessellate(const vector<RealType>& points,
   const double cdx = max(degeneracy, cboxsize/coordMax);
 
   if( recursionDepth == 1 ){
-     mLow.push_back(clow[0]);  mHigh.push_back(chigh[0]);
-     mLow.push_back(clow[1]);  mHigh.push_back(chigh[1]);
+     mLow.resize(2);     mHigh.resize(2);
+     mLow[0] = clow[0];  mHigh[0] = chigh[0];
+     mLow[1] = clow[1];  mHigh[1] = chigh[1];
      mdx = cdx;
   }
   
@@ -687,8 +688,8 @@ tessellate(const vector<RealType>& points,
                 for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
                      itr != neighborCells[i].outer().end(); ++itr){
                    cerr << (*itr)
-                        << "(" << (*itr).realx(clow[0],cdx) 
-                        << "," << (*itr).realy(clow[1],cdx) << ")" << endl;
+                        << "(" << (*itr).realx(clow[0],mdx) 
+                        << "," << (*itr).realy(clow[1],mdx) << ")" << endl;
                 }
                 POLY_ASSERT(0);
              }
@@ -708,8 +709,8 @@ tessellate(const vector<RealType>& points,
           int nSides = 0;
           for (typename BGring::const_iterator itr = boundaryRing.begin();
                itr != boundaryRing.end() - 1; ++itr, ++nSides) {
-             subPLCpoints.push_back( (*itr).realx(clow[0],cdx) );
-             subPLCpoints.push_back( (*itr).realy(clow[1],cdx) );
+             subPLCpoints.push_back( (*itr).realx(clow[0],mdx) );
+             subPLCpoints.push_back( (*itr).realy(clow[1],mdx) );
           }
 
           // Form the bounding PLC
@@ -865,8 +866,8 @@ tessellate(const vector<RealType>& points,
          // Check the node has not moved more than 2.5 quantized mesh spacings. NOTE: this is
          // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*cdx, 
          // but nodes will fail this strict of a test.
-         POLY_ASSERT2( dist < 2.5*cdx, 
-                       dist << " " << 2.5*cdx << " : (" << node[0] << " " << node[1] << ") (" << result[0] << " " << result[1] << ")\n" << geometry);
+         POLY_ASSERT2( dist < 2.5*mdx,
+                       dist << " " << 2.5*mdx << " : (" << node[0] << " " << node[1] << ") (" << result[0] << " " << result[1] << ")\n" << geometry);
          node[0] = result[0];
          node[1] = result[1];
        }
