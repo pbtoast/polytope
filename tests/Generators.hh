@@ -134,11 +134,11 @@ public:
    //------------------------------------------------------------------------
    // add a point to the generator set
    //------------------------------------------------------------------------
-   void addGenerator(RealType& pos)
+   void addGenerator(RealType* pos)
    {
       std::vector<RealType> point;
       for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
-      bool inside = boost::geometry::within( makePoint(pos), mBoundary.mBGboundary );
+      bool inside = boost::geometry::within( makePoint(point), mBoundary.mBGboundary );
       POLY_ASSERT( inside );
       mPoints.insert( mPoints.end(), point.begin(), point.end() );
    }
