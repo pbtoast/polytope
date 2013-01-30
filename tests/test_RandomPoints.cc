@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
    cout << "\nTriangle Tessellator:\n" << endl;
    TriangleTessellator<double> triangle;
-   //testAllBoundaries(triangle);
+   testAllBoundaries(triangle);
 
    //srand(10489593);  //cell parents multiple orphans            - PASSES
    //srand(10489594);  //orphan neighbors are orphan parents      - PASSES
@@ -154,6 +154,7 @@ int main(int argc, char** argv)
    // VoroPP_2d<double> voro;
    // testAllBoundaries(voro);
 
+   cout << "PASS" << endl;
 #if HAVE_MPI
    MPI_Finalize();
 #endif
