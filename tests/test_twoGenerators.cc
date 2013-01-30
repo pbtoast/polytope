@@ -33,14 +33,12 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
-  double point[2];
-  
   Boundary2D<double> boundary;
   boundary.unitSquare();
   Generators<2,double> generators(boundary);
   
-  point = {-0.25, -0.125};  generators.addGenerator(point);
-  point = { 0.25,  0.125};  generators.addGenerator(point);
+  double point1[2] = {-0.25, -0.125};  generators.addGenerator(point1);
+  double point2[2] = { 0.25,  0.125};  generators.addGenerator(point2);
   
   Tessellation<2,double> mesh;
   TriangleTessellator<double> triangle;
