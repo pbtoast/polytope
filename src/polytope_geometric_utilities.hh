@@ -7,7 +7,7 @@
 #include <limits>
 #include <algorithm>
 
-#if USE_MPI
+#if HAVE_MPI
 #include "mpi.h"
 #include "polytope_parallel_utilities.hh"
 #endif
@@ -249,7 +249,7 @@ computeBoundingBox(const RealType* pos,
          xmax[j] = std::max(xmax[j], pos[Dimension*i + j]);
       }
    }
-#if USE_MPI
+#if HAVE_MPI
    if (globalReduce) {
      for (unsigned j = 0; j != Dimension; ++j) {
        xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);
