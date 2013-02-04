@@ -27,7 +27,8 @@ struct DistanceFunctor<2, RealType> {
   static RealType impl(const RealType* a, const RealType* b) {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
-    return std::sqrt(dx*dx + dy*dy);
+    //return std::sqrt(dx*dx + dy*dy);
+    return sqrt(dx*dx + dy*dy);
   }
 };
 
@@ -38,7 +39,8 @@ struct DistanceFunctor<3, RealType> {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
     const RealType dz = a[2] - b[2];
-    return std::sqrt(dx*dx + dy*dy + dz*dz);
+    //return std::sqrt(dx*dx + dy*dy + dz*dz);
+    return sqrt(dx*dx + dy*dy + dz*dz);
   }
 };
 
@@ -62,7 +64,8 @@ template<int Dimension, typename RealType> struct UnitVectorFunctor;
 template<typename RealType> 
 struct UnitVectorFunctor<2, RealType> {
   static void impl(RealType* a) {
-    const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1]));
+    //const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1]));
+    const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1]));
     a[0] /= mag;
     a[1] /= mag;
   }
@@ -72,7 +75,8 @@ struct UnitVectorFunctor<2, RealType> {
 template<typename RealType> 
 struct UnitVectorFunctor<3, RealType> {
   static void impl(RealType* a) {
-    const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
+    //const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
+    const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
     a[0] /= mag;
     a[1] /= mag;
     a[2] /= mag;
@@ -169,13 +173,16 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     acmag += ac[j]*ac[j];
   }
   if (abmag < tol or acmag < tol) return true;
-  abmag = std::sqrt(abmag);
-  acmag = std::sqrt(acmag);
+  //abmag = std::sqrt(abmag);
+  //acmag = std::sqrt(acmag);
+  abmag = sqrt(abmag);
+  acmag = sqrt(acmag);
   for (unsigned j = 0; j != Dimension; ++j) {
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  //return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
 }
 
 //------------------------------------------------------------------------------
@@ -188,7 +195,8 @@ closestPointOnSegment2D(const RealType* point,
                         const RealType* s2,
                         RealType* result) {
   RealType shat[2] = {s2[0] - s1[0], s2[1] - s1[1]};
-  const RealType seglength = std::sqrt(shat[0]*shat[0] + shat[1]*shat[1]);
+  //const RealType seglength = std::sqrt(shat[0]*shat[0] + shat[1]*shat[1]);
+  const RealType seglength = sqrt(shat[0]*shat[0] + shat[1]*shat[1]);
   if (seglength < 1.0e-10) {
     result[0] = 0.5*(s1[0] + s2[0]);
     result[1] = 0.5*(s1[1] + s2[1]);
@@ -360,7 +368,8 @@ raySphereIntersection(const RealType* p_ray,
     result[0] = p_ray[0]; result[1] = p_ray[1]; result[2] = p_ray[2];
     return true;
   } else {
-    d = std::sqrt(d);
+    //d = std::sqrt(d);
+    d = sqrt(d);
     const RealType t = 0.5*std::max(-b - d, -b + d);
     POLY_ASSERT(t >= 0.0);
     result[0] = p_ray[0] + t*n_ray[0];

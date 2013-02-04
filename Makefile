@@ -2,13 +2,16 @@
 # Makefile -- Use this to build on *NIX systems.
 
 # Options set on command line.
-debug      = not-set
-MPI        = not-set
-CC         = not-set
-CXX        = not-set
-prefix     = not-set
-boost_root = not-set
-use_silo   = 1
+debug          = not-set
+MPI            = not-set
+CC             = not-set
+CXX            = not-set
+prefix         = not-set
+boost_root     = not-set
+use_silo       = 1
+use_python     = 0
+python_exe     = not-set
+pybindgen_path = not-set
 
 # This proxies everything to the builddir cmake.
 
@@ -74,6 +77,23 @@ endif
 
 # Choose to build silo or not if available
 CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
+
+# Explicit path for PyBindGen
+# IDEA: cmake can find the python interpreter and libraries for you. If you set use_python=1,
+#       but a valid pybindgen root is not given, do nothing. 
+ifeq ($(use_python), 1)
+  ifneq ($(pybindgen_path), not-set)
+    CONFIG_FLAGS += -DPYBINDGEN_PATH=$(pybindgen_path)
+  else
+    use_python = 0
+  endif
+  ifneq ($(python_exe), not-set)
+    CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
+  endif
+endif
+
+# Choose to build python bindings with pybindgen
+CONFIG_FLAGS += -DUSE_PYTHON=$(use_python)
 
 # Special considerations for specific systems.
 ifeq ($(systype), Darwin)
