@@ -50,17 +50,17 @@ class Tessellation:
         # Methods
         x.add_method("clear", None, [])
         x.add_method("empty", retval("bool"), [])
-        x.add_method("computeNodeCells", retval("std::vector<std::set<unsigned> >"), [])
-        x.add_method("computeCellToNodes", retval("std::vector<std::set<unsigned> >"), [])
+        x.add_method("computeNodeCells", retval("vector_of_set_of_unsigned"), [])
+        x.add_method("computeCellToNodes", retval("vector_of_set_of_unsigned"), [])
         
         # Attributes
-        x.add_custom_instance_attribute("nodes", retval("std::vector<double>*", caller_owns_return=False), getter="polytope::getNodes", setter="polytope::setNodes", getter_template_parameters=[str(ndim),"double"], setter_template_parameters=[str(ndim),"double"])
-        x.add_instance_attribute("cells", "std::vector<std::vector<int> >")
-        x.add_instance_attribute("faces", "std::vector<std::vector<unsigned> >")
-        x.add_instance_attribute("faceCells", "std::vector<std::vector<int> >")
+        x.add_custom_instance_attribute("nodes", retval("vector_of_double*", caller_owns_return=False), getter="polytope::getNodes", setter="polytope::setNodes", getter_template_parameters=[str(ndim),"double"], setter_template_parameters=[str(ndim),"double"])
+        x.add_instance_attribute("cells", "vector_of_vector_of_int")
+        x.add_instance_attribute("faces", "vector_of_vector_of_unsigned")
+        x.add_instance_attribute("faceCells", "vector_of_vector_of_int")
         x.add_instance_attribute("convexHull", PLC)
-        x.add_instance_attribute("neighborDomains","std::vector<unsigned>")
-        x.add_instance_attribute("sharedNodes","std::vector<std::vector<unsigned> >")
-        x.add_instance_attribute("sharedFaces","std::vector<std::vector<unsigned> >")
+        x.add_instance_attribute("neighborDomains","vector_of_unsigned")
+        x.add_instance_attribute("sharedNodes","vector_of_vector_of_unsigned")
+        x.add_instance_attribute("sharedFaces","vector_of_vector_of_unsigned")
         
         return

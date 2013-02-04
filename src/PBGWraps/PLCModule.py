@@ -50,7 +50,7 @@ class PLC:
         x.add_method("valid", retval("bool"), [], is_const=True)
         
         # Attributes
-        x.add_instance_attribute("facets", "std::vector<std::vector<int> >")
-        x.add_instance_attribute("holes", "std::vector<std::vector<std::vector<int> > >")
+        x.add_instance_attribute("facets", "vector_of_vector_of_int")
+        x.add_instance_attribute("holes", "vector_of_vector_of_vector_of_int")
                 
         return
