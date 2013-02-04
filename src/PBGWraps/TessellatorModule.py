@@ -63,16 +63,16 @@ class Tessellator:
         x.add_constructor([])
 
         # Methods
-        x.add_method("tessellate", None, [constrefparam("std::vector<double>", "points"),
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
-        x.add_method("tessellate", None, [constrefparam("std::vector<double>", "points"),
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
                                           param("double *", "low"),#, transfer_ownership=True),
                                           param("double *", "high"),#, transfer_ownership=True),
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
-        x.add_method("tessellate", None, [constrefparam("std::vector<double>", "points"),
-                                          constrefparam("std::vector<double>", "PLCpoints"),
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
+                                          constrefparam("vector_of_double", "PLCpoints"),
                                           constrefparam(PLC, "geometry"),
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)

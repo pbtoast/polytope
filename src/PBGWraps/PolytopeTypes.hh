@@ -61,8 +61,8 @@ getNodes( Tessellation<Dimension, RealType>& self ){
 
 template<int Dimension, typename RealType>
 void
-setNodes( Tessellation<Dimension, RealType>& self, std::vector<RealType>& nodesIn ){
-   self.nodes = nodesIn;
+setNodes( Tessellation<Dimension, RealType>& self, std::vector<RealType>* nodesIn ){
+   self.nodes = *nodesIn;
 }
 
 
