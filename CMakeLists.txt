@@ -188,6 +188,9 @@ add_subdirectory(voro_3d)
 include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
+# Tests directory
+add_subdirectory(tests)
+  
 # Python bindings.
 if(HAVE_PYTHON)
   include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
@@ -195,9 +198,6 @@ if(HAVE_PYTHON)
   add_subdirectory(src/PBGWraps)
 endif()
 
-# Tests directory
-#add_subdirectory(tests)
-  
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 

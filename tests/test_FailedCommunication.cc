@@ -28,9 +28,7 @@
 #include "checkDistributedTessellation.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 using namespace std;
@@ -165,7 +163,8 @@ int main(int argc, char** argv) {
    const string parCheck = checkDistributedTessellation(mesh);
    POLY_CHECK2(parCheck == "ok", parCheck);
 
-  cout << "PASS" << endl;
-  MPI_Finalize();
-  return 0;
+   MPI_Barrier(MPI_COMM_WORLD);
+   cout << "PASS" << endl;
+   MPI_Finalize();
+   return 0;
 }
