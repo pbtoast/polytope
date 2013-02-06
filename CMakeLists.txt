@@ -80,6 +80,8 @@ if (USE_PYTHON EQUAL 1)
 	PYTHON_LIB_DIR ${PYTHON_EXE})
       if (EXISTS "${PYTHON_LIB_DIR}/compileall.py" AND
 	  EXISTS "${PYTHON_INCLUDE_DIR}/Python.h")
+	set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
+	set(PYBINDGEN_MODULE_NAME "PolytopeModules")
 	set(HAVE_PYTHON true)
 	message("-- Using Python executable ${PYTHON_EXE}")
 	message("-- Using PyBindGen installation ${PYBINDGEN_PATH}")
