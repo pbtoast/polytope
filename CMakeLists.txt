@@ -71,48 +71,26 @@ endif()
 
 # Find Python
 if (USE_PYTHON EQUAL 1)
+  #set(LIST_OF_PYTHON_VERSIONS "2.7" "2.6" "2.5" "2.4" "2.3")
   if (PYBINDGEN_PATH)
-    if (PYTHON_EXE)
-      set(HAVE_PYTHON true)
-      message("-- Using Python executable ${PYTHON_EXE}")
-      message("-- Using PyBindGen installation ${PYBINDGEN_PATH}")
-    else()
-      set(HAVE_PYTHON false)
-      message("-- Optional Python executable not provided.")
-      message("-- Python bindings will not be made.")
+    if (PYTHON_EXE AND PYTHON_VERSION)
+      string(REPLACE "bin/python" "include/python${PYTHON_VERSION}" 
+	PYTHON_INCLUDE_DIR ${PYTHON_EXE})
+      string(REPLACE "bin/python" "lib/python${PYTHON_VERSION}" 
+	PYTHON_LIB_DIR ${PYTHON_EXE})
+      if (EXISTS "${PYTHON_LIB_DIR}/compileall.py" AND
+	  EXISTS "${PYTHON_INCLUDE_DIR}/Python.h")
+	set(HAVE_PYTHON true)
+	message("-- Using Python executable ${PYTHON_EXE}")
+	message("-- Using PyBindGen installation ${PYBINDGEN_PATH}")
+      else()
+	set(HAVE_PYTHON false)
+	message("-- Optional Python executable not provided.")
+	message("-- Python bindings will not be made.")
+      endif()
     endif()
   endif()
 endif()
-
-#if (USE_PYTHON EQUAL 1)
-#  find_package(Python)
-#  if (${PYTHONINTERP_FOUND})
-#    message("-- Found Python installation at ${PYTHON_EXECUTABLE}")
-#    ##### obtained from FindPythonLibs. Do I need this? #####
-#    #find_package(PythonLibs)
-#    #include_directories("${PYTHON_INCLUDE_PATH}")
-#    #message("-- Found Python files in ${PYTHON_INCLUDE_PATH}")
-#    #########################################################
-#    find_package(PyBindGen)
-#    if (${PyBindGen_FOUND})
-#      set(HAVE_PYTHON true)
-#      link_directories("${PyBindGen_LIBRARY_DIR}")
-#      message("-- Found PyBindGen installation at ${PyBindGen_LIBRARY_DIR}")
-#    else ()
-#      message("-- Unable to find optional package PyBindGen")
-#    endif()
-#  else ()
-#    message("-- Unable to find optional package Python.")
-#    set(HAVE_PYTHON false)
-#  endif()
-#else ()
-#  set(HAVE_PYTHON false)
-#endif()
-
-#if (PyBindGen_FOUND)
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPyBindGen_FOUND=1")
-#endif()
-
 
 # Find HDF5.
 set(HDF5_USE_STATIC_LIBRARIES true)
@@ -208,9 +186,16 @@ add_subdirectory(voro_3d)
 include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
-# Tests directory
-add_subdirectory(tests)
+# Python bindings.
+if(HAVE_PYTHON)
+  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
+  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
+  add_subdirectory(src/PBGWraps)
+endif()
 
+# Tests directory
+#add_subdirectory(tests)
+  
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
@@ -252,4 +237,3 @@ include(CPack)
 
 # enable dashboard scripting
 include (CTest)
-  

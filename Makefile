@@ -11,7 +11,9 @@ boost_root     = not-set
 use_silo       = 1
 use_python     = 0
 python_exe     = not-set
+python_version = not-set
 pybindgen_path = not-set
+
 
 # This proxies everything to the builddir cmake.
 
@@ -79,8 +81,6 @@ endif
 CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
 
 # Explicit path for PyBindGen
-# IDEA: cmake can find the python interpreter and libraries for you. If you set use_python=1,
-#       but a valid pybindgen root is not given, do nothing. 
 ifeq ($(use_python), 1)
   ifneq ($(pybindgen_path), not-set)
     CONFIG_FLAGS += -DPYBINDGEN_PATH=$(pybindgen_path)
@@ -88,7 +88,10 @@ ifeq ($(use_python), 1)
     use_python = 0
   endif
   ifneq ($(python_exe), not-set)
-    CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
+    ifneq ($(python_version), not-set)
+       CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
+       CONFIG_FLAGS += -DPYTHON_VERSION=$(python_version)
+    endif
   endif
 endif
 

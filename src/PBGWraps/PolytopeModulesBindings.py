@@ -64,9 +64,9 @@ pkgs_string = "CXXContainers PLC Tessellation Tessellator"
 pkgs = pkgs_string.split()
 
 # Extract the desired output files.
-#outfile = "PolytopeModules.C"
+outfile = "PolytopeModules.C"
 
-outfile = sys.argv[-1].replace("Bindings.py", ".C")
+#outfile = sys.argv[-1].replace("Bindings", "").split(".")[0]+".C"
 print "Parsing pybindgen packages: ", pkgs
 
 #-------------------------------------------------------------------------------
