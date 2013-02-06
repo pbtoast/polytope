@@ -42,7 +42,8 @@ class Tessellation:
     def generateTessellationBindings(self, x, ndim):
         
         # Object names
-        PLC = "polytope::PLC%id" % ndim
+        PLC    = "polytope::PLC%id"  % ndim
+        PLCptr = "polytope::PLC%id*" % ndim
         
         # Constructors
         x.add_constructor([])
@@ -54,13 +55,25 @@ class Tessellation:
         x.add_method("computeCellToNodes", retval("vector_of_set_of_unsigned"), [])
         
         # Attributes
-        x.add_custom_instance_attribute("nodes", retval("vector_of_double*", caller_owns_return=False), getter="polytope::getNodes", setter="polytope::setNodes", getter_template_parameters=[str(ndim),"double"], setter_template_parameters=[str(ndim),"double"])
-        x.add_instance_attribute("cells", "vector_of_vector_of_int")
-        x.add_instance_attribute("faces", "vector_of_vector_of_unsigned")
-        x.add_instance_attribute("faceCells", "vector_of_vector_of_int")
-        x.add_instance_attribute("convexHull", PLC)
-        x.add_instance_attribute("neighborDomains","vector_of_unsigned")
-        x.add_instance_attribute("sharedNodes","vector_of_vector_of_unsigned")
-        x.add_instance_attribute("sharedFaces","vector_of_vector_of_unsigned")
+        attributes = ["nodes", "cells", "faces", "infNodes", "faceCells",
+                      "convexHull", "neighborDomains", "sharedNodes", "sharedFaces"]
+
+        returnvals = ["vector_of_double*",
+                      "vector_of_vector_of_int*", 
+                      "vector_of_vector_of_unsigned*", 
+                      "vector_of_unsigned*",
+                      "vector_of_vector_of_int*", 
+                      PLCptr,
+                      "vector_of_unsigned*", 
+                      "vector_of_vector_of_unsigned*", 
+                      "vector_of_vector_of_unsigned*"]
         
+        for i,(att,ret) in enumerate(zip(attributes,returnvals)):
+            tmp = att[0].upper()+att[1:]
+            x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
+                                            getter="polytope::get"+tmp,
+                                            setter="polytope::set"+tmp,
+                                            getter_template_parameters=[str(ndim),"double"], 
+                                            setter_template_parameters=[str(ndim),"double"])
+                
         return
