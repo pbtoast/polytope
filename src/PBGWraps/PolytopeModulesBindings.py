@@ -1,9 +1,8 @@
 # -*- mode: python -*-
 #-------------------------------------------------------------------------------
-# Master SpheralModules file for generating the Spheral++ python bindings.
+# Master PolytopeModules file for generating the Polytope python bindings.
 #-------------------------------------------------------------------------------
-import os
-import sys
+import os, sys
 from pybindgen import *
 
 #-------------------------------------------------------------------------------
@@ -73,6 +72,10 @@ print "Parsing pybindgen packages: ", pkgs
 # Create the PolytopeModules module.
 #-------------------------------------------------------------------------------
 mod = Module("PolytopeModules")
+
+# mod.add_include('"PolytopeTypes.hh"')
+# mod.add_function("haveTriangle", retval("bool"), [])
+# mod.add_function("haveTetgen", retval("bool"), [])
 
 # For now we rely on the custom rolled wrappings in CXXContainers to wrap up the
 # C++ containers.  Hopefully pybindgen's native support for these things will 

@@ -1,145 +1,55 @@
-# Serialization test.
-add_executable(test_serialize test_serialize.cc)
-add_test(test_serialize test_serialize)
-target_link_libraries(test_serialize polytope)
-set_tests_properties(test_serialize PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+#-----------------------------------------------------------------------------
+# Adding a C++ test to Polytope
+# 
+# The polytope test directory assumes all tests follow the naming convention
+#      "test_<name>.cc"
+#
+# To add a test, the user must register the test <name> and a list of the
+# dependencies needed to build it: 
+#      POLYTOPE_ADD_TEST( name dependency_list )
+#
+# The current set of dependencies is
+#      MPI       : MPI is used
+#      TETGEN    : Tetgen Tessellator is used
+#      BOOST     : Boost library is used
+#      TRIANGLE  : Triangle Tessellator is used
+#
+# NOTES:
+# (1) An empty string in the dependency list means the test will always build
+# (2) If you need Boost and Triangle, you need only put "TRIANGLE"
+# (3) If a test has multiple dependencies, submit the dependency list
+#     as a single string, with individual entries separated by a semi-colon
+#     (EXAMPLE: if both TETGEN and MPI are needed, the dependency list
+#               should read "TETGEN:MPI"
+#-----------------------------------------------------------------------------
 
-# Convex hull 2D test.
-add_executable(test_convexHull_2d test_convexHull_2d.cc)
-add_test(test_convexHull_2d test_convexHull_2d)
-target_link_libraries(test_convexHull_2d polytope)
-set_tests_properties(test_convexHull_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+# The POLYTOPE_ADD_TEST macro
+include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
 
-# Convex hull 3D test.
-add_executable(test_convexHull_3d test_convexHull_3d.cc)
-add_test(test_convexHull_3d test_convexHull_3d)
-target_link_libraries(test_convexHull_3d polytope)
-set_tests_properties(test_convexHull_3d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+# Tests not involving the tessellators
+POLYTOPE_ADD_TEST( "serialize"       "" )
+POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
+POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
+POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
+POLYTOPE_ADD_TEST( "plcOrder"        "" )
+POLYTOPE_ADD_TEST( "within_2d"       "" )
 
-# nearestPoint 2D test.
-add_executable(test_nearestPoint_2d test_nearestPoint_2d.cc)
-add_test(test_nearestPoint_2d test_nearestPoint_2d)
-target_link_libraries(test_nearestPoint_2d polytope)
-set_tests_properties(test_nearestPoint_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+# Serial tessellator tests
+POLYTOPE_ADD_TEST( "UnitSquare"          "BOOST" )
+POLYTOPE_ADD_TEST( "Degenerate"          "BOOST" )
+POLYTOPE_ADD_TEST( "TriangleTessellator" "TRIANGLE" )
+POLYTOPE_ADD_TEST( "RandomPoints"        "TRIANGLE" )
+POLYTOPE_ADD_TEST( "Area"                "TRIANGLE" )
+POLYTOPE_ADD_TEST( "OrphanedCell"        "TRIANGLE" )
+POLYTOPE_ADD_TEST( "TwoGenerators"       "TRIANGLE" )
+POLYTOPE_ADD_TEST( "TetgenTessellator"   "TETGEN" )
+POLYTOPE_ADD_TEST( "VoroPP_2d"           "" )
+POLYTOPE_ADD_TEST( "VoroPP_3d"           "" )
 
-# within 2D test.
-add_executable(test_within_2d test_within_2d.cc)
-add_test(test_within_2d test_within_2d)
-target_link_libraries(test_within_2d polytope)
-set_tests_properties(test_within_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-
-# Voro++ 2D tessellator.
-add_executable(test1_VoroPP_2d test1_VoroPP_2d.cc)
-add_test(test1_VoroPP_2d test1_VoroPP_2d)
-target_link_libraries(test1_VoroPP_2d polytope)
-set_tests_properties(test1_VoroPP_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-if (Boost_FOUND)     
-  add_executable(test_UnitSquare test_UnitSquare.cc)
-  add_test(test_UnitSquare test_UnitSquare)
-  target_link_libraries(test_UnitSquare polytope)
-  set_tests_properties(test_UnitSquare PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_Degenerate test_Degenerate.cc)
-  add_test(test_Degenerate test_Degenerate)
-  target_link_libraries(test_Degenerate polytope)
-  set_tests_properties(test_Degenerate PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-endif ()
-
-# Voro++ 3D tessellator.
-add_executable(test1_VoroPP_3d test1_VoroPP_3d.cc)
-add_test(test1_VoroPP_3d test1_VoroPP_3d)
-target_link_libraries(test1_VoroPP_3d polytope)
-set_tests_properties(test1_VoroPP_3d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-
-# Triangle (2D) tessellator.
-if (TRIANGLE_FOUND)
-  add_executable(test_TriangleTessellator test_TriangleTessellator.cc)
-  add_test(test_TriangleTessellator test_TriangleTessellator)
-  target_link_libraries(test_TriangleTessellator polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_TriangleTessellator PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_RandomPoints test_RandomPoints.cc)
-  add_test(test_RandomPoints test_RandomPoints)
-  target_link_libraries(test_RandomPoints polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_RandomPoints PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_PLCorder test_PLCorder.cc)
-  add_test(test_PLCorder test_PLCorder)
-  target_link_libraries(test_PLCorder polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_PLCorder PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_Area test_Area.cc)
-  add_test(test_Area test_Area)
-  target_link_libraries(test_Area polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_Area PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_OrphanedCell test_OrphanedCell.cc)
-  add_test(test_OrphanedCell test_OrphanedCell)
-  target_link_libraries(test_OrphanedCell polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_OrphanedCell PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  add_executable(test_twoGenerators test_twoGenerators.cc)
-  add_test(test_twoGenerators test_twoGenerators)
-  target_link_libraries(test_twoGenerators polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_twoGenerators PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-
-  
-  # Distributed Triangle tessellator.
-  if (USE_MPI EQUAL 1)
-    add_executable(test_DistributedTriangle test_DistributedTriangle.cc)
-    add_test(test_DistributedTriangle test_DistributedTriangle)
-    target_link_libraries(test_DistributedTriangle polytope)
-    set_tests_properties(test_DistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-    add_executable(test_SerialDistributedTriangle test_SerialDistributedTriangle.cc)
-    add_test(test_SerialDistributedTriangle test_SerialDistributedTriangle)
-    target_link_libraries(test_SerialDistributedTriangle polytope)
-    set_tests_properties(test_SerialDistributedTriangle PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-    add_executable(test_FailedCommunication test_FailedCommunication.cc)
-    add_test(test_FailedCommunication test_FailedCommunication)
-    target_link_libraries(test_FailedCommunication polytope)
-    set_tests_properties(test_FailedCommunication PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-    add_executable(test_DistributedRandomPoints test_DistributedRandomPoints.cc)
-    add_test(test_DistributedRandomPoints test_DistributedRandomPoints)
-    target_link_libraries(test_DistributedRandomPoints polytope)
-    set_tests_properties(test_DistributedRandomPoints PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-    
-  endif()
-endif()
-
-# Tetgen (3D) tessellator.
-if ( 0 ) #if (TETGEN_FOUND)
-  add_executable(test_TetgenTessellator test_TetgenTessellator.cc)
-  add_test(test_TetgenTessellator test_TetgenTessellator)
-  target_link_libraries(test_TetgenTessellator polytope ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
-  set_tests_properties(test_TetgenTessellator PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-endif()
-
-# Distributed Voro++ 2D tessellator.
-if (USE_MPI EQUAL 1)
-  add_executable(test1_DistributedVoroPP_2d test1_DistributedVoroPP_2d.cc)
-  add_test(test1_DistributedVoroPP_2d test1_DistributedVoroPP_2d)
-  target_link_libraries(test1_DistributedVoroPP_2d polytope)
-  set_tests_properties(test1_DistributedVoroPP_2d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-
-# Distributed Voro++ 3D tessellator.
-  add_executable(test1_DistributedVoroPP_3d test1_DistributedVoroPP_3d.cc)
-  add_test(test1_DistributedVoroPP_3d test1_DistributedVoroPP_3d)
-  target_link_libraries(test1_DistributedVoroPP_3d polytope)
-  set_tests_properties(test1_DistributedVoroPP_3d PROPERTIES PASS_REGULAR_EXPRESSION PASS
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-endif()
+# Distributed tessellator tests
+POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
+POLYTOPE_ADD_TEST( "SerialDistributedTriangle" "MPI;TRIANGLE" )
+POLYTOPE_ADD_TEST( "FailedCommunication"       "MPI;TRIANGLE" )
+POLYTOPE_ADD_TEST( "DistributedRandomPoints"   "MPI;TRIANGLE" )
+POLYTOPE_ADD_TEST( "DistributedVoroPP_2d"      "MPI" )
+POLYTOPE_ADD_TEST( "DistributedVoroPP_3d"      "MPI" )

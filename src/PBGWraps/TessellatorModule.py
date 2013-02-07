@@ -1,6 +1,6 @@
 from pybindgen import *
 
-import sys
+import os,sys
 sys.path.append(".")
 from PBGutils import *
 
