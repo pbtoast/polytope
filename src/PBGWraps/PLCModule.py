@@ -50,7 +50,15 @@ class PLC:
         x.add_method("valid", retval("bool"), [], is_const=True)
         
         # Attributes
-        x.add_instance_attribute("facets", "vector_of_vector_of_int")
-        x.add_instance_attribute("holes", "vector_of_vector_of_vector_of_int")
-                
+        attributes = ["facets", "holes"]
+        returnvals = ["vector_of_vector_of_int*",
+                      "vector_of_vector_of_vector_of_int*"]
+
+        for i,(att,ret) in enumerate(zip(attributes,returnvals)):
+            x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
+                                            getter="polytope::get"+att,
+                                            setter="polytope::set"+att,
+                                            getter_template_parameters=[str(ndim),"double"], 
+                                            setter_template_parameters=[str(ndim),"double"])
+        
         return

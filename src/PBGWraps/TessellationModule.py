@@ -69,10 +69,9 @@ class Tessellation:
                       "vector_of_vector_of_unsigned*"]
         
         for i,(att,ret) in enumerate(zip(attributes,returnvals)):
-            tmp = att[0].upper()+att[1:]
             x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
-                                            getter="polytope::get"+tmp,
-                                            setter="polytope::set"+tmp,
+                                            getter="polytope::get"+att,
+                                            setter="polytope::set"+att,
                                             getter_template_parameters=[str(ndim),"double"], 
                                             setter_template_parameters=[str(ndim),"double"])
                 
