@@ -80,7 +80,7 @@ class Tessellator:
         
         # Attributes
         
-
+        
         return
 
     #---------------------------------------------------------------------------
@@ -88,8 +88,11 @@ class Tessellator:
     #---------------------------------------------------------------------------
     def generateTriangleTessellatorBindings(self, x, ndim):
 
+        # Constructors
+        x.add_constructor([])
+
         # Methods
-        x.add_method("handlesPLCs", retval('bool'), [], is_const=True)
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
         
         return
 
@@ -98,8 +101,13 @@ class Tessellator:
     #---------------------------------------------------------------------------
     def generateTetgenTessellatorBindings(self, x, ndim):
 
+        # Constructors
+        x.add_constructor([param("const bool", "directComputation")])
+
         # Methods
-        x.add_method("handlesPLCs", retval('bool'), [], is_const=True)
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("directComputation", retval("bool"), [], is_const=True)
+        x.add_method("directComputation", None, [param("const bool", "x")])
 
         return
     
