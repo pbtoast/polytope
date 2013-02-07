@@ -1,21 +1,13 @@
 #ifndef __PBGWRAPS_POLYTOPETYPES__
 #define __PBGWRAPS_POLYTOPETYPES__
 
+#include "polytope.hh"
+
 #include "PLC.hh"
 #include "Tessellation.hh"
 #include "Tessellator.hh"
-
-// TODO: Get rid of this line once I'm building with cmake
-#define HAVE_TRIANGLE 1
-#define HAVE_TETGEN 1
-
-#if HAVE_TRIANGLE
 #include "TriangleTessellator.hh"
-#endif
-
-#if HAVE_TETGEN
 #include "TetgenTessellator.hh"
-#endif
 
 //#include "VoroPP_2d.hh"
 //#include "VoroPP_3d.hh"
@@ -167,6 +159,27 @@ template<int Dimension, typename RealType>
 void setsharedFaces( Tessellation<Dimension, RealType>& self, 
                      std::vector<std::vector<unsigned> >* sharedFacesIn )
 { self.sharedFaces = *sharedFacesIn; }
+
+
+// //------------------------------------------------------------------------------
+// // Getting preprocessor variables
+// //------------------------------------------------------------------------------
+// bool haveTriangle(){ 
+// #if HAVE_TRIANGLE
+//    return true;
+// #else
+//    return false;
+// #endif
+// }
+
+// bool haveTetgen(){ 
+// #if HAVE_TETGEN
+//    return true;
+// #else
+//    return false;
+// #endif
+// }
+
 
 }
 

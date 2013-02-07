@@ -56,13 +56,16 @@ set(Boost_ADDITIONAL_VERSIONS "1.51")
 find_package(Boost "1.51")
 if (USING_XLC) 
   set(Boost_FOUND false)
+  set(HAVE_BOOST false)
   message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
 endif()
 if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
+  set(HAVE_BOOST true)
   message("-- Found BOOST installation at ${Boost_INCLUDE_DIR}")
 else ()
   message("-- Unable to find required package BOOST.")
+  set(HAVE_BOOST false)
 endif ()
 
 if (Boost_FOUND)
@@ -189,7 +192,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
 # Tests directory
-add_subdirectory(tests)
+#add_subdirectory(tests)
   
 # Python bindings.
 if(HAVE_PYTHON)
