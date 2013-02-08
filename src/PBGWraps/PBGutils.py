@@ -1,46 +1,6 @@
 import sys
 from pybindgen import *
 
-## #-------------------------------------------------------------------------------
-## # Find the object associated with the given name.
-## #-------------------------------------------------------------------------------
-## def findObject(name):
-##     for mod in sys.modules.values():
-##         try:
-##             for xname, val in mod.__dict__.items():
-##                 if xname == name:
-##                     return val
-##         except:
-##             pass
-##     raise ValueError, "Could not find %s" % name
-
-## #-------------------------------------------------------------------------------
-## # Find a set of objects.
-## #-------------------------------------------------------------------------------
-## def findObjects(*args):
-##     return [findObject(name) for name in args]
-
-## #-------------------------------------------------------------------------------
-## # Publish an object to the world.
-## #-------------------------------------------------------------------------------
-## def publish(thing, name):
-##     globals()[name] = thing
-##     if not publishedRegistry in globals():
-##         globals()[publishedRegistry] = []
-##     globals()[publishedRegistry].append(name)
-
-## def publishObjects(stuff):
-##     for thing, name in stuff:
-##         publish(thing, name)
-
-## #-------------------------------------------------------------------------------
-## # Load all the currently published types from Spheral.
-## #-------------------------------------------------------------------------------
-## def findAllPublishedObjects():
-##     names = globals()[publishedRegistry]
-##     result = [findObject(name) for name in names]
-##     return result
-
 #-------------------------------------------------------------------------------
 # Add an object by name to a module/namespace, and publish it to the world.
 #-------------------------------------------------------------------------------
@@ -86,3 +46,55 @@ def refparam(cppobj, argname, default_value=None):
 
 def constrefparam(cppobj, argname, default_value=None):
     return Parameter.new(ref("const " + cppobj), argname, direction=Parameter.DIRECTION_INOUT, default_value=default_value)
+
+#-------------------------------------------------------------------------------
+# Generate the SWIG <-> pybindgen binding boilerplate.
+# These methods can be used to write explicit SWIG in/out typemaps -- ugly
+# but it does let pybindgen wrapped objects interact with SWIG wrapped objects.
+#-------------------------------------------------------------------------------
+def generateSWIGBindings(obj, out):
+    pdict = {"class_name"   : obj.full_name,
+             "pystruct"     : obj.get_pystruct(),
+             "pytypestruct" : obj.pytypestruct}
+    SWIGHelpersOut = '''
+
+PyObject* pybindgen(%(class_name)s* obj,
+                    const bool own,
+                    const bool copy) {
+   POLY_ASSERT((copy and own) or (not copy));
+   %(pystruct)s *result;
+   result = PyObject_New(%(pystruct)s, &%(pytypestruct)s);
+   if (copy) {
+      result->obj = new %(class_name)s(*obj);
+   } else {
+      result->obj = obj;
+   }
+   if (own) {
+      result->flags = PYBINDGEN_WRAPPER_FLAG_NONE;
+   } else {
+      result->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;
+   }
+   return (PyObject*) result;
+}
+PyObject* pybindgen(const %(class_name)s* obj) {
+   return pybindgen(const_cast<%(class_name)s*>(obj), true, true);
+}
+
+''' % pdict
+    SWIGHelpersIn = '''
+
+int unpybindgen(PyObject *o, %(class_name)s* obj) {
+   POLY_ASSERT(o != NULL);
+   POLY_ASSERT(obj != NULL);
+   PyErr_Clear();
+   if (o->ob_type != &%(pytypestruct)s) return 0;
+   %(pystruct)s* py_obj = (%(pystruct)s*) o;
+   if (py_obj->obj == NULL) return 0;
+   *obj = *(py_obj->obj);
+   return 1;
+}
+
+''' % pdict
+
+    out.writeln(SWIGHelpersOut)
+    out.writeln(SWIGHelpersIn)
