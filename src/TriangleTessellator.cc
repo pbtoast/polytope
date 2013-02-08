@@ -20,6 +20,7 @@
 #include <boost/geometry/multi/geometries/multi_point.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 
+
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
 #define TRILIBRARY
@@ -40,6 +41,7 @@
 #define incircleadapt triangle_incircleadapt
 #define incircle triangle_incircle
 #include "triangle.c"
+
 
 //------------------------------------------------------------------------------
 // Teach Boost.Geometry how to handle our Point2 class with appropriate traits.
@@ -943,7 +945,7 @@ template class TriangleTessellator<double>;
 
 
 
-   /*
+/*
 //PRIVATE STUFF:
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -1053,7 +1055,6 @@ computeDelaunay(const vector<RealType>& points,
 
 
 
-  
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
