@@ -58,26 +58,12 @@ def generateSWIGBindings(obj, out):
              "pytypestruct" : obj.pytypestruct}
     SWIGHelpersOut = '''
 
-PyObject* pybindgen(%(class_name)s* obj,
-                    const bool own,
-                    const bool copy) {
-   POLY_ASSERT((copy and own) or (not copy));
+PyObject* pybindgen(%(class_name)s* obj) {
    %(pystruct)s *result;
    result = PyObject_New(%(pystruct)s, &%(pytypestruct)s);
-   if (copy) {
-      result->obj = new %(class_name)s(*obj);
-   } else {
-      result->obj = obj;
-   }
-   if (own) {
-      result->flags = PYBINDGEN_WRAPPER_FLAG_NONE;
-   } else {
-      result->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;
-   }
+   result->obj = obj;
+   result->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;
    return (PyObject*) result;
-}
-PyObject* pybindgen(const %(class_name)s* obj) {
-   return pybindgen(const_cast<%(class_name)s*>(obj), true, true);
 }
 
 ''' % pdict
@@ -90,7 +76,7 @@ int unpybindgen(PyObject *o, %(class_name)s* obj) {
    if (o->ob_type != &%(pytypestruct)s) return 0;
    %(pystruct)s* py_obj = (%(pystruct)s*) o;
    if (py_obj->obj == NULL) return 0;
-   *obj = *(py_obj->obj);
+   obj = py_obj->obj;
    return 1;
 }
 
