@@ -31,7 +31,6 @@ POLYTOPE_ADD_TEST( "serialize"       "" )
 POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
 POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
 POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
-POLYTOPE_ADD_TEST( "plcOrder"        "" )
 POLYTOPE_ADD_TEST( "within_2d"       "" )
 
 # Serial tessellator tests
@@ -46,6 +45,7 @@ POLYTOPE_ADD_TEST( "TetgenTessellator"   "TETGEN"   )
 POLYTOPE_ADD_TEST( "VoroPP_2d"           ""         )
 POLYTOPE_ADD_TEST( "VoroPP_3d"           ""         )
 POLYTOPE_ADD_TEST( "Centroidal"          "TRIANGLE" )
+POLYTOPE_ADD_TEST( "plcOrder"            "TRIANGLE" )
 
 # Distributed tessellator tests
 POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
