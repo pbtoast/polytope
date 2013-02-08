@@ -4,6 +4,7 @@
 #-------------------------------------------------------------------------------
 import os, sys
 from pybindgen import *
+from PBGutils import generateSWIGBindings
 
 #-------------------------------------------------------------------------------
 # This is the implementation of the multi-section factory that allows us to
@@ -124,5 +125,12 @@ if __name__ == "__main__":
     print "Generating C code."
     out = PolytopeMultiSectionFactory(outfile, pkgs)
     print "Section sinks:  ", out.section_sinks
+
     mod.generate(out, "PolytopeModules")
+
+    for p in pkgs:
+        sink = out.get_section_code_sink("PolytopeModules_%s" % p)
+        for obj in eval(p).objs:
+            generateSWIGBindings(obj, sink)
+
     out.close()
