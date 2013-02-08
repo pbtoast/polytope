@@ -24,6 +24,8 @@ class Tessellation:
         self.Tessellation2d = addObject(polytope, "Tessellation2d")
         self.Tessellation3d = addObject(polytope, "Tessellation3d")
 
+        self.objs = [self.Tessellation2d, self.Tessellation3d]
+
         return
     
     #---------------------------------------------------------------------------
@@ -31,8 +33,9 @@ class Tessellation:
     #---------------------------------------------------------------------------
     def generateBindings(self, mod):
                        
-        self.generateTessellationBindings(self.Tessellation2d, 2)
-        self.generateTessellationBindings(self.Tessellation3d, 3)
+        for (obj, dim) in ((self.Tessellation2d, 2),
+                           (self.Tessellation3d, 3)):
+            self.generateTessellationBindings(obj, dim)
 
         return
 
