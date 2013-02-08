@@ -159,6 +159,13 @@ tessellate(const vector<RealType>& points,
   // Use the PLC method with an empty geometry.
   PLC<2, RealType> geometry;
   tessellate(points, points, geometry, mesh);
+  
+  /*
+  // Use an empty PLCpoints vector to compute Delaunay
+  std::vector<RealType> PLCpoints;
+  triangulateio delaunay;
+  computeDelaunay(points, PLCpoints, delaunay);
+  */
 }
 //------------------------------------------------------------------------------
 
@@ -936,7 +943,7 @@ template class TriangleTessellator<double>;
 
 
 
-
+   /*
 //PRIVATE STUFF:
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -1046,7 +1053,7 @@ computeDelaunay(const vector<RealType>& points,
 
 
 
-
+  
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
@@ -1115,6 +1122,6 @@ computeDelaunay(const vector<RealType>& points,
     }
   }
 
-
+*/
 
 }
