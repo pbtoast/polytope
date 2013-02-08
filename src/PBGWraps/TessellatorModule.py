@@ -31,6 +31,9 @@ class Tessellator:
         # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
         # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
 
+        self.objs = [self.Tessellator2d, self.Tessellator3d,
+                     self.TriangleTessellator2d, self.TetgenTessellator3d]
+
         return
     
     #---------------------------------------------------------------------------

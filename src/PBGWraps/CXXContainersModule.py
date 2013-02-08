@@ -164,6 +164,8 @@ class CXXContainers:
         # Namespace.
         std = mod.add_cpp_namespace("std")
 
+        self.objs = []
+
         # These are the basic types we form vectors of.
         # We break this set into two types:
         #   elementTypes0 : things we want to index by value
@@ -173,11 +175,17 @@ class CXXContainers:
 
         # std::vector types.
         for name in (self.elementTypes0 + self.elementTypes1):
-            exec('self.vector_of_%s = addObject(mod, "vector_of_%s", allow_subclassing=True)' % (name, name))
+            exec('''
+self.vector_of_%(name)s = addObject(mod, "vector_of_%(name)s", allow_subclassing=True)
+self.objs.append(self.vector_of_%(name)s)
+''' % {"name" : name})
 
         # std::set types
         for name in self.elementTypes0:
-            exec('self.set_of_%s = addObject(mod, "set_of_%s", allow_subclassing=True)' % (name, name))
+            exec('''
+self.set_of_%(name)s = addObject(mod, "set_of_%(name)s", allow_subclassing=True)
+self.objs.append(self.set_of_%(name)s)
+''' % {"name" : name})
 
         # A few value types need special mangling for the element specs.
         self.valueMap = {}
