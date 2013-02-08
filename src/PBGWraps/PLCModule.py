@@ -24,6 +24,8 @@ class PLC:
         self.PLC2d = addObject(polytope, "PLC2d")
         self.PLC3d = addObject(polytope, "PLC3d")
 
+        self.objs = [self.PLC2d, self.PLC3d]
+
         return
     
     #---------------------------------------------------------------------------
