@@ -46,8 +46,15 @@ class TriangleTessellator: public Tessellator<2, RealType>
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
-
+   
   private:
+  /*
+  void computeDelaunay(const std::vector<RealType>& points,
+                       const std::vector<RealType>& PLCpoints,
+                       triangulateio& delaunay) const;
+  */ 
+  
+
   mutable std::vector<RealType> mLow;
   mutable std::vector<RealType> mHigh;
   mutable RealType mdx;
