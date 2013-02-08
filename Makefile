@@ -12,7 +12,6 @@ use_silo       = 1
 use_python     = 0
 python_exe     = not-set
 python_version = not-set
-pybindgen_path = not-set
 
 
 # This proxies everything to the builddir cmake.
@@ -82,16 +81,15 @@ CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
 
 # Explicit path for PyBindGen
 ifeq ($(use_python), 1)
-  ifneq ($(pybindgen_path), not-set)
-    CONFIG_FLAGS += -DPYBINDGEN_PATH=$(pybindgen_path)
-  else
-    use_python = 0
-  endif
   ifneq ($(python_exe), not-set)
     ifneq ($(python_version), not-set)
        CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
        CONFIG_FLAGS += -DPYTHON_VERSION=$(python_version)
+    else
+       use_python = 0
     endif
+  else
+    use_python = 0
   endif
 endif
 

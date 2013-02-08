@@ -69,7 +69,7 @@ namespace {
 void
 createBGUnion( boost::geometry::model::ring<Point2<CoordHash>,false> ring, 
                boost::geometry::model::multi_polygon<
-               boost::geometry::model::polygon<Point2<CoordHash>,false> >& multiPolygon )
+                 boost::geometry::model::polygon<Point2<CoordHash>,false> >& multiPolygon )
 {
   boost::geometry::model::multi_polygon<
     boost::geometry::model::polygon<Point2<CoordHash>,false> > temp;
@@ -329,7 +329,6 @@ tessellate(const vector<RealType>& points,
   internal::CounterMap<EdgeHash> edgeCounter;
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
   map<int, set<int> > gen2tri;
-  map<int, set<int> > neighbors;
   int k, pindex, qindex, rindex, iedge;
   for (i = 0; i != delaunay.numberoftriangles; ++i) {
     pindex = delaunay.trianglelist[3*i];
@@ -378,23 +377,23 @@ tessellate(const vector<RealType>& points,
   
   // Flag any generators on the edge of the tessellation.  Here we mean the actual
   // generators, not our added boundary ones.
-  vector<bool> exteriorGenerators(numGenerators, false);
-  BoolMap<EdgeHash> exteriorEdgeTest;
+  //vector<bool> exteriorGenerators(numGenerators, false);
+  //BoolMap<EdgeHash> exteriorEdgeTest;
   list<EdgeHash> exteriorEdges;
-  vector<vector<EdgeHash> > exteriorEdgesOfGen(numGenerators);
+  //vector<vector<EdgeHash> > exteriorEdgesOfGen(numGenerators);
   for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
        itr != edgeCounter.end();
        ++itr) {
     POLY_ASSERT(itr->second == 1 or itr->second == 2);
     if (itr->second == 1) {
-      i = itr->first.first;
-      j = itr->first.second;
-      exteriorGenerators[i] = true;
-      exteriorGenerators[j] = true;
+      //i = itr->first.first;
+      //j = itr->first.second;
+      //exteriorGenerators[i] = true;
+      //exteriorGenerators[j] = true;
       exteriorEdges.push_back(itr->first);
-      exteriorEdgeTest.insert(make_pair(itr->first, true));
-      exteriorEdgesOfGen[i].push_back(itr->first);
-      exteriorEdgesOfGen[j].push_back(itr->first);
+      //exteriorEdgeTest.insert(make_pair(itr->first, true));
+      //exteriorEdgesOfGen[i].push_back(itr->first);
+      //exteriorEdgesOfGen[j].push_back(itr->first);
     }
   }
 
@@ -589,8 +588,8 @@ tessellate(const vector<RealType>& points,
   }
   // POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
 
-  
   // Build the map from cell to set of neighboring cells  
+  map<int, set<int> > neighbors;
   for (i = 0; i != numGenerators; ++i){
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end() - 1; ++itr) {
@@ -932,5 +931,123 @@ tessellate(const vector<RealType>& points,
 // Explicit instantiation.
 //------------------------------------------------------------------------------
 template class TriangleTessellator<double>;
+
+
+
+
+
+/*
+//PRIVATE STUFF:
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeDelaunay(const vector<RealType>& points,
+                const vector<RealType>& PLCpoints,
+                triangulateio& delaunay) const 
+{
+  triangulateio in;
+   
+  // Find the range of the generator points.
+  const unsigned numGenerators = points.size()/2;
+  const unsigned numPLCpoints = PLCpoints.size()/2;
+  RealType vertices[2*numPLCpoints];
+  for( unsigned i=0; i<PLCpoints.size(); ++i) vertices[i] = PLCpoints[i];
+  RealType  low[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
+  int i, j;
+  for (i = 0; i != numGenerators; ++i) {
+    low[0] = min(low[0], points[2*i]);
+    low[1] = min(low[1], points[2*i+1]);
+    high[0] = max(high[0], points[2*i]);
+    high[1] = max(high[1], points[2*i+1]);
+  }
+  for (i = 0; i != numPLCpoints; ++i) {
+    low[0] = min(low[0], PLCpoints[2*i]);
+    low[1] = min(low[1], PLCpoints[2*i+1]);
+    high[0] = max(high[0], PLCpoints[2*i]);
+    high[1] = max(high[1], PLCpoints[2*i+1]);
+  }
+  POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
+  RealType box[2] = {high[0] - low[0], 
+                     high[1] - low[1]};
+  const double boxsize = 2.0*max(box[0], box[1]);
+
+  // Define input points, including our false external generators.
+  in.numberofpoints = numGenerators + 4;
+  in.pointlist = new RealType[2*in.numberofpoints];
+  copy(points.begin(), points.end(), in.pointlist);
+  const double xmin = 0.5*(low[0] + high[0]) - boxsize;
+  const double ymin = 0.5*(low[1] + high[1]) - boxsize;
+  const double xmax = 0.5*(low[0] + high[0]) + boxsize;
+  const double ymax = 0.5*(low[1] + high[1]) + boxsize;
+  in.pointlist[2*numGenerators  ] = xmin; in.pointlist[2*numGenerators+1] = ymin;
+  in.pointlist[2*numGenerators+2] = xmax; in.pointlist[2*numGenerators+3] = ymin;
+  in.pointlist[2*numGenerators+4] = xmax; in.pointlist[2*numGenerators+5] = ymax;
+  in.pointlist[2*numGenerators+6] = xmin; in.pointlist[2*numGenerators+7] = ymax;
+  // cerr << "Chose bounding range : (" << xmin << " " << ymin << ") (" << xmax << " " << ymax << ")" << endl;
+
+  // No point attributes or markers.
+  in.numberofpointattributes = 0;
+  in.pointattributelist = 0; 
+  in.pointmarkerlist = 0; // No point markers.
+
+  // Fill in Triangle's boundary info.  We use our imposed outer box of fake
+  // generators.
+  in.numberofsegments = 4;
+  in.segmentlist = new int[2*in.numberofsegments];
+  j = 0;
+  for (i = 0; i != 4; ++i) {
+    in.segmentlist[j++] = numGenerators + i;
+    in.segmentlist[j++] = numGenerators + ((i + 1) % 4);
+  }
+  in.segmentmarkerlist = 0;
+  in.numberofholes = 0;
+  in.holelist = 0;
+
+  // No regions.
+  in.numberofregions = 0;
+  in.regionlist = 0;
+
+  // Set up the structure for the triangulation.
+  delaunay.pointlist = 0;
+  delaunay.pointattributelist = 0;
+  delaunay.pointmarkerlist = 0;
+  delaunay.trianglelist = 0;
+  delaunay.triangleattributelist = 0;
+  delaunay.neighborlist = 0;
+  delaunay.segmentlist = 0;
+  delaunay.segmentmarkerlist = 0;
+  delaunay.edgelist = 0;
+  delaunay.edgemarkerlist = 0;
+  delaunay.holelist = 0;
+
+  // Do the triangulation. Switches pass to triangle are:
+  // -Q : Quiet (shaddap!), no output on the terminal except errors.
+  // -z : Indices are all numbered from zero.
+  // -e : Generates edges and places them in out.edgelist.
+  // -c : Generates convex hull and places it in out.segmentlist.
+  // -p : Uses the given PLC information.
+  // if (geometry.empty())
+  //   triangulate((char*)"Qzec", &in, &delaunay, 0);
+  // else
+  //   triangulate((char*)"Qzep", &in, &delaunay, 0);
+  triangulate((char*)"Qzep", &in, &delaunay, 0);
+
+  // Make sure we got something.
+  if (delaunay.numberoftriangles == 0)
+    error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
+  if (delaunay.numberofpoints != numGenerators + 4) {
+    char err[1024];
+    snprintf(err, 1024, "TriangleTessellator: Delauney triangulation produced %d triangles\n(%d generating points given)", 
+             delaunay.numberofpoints, (int)numGenerators);
+    error(err);
+  }
+*/
+
+
+
+
+
 
 }

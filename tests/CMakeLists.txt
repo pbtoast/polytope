@@ -45,6 +45,7 @@ POLYTOPE_ADD_TEST( "TwoGenerators"       "TRIANGLE" )
 POLYTOPE_ADD_TEST( "TetgenTessellator"   "TETGEN"   )
 POLYTOPE_ADD_TEST( "VoroPP_2d"           ""         )
 POLYTOPE_ADD_TEST( "VoroPP_3d"           ""         )
+POLYTOPE_ADD_TEST( "Centroidal"          "TRIANGLE" )
 
 # Distributed tessellator tests
 POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
