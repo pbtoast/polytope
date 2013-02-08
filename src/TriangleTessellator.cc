@@ -624,7 +624,7 @@ tessellate(const vector<RealType>& points,
     for (std::map<int, std::vector<BGring> >::const_iterator orphanItr = orphanage.begin();
          orphanItr != orphanage.end(); ++orphanItr){
       int parent = orphanItr->first;
-      cerr << "Cell " << parent << ":" << endl;
+      cerr << "Parent cell: " << parent << ":" << endl;
       for (unsigned iorphan = 0; iorphan != orphanItr->second.size(); ++iorphan){
         BGring orphan = orphanItr->second[iorphan];
 
