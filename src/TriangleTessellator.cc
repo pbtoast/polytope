@@ -936,7 +936,7 @@ template class TriangleTessellator<double>;
 
 
 
-/*
+
 //PRIVATE STUFF:
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -1043,10 +1043,77 @@ computeDelaunay(const vector<RealType>& points,
              delaunay.numberofpoints, (int)numGenerators);
     error(err);
   }
-*/
 
 
 
+
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeDelaunay(const vector<RealType>& points,
+                const vector<RealType>& PLCpoints,
+                triangulateio& delaunay) const 
+{
+  // Create the Voronoi nodes from the list of triangles. Each triangle 
+  // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
+  // The Voronoi node is located at the center of the triangle, though things
+  // get a little squirrely at boundaries.  On boundary edges we create
+  // a vertex at the edge center.
+
+  // Find the circumcenters of each triangle, and build the set of triangles
+  // associated with each generator.
+  RealType  clow[2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType chigh[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
+  internal::CounterMap<EdgeHash> edgeCounter;
+  vector<RealPoint> circumcenters(delaunay.numberoftriangles);
+  map<int, set<int> > gen2tri;
+  int k, pindex, qindex, rindex, iedge;
+  for (i = 0; i != delaunay.numberoftriangles; ++i) {
+    pindex = delaunay.trianglelist[3*i];
+    qindex = delaunay.trianglelist[3*i + 1];
+    rindex = delaunay.trianglelist[3*i + 2];
+    if (pindex < numGenerators and qindex < numGenerators and rindex < numGenerators) {
+      ++edgeCounter[internal::hashEdge(pindex, qindex)];
+      ++edgeCounter[internal::hashEdge(qindex, rindex)];
+      ++edgeCounter[internal::hashEdge(rindex, pindex)];
+    }
+    geometry::computeCircumcenter2d(&delaunay.pointlist[2*pindex],
+                                    &delaunay.pointlist[2*qindex],
+                                    &delaunay.pointlist[2*rindex],
+                                    &circumcenters[i].x);
+    gen2tri[pindex].insert(i);
+    gen2tri[qindex].insert(i);
+    gen2tri[rindex].insert(i);
+    clow[0] = min(clow[0], circumcenters[i].x);
+    clow[1] = min(clow[1], circumcenters[i].y);
+    chigh[0] = max(chigh[0], circumcenters[i].x);
+    chigh[1] = max(chigh[1], circumcenters[i].y);
+  }
+  
+  POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+  POLY_ASSERT(clow[0] < chigh[0] and clow[1] < chigh[1]);
+  RealType cbox[2] = {chigh[0] - clow[0], 
+                      chigh[1] - clow[1]};
+  const double cboxsize = 2.0*max(cbox[0], cbox[1]);
+  const double cdx = max(degeneracy, cboxsize/coordMax);
+
+  if( recursionDepth == 1 ){
+     mLow.resize(2);     mHigh.resize(2);
+     mLow[0] = clow[0];  mHigh[0] = chigh[0];
+     mLow[1] = clow[1];  mHigh[1] = chigh[1];
+     mdx = cdx;
+  }
+  
+  // Flag any generators on the edge of the tessellation.  Here we mean the actual
+  list<EdgeHash> exteriorEdges;
+  for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCounter.begin();
+       itr != edgeCounter.end();
+       ++itr) {
+    POLY_ASSERT(itr->second == 1 or itr->second == 2);
+    if (itr->second == 1) {
+      exteriorEdges.push_back(itr->first);
+    }
+  }
 
 
 
