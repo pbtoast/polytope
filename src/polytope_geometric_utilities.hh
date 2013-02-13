@@ -381,6 +381,52 @@ raySphereIntersection(const RealType* p_ray,
 }
 
 //------------------------------------------------------------------------------
+// Find the ray-sphere intersection, assuming the ray's origin is inside the 
+// sphere.
+// Arguments:
+//   p_ray : point origin of ray.
+//   n_ray : unit normal in direction of ray.
+// p_sphere: center of the circle.
+// r_sphere: radius of the circle.
+//     tol : the tolerance for zero (check for parallel lines and such)
+//  result : the intersection point
+//------------------------------------------------------------------------------
+template<typename RealType> 
+bool
+rayCircleIntersection(const RealType* p_ray,
+                      const RealType* n_ray,
+                      const RealType* p_circle,
+                      const RealType r_circle,
+                      const RealType& tol,
+                      RealType* result) {
+  POLY_ASSERT2((distance<2, RealType>(p_ray, p_circle) <= r_circle), 
+               "(" << p_ray[0] << " " << p_ray[1] << ") (" 
+               << p_circle[0] << " " << p_circle[1] << ")" << " : " 
+               << (distance<2, RealType>(p_ray, p_circle)) << " " << r_circle);
+  POLY_ASSERT(std::abs(n_ray[0]*n_ray[0] + n_ray[1]*n_ray[1] - 1.0) < 1.0e-10);
+  const RealType rs0[2] = {p_ray[0] - p_circle[0],
+                           p_ray[1] - p_circle[1]};
+  const RealType b = 2.0*dot<2, RealType>(n_ray, rs0);
+  const RealType c = dot<2, RealType>(rs0, rs0) - r_circle*r_circle;
+  RealType d = b*b - 4.0*c;
+  POLY_ASSERT(d >= -tol);
+  if (d < tol) {
+    // Glancing intersection at the edge of the circle -- it must be the origin of the ray!
+    result[0] = p_ray[0]; result[1] = p_ray[1];
+    return true;
+  } else {
+    //d = std::sqrt(d);
+    d = sqrt(d);
+    const RealType t = 0.5*std::max(-b - d, -b + d);
+    POLY_ASSERT(t >= 0.0);
+    result[0] = p_ray[0] + t*n_ray[0];
+    result[1] = p_ray[1] + t*n_ray[1];
+  }
+  POLY_ASSERT(std::abs(distance<2, RealType>(result, p_circle) - r_circle) < tol);
+  return true;
+}
+
+//------------------------------------------------------------------------------
 // Find the closest point of intersection for ray and a box.
 // Returns an int indicating which plane is intersected:
 // -1 : no intersection
@@ -634,6 +680,16 @@ computeTriangleCircumcenter3d(double* A, double* B, double* C, double* X) {
   X[1] = 0.5*e[1]/d2 + C[1];
   X[2] = 0.5*e[2]/d2 + C[2];
   return true;
+}
+
+//------------------------------------------------------------------------------
+// Compute the centroid of a triangle in 2D.
+//------------------------------------------------------------------------------
+inline
+void
+computeTriangleCentroid2d(double* A, double* B, double* C, double* X) {
+  X[0] = (A[0] + B[0] + C[0])/3.0;
+  X[1] = (A[1] + B[1] + C[1])/3.0;
 }
 
 //------------------------------------------------------------------------------

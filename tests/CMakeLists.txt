@@ -46,6 +46,7 @@ POLYTOPE_ADD_TEST( "VoroPP_2d"           ""         )
 POLYTOPE_ADD_TEST( "VoroPP_3d"           ""         )
 POLYTOPE_ADD_TEST( "Centroidal"          "TRIANGLE" )
 POLYTOPE_ADD_TEST( "plcOrder"            "TRIANGLE" )
+POLYTOPE_ADD_TEST( "TriangleUnbounded"   "TRIANGLE" )
 
 # Distributed tessellator tests
 POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
