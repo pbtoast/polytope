@@ -13,6 +13,21 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "Point.hh"
+struct triangulateio;
+
+// We use the Boost.Geometry library to handle polygon intersections and such.
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/multi/geometries/multi_point.hpp>
+#include <boost/geometry/multi/geometries/multi_polygon.hpp>
+
+namespace BG = boost::geometry;
+
+typedef int64_t CoordHash;
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, BG::cs::cartesian, x, y)
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, BG::cs::cartesian, x, y)
 
 namespace polytope 
 {
@@ -20,7 +35,7 @@ namespace polytope
 template<typename RealType>
 class TriangleTessellator: public Tessellator<2, RealType> 
 {
-  public:
+public:
 
   // Constructor, destructor.
   TriangleTessellator();
@@ -47,13 +62,35 @@ class TriangleTessellator: public Tessellator<2, RealType>
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
    
-  private:
-  /*
+
+private:
+  //-------------------- Private interface ----------------------
+
+  typedef std::pair<int, int> EdgeHash;
+  typedef Point2<CoordHash> IntPoint;
+  typedef Point2<double> RealPoint;
+  typedef BG::model::polygon<IntPoint,    // point type
+                             false>       // clockwise
+    BGpolygon;
+  typedef BG::model::ring<IntPoint,       // point type
+                          false>          // clockwise
+    BGring;
+  typedef BG::model::polygon<RealPoint,   // point type
+                             false>       // clockwise
+    realBGpolygon;
+  typedef BG::model::multi_point<IntPoint> BGmulti_point;
+  typedef BG::model::multi_polygon<BGpolygon> BGmulti_polygon;
+
+  static CoordHash coordMax;
+  static double degeneracy;
+  
+  // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
                        const std::vector<RealType>& PLCpoints,
                        triangulateio& delaunay) const;
-  */ 
   
+  // TODO: This does something. The extent of which I have not yet determined
+  void something(triangulateio& delaunay) const;
 
   mutable std::vector<RealType> mLow;
   mutable std::vector<RealType> mHigh;

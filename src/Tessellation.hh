@@ -23,6 +23,7 @@ class Tessellation
     cells(),
     faces(),
     infNodes(),
+    infFaces(),
     faceCells(),
     convexHull() {}
 
@@ -33,6 +34,7 @@ class Tessellation
     cells.clear();
     faces.clear();
     infNodes.clear();
+    infFaces.clear();
     faceCells.clear();
     convexHull.clear();
   }
@@ -42,7 +44,8 @@ class Tessellation
   bool empty() const
   {
     return nodes.empty() and cells.empty() and faces.empty() and 
-      infNodes.empty() and faceCells.empty() and convexHull.empty();
+       infNodes.empty() and infFaces.empty() and faceCells.empty() and 
+       convexHull.empty();
   }
 
   //! An array of (Dimension*numNodes) values containing components of 
@@ -66,9 +69,15 @@ class Tessellation
   std::vector<std::vector<unsigned> > faces;
 
   //! An array of node indices which are the "free" or unbound nodes 
-  //! for unbounded tessellations.  These nodes terminate on a spherical
-  //! surface that represents the rays going out to infinity.
+  //! for unbounded tessellations.  These nodes are the termination point
+  //! on a spherical surface of a ray going out to infinity.
   std::vector<unsigned> infNodes;
+
+  //! The fictitious face connecting inf nodes for a given unbounded cell.
+  //! If cell i is an unbounded cell, then infFaces[i] is the set of ordered
+  //! infNodes belonging to the cell representing a "face" at infinity.
+  //! In 2D, infFaces[i] is of size 2.
+  std::vector<std::vector<unsigned> > infFaces;
 
   //! An array of cell indices for each face, i.e., the cells that share
   //! the face.
