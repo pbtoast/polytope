@@ -129,7 +129,7 @@ class Tessellation
   //! Collect the nodes around each cell
   std::vector<std::set<unsigned> > computeCellToNodes()
   {
-    std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
+    std::vector<std::set<unsigned> > result(cells.size());//(nodes.size()/Dimension);
     for (unsigned i = 0; i != cells.size(); ++i){
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end(); ++faceItr){
