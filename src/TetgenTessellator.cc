@@ -270,8 +270,8 @@ tessellate(const vector<double>& points,
   // Flag all the inf nodes in a fast lookup array.
   unsigned nnodes = mesh.nodes.size()/3;
   int i, j, k, j0, k0, jplane, kplane;
-  vector<unsigned> infNodeFlags(nnodes, 0);
-  for (i = 0; i != mesh.infNodes.size(); ++i) infNodeFlags[mesh.infNodes[i]] = 1;
+  //vector<unsigned> infNodeFlags(nnodes, 0);
+  //for (i = 0; i != mesh.infNodes.size(); ++i) infNodeFlags[mesh.infNodes[i]] = 1;
 
   // Find the faces with "inf" nodes, and close them with edges along the
   // bounding box.
@@ -280,17 +280,17 @@ tessellate(const vector<double>& points,
   for (i = 0; i != nfaces; ++i) {
     vector<unsigned>& faceNodes = mesh.faces[i];
     j = 0;
-    while (j < faceNodes.size() and infNodeFlags[faceNodes[j]] == 0) ++j;
+    while (j < faceNodes.size() and mesh.infNodes[faceNodes[j]] == 0) ++j;
     if (j < faceNodes.size()) {
 
       // Yep, this face has inf nodes.  There should be two of 'em.
       k = (j + 1) % faceNodes.size();
       j0 = (j - 1) % faceNodes.size(); 
       k0 = (k - 1) % faceNodes.size(); 
-      POLY_ASSERT(infNodeFlags[faceNodes[j]] == 1 and
-                  infNodeFlags[faceNodes[k]] == 1 and
-                  infNodeFlags[faceNodes[j0]] == 0 and
-                  infNodeFlags[faceNodes[k0]] == 0);
+      POLY_ASSERT(mesh.infNodes[faceNodes[j]] == 1 and
+                  mesh.infNodes[faceNodes[k]] == 1 and
+                  mesh.infNodes[faceNodes[j0]] == 0 and
+                  mesh.infNodes[faceNodes[k0]] == 0);
       ray_hat.x = mesh.nodes[3*j]   - mesh.nodes[3*j0];
       ray_hat.y = mesh.nodes[3*j+1] - mesh.nodes[3*j0+1];
       ray_hat.z = mesh.nodes[3*j+2] - mesh.nodes[3*j0+2];
@@ -421,7 +421,7 @@ computeVoronoiNatively(const vector<double>& points,
   RealType ray_sph_int[3];
   vector<EdgeHash> edges;
   edges.reserve(out.numberofvedges);
-  mesh.infNodes = vector<unsigned>();
+  mesh.infNodes = vector<unsigned>(point2node.size());
   for (i = 0; i != out.numberofvedges; ++i) {
     tetgenio::voroedge& vedge = out.vedgelist[i];
     v1 = vedge.v1;
@@ -447,7 +447,8 @@ computeVoronoiNatively(const vector<double>& points,
       k = point2node.size();
       n2 = internal::addKeyToMap(p1, point2node);
       if (k != point2node.size()) {
-        mesh.infNodes.push_back(n2);
+        //mesh.infNodes.push_back(n2);
+        mesh.infNodes[n2] = 1;
         mesh.nodes.push_back(p1.realx(vlow[0], degeneracy));
         mesh.nodes.push_back(p1.realy(vlow[1], degeneracy));
         mesh.nodes.push_back(p1.realz(vlow[2], degeneracy));
@@ -704,7 +705,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   bool test;
   RealPoint fhat, tetcent, test_point, a_b, a_c, pinf;
   map<TetFacetHash, unsigned> facet2id;
-  mesh.infNodes = vector<unsigned>();
+  mesh.infNodes = vector<unsigned>(circ2id.size());
   for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
        facetItr != facet2tets.end();
        ++facetItr) {
@@ -768,7 +769,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       j = internal::addKeyToMap(ip, circ2id);
       POLY_ASSERT(facet2id.find(facet) == facet2id.end());
       facet2id[facet] = j;
-      if (k != circ2id.size()) mesh.infNodes.push_back(j);
+      if (k != circ2id.size()) mesh.infNodes.push_back(1); //mesh.infNodes.push_back(j);
     }
   }
 
