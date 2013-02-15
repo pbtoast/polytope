@@ -68,16 +68,16 @@ class Tessellation
   //! viewed from the "positive" (outside) direction. 
   std::vector<std::vector<unsigned> > faces;
 
-  //! An array of node indices which are the "free" or unbound nodes 
-  //! for unbounded tessellations.  These nodes are the termination point
-  //! on a spherical surface of a ray going out to infinity.
+  //! Arry of node indices: 0 for interior nodes and 1 for nodes at
+  //! "infinity" if this is an unbounded tessellation. The infinite node
+  //! is the termination point on a spherical surface of a ray going
+  //! out to infinity.
   std::vector<unsigned> infNodes;
 
-  //! The fictitious face connecting inf nodes for a given unbounded cell.
-  //! If cell i is an unbounded cell, then infFaces[i] is the set of ordered
-  //! infNodes belonging to the cell representing a "face" at infinity.
-  //! In 2D, infFaces[i] is of size 2.
-  std::vector<std::vector<unsigned> > infFaces;
+  //! Array of face indices: 0 for interior faces and 1 for faces at
+  //! "infinity" for unbounded tessellations. The infinite face connects
+  //! the collection of infinite nodes for a given unbounded cell.
+  std::vector<unsigned> infFaces;
 
   //! An array of cell indices for each face, i.e., the cells that share
   //! the face.

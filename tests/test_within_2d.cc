@@ -19,13 +19,15 @@ using namespace std;
 int main(int argc, char** argv) {
 
   // Create a PLC with one hole:
-  //  ________    ________
-  //  |       \  /       |
-  //  |        \/        |
-  //  |      __  __      |
-  //  |      | \/ |      |
-  //  |      |____|      |
-  //  |__________________|
+  //  
+  //  |\_           _/|
+  //  |  \_       _/  |
+  //  |    \_   _/    |
+  //  |      \_/      |
+  //  |               |
+  //  |     |\_/|     |
+  //  |     |___|     |
+  //  |_______________|
   //
   const unsigned numVertices = 10;
   double vertices[20] = {-5.0, -5.0,
@@ -52,62 +54,92 @@ int main(int argc, char** argv) {
   }
 
   // Test some points.  
-
-  { // Inside: fully
+  unsigned i = 1;
+  { // 1)  Inside: fully
     double p[2] = {-4.0, 1.0};
     bool answer = true;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2( inside == answer, "Test " << i );  ++i;
   }
 
-  { // Outside: fully
+  { // 2) Outside: fully
     double p[2] = {-6.0, -3.0};
     bool answer = false;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
 
-  { // Outside: within hole
+  { // 3) Outside: within hole
     double p[2] = {0.0, -3.5};
     bool answer = false;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
 
-  { // Inside: tangent to vertex
+  { // 4) Inside: tangent to vertex
     double p[2] = {3.0, 0.0};
     bool answer = true;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
   
-  { // Outside: tangent to vertex
+  { // 5) Outside: tangent to vertex
     double p[2] = {0.0, 5.0};
     bool answer = false;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
 
-  { // Inside: tangent to hole vertex
+  { // 6) Inside: tangent to hole vertex
     double p[2] = {2.0, -2.5};
     bool answer = true;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
 
-  { // Outside: within hole, tangent to hole vertex
+  { // 7) Outside: within hole, tangent to hole vertex
     double p[2] = {-0.5, -2.5};
     bool answer = false;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
 
-  { // Inside: tangent to face of hole
+  { // 8) Inside: tangent to face of hole
     double p[2] = {-1.0, 0.0};
     bool answer = true;
     const bool inside = within(p, numVertices, vertices, plc);
-    POLY_CHECK( inside == answer );
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
   }
+
+  { // 9) Inside: on left outer boundary
+    double p[2] = {-5.0, 0.0};
+    bool answer = true;
+    const bool inside = within(p, numVertices, vertices, plc);
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
+  }
+
+  { // 10) Inside: on right outer boundary
+    double p[2] = {5.0, 0.0};
+    bool answer = true;
+    const bool inside = within(p, numVertices, vertices, plc);
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
+  }
+
+  { // 11) Inside: on bottom outer boundary
+    double p[2] = {0.0, -5.0};
+    bool answer = true;
+    const bool inside = within(p, numVertices, vertices, plc);
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
+  }
+
+  { // 12) Inside: on hole boundary
+    double p[2] = {-1.0, -3.0};
+    bool answer = true;
+    const bool inside = within(p, numVertices, vertices, plc);
+    POLY_CHECK2(inside == answer, "Test " << i );  ++i;
+  }
+
+  
 
   cout << "PASS" << endl;
   return 0;

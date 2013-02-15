@@ -86,7 +86,6 @@ private:
   
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
-                       const std::vector<RealType>& PLCpoints,
                        triangulateio& delaunay) const;
   
   // TODO: This does something. The extent of which I have not yet determined
