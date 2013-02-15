@@ -221,13 +221,20 @@ withinPolygon2D(const RealType* point,
    unsigned j = numVertices - 1;
    bool result = false;
    for (unsigned i = 0; i < numVertices; ++i ) {
-      if (((vertices[2*i+1] < point[1] && vertices[2*j+1] >= point[1])  ||
-           (vertices[2*j+1] < point[1] && vertices[2*i+1] >= point[1])) &&
-          (vertices[2*i]   <= point[0] || vertices[2*j]   <= point[0]) ) {
-         result ^= ( vertices[2*i] + 
-                     ( point[1]        - vertices[2*i+1] ) /
-                     ( vertices[2*j+1] - vertices[2*i+1] ) *
-                     ( vertices[2*j]   - vertices[2*i]   ) < point[0] );
+      // if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
+      //    return true;
+      // }
+      if (((vertices[2*i+1]<= point[1] and vertices[2*j+1] >= point[1])  or
+           (vertices[2*j+1]<= point[1] and vertices[2*i+1] >= point[1])) and
+          (vertices[2*i]   <= point[0] or  vertices[2*j]   <= point[0]) ) {
+         if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
+            return true;
+         }else{
+            result ^= ( vertices[2*i] + 
+                        ( point[1]        - vertices[2*i+1] ) /
+                        ( vertices[2*j+1] - vertices[2*i+1] ) *
+                        ( vertices[2*j]   - vertices[2*i]   ) < point[0] );
+         }
       }
       j = i;
    }
