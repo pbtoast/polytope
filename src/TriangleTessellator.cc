@@ -48,6 +48,48 @@ using std::abs;
 
 namespace {
 
+
+// //------------------------------------------------------------------------------
+// // An implementation of the map specialized for testing true/false.
+// // If tested with a key that does not exist, it is initialized as false.
+// //------------------------------------------------------------------------------
+// template<typename Key, 
+//          typename Comparator = std::less<Key> >
+// class BoolMap: public std::map<Key, bool> {
+// public:
+//   BoolMap(): std::map<Key, bool>() {}
+//   virtual ~BoolMap() {}
+//   bool operator[](const Key& key) const {
+//     typename std::map<Key, bool>::const_iterator itr = this->find(key);
+//     if (itr == this->end()) return false;
+//     return itr->second;
+//   }
+// };
+
+// //------------------------------------------------------------------------------
+// // Predicate to check if either element of a std::pair matches the given value.
+// //------------------------------------------------------------------------------
+// template<typename T>
+// struct MatchEitherPairValue {
+//   T mval;
+//   MatchEitherPairValue(const T& x): mval(x) {}
+//   bool operator()(const std::pair<T, T>& x) const { return (x.first == mval or x.second == mval); }
+// };
+
+// //------------------------------------------------------------------------------
+// // Get the set of map keys
+// //------------------------------------------------------------------------------
+// template<typename Key, typename T>
+// std::set<Key>
+// getMapKeys(std::map<Key, T>& mapIn) {
+//   typename std::set<Key> result;
+//   for (typename std::map<Key, T>::const_iterator itr = mapIn.begin();
+//        itr != mapIn.end(); ++itr){
+//     result.insert( itr->first );
+//   }
+//   return result;
+// }
+
 ///------------------------------------------------------------------------
 // Union a Boost.Geometry ring with a Boost.Geometry multi_polygon.
 // The resulting multi_polygon is corrected to ensure it conforms to
@@ -63,48 +105,6 @@ createBGUnion( boost::geometry::model::ring<Point2<CoordHash>,false> ring,
   boost::geometry::union_(multiPolygon, ring, temp);
   boost::geometry::correct(temp);
   multiPolygon=temp;
-}
-//------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// An implementation of the map specialized for testing true/false.
-// If tested with a key that does not exist, it is initialized as false.
-//------------------------------------------------------------------------------
-template<typename Key, 
-         typename Comparator = std::less<Key> >
-class BoolMap: public std::map<Key, bool> {
-public:
-  BoolMap(): std::map<Key, bool>() {}
-  virtual ~BoolMap() {}
-  bool operator[](const Key& key) const {
-    typename std::map<Key, bool>::const_iterator itr = this->find(key);
-    if (itr == this->end()) return false;
-    return itr->second;
-  }
-};
-
-//------------------------------------------------------------------------------
-// Predicate to check if either element of a std::pair matches the given value.
-//------------------------------------------------------------------------------
-template<typename T>
-struct MatchEitherPairValue {
-  T mval;
-  MatchEitherPairValue(const T& x): mval(x) {}
-  bool operator()(const std::pair<T, T>& x) const { return (x.first == mval or x.second == mval); }
-};
-
-//------------------------------------------------------------------------------
-// Get the set of map keys
-//------------------------------------------------------------------------------
-template<typename Key, typename T>
-std::set<Key>
-getMapKeys(std::map<Key, T>& mapIn) {
-  typename std::set<Key> result;
-  for (typename std::map<Key, T>::const_iterator itr = mapIn.begin();
-       itr != mapIn.end(); ++itr){
-    result.insert( itr->first );
-  }
-  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -149,6 +149,27 @@ buildBoostBoundary(const vector<PointType>& IntPLCPoints,
 //------------------------------------------------------------------------------
 // Given an array of 3 integers and 1 unique value, find the other two.
 //------------------------------------------------------------------------------
+int
+findOtherTriIndex(const int* indices,
+                  const int a,
+                  const int b) {
+  POLY_ASSERT(a == indices[0] or a == indices[1] or a == indices[2]);
+  POLY_ASSERT(b == indices[0] or b == indices[1] or b == indices[2]);
+  POLY_ASSERT(indices[0] != indices[1] and 
+              indices[0] != indices[2] and 
+              indices[1] != indices[2]);
+  int c;
+  if (a != indices[0] and b != indices[0]) {
+    c = indices[0];
+  }else {
+    c = ((a == indices[1] or b == indices[1]) ? indices[2] : indices[1]);
+  }
+  return c;
+}
+
+//------------------------------------------------------------------------------
+// Given an array of 3 integers and 1 unique value, find the other two.
+//------------------------------------------------------------------------------
 void
 findOtherTriIndices(const int* indices,
                     const int a,
@@ -165,6 +186,86 @@ findOtherTriIndices(const int* indices,
     b = indices[1];
     c = indices[2];
   } 
+}
+
+//------------------------------------------------------------------------------
+// Find the circumcenters of each triangle, and build the set of triangles
+// associated with each generator.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+computeTriangleMaps(const RealType* pointList,
+                    const RealType* triangleList,
+                    const unsigned numberOfTriangles,
+                    map<pair<int,int>, vector<unsigned> >& edge2tri,
+                    map<int, set<unsigned> >& gen2tri,
+                    vector<Point2<RealType> >& circumcenters) {
+  int pindex, qindex, rindex, i, j;
+  pair<int,int> pq, pr, qr;
+  for (i = 0; i != numberOfTriangles; ++i) {
+    pindex = triangleList[3*i  ];
+    qindex = triangleList[3*i+1];
+    rindex = triangleList[3*i+2];
+    pq = internal::hashEdge(pindex, qindex);
+    pr = internal::hashEdge(pindex, rindex);
+    qr = internal::hashEdge(qindex, rindex);
+    geometry::computeCircumcenter2d(pointList[2*pindex],
+                                    pointList[2*qindex],
+                                    pointList[2*rindex],
+                                    &circumcenters[i].x);
+    gen2tri[pindex].insert(i);
+    gen2tri[qindex].insert(i);
+    gen2tri[rindex].insert(i);
+    edge2tri[pq].push_back(i);
+    edge2tri[pr].push_back(i);
+    edge2tri[qr].push_back(i);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Compute the outward-pointing unit vector from the edge of a triangle with
+// nodes p1 and p2. pvert is the third vertex of the triangle
+//------------------------------------------------------------------------------
+template<typename RealType>
+Point2<RealType> 
+computeEdgeUnitVector(RealType* p1, RealType* p2, RealType* pvert){
+  Point2<RealType> ehat, test_point, tricent;
+  geometry::computeTriangleCentroid2d(p1, p2, pvert, &tricent.x);
+  ehat.x = -(p2[1] - p1[1]);
+  ehat.y =  (p2[0] - p1[0]);
+  geometry::unitVector<2, RealType>(&ehat.x);
+  copy(p1, p1+2, &test_point.x);
+  test_point += ehat;
+  if ( orient2d(p1, p2, &tricent.x   )*
+       orient2d(p1, p2, &test_point.x) > 0.0){
+    ehat *= -1.0;
+  }
+  return ehat;
+}
+
+//------------------------------------------------------------------------------
+// Compute bounding box which contains the "infinite" sphere for 
+// unbounded tessellations
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+computeUnboundedBox(const RealType* points,
+                    const unsigned numPoints,
+                    const bool globalReduce,
+                    RealType low[Dimension],
+                    RealType high[Dimension]) {
+  RealType xmin[Dimension], xmax[Dimension];
+  geometry::computeBoundingBox(points, numPoints, globalReduce, xmin, xmax);
+  const RealType rinf = -std::numeric_limits<RealType>::max();
+  const RealType cent[Dimension];
+  for(unsigned j=0; j != Dimension; ++j) {
+    rinf = max( rinf, xmax[j]-xmin[j] );
+    cent[j] = 0.5*( xmin[j]+xmax[j] );
+  }
+  for(unsigned j=0; j != Dimension; ++j) {
+    low[j]  = cent[j] - rinf;
+    high[j] = cent[j] + rinf;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -268,18 +369,18 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
 }
 
 
-//------------------------------------------------------------------------------
-// Counts the number of times we recursively call tessellate
-//------------------------------------------------------------------------------
-class RecursionCounter {
-public:
-   inline RecursionCounter() { ++count; }
-   inline ~RecursionCounter() { --count; }
-   inline operator int() const { return count; }
-private:
-   static int count;
-};
-int RecursionCounter::count = 0;
+// //------------------------------------------------------------------------------
+// // Counts the number of times we recursively call tessellate
+// //------------------------------------------------------------------------------
+// class RecursionCounter {
+// public:
+//    inline RecursionCounter() { ++count; }
+//    inline ~RecursionCounter() { --count; }
+//    inline operator int() const { return count; }
+// private:
+//    static int count;
+// };
+// int RecursionCounter::count = 0;
 
 
 } // end anonymous namespace
@@ -386,7 +487,7 @@ tessellate(const vector<RealType>& points,
   
   // The bounding circle onto which we project the "infinite" rays of the 
   // unbounded faces of the tessellation.
-  const RealType rinf = 4.0*max(cbox[0], cbox[1]);
+  const RealType rinf = 2.0*max(cbox[0], cbox[1]);
   const RealType cboxc[2] = {0.5*(mLow[0]+mHigh[0]), 0.5*(mLow[1]+mHigh[1])};
 
   // We resize mLow and boxsize so that the bounding box
@@ -406,13 +507,13 @@ tessellate(const vector<RealType>& points,
     tri2id[i] = j;
   }
   
-  // Blago!
+  // // Blago!
   // cerr << "Bounding box:"
   //      << "(" << mLow[0] << "," << mHigh[0] << ")x"
   //      << "(" << mLow[1] << "," << mHigh[1] << ")" << endl;
   // cerr << "Box size    = " << cboxsize << endl;
   // cerr << "spacing     = " << mdx << endl;
-  // Blago!
+  // // Blago!
 
   // The exterior edges of the triangularization have "unbounded" rays, originating
   // at the circumcenter of the corresponding triangle and passing perpendicular to
@@ -656,7 +757,6 @@ tessellate(const vector<RealType>& points,
            const PLC<2, RealType>& geometry,
            Tessellation<2, RealType>& mesh) const 
 {
-  RecursionCounter recursionDepth;
   POLY_ASSERT(!points.empty());
 
   // Make sure we're not modifying an existing tessellation.
@@ -786,7 +886,7 @@ tessellate(const vector<RealType>& points,
   // sub-tessellation by using the geometry obtained by union-ing the orphan 
   // with its neighboring cells. The way we compute cell neighbors should ensure
   // that the union gives a contiguous geometry with no holes
-  if( orphanage.size() > 0 and recursionDepth == 1 ){
+  if( orphanage.size() > 0 ){ //and recursionDepth == 1 ){
 
     // // First aglomerate all orphaned pieces that neighbor one another by searching orphan pairs
     // // TODO: Figure out a more efficient way to do this operation
@@ -841,7 +941,6 @@ tessellate(const vector<RealType>& points,
       // cerr << endl;
       // Blago!
         
-        
       // If the orphan only has a single neighbor, we can skip a lot of work.
       // No need to tessellate - simply union the orphan with its neighbor cell.
       Tessellation<2, RealType> submesh;
@@ -872,7 +971,7 @@ tessellate(const vector<RealType>& points,
             POLY_ASSERT(0);
           }
         }
-          
+
         BGring boundaryRing = neighborCells[0].outer();
         
         // TODO: Make sure union-ing rings that share a common face results in 
@@ -899,7 +998,7 @@ tessellate(const vector<RealType>& points,
           subPLC.facets[i][1] = (i+1) % nSides;
         }
 
-          tessellate(subpoints,subPLCpoints,subPLC,submesh);
+        tessellate(subpoints,subPLCpoints,subPLC,submesh);
       }
         
       // We're only concerned with the cells in the sub-tessellation whose generators
@@ -941,10 +1040,10 @@ tessellate(const vector<RealType>& points,
              cerr << (*itr).realx(mLow[0],mdx) << " " 
                   << (*itr).realy(mLow[1],mdx) << endl;
           }
-          for (typename BGring::const_iterator itr = thisRing.begin();
-               itr != thisRing.end(); ++itr){
-             cerr << *itr << endl;
-          }
+          // for (typename BGring::const_iterator itr = thisRing.begin();
+          //      itr != thisRing.end(); ++itr){
+          //    cerr << *itr << endl;
+          // }
           // Blago!
 
             
@@ -956,6 +1055,16 @@ tessellate(const vector<RealType>& points,
           BGring simplifiedRing;
           boost::geometry::simplify(thisRing, simplifiedRing, 1);
           thisRing = simplifiedRing;
+
+          // // Blago!
+          // cerr << endl << "Cell " << thisIndex << endl;
+          // cerr << endl << "POST SIMPLIFY:" << endl;
+          // for (typename BGring::const_iterator itr = thisRing.begin();
+          //      itr != thisRing.end(); ++itr){
+          //    cerr << (*itr).realx(mLow[0],mdx) << " " 
+          //         << (*itr).realy(mLow[1],mdx) << endl;
+          // }
+          // // Blago!
         }
         
         // If the orphan has only a single neighbor, just compute its union with
@@ -963,10 +1072,20 @@ tessellate(const vector<RealType>& points,
         else{
           thisRing = orphan;
         }
-             
+
         // Union this new cell ring with the original cell ring from the full tessellation
         std::vector<BGring> unionRing;
         boost::geometry::union_( thisRing, cellRings[thisIndex], unionRing );
+        // Blago!
+        for (int ii=0; ii<unionRing.size(); ++ii){
+          cerr << "Union Ring " << ii+1 << ":" << endl;
+          for (typename BGring::const_iterator itr = unionRing[ii].begin();
+              itr != unionRing[ii].end(); ++itr){
+            cerr << (*itr).realx(mLow[0],mdx) << " " 
+                 << (*itr).realy(mLow[1],mdx) << endl;
+          }
+        }
+        // Blago!
         POLY_ASSERT(unionRing.size() == 1);
         thisRing = unionRing[0];
 
@@ -1103,6 +1222,109 @@ template class TriangleTessellator<double>;
 //------------------------------------------------------------------------------
 //PRIVATE STUFF:
 //------------------------------------------------------------------------------
+
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// void
+// TriangleTessellator<RealType>::
+// subtessellate(const vector<RealType>& points,
+//               const vector<RealType>& PLCpoints,
+//               const PLC<2, RealType>& geometry,
+//               vector<BGring>& cellRings) const 
+// {
+//   POLY_ASSERT(!points.empty());
+//   POLY_ASSERT2(!PLCpoints.empty(), "Error: attempting to create a bounded "
+//                << "tessellation with no bounding points");
+//   POLY_ASSERT2(!geometry.empty(),  "Error: attempting to create a bounded "
+//                << "tessellation with no bounding PLC");
+  
+//   // Make sure we're not modifying an existing tessellation.
+//   POLY_ASSERT(mesh.empty());
+
+//   // // Find the range of the generator points.
+//   const unsigned numGenerators = points.size()/2;
+//   const unsigned numPLCpoints = PLCpoints.size()/2;
+//   int i, j, k;
+//   // for (i = 0; i != numPLCpoints; ++i) {
+//   //   mLow [0] = min(mLow [0], PLCpoints[2*i  ]);
+//   //   mLow [1] = min(mLow [1], PLCpoints[2*i+1]);
+//   //   mHigh[0] = max(mHigh[0], PLCpoints[2*i  ]);
+//   //   mHigh[1] = max(mHigh[1], PLCpoints[2*i+1]);
+//   // }
+//   // POLY_ASSERT(mLow[0] < mHigh[0] and mLow[1] < mHigh[1]);
+
+//   // Start by creating an unbounded tessellation
+//   tessellate(points, mesh);
+  
+//   // Quantize the PLCpoints
+//   std::vector<IntPoint> IntPLCPoints(numPLCpoints);
+//   for (i = 0; i < numPLCpoints; ++i){
+//     IntPLCPoints[i] = IntPoint( PLCpoints[2*i], PLCpoints[2*i+1],
+// 				mLow[0], mLow[1], mdx );
+//   }
+
+//   // Generate the quantized boundary to handle boost intersections
+//   BGpolygon boundary;
+//   buildBoostBoundary(IntPLCPoints, geometry, boundary);
+  
+//   // Walk each generator and build up it's unique nodes and faces.
+//   //mesh.cells.resize(numGenerators);
+//   IntPoint X, IntNode;
+//   bool inside;
+//   for (i = 0; i != numGenerators; ++i) {
+//     vector<IntPoint> cellBoundary;
+//     for (vector<int>::const_iterator faceItr = mesh.cells[i].begin();
+//          faceItr != mesh.cells[i].end(); ++faceItr){
+//       const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+//       POLY_ASSERT(iface < mesh.faceCells.size());
+//       POLY_ASSERT(mesh.faces[iface].size() == 2);
+//       const unsigned inode1 = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
+//       const unsigned inode2 = *faceItr < 0 ? mesh.faces[iface][0] : mesh.faces[iface][1];
+//       IntNode = IntPoint(mesh.nodes[2*inode1  ],
+//                          mesh.nodes[2*inode1+1],
+//                          mLow[0], mLow[1], mdx);
+//       cellBoundary.push_back(IntNode);
+//       if( mesh.infNodes[inode1]==1 and mesh.infNodes[inode2]==1 ){
+//          // Check that segment connectig node1 and node2 doesn't intersect inner
+//          // bounding radius.
+//          //    If it does: get an intermediate point at the outer "infinite" radius
+//          //                in between node1 and node2, quantize it, and add it
+//          //                to the cell ring
+//       }
+//     }
+//     cellBoundary.push_back( cellBoundary[0] );  // Close the ring
+//     boost::geometry::assign(cellRings[i], BGring(cellBoundary.begin(), cellBoundary.end()));
+//     boost::geometry::correct(cellRings[i]);
+
+//     // Intersect with the boundary to get the bounded cell.
+//     // Since for complex boundaries this may return more than one polygon, we find
+//     // the one that contains the generator.
+//     vector<BGring> cellIntersections;
+//     boost::geometry::intersection(boundary, cellRings[i], cellIntersections);
+//     if (cellIntersections.size() == 0) {
+//       cerr << points[2*i] << " " << points[2*i+1] << endl 
+//            << boost::geometry::dsv(cellRings[i]) << endl
+//            << boost::geometry::dsv(boundary) << endl;
+//     }
+//     POLY_ASSERT(cellIntersections.size() > 0);
+//     if (cellIntersections.size() == 1) {
+//       cellRings[i] = cellIntersections[0];
+//     } else {
+//       X = IntPoint(points[2*i], points[2*i+1], mLow[0], mLow[1], mdx);
+//       k = cellIntersections.size();
+//       for (j = 0; j != cellIntersections.size(); ++j) {
+//         inside = boost::geometry::within(X, cellIntersections[j]);
+//         if( inside )  k = j;
+//       }
+//       POLY_ASSERT(k < cellIntersections.size());
+//       cellRings[i] = cellIntersections[k];
+//     }
+//   }
+// }
+
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
@@ -1170,72 +1392,97 @@ computeDelaunay(const vector<RealType>& points,
 }
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-something(triangulateio& delaunay) const {
-  // Create the Voronoi nodes from the list of triangles. Each triangle 
-  // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
-  // The Voronoi node is located at the center of the triangle, though things
-  // get a little squirrely at boundaries.  On boundary edges we create
-  // a vertex at the edge center.
-
-  // Find the circumcenters of each triangle, and build the set of triangles
-  // associated with each generator.
-  vector<RealPoint> circumcenters(delaunay.numberoftriangles);
-  map<EdgeHash, vector<unsigned> > edge2tri;
-  map<int, set<int> > gen2tri;
-  int i, pindex, qindex, rindex;
-  EdgeHash pq, pr, qr;
-  for (i = 0; i != delaunay.numberoftriangles; ++i) {
-    pindex = delaunay.trianglelist[3*i];
-    qindex = delaunay.trianglelist[3*i + 1];
-    rindex = delaunay.trianglelist[3*i + 2];
-    pq = internal::hashEdge(pindex, qindex);
-    pr = internal::hashEdge(pindex, rindex);
-    qr = internal::hashEdge(qindex, rindex);
-    geometry::computeCircumcenter2d(&delaunay.pointlist[2*pindex],
-                                    &delaunay.pointlist[2*qindex],
-                                    &delaunay.pointlist[2*rindex],
-                                    &circumcenters[i].x);
-    gen2tri[pindex].insert(i);
-    gen2tri[qindex].insert(i);
-    gen2tri[rindex].insert(i);
-    edge2tri[pq].push_back(i);
-    edge2tri[pr].push_back(i);
-    edge2tri[qr].push_back(i);
-    mLow[0] = min(mLow[0], circumcenters[i].x);
-    mLow[1] = min(mLow[1], circumcenters[i].y);
-    mHigh[0] = max(mHigh[0], circumcenters[i].x);
-    mHigh[1] = max(mHigh[1], circumcenters[i].y);
-  }
-  
-  // The circumcenters may all lie inside the convex hull of the
-  // generators for an unbounded tessellation.
-  for (i = 0; i != delaunay.numberofpoints; ++i){
-     mLow[0]  = min(mLow[0] , delaunay.pointlist[2*i  ]);
-     mLow[1]  = min(mLow[1] , delaunay.pointlist[2*i+1]);
-     mHigh[0] = max(mHigh[0], delaunay.pointlist[2*i  ]);
-     mHigh[1] = max(mHigh[1], delaunay.pointlist[2*i+1]);
-  }
-  POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
-  POLY_ASSERT(mLow[0] < mHigh[0] and mLow[1] < mHigh[1]);
-  
-  // The bounding box which contains PLC, and all circumcenters and generators
-  RealType cbox[2] = {mHigh[0] - mLow[0], mHigh[1] - mLow[1]};
-  
-  // The bounding circle onto which we project the "infinite" rays of the 
-  // unbounded faces of the tessellation.
-  const RealType rinf = 4.0*max(cbox[0], cbox[1]);
-  const RealType cboxc[2] = {0.5*(mLow[0]+mHigh[0]), 0.5*(mLow[1]+mHigh[1])};
-
-  // We resize mLow and boxsize so that the bounding box
-  // contains the "infinite" sphere. mHigh is not really needed.
-  mLow [0] = cboxc[0]-rinf;  mLow [1] = cboxc[1]-rinf;
-  mHigh[0] = cboxc[0]+rinf;  mHigh[1] = cboxc[1]+rinf;
-  const double cboxsize = 2.0*rinf;
-  mdx = max(degeneracy, cboxsize/coordMax);
-}
 
 }
+
+
+
+
+
+
+// //------------------------------------------------------------------------------
+// // Compute bounding box which contains the "infinite" sphere for 
+// // unbounded tessellations
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// void
+// TriangleTessellator<RealType>::
+// subtessellate(const vector<RealType>& points,
+//               const vector<RealType>& PLCpoints,
+//               const PLC<2, RealType>& geometry,
+//               const RealType* low,
+//               const RealType* high,
+//               const RealType  dx,
+//               vector<BGring>& cellRings) const 
+// {
+//   POLY_ASSERT(!points.empty());
+
+//   // Make sure we're not modifying an existing tessellation.
+//   POLY_ASSERT(mesh.empty());
+
+//   const CoordHash coordMax = (1LL << 30); // numeric_limits<CoordHash>::max() >> 32U;
+//   const double degeneracy = 1.0e-12;
+  
+//   // Compute the triangularization
+//   triangulateio delaunay;
+//   computeDelaunay(points, delaunay);
+
+//   const unsigned numGenerators = points.size()/2;
+  
+//   //--------------------------------------------------------
+//   // Create the Voronoi tessellation from the triangulation.
+//   //--------------------------------------------------------
+
+//   // Create the Voronoi nodes from the list of triangles. Each triangle 
+//   // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
+//   vector<RealPoint> circumcenters;
+//   map<EdgeHash, vector<unsigned> > edge2tri;
+//   map<int, set<unsigned> > gen2tri;
+//   map<RealPoint, int> circ2id;
+//   map<int, unsigned> tri2id;
+//   computeTriangleMaps(delaunay.pointlist, 
+//                       delaunay.trianglelist,
+//                       delaunay.numberoftriangles,
+//                       circumcenters, edge2tri, gen2tri, circ2id, tri2id);
+  
+//   // The exterior edges of the triangularization have "unbounded" rays, originating
+//   // at the circumcenter of the corresponding triangle and passing perpendicular to
+//   // the edge
+//   bool test;
+//   RealPoint ehat, pinf;
+//   map<EdgeHash, unsigned> edge2id;
+//   unsigned k, i1, i2;
+//   mesh.infNodes = vector<unsigned>(circ2id.size());
+//   for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tri.begin();
+//        edgeItr != edge2tri.end(); ++edgeItr){
+//     const EdgeHash& edge = edgeItr->first;
+//     const vector<unsigned>& tris = edgeItr->second;
+//     if (tris.size() == 1){
+//       i  = tris[0];
+//       i1 = edge.first;
+//       i2 = edge.second;      
+//       POLY_ASSERT(i < delaunay.numberoftriangles);
+//       i3 = findOtherTriIndex(&delaunay.trianglelist[3*i], i1, i2);
+
+//       // Get the unit vector pointing out of the triangle, perp to the edge
+//       ehat = computeEdgeUnitVector(&delaunay.pointlist[2*i1],
+//                                    &delaunay.pointlist[2*i2],
+//                                    &delaunay.pointlist[2*i3]);
+                                   
+//       // Get the intersection point along the "infinite" circumcircle
+//       test = geometry::rayCircleIntersection(&circumcenters[i].x,
+//                                              &ehat.x,
+//                                              cboxc,
+//                                              rinf,
+//                                              1.0e-10,
+//                                              &pinf.x);
+//       POLY_ASSERT(test);
+//       k = circ2id.size();
+//       j = internal::addKeyToMap(pinf, circ2id);
+//       POLY_ASSERT(edge2id.find(edge) == edge2id.end());
+//       edge2id[edge] = j;
+//       if (k != circ2id.size()) mesh.infNodes.push_back(1);
+//     }
+//   }
+// }
+
