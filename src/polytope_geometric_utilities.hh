@@ -721,6 +721,31 @@ computeTetCentroid(double* A, double* B, double* C, double* D, double* X) {
   X[2] = 0.25*(A[2] + B[2] + C[2] + D[2]);
 }
 
+//------------------------------------------------------------------------------
+// Compute intersection of two 2D line segments if it exists
+//------------------------------------------------------------------------------
+inline
+bool
+segmentIntersection2D(double* a, double* b, double* c, double* d, double* result) {
+   double r1[2] = {b[0]-a[0] , b[1]-a[1]};  //direction vector of first segment
+   double r2[2] = {d[0]-c[0] , d[1]-c[1]};  //direction vector of second segment
+   double ca[2] = {c[0]-a[0] , c[1]-a[1]};
+   double r1_cross_r2[3];
+   cross<2,double>(r1, r2, r1_cross_r2);
+   // Parallel segments
+   if( r1_cross_r2[2] == 0 ) return false;
+   double t[3];
+   cross<2,double>(ca, r2, t);
+   double p = t[2]/r1_cross_r2[2];
+   // The finite segments intersect
+   if( 0 <= p and p <= 1 ){
+      result[0] = a[0] + p*r1[0];
+      result[1] = a[1] + p*r1[1];
+      return true;
+   }
+   return false;
+}
+
 }
 }
 
