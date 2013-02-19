@@ -88,8 +88,15 @@ private:
   void computeDelaunay(const std::vector<RealType>& points,
                        triangulateio& delaunay) const;
   
-  // TODO: This does something. The extent of which I have not yet determined
-  void something(triangulateio& delaunay) const;
+  // Compute cell rings from an unbounded tessellation
+  void computeCellRings(const std::vector<RealType>& points,
+			const std::vector<RealType>& PLCpoints,
+			const PLC<2, RealType>& geometry,
+			RealType* low,
+			RealType* high,
+			std::vector<BGring>& cellRings,
+			std::map<int, std::vector<BGring> >& orphanage) const;
+
 
   mutable std::vector<RealType> mLow;
   mutable std::vector<RealType> mHigh;

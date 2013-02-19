@@ -20,7 +20,7 @@
 # (3) If a test has multiple dependencies, submit the dependency list
 #     as a single string, with individual entries separated by a semi-colon
 #     (EXAMPLE: if both TETGEN and MPI are needed, the dependency list
-#               should read "TETGEN:MPI"
+#               should read "TETGEN;MPI"
 #-----------------------------------------------------------------------------
 
 # The POLYTOPE_ADD_TEST macro
@@ -32,6 +32,7 @@ POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
 POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
 POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
 POLYTOPE_ADD_TEST( "within_2d"       "" )
+POLYTOPE_ADD_TEST( "intersect_2d"    "" )
 
 # Serial tessellator tests
 POLYTOPE_ADD_TEST( "UnitSquare"          "BOOST"    )

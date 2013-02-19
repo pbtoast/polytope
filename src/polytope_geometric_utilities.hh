@@ -388,13 +388,13 @@ raySphereIntersection(const RealType* p_ray,
 }
 
 //------------------------------------------------------------------------------
-// Find the ray-sphere intersection, assuming the ray's origin is inside the 
-// sphere.
+// Find the ray-circle intersection, assuming the ray's origin is inside the 
+// circle.
 // Arguments:
 //   p_ray : point origin of ray.
 //   n_ray : unit normal in direction of ray.
-// p_sphere: center of the circle.
-// r_sphere: radius of the circle.
+// p_circle: center of the circle.
+// r_circle: radius of the circle.
 //     tol : the tolerance for zero (check for parallel lines and such)
 //  result : the intersection point
 //------------------------------------------------------------------------------
@@ -724,19 +724,23 @@ computeTetCentroid(double* A, double* B, double* C, double* D, double* X) {
 //------------------------------------------------------------------------------
 // Compute intersection of two 2D line segments if it exists
 //------------------------------------------------------------------------------
-inline
+template<typename RealType>
 bool
-segmentIntersection2D(double* a, double* b, double* c, double* d, double* result) {
-   double r1[2] = {b[0]-a[0] , b[1]-a[1]};  //direction vector of first segment
-   double r2[2] = {d[0]-c[0] , d[1]-c[1]};  //direction vector of second segment
-   double ca[2] = {c[0]-a[0] , c[1]-a[1]};
-   double r1_cross_r2[3];
-   cross<2,double>(r1, r2, r1_cross_r2);
+segmentIntersection2D(const RealType* a, 
+		      const RealType* b, 
+		      const RealType* c, 
+		      const RealType* d, 
+		      RealType* result) {
+   RealType r1[2] = {b[0]-a[0] , b[1]-a[1]};  //direction vector of first segment
+   RealType r2[2] = {d[0]-c[0] , d[1]-c[1]};  //direction vector of second segment
+   RealType ca[2] = {c[0]-a[0] , c[1]-a[1]};
+   RealType r1_cross_r2[3];
+   cross<2,RealType>(r1, r2, r1_cross_r2);
    // Parallel segments
    if( r1_cross_r2[2] == 0 ) return false;
-   double t[3];
-   cross<2,double>(ca, r2, t);
-   double p = t[2]/r1_cross_r2[2];
+   RealType t[3];
+   cross<2,RealType>(ca, r2, t);
+   RealType p = t[2]/r1_cross_r2[2];
    // The finite segments intersect
    if( 0 <= p and p <= 1 ){
       result[0] = a[0] + p*r1[0];
