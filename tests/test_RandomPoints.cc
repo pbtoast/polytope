@@ -139,7 +139,7 @@ int main(int argc, char** argv)
    // outputResult(triangle,5,20);
    // cout << "*****This completes test " << rnum << "******" << endl;
 
-   outputResult(triangle,0,10);
+   outputResult(triangle,2,200);
 
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities

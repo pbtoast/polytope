@@ -980,8 +980,8 @@ tessellate(const vector<RealType>& points,
       node[1] = result[1];
     }
      
-    POLY_ASSERT( node[0] >= low[0] and node[0] <= high[0] );
-    POLY_ASSERT( node[1] >= low[1] and node[1] <= high[1] );
+    // POLY_ASSERT( node[0] >= low[0] and node[0] <= high[0] );
+    // POLY_ASSERT( node[1] >= low[1] and node[1] <= high[1] );
     mesh.nodes[2*i]   = node[0];
     mesh.nodes[2*i+1] = node[1];
 
