@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <sstream>
+#include <algorithm>
 
 #include "polytope.hh"
 #include "Boundary2D.hh"
@@ -30,14 +31,19 @@ int main(int argc, char** argv)
 #endif
    
    unsigned nPoints = 100;     // Number of generators
-   unsigned nIter   = 20;      // Number of iterations
+   unsigned nIter   = 100;      // Number of iterations
 
    // Set up boundary and disperse random generator locations
    Boundary2D<double> boundary;
-   boundary.unitCircle();
+   boundary.donut();
    Generators<2,double> generators(boundary);
    generators.randomPoints(nPoints);
-   std::vector<double> points = generators.mPoints;
+   std::vector<double> points;
+   for (unsigned i = 0; i != nPoints; ++i) {
+     if (boundary.testInside(&generators.mPoints[2*i])) {
+       std::copy(&generators.mPoints[2*i], &generators.mPoints[2*i+2], std::back_inserter(points));
+     }
+   }
    
    // Initialize mesh and tessellator
    Tessellation<2,double> mesh;
@@ -72,8 +78,8 @@ int main(int argc, char** argv)
       for (int i = 0; i < mesh.cells.size(); ++i){
          double tmp[2];
          geometry::computeCellCentroid(mesh, i, tmp);
-         points[2*i  ] = tmp[0];
-         points[2*i+1] = tmp[1];
+         points[2*i  ] = 0.5*(points[2*i  ] + tmp[0]);
+         points[2*i+1] = 0.5*(points[2*i+1] + tmp[1]);
       }
    }
 
