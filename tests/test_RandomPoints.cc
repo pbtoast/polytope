@@ -19,9 +19,7 @@
 #include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 using namespace std;
@@ -128,7 +126,7 @@ int main(int argc, char** argv)
    TriangleTessellator<double> triangle;
    //testAllBoundaries(triangle);
 
-   //srand(10489593);  //cell parents multiple orphans            - PASSES
+   srand(10489593);  //cell parents multiple orphans            - PASSES
    //srand(10489594);  //orphan neighbors are orphan parents      - PASSES
    //srand(10489609);  //overlapping orphans (order issue)        - FAILS
    //srand(10489611);  //empty orphan neighbor set                - FAILS
@@ -136,10 +134,9 @@ int main(int argc, char** argv)
 
    // int rnum = 10489616;
    // srand(rnum);
-   // outputResult(triangle,5,20);
-   // cout << "*****This completes test " << rnum << "******" << endl;
-
-   outputResult(triangle,2,200);
+   outputResult(triangle,5,20);
+   
+   //outputResult(triangle,2,200);
 
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
