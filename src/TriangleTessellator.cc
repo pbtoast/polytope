@@ -13,6 +13,7 @@
 #include "convexHull_2d.hh"
 #include "nearestPoint.hh"
 #include "within.hh"
+#include "intersect.hh"
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -227,20 +228,24 @@ computeTriangleMaps(const RealType* pointList,
 // nodes p1 and p2. pvert is the third vertex of the triangle
 //------------------------------------------------------------------------------
 template<typename RealType>
-Point2<RealType> 
-computeEdgeUnitVector(RealType* p1, RealType* p2, RealType* pvert){
-  Point2<RealType> ehat, test_point, tricent;
+void
+computeEdgeUnitVector(RealType* p1, 
+		      RealType* p2, 
+		      RealType* pvert,
+		      RealType* result){
+  Point2<RealType> test_point, tricent;
   geometry::computeTriangleCentroid2d(p1, p2, pvert, &tricent.x);
-  ehat.x = -(p2[1] - p1[1]);
-  ehat.y =  (p2[0] - p1[0]);
-  geometry::unitVector<2, RealType>(&ehat.x);
+  result[0] = -(p2[1] - p1[1]);
+  result[1] =  (p2[0] - p1[0]);
+  geometry::unitVector<2, RealType>(result);
   copy(p1, p1+2, &test_point.x);
-  test_point += ehat;
+  test_point.x += result[0];
+  test_point.y += result[1];
   if ( orient2d(p1, p2, &tricent.x   )*
        orient2d(p1, p2, &test_point.x) > 0.0){
-    ehat *= -1.0;
+    result[0] *= -1.0;
+    result[1] *= -1.0;
   }
-  return ehat;
 }
 
 //------------------------------------------------------------------------------
@@ -520,9 +525,10 @@ tessellate(const vector<RealType>& points,
       i2 = edge.second;
       ivert = findOtherTriIndex(&delaunay.trianglelist[3*i], i1, i2);
       
-      ehat = computeEdgeUnitVector(&delaunay.pointlist[2*i1],
-				   &delaunay.pointlist[2*i2],
-				   &delaunay.pointlist[2*ivert]);
+      computeEdgeUnitVector(&delaunay.pointlist[2*i1],
+			    &delaunay.pointlist[2*i2],
+			    &delaunay.pointlist[2*ivert],
+			    &ehat.x);
        
       // Get the intersection point along the "infinite" circumcircle
       test = geometry::rayCircleIntersection(&circumcenters[i].x,
@@ -1051,6 +1057,13 @@ computeCellRings(const vector<RealType>& points,
   Tessellation<2,RealType> mesh;
   tessellate(points, mesh);
 
+  // The bounding box which contains PLC, and all circumcenters and generators
+  RealType cbox[2] = {mHigh[0] - mLow[0], mHigh[1] - mLow[1]};
+  
+  // Bounding circle radius and center
+  const RealType rinf = 2.0*max(cbox[0], cbox[1]);
+  const RealType cboxc[2] = {0.5*(mLow[0]+mHigh[0]), 0.5*(mLow[1]+mHigh[1])};
+
   // Quantize the PLCpoints
   std::vector<IntPoint> IntPLCPoints(numPLCpoints);
   for (i = 0; i < numPLCpoints; ++i){
@@ -1064,7 +1077,8 @@ computeCellRings(const vector<RealType>& points,
 
   // Walk each generator and build up it's unique nodes and faces.
   IntPoint X, IntNode;
-  bool inside;
+  RealPoint ehat, pinf;
+  bool inside, test;
   cellRings.resize(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
     vector<IntPoint> cellBoundary;
@@ -1079,12 +1093,33 @@ computeCellRings(const vector<RealType>& points,
                          mesh.nodes[2*inode1+1],
                          mLow[0], mLow[1], mdx);
       cellBoundary.push_back(IntNode);
-      if( mesh.infNodes[inode1]==1 and mesh.infNodes[inode2]==1 ){
-         // Check that segment connectig node1 and node2 doesn't intersect inner
-         // bounding radius.
-         //    If it does: get an intermediate point at the outer "infinite" radius
-         //                in between node1 and node2, quantize it, and add it
-         //                to the cell ring
+      // If both face nodes are infNodes, the inf face that connects them crosses the
+      // interior of the "infinite" bounding circle. Test if the face intersects
+      // the PLC boundary
+      if (mesh.infNodes[inode1]==1 and mesh.infNodes[inode2]==1){
+	vector<RealType> result;
+	unsigned nints = intersect(&mesh.nodes[2*inode1], &mesh.nodes[2*inode2], 
+				   numPLCpoints, &PLCpoints[0], geometry, result);
+	// If it intersects, create a new inf node between them by projecting
+	// the generator position out to the bounding circle along the ray
+	// pointing normal to the original inf face.
+	if (nints > 0){
+	  cerr << "Connecting two inf nodes crosses the PLC boundary!" << endl;
+	  computeEdgeUnitVector(&mesh.nodes[2*inode1],
+				&mesh.nodes[2*inode2],
+				(RealType*)&points[2*i],
+				&ehat.x);
+	  test = geometry::rayCircleIntersection(&points[2*i],
+						 &ehat.x,
+						 cboxc,
+						 rinf,
+						 1.0e-10,
+						 &pinf.x);
+	  POLY_ASSERT(test);
+	  // Add the fictitious inf node
+	  IntNode = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mdx);
+	  cellBoundary.push_back(IntNode);
+	}
       }
     }
     POLY_ASSERT(cellBoundary.size() > 0);
