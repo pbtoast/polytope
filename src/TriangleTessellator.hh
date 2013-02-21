@@ -83,7 +83,15 @@ private:
 
   static CoordHash coordMax;
   static double degeneracy;
-  
+
+  // Compute an unbounded tessellation from two-point data
+  void computeVoronoiFromTwoPoints(const std::vector<RealType>& points,
+                                   Tessellation<2, RealType>& mesh) const;
+
+  // Compute an unbounded tessellation
+  void computeVoronoi(const std::vector<RealType>& points,
+                      Tessellation<2, RealType>& mesh) const;
+
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
                        triangulateio& delaunay) const;
@@ -97,7 +105,7 @@ private:
 			std::vector<BGring>& cellRings,
 			std::map<int, std::vector<BGring> >& orphanage) const;
 
-
+  // Bounding box to compute quantized point
   mutable std::vector<RealType> mLow;
   mutable std::vector<RealType> mHigh;
   mutable RealType mdx;

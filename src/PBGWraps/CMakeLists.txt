@@ -35,7 +35,7 @@ add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
-  ${PYTHON_STATIC_LIB}
+#  ${PYTHON_STATIC_LIB}
 )
 
 # Remove the "lib" prefix convention from the library
