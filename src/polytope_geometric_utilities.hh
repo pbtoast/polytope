@@ -259,10 +259,10 @@ computeBoundingBox(const RealType* pos,
    }
    const unsigned n = pos_size/Dimension;
    for (unsigned i = 0; i != n; ++i) {
-      for (unsigned j = 0; j != Dimension; ++j) {
-         xmin[j] = std::min(xmin[j], pos[Dimension*i + j]);
-         xmax[j] = std::max(xmax[j], pos[Dimension*i + j]);
-      }
+     for (unsigned j = 0; j != Dimension; ++j) {
+       xmin[j] = std::min(xmin[j], pos[Dimension*i + j]);
+       xmax[j] = std::max(xmax[j], pos[Dimension*i + j]);
+     }
    }
 #if HAVE_MPI
    if (globalReduce) {
@@ -290,6 +290,40 @@ computeBoundingBox(const std::vector<RealType>& pos,
                                           xmin,
                                           xmax);
 }
+
+
+
+template<int Dimension, typename RealType>
+inline
+void
+expandBoundingBox(const RealType* pos,
+		  const unsigned pos_size,
+		  const bool globalReduce,
+		  RealType xmin[Dimension],
+		  RealType xmax[Dimension]) {
+  RealType low[Dimension], high[Dimension];
+  computeBoundingBox<Dimension, RealType>(pos,
+					  pos_size,
+					  globalReduce,
+					  low,
+					  high);
+  const unsigned n = pos_size/Dimension;
+  for (unsigned i = 0; i != n; ++i) {
+    for (unsigned j = 0; j != Dimension; ++j) {
+      xmin[j] = std::min(xmin[j], low [j]);
+      xmax[j] = std::max(xmax[j], high[j]);
+    }
+  }
+#if HAVE_MPI
+  if (globalReduce) {
+    for (unsigned j = 0; j != Dimension; ++j) {
+      xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);
+      xmax[j] = allReduce(xmax[j], MPI_MAX, MPI_COMM_WORLD);
+    }
+  }
+#endif
+}
+
 
 //------------------------------------------------------------------------------
 // Find the ray-plane intersection, return true if there's a valid answer and

@@ -340,9 +340,6 @@ template<typename RealType>
 TriangleTessellator<RealType>::
 TriangleTessellator():
   Tessellator<2, RealType>() {
-   // mLow.assign(  2,  numeric_limits<RealType>::max() );
-   // mHigh.assign( 2, -numeric_limits<RealType>::max() );
-   // mdx = 0;
 }
 //------------------------------------------------------------------------------
 
@@ -361,6 +358,12 @@ tessellate(const vector<RealType>& points,
            Tessellation<2, RealType>& mesh) const {
   const unsigned numGenerators = points.size()/2;
   POLY_ASSERT(numGenerators > 1 );
+  
+  // Reset the bounding box and quantized mesh spacing
+  mLow.assign(  2,  numeric_limits<RealType>::max() );
+  mHigh.assign( 2, -numeric_limits<RealType>::max() );
+  mdx = 0;
+  
   if( numGenerators == 2 ){
      this->computeVoronoiFromTwoPoints(points,mesh);
   }else{
@@ -746,16 +749,18 @@ computeVoronoiFromTwoPoints(const vector<RealType>& points,
   const double degeneracy = 1.0e-12;
 
   // Bounding box for the points
-  RealType low [2] = { numeric_limits<RealType>::max(), 
-		       numeric_limits<RealType>::max()};
-  RealType high[2] = {-numeric_limits<RealType>::max(), 
-		      -numeric_limits<RealType>::max()};  
-  for (int i = 0; i != points.size()/2; ++i){
-     low[0]  = min(low[0] , points[2*i  ]);
-     low[1]  = min(low[1] , points[2*i+1]);
-     high[0] = max(high[0], points[2*i  ]);
-     high[1] = max(high[1], points[2*i+1]);
-  }
+  RealType low[2], high[2];
+  geometry::computeBoundingBox<2,RealType>(points, true, low, high);
+//   RealType low [2] = { numeric_limits<RealType>::max(), 
+// 		       numeric_limits<RealType>::max()};
+//   RealType high[2] = {-numeric_limits<RealType>::max(), 
+// 		      -numeric_limits<RealType>::max()};  
+//   for (int i = 0; i != points.size()/2; ++i){
+//      low[0]  = min(low[0] , points[2*i  ]);
+//      low[1]  = min(low[1] , points[2*i+1]);
+//      high[0] = max(high[0], points[2*i  ]);
+//      high[1] = max(high[1], points[2*i+1]);
+//   }
   POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
 
   // The bounding box which contains PLC, and all circumcenters and generators
@@ -949,19 +954,16 @@ computeVoronoi(const vector<RealType>& points,
     high[0] = max(high[0], circumcenters[i].x);
     high[1] = max(high[1], circumcenters[i].y);
   }
+  POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
 
   // The circumcenters may all lie inside the convex hull of the
   // generators for an unbounded tessellation. Include the generator
   // locations in the high/low search
-  for (i = 0; i != delaunay.numberofpoints; ++i){
-     low[0]  = min(low[0] , delaunay.pointlist[2*i  ]);
-     low[1]  = min(low[1] , delaunay.pointlist[2*i+1]);
-     high[0] = max(high[0], delaunay.pointlist[2*i  ]);
-     high[1] = max(high[1], delaunay.pointlist[2*i+1]);
-  }
-  POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+  geometry::expandBoundingBox<2,RealType>(&delaunay.pointlist[0],
+					  2*delaunay.numberofpoints,
+					  true, low, high);
   POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
-  
+
   // The bounding box which contains all circumcenters and generators
   RealType cbox[2] = {high[0] - low[0], high[1] - low[1]};
   
@@ -969,7 +971,7 @@ computeVoronoi(const vector<RealType>& points,
   // unbounded faces of the tessellation.
   const RealType rtmp    = 2.0*max(cbox[0], cbox[1]);
   const RealType ctmp[2] = {0.5*(low[0]+high[0]), 0.5*(low[1]+high[1])};
-
+  
   // We resize mLow and boxsize so that the bounding box
   // contains the "infinite" sphere. mHigh is not really needed.
   // cerr << "mLow  = (" << mLow[0]      << "," << mLow[1]      << ")" << endl;
@@ -1003,6 +1005,8 @@ computeVoronoi(const vector<RealType>& points,
   //      << "(" << mLow[1] << "," << mHigh[1] << ")" << endl;
   // cerr << "Box size    = " << cboxsize << endl;
   // cerr << "spacing     = " << mdx << endl;
+  // cerr << "radius      = " << rinf << endl;
+  // cerr << "center      = (" << cboxc[0] << "," << cboxc[1] << ")" << endl;
   // // Blago!
 
   // The exterior edges of the triangularization have "unbounded" rays, originating
@@ -1190,16 +1194,8 @@ computeCellRings(const vector<RealType>& points,
   const unsigned numPLCpoints = PLCpoints.size()/2;
   int i, j, k;
   
-  RealType low [2] = { numeric_limits<RealType>::max(), 
-		       numeric_limits<RealType>::max()};
-  RealType high[2] = {-numeric_limits<RealType>::max(), 
-		      -numeric_limits<RealType>::max()};
-  for (i = 0; i != numPLCpoints; ++i) {
-    low [0] = min(low [0], PLCpoints[2*i  ]);
-    low [1] = min(low [1], PLCpoints[2*i+1]);
-    high[0] = max(high[0], PLCpoints[2*i  ]);
-    high[1] = max(high[1], PLCpoints[2*i+1]);
-  }
+  RealType low[2], high[2];
+  geometry::computeBoundingBox<2,RealType>(PLCpoints, true, low, high);
   POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);  
 
   mLow[0] = min(mLow[0], low[0]);  mHigh[0] = max(mHigh[0], high[0]);
@@ -1207,7 +1203,12 @@ computeCellRings(const vector<RealType>& points,
 
   // Start by creating an unbounded tessellation
   Tessellation<2,RealType> mesh;
-  tessellate(points, mesh);
+  if( numGenerators == 2 ){
+     this->computeVoronoiFromTwoPoints(points,mesh);
+  }else{
+     this->computeVoronoi(points,mesh);
+  }
+  //tessellate(points, mesh);
 
   // Bounding circle radius and center
   const RealType rinf = 0.5*(mHigh[0]-mLow[0]);
