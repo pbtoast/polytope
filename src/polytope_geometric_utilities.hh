@@ -738,13 +738,15 @@ segmentIntersection2D(const RealType* a,
    cross<2,RealType>(r1, r2, r1_cross_r2);
    // Parallel segments
    if( r1_cross_r2[2] == 0 ) return false;
-   RealType t[3];
-   cross<2,RealType>(ca, r2, t);
-   RealType p = t[2]/r1_cross_r2[2];
+   RealType t1[3], t2[3];
+   cross<2,RealType>(ca, r2, t1);
+   cross<2,RealType>(ca, r1, t2);
+   RealType p1 = t1[2]/r1_cross_r2[2];
+   RealType p2 = t2[2]/r1_cross_r2[2];
    // The finite segments intersect
-   if( 0 <= p and p <= 1 ){
-      result[0] = a[0] + p*r1[0];
-      result[1] = a[1] + p*r1[1];
+   if( 0 <= p1 and p1 <= 1 and 0 <= p2 and p2 <= 1 ){
+      result[0] = a[0] + p1*r1[0];
+      result[1] = a[1] + p1*r1[1];
       return true;
    }
    return false;
