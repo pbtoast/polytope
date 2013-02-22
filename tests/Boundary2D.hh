@@ -56,7 +56,7 @@ public:
       funkystar          = 4,
       circlewithstarhole = 5,
       cardioid           = 6,
-      cardioidwithhole   = 7,
+      burninator         = 7
    };
    
    // Boundary type
@@ -121,8 +121,8 @@ public:
       case cardioid:
          this->cardioidBoundary();
          break;
-      case cardioidwithhole:
-         this->cardioidWithHole();
+      case burninator:
+         this->trogdor();
          break;
       }
 
@@ -392,14 +392,53 @@ public:
 
    
    //------------------------------------------------------------------------
-   // cardioidWithHole
-   // The z=1 cardioid above
+   // trogdor
+   // No explanation necessary
    //------------------------------------------------------------------------
-   void cardioidWithHole()
+   void trogdor()
    {
-      cardioidBoundary( 1.0 );
-      mType = cardioidwithhole;
-      this->finalize();
+     const unsigned nSides = 30;
+     const double points[60] = {2, 9,
+                                4, 8.9000000000000004,
+                                5, 9.1999999999999993,
+                                6.5, 8.8000000000000007,
+                                7, 8,
+                                6.5, 7,
+                                5, 6.2999999999999998,
+                                4, 5.5,
+                                3.7000000000000002, 4.5999999999999996,
+                                4, 3.5,
+                                5.5, 2.7999999999999998,
+                                6.7999999999999998, 3.3999999999999999,
+                                5.5, 2.5,
+                                4, 2.6000000000000001,
+                                3, 3,
+                                2.5, 4,
+                                2.3999999999999999, 4.5,
+                                2.5, 5.2999999999999998,
+                                3, 5.9000000000000004,
+                                4.5, 7,
+                                4.9000000000000004, 7.2999999999999998,
+                                5.0999999999999996, 7.7000000000000002,
+                                5, 8,
+                                4.5, 8,
+                                3.5, 7.5,
+                                2, 7,
+                                2, 7.4000000000000004,
+                                3.2999999999999998, 8,
+                                1.75, 8,
+                                1.75, 9.1999999999999993};
+     
+     mPLC.facets.resize( nSides, std::vector<int>(2) );
+     for (unsigned i = 0; i != nSides; ++i){
+        mPLCpoints.push_back(points[2*i  ]);
+        mPLCpoints.push_back(points[2*i+1]);
+        mPLC.facets[i][0] = i;
+        mPLC.facets[i][1] = (i+1) % nSides;
+     }
+           
+     mType = burninator;
+     this->finalize();
    }
 
    

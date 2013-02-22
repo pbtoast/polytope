@@ -100,8 +100,6 @@ private:
   void computeCellRings(const std::vector<RealType>& points,
 			const std::vector<RealType>& PLCpoints,
 			const PLC<2, RealType>& geometry,
-			RealType* low,
-			RealType* high,
 			std::vector<BGring>& cellRings,
 			std::map<int, std::vector<BGring> >& orphanage) const;
 

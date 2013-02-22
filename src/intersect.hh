@@ -88,7 +88,7 @@ intersect(const RealType* point1,
   std::vector<unsigned> holeIntersections(numHoles);
   for (unsigned ihole = 0; ihole != plc.holes.size(); ++ihole) {
     holeIntersections[ihole] = intersectFacets<Dimension, RealType>(point1, point2, numVertices, vertices, plc.holes[ihole], result);
-    numIntersections += holeIntersections[ihole];
+    //numIntersections += holeIntersections[ihole];
   }
   return numIntersections;
 }

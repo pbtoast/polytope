@@ -125,19 +125,8 @@ int main(int argc, char** argv)
    cout << "\nTriangle Tessellator:\n" << endl;
    TriangleTessellator<double> triangle;
    //testAllBoundaries(triangle);
-
-   srand(10489593);  //cell parents multiple orphans            - PASSES
-   //srand(10489594);  //orphan neighbors are orphan parents      - PASSES
-   //srand(10489609);  //overlapping orphans (order issue)        - FAILS
-   //srand(10489611);  //empty orphan neighbor set                - FAILS
-   //srand(10489612);  //Boost.Geometry invalid overlay exception - FAILS
-
-   // int rnum = 10489616;
-   // srand(rnum);
-   outputResult(triangle,5,20);
    
-   //outputResult(triangle,2,200);
-
+   outputResult(triangle,6,20);
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
    //
