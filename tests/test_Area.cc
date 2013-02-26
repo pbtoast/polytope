@@ -3,7 +3,7 @@
 // Compare the total area of the polytope tessellation to the area of the
 // bounding region. Iterates over all default boundaries in Boundary2D.hh
 // and computes tessellation areas for N randomly-distributed generators,
-// where N = 10, 100, 1000, and 10000. Areas are computed using 
+// where N = 100, 1000, and 10000. Areas are computed using 
 // Boost.Geometry
 //
 // NOTE: Area discrepancies are due to cells divided by PLC boundaries.
@@ -25,9 +25,7 @@
 #include "Generators.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 using namespace std;
@@ -40,11 +38,11 @@ double testBoundary(Boundary2D<double>& boundary,
                     Tessellator<2,double>& tessellator)
 {
    Generators<2,double> generators( boundary );
-   unsigned nPoints = 1;
+   unsigned nPoints = 10;
    Tessellation<2,double> mesh;
    cout << "Area of boundary = " << boundary.mArea << endl;
    double result = 0.0;
-   for( unsigned n = 0; n < 4; ++n ){
+   for( unsigned n = 0; n < 3; ++n ){
       POLY_ASSERT( mesh.empty() );
       nPoints = nPoints * 10;
       cout << nPoints << " points..." << endl;

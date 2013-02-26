@@ -19,9 +19,7 @@
 #include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 #define POLY_CHECK_BOOL(x) if (!(x)) { cout << "FAIL: "; return false; }
@@ -78,7 +76,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
    boundary.unitSquare();
    Generators<2,double> generators( boundary );
 
-   unsigned nx = 50;
+   unsigned nx = 10;
    std::vector<unsigned> nxny(2,nx);
    
    // Create generators
