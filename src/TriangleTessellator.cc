@@ -367,7 +367,7 @@ tessellate(const vector<RealType>& points,
   if( numGenerators == 2 ){
      this->computeVoronoiFromTwoPoints(points,mesh);
   }else{
-     this->computeVoronoi(points,mesh);
+     this->computeVoronoiFromManyPoints(points,mesh);
   }
 }
 //------------------------------------------------------------------------------
@@ -745,23 +745,13 @@ computeVoronoiFromTwoPoints(const vector<RealType>& points,
  
   POLY_ASSERT(points.size()/2 == 2);
 
-  const CoordHash coordMax = (1LL << 32); // numeric_limits<CoordHash>::max() >> 32U;
+  const CoordHash coordMax = (1LL << 31); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
 
   // Bounding box for the points
   RealType low[2], high[2];
   geometry::computeBoundingBox<2,RealType>(points, true, low, high);
-//   RealType low [2] = { numeric_limits<RealType>::max(), 
-// 		       numeric_limits<RealType>::max()};
-//   RealType high[2] = {-numeric_limits<RealType>::max(), 
-// 		      -numeric_limits<RealType>::max()};  
-//   for (int i = 0; i != points.size()/2; ++i){
-//      low[0]  = min(low[0] , points[2*i  ]);
-//      low[1]  = min(low[1] , points[2*i+1]);
-//      high[0] = max(high[0], points[2*i  ]);
-//      high[1] = max(high[1], points[2*i+1]);
-//   }
-  POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
+  POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);
 
   // The bounding box which contains PLC, and all circumcenters and generators
   RealType cbox[2] = {high[0] - low[0], high[1] - low[1]};
@@ -889,15 +879,52 @@ computeVoronoiFromTwoPoints(const vector<RealType>& points,
 template<typename RealType>
 void
 TriangleTessellator<RealType>::
+computeVoronoiFromManyPoints(const vector<RealType>& points,
+                             Tessellation<2, RealType>& mesh) const {
+  POLY_ASSERT(!points.empty());
+  POLY_ASSERT(points.size() != 2);
+
+  // Check that the points are not all collinear. If they are, the mesh is 1D
+  // degenerate, and we cannot compute the Delaunay.
+  bool collinear = true;
+  int i = 2;
+  while( collinear and i != points.size()/2 ){
+     collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], &points[2*i], 1.0e-10);
+     ++i;
+  }
+  
+  if (collinear){
+     this->computeVoronoiFromCollinearPoints(points,mesh);
+  }else{
+     this->computeVoronoi(points,mesh);
+  }
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeVoronoiFromCollinearPoints(const vector<RealType>& points,
+                             Tessellation<2, RealType>& mesh) const {
+   POLY_ASSERT2(0, "Sorry, computeVoronoiFromCollinearPoints() hasn't been written yet");
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
 computeVoronoi(const vector<RealType>& points,
                Tessellation<2, RealType>& mesh) const {
 
   POLY_ASSERT(!points.empty());
+  POLY_ASSERT(points.size() != 2);
 
   // Make sure we're not modifying an existing tessellation.
   POLY_ASSERT(mesh.empty());
 
-  const CoordHash coordMax = (1LL << 32); // numeric_limits<CoordHash>::max() >> 32U;
+  const CoordHash coordMax = (1LL << 31); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
   
   const unsigned numGenerators = points.size()/2;
@@ -962,7 +989,7 @@ computeVoronoi(const vector<RealType>& points,
   geometry::expandBoundingBox<2,RealType>(&delaunay.pointlist[0],
 					  2*delaunay.numberofpoints,
 					  true, low, high);
-  POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);
+  POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);
 
   // The bounding box which contains all circumcenters and generators
   RealType cbox[2] = {high[0] - low[0], high[1] - low[1]};

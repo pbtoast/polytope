@@ -21,14 +21,20 @@
 #include "Generators.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 using namespace std;
 using namespace polytope;
 
+
+//------------------------------------------------------------------------------
+// Compute the square of the distance.
+//------------------------------------------------------------------------------
+double distance2(const double x1, const double y1,
+                 const double x2, const double y2) {
+  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
+}
 
 //------------------------------------------------------------------------------
 // The test itself.
@@ -47,7 +53,7 @@ int main(int argc, char** argv) {
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
    // Initialize the bounding PLC
-   int bType = 2;
+   int bType = 7;
    Boundary2D<double> boundary;
    boundary.computeDefaultBoundary( bType );
    
@@ -56,14 +62,45 @@ int main(int argc, char** argv) {
    Generators<2,double> generators( boundary );
    generators.randomPoints( N );
    
-   // Assign random points to each processor
-   vector<double> myGenerators;
-   for (unsigned i = 0; i < N; ++i){
-      if( i%numProcs == rank ){
-         myGenerators.push_back( generators.mPoints[2*i]   );
-         myGenerators.push_back( generators.mPoints[2*i+1] );
-      }
+   // // Assign random points to each processor
+   // vector<double> myGenerators;
+   // for (unsigned i = 0; i < N; ++i){
+   //    if( i%numProcs == rank ){
+   //       myGenerators.push_back( generators.mPoints[2*i]   );
+   //       myGenerators.push_back( generators.mPoints[2*i+1] );
+   //    }
+   // }
+
+   // Assign points to processors in quasi-Voronoi fashion
+   vector<double> xproc, yproc, myGenerators;
+   double p[2];
+   xproc.reserve(numProcs);
+   yproc.reserve(numProcs);
+   for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
+     boundary.getPointInside(p);
+     xproc.push_back(p[0]);
+     yproc.push_back(p[1]);
    }
+   for (unsigned i = 0; i < N; ++i){
+     unsigned owner = 0;
+     double minDist2 = distance2(generators.mPoints[2*i], 
+                                 generators.mPoints[2*i+1], 
+                                 xproc[0], yproc[0]);
+     for (unsigned iproc = 1; iproc < numProcs; ++iproc) {
+       const double d2 = distance2(generators.mPoints[2*i], 
+                                   generators.mPoints[2*i+1], 
+                                   xproc[iproc], yproc[iproc]);
+       if( d2 < minDist2 ){
+         owner = iproc;
+         minDist2 = d2;
+       }
+     }
+     if (rank == owner) {
+       myGenerators.push_back(generators.mPoints[2*i  ]);
+       myGenerators.push_back(generators.mPoints[2*i+1]);
+     }
+   }
+
    
    polytope::Tessellation<2, double> mesh;
    polytope::DistributedTessellator<2, double> distTest
@@ -119,7 +156,7 @@ int main(int argc, char** argv) {
    }
     
    // Blago!
-#if USE_SILO
+#if HAVE_SILO
    vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
    for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
    for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];

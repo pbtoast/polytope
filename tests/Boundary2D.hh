@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include "polytope.hh"
+#include "within.hh"
 #include "polytope_test_utilities.hh"
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
@@ -580,6 +581,16 @@ public:
    {
       boost::geometry::clear(mBGboundary);
       mBGboundary = makePolygon<RealType>( mPLC, mPLCpoints );
+   }
+
+   void getPointInside(RealType* point)
+   {
+     bool inside = false;
+     while( !inside ){
+       point[0] = mLow[0] + random01()*(mHigh[0] - mLow[0]);
+       point[1] = mLow[1] + random01()*(mHigh[1] - mLow[1]);
+       inside = within(point, mPLCpoints.size()/2, &mPLCpoints[0], mPLC);
+     }
    }
 
 };
