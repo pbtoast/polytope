@@ -8,8 +8,6 @@
 #include <sstream>
 
 #include "polytope.hh"
-#include "Boundary2D.hh"
-#include "Generators.hh"
 #include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
@@ -21,8 +19,27 @@ using namespace polytope;
 
 
 // -----------------------------------------------------------------------
+// outputMesh
 // -----------------------------------------------------------------------
+void outputMesh(Tessellation<2,double>& mesh, int ntest) {
+#if HAVE_SILO
+   vector<double> index(mesh.cells.size());
+   vector<double> genx (mesh.cells.size());
+   vector<double> geny (mesh.cells.size());
+   for (int i = 0; i < mesh.cells.size(); ++i){
+      index[i] = double(i);
+   }
+   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+   cellFields["cell_index"   ] = &index[0];
+   ostringstream os;
+   os << "test_TriangleUnbounded_test_" << ntest;
+   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+                                          faceFields, cellFields, os.str());
+#endif
+}
+
 // -----------------------------------------------------------------------
+// main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -30,89 +47,106 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
-  // unsigned nPoints = 5;
-  // double pts[10] = {0.0, 0.0,
-  //                   1.0, 0.0,
-  //                   1.0, 1.0,
-  //                   0.0, 1.0,
-  //                   0.2, 0.5};
-
-  // std::vector<double> points;
-  // for (unsigned i=0; i<nPoints; ++i){
-  //    points.push_back(pts[2*i  ]);
-  //    points.push_back(pts[2*i+1]);
-  // }
-
-  Boundary2D<double> boundary;
-  boundary.computeDefaultBoundary(3);
-  Generators<2,double> generators(boundary);
-  generators.randomPoints(20);
-
-  Tessellation<2,double> mesh;
+  int test = 1;
   TriangleTessellator<double> triangle;
 
+  Tessellation<2,double> mesh;
 
-  // Do the unbounded tessellation
-  triangle.tessellate( generators.mPoints, mesh );
-#if HAVE_SILO
+  // Test 1: Circle of generators
   {
-    vector<double> index(mesh.cells.size());
-    vector<double> genx (mesh.cells.size());
-    vector<double> geny (mesh.cells.size());
-    for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = generators.mPoints[2*i];
-      geny[i]  = generators.mPoints[2*i+1];
+    cout << "\nTest 1: Circle of generators" << endl;
+    int N = 18;
+    vector<double> points(2*N);
+    for (unsigned i = 0; i < N; ++i){
+       double theta = 2.0*M_PI*i/(N+1);
+       points[2*i] = cos(theta);  points[2*i+1] = sin(theta);
     }
-    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["cell_index"] = &index[0];
-    cellFields["cell_center_x"] = &genx[0];
-    cellFields["cell_center_y"] = &geny[0];
-    ostringstream os;
-    os << "test_unbounded_mesh";
-    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                           faceFields, cellFields, os.str());
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
   }
-#endif
 
-  // const unsigned nSides = 4;
-  // std::vector<double> PLCpoints;
-  // PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
-  // PLCpoints.push_back(1.0);  PLCpoints.push_back(0.0);
-  // PLCpoints.push_back(1.0);  PLCpoints.push_back(1.0);
-  // PLCpoints.push_back(0.0);  PLCpoints.push_back(1.0);
-  
-  // PLC<2,double> geometry;
-  // geometry.facets.resize( nSides, std::vector<int>(2) );
-  // for (unsigned i = 0; i != nSides; ++i){
-  //   geometry.facets[i][0] = i;
-  //   geometry.facets[i][1] = (i+1) % nSides;
-  // }
-  
-  // Now do the bounded version
-  mesh.clear();
-  triangle.tessellate( generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh );
-#if HAVE_SILO
+  // Test 2: Circle of generators
   {
-    vector<double> index(mesh.cells.size());
-    vector<double> genx (mesh.cells.size());
-    vector<double> geny (mesh.cells.size());
-    for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = generators.mPoints[2*i];
-      geny[i]  = generators.mPoints[2*i+1];
+    cout << "\nTest 2: Two uniform rows of generators" << endl;
+    int N = 10;
+    vector<double> points(4*N);
+    for (unsigned i = 0; i < N; ++i){
+       points[4*i  ] = i;  points[4*i+1] = -1.0;
+       points[4*i+2] = i;  points[4*i+3] =  1.0;
     }
-    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["cell_index"] = &index[0];
-    cellFields["cell_center_x"] = &genx[0];
-    cellFields["cell_center_y"] = &geny[0];
-    ostringstream os;
-    os << "test_bounded_mesh";
-    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                           faceFields, cellFields, os.str());
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
   }
-#endif
-  
+
+  // Test 3: Collinear generators with one non-collinear
+  {
+    cout << "\nTest 3: Collinear generators, except one" << endl;
+    int N = 10;
+    vector<double> points(2*N);
+    for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
+    points.push_back(4.5);
+    points.push_back(1.0);
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
+  }
+
+  // Test 4: 2x2 Cartesian Generators
+  {
+    cout << "\nTest 4: 2x2 Cartesian generators" << endl;
+    vector<double> points;
+    points.push_back(0.0); points.push_back(0.0);
+    points.push_back(1.0); points.push_back(0.0);
+    points.push_back(1.0); points.push_back(1.0);
+    points.push_back(0.0); points.push_back(1.0);
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
+  }
+
+  // Test 5: Two generators
+  {
+    cout << "\nTest 5: Two generators" << endl;
+    vector<double> points;
+    points.push_back(0.0); points.push_back(0.0);
+    points.push_back(1.0); points.push_back(0.0);
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
+  }
+
+  // Test 6: Line of generators, uniform
+  {
+    cout << "\nTest 6: Uniform line of generators" << endl;
+    vector<double> points(20, 0);
+    for (unsigned i = 0; i < 10; ++i)  points[2*i] = double(i);
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
+  }
+
+  // Test 7: Line of generators, non-uniform
+  {
+    cout << "\nTest 7: Non-uniform line of generators" << endl;
+    vector<double> points(20);
+    for (unsigned i = 0; i < 10; ++i)  points[2*i] = double(i) + random01() - 0.5;
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    ++test;
+  }
+
+
+
+
   cout << "PASS" << endl;
 
 #if HAVE_MPI
