@@ -759,6 +759,7 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   
   const CoordHash coordMax = (1LL << 31); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 4.0e-10;
+
   int i;
   
   vector<pair<RealPoint,int> > pointIndexPairs;
@@ -783,7 +784,7 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   const RealType ctmp[2] = {0.5*(low[0]+high[0]), 0.5*(low[1]+high[1])};
 
   // We resize mLow and boxsize so that the bounding box
-  // contains the "infinite" sphere. mHigh is not really needed.
+  // contains the "infinite" sphere.
   mLow [0] = min(mLow [0], ctmp[0]-rtmp);
   mLow [1] = min(mLow [1], ctmp[1]-rtmp);
   mHigh[0] = max(mHigh[0], ctmp[0]+rtmp);  
