@@ -44,6 +44,8 @@ int main(int argc, char** argv)
   TriangleTessellator<double> triangle;
   triangle.tessellate( generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh );
   
+  cerr << "\n\n\n\n\n" << mesh << endl;
+
 #if HAVE_SILO
   vector<double> index( mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);

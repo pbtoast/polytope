@@ -36,6 +36,16 @@ void internal_abort();
 
 namespace internal {
 
+
+//------------------------------------------------------------------------------
+// Pair comparator for first index only
+//------------------------------------------------------------------------------
+template <typename T1, typename T2>
+bool
+pairCompareFirst( std::pair<T1,T2> x, std::pair<T1,T2> y ) {
+  return (x.first < y.first);
+}
+
 //------------------------------------------------------------------------------
 // Update the map of thingies to unique indices.
 //------------------------------------------------------------------------------

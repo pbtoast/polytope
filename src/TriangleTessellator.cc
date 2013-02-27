@@ -105,6 +105,7 @@ buildBoostBoundary(const vector<PointType>& IntPLCPoints,
   }
 }
 
+
 //------------------------------------------------------------------------------
 // Given an array of 3 integers and 1 unique value, find the other two.
 //------------------------------------------------------------------------------
@@ -758,13 +759,15 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   
   const CoordHash coordMax = (1LL << 31); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 4.0e-10;
-
   int i;
-  vector<RealPoint> sortPoints;
-  for (i = 0; i < numGenerators; ++i){
-    sortPoints.push_back( RealPoint( points[2*i], points[2*i+1] ) );
+  
+  vector<pair<RealPoint,int> > pointIndexPairs;
+  for (i = 0; i != numGenerators; ++i){
+    pointIndexPairs.push_back(make_pair(RealPoint(points[2*i], points[2*i+1]), i));
   }
-  sort( sortPoints.begin(), sortPoints.end() );
+  sort( pointIndexPairs.begin(), 
+	pointIndexPairs.end(), 
+	internal::pairCompareFirst<RealPoint,int> );
   
   // Bounding box for the points
   RealType low[2], high[2];
@@ -799,13 +802,18 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   mesh.faceCells.resize(numGenerators+3);
   
   bool test;
-  unsigned inode, iface, icell;
+  unsigned inode, iface, icell1, icell2;
   RealPoint p1, p2, r1, r2, node, midpt;
   IntPoint IntNode;
   vector<int> cellFaces(2);
   for (i = 0; i != numGenerators-1; ++i){
-    p1    = sortPoints[i];
-    p2    = sortPoints[i+1];
+    inode  = 2*i;
+    iface  = i;
+    icell1 = pointIndexPairs[i  ].second;
+    icell2 = pointIndexPairs[i+1].second;
+
+    p1    = pointIndexPairs[i  ].first;
+    p2    = pointIndexPairs[i+1].first;
     midpt = RealPoint( 0.5*(p1.x + p2.x),
 		       0.5*(p1.y + p2.y) );
     r1.x = p2.x - p1.x;
@@ -818,48 +826,49 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
     test = geometry::rayCircleIntersection(&midpt.x, &r2.x, cboxc, rinf, 1.0e-10, &node.x);
     POLY_ASSERT(test);
     IntNode = IntPoint(node.x, node.y, mLow[0], mLow[1], mdx);
-    mesh.nodes[4*i  ] = IntNode.realx(mLow[0],mdx);
-    mesh.nodes[4*i+1] = IntNode.realy(mLow[1],mdx);
+    mesh.nodes[2*inode  ] = IntNode.realx(mLow[0],mdx);
+    mesh.nodes[2*inode+1] = IntNode.realy(mLow[1],mdx);
     mesh.infNodes.push_back(1);
-
+    
     // Node 2*i+1: other endpt of interior face
     r2 *= -1.0;
     test = geometry::rayCircleIntersection(&midpt.x, &r2.x, cboxc, rinf, 1.0e-10, &node.x);
     POLY_ASSERT(test);
     IntNode = IntPoint(node.x,node.y,mLow[0],mLow[1],mdx);
-    mesh.nodes[4*i+2] = IntNode.realx(mLow[0],mdx);
-    mesh.nodes[4*i+3] = IntNode.realy(mLow[1],mdx);
+    mesh.nodes[2*(inode+1)  ] = IntNode.realx(mLow[0],mdx);
+    mesh.nodes[2*(inode+1)+1] = IntNode.realy(mLow[1],mdx);
     mesh.infNodes.push_back(1);
     
     // Mesh cells: the interior face between cells i and i+1. Construct mesh
     // so that this face is oriented positively for cell i
-    mesh.cells[i  ].push_back(i);
-    mesh.cells[i+1].push_back(~i);
-
+    mesh.cells[icell1].push_back( iface);
+    mesh.cells[icell2].push_back(~iface);
+    
     // Nodes around the interior mesh faces
-    mesh.faces[i].push_back(2*i  );
-    mesh.faces[i].push_back(2*i+1);
+    mesh.faces[iface].push_back(inode  );
+    mesh.faces[iface].push_back(inode+1);
     mesh.infFaces.push_back(0);
-
+    
     // Cells adjacent to each interior face. Positively oriented for cell i.
-    mesh.faceCells[i].push_back(i);
-    mesh.faceCells[i].push_back(~(i+1));
+    mesh.faceCells[iface].push_back( icell1);
+    mesh.faceCells[iface].push_back(~icell2);
   }
 
   // ------------------ Extra node at index 0 ----------------- //
 
-  inode = 2*(numGenerators-1);
-  iface = numGenerators-1;
-  icell = 0;
+  inode  = 2*(numGenerators-1);
+  iface  = numGenerators-1;
+  icell1 = pointIndexPairs[0].second;
+  icell2 = pointIndexPairs[1].second;
 
   // Node position
-  p1   = sortPoints[icell  ];
-  p2   = sortPoints[icell+1];
+  p1   = pointIndexPairs[icell1].first;
+  p2   = pointIndexPairs[icell2].first;
   r1.x = p1.x - p2.x;
   r1.y = p1.y - p2.y;
   geometry::unitVector<2,RealType>(&r1.x);
   
-  test = geometry::rayCircleIntersection(&p1.x, &r2.x, cboxc, rinf, 1.0e-10, &node.x);
+  test = geometry::rayCircleIntersection(&p1.x, &r1.x, cboxc, rinf, 1.0e-10, &node.x);
   POLY_ASSERT(test);
   IntNode = IntPoint(node.x, node.y, mLow[0], mLow[1], mdx);
   mesh.nodes[2*inode  ] = IntNode.realx(mLow[0],mdx);
@@ -867,8 +876,8 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   mesh.infNodes.push_back(1);
   
   // Extra faces for cell 0
-  mesh.cells[icell].push_back(iface  );
-  mesh.cells[icell].push_back(iface+1);
+  mesh.cells[icell1].push_back(iface  );
+  mesh.cells[icell1].push_back(iface+1);
 
   // Nodes for those two faces
   mesh.faces[iface].push_back(1    );
@@ -881,24 +890,25 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   mesh.infFaces.push_back(1);
 
   // Only cell 0 is around those faces
-  mesh.faceCells[iface  ].push_back(icell);
-  mesh.faceCells[iface+1].push_back(icell);
+  mesh.faceCells[iface  ].push_back(icell1);
+  mesh.faceCells[iface+1].push_back(icell1);
 
 
   // ------------------ Extra node at index N ----------------- //
   
-  inode = 2*numGenerators-1;
-  iface = numGenerators+1;
-  icell = numGenerators-1;
+  inode  = 2*numGenerators-1;
+  iface  = numGenerators+1;
+  icell1 = pointIndexPairs[numGenerators-1].second;
+  icell2 = pointIndexPairs[numGenerators-2].second;
 
   // Node position
-  p1   = sortPoints[icell-1];
-  p2   = sortPoints[icell  ];
-  r1.x = p2.x - p1.x;
-  r1.y = p2.y - p1.y;
+  p1   = pointIndexPairs[numGenerators-1].first;
+  p2   = pointIndexPairs[numGenerators-2].first;
+  r1.x = p1.x - p2.x;
+  r1.y = p1.y - p2.y;
   geometry::unitVector<2,RealType>(&r1.x);
   
-  test = geometry::rayCircleIntersection(&p2.x, &r2.x, cboxc, rinf, 1.0e-10, &node.x);
+  test = geometry::rayCircleIntersection(&p2.x, &r1.x, cboxc, rinf, 1.0e-10, &node.x);
   POLY_ASSERT(test);
   IntNode = IntPoint(node.x, node.y, mLow[0], mLow[1], mdx);
   mesh.nodes[2*inode  ] = IntNode.realx(mLow[0],mdx);
@@ -906,22 +916,27 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   mesh.infNodes.push_back(1);
   
   // Extra faces for cell N
-  mesh.cells[icell].push_back(iface  );
-  mesh.cells[icell].push_back(iface+1);
+  mesh.cells[icell1].push_back(iface  );
+  mesh.cells[icell1].push_back(iface+1);
 
   // Nodes for those two faces
-  mesh.faces[iface  ].push_back(2*(numGenerators-1));
-  mesh.faces[iface  ].push_back(inode              );
-  mesh.faces[iface+1].push_back(inode);
-  mesh.faces[iface+1].push_back(2* numGenerators-1 );
+  mesh.faces[iface  ].push_back(2*numGenerators-4 );
+  mesh.faces[iface  ].push_back(inode             );
+  mesh.faces[iface+1].push_back(inode             );
+  mesh.faces[iface+1].push_back(2*numGenerators-3 );
   
   // Both faces are inf faces
   mesh.infFaces.push_back(1);
   mesh.infFaces.push_back(1);
 
   // Only cell 0 is around those faces
-  mesh.faceCells[iface  ].push_back(icell);
-  mesh.faceCells[iface+1].push_back(icell);
+  mesh.faceCells[iface  ].push_back(icell1);
+  mesh.faceCells[iface+1].push_back(icell1);
+
+  // Blago!
+  cerr << mesh << endl;
+  // Blago!
+
 }
 //------------------------------------------------------------------------------
 
