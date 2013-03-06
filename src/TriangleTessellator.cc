@@ -49,7 +49,7 @@ using std::abs;
 
 namespace {
 
-///------------------------------------------------------------------------
+//------------------------------------------------------------------------
 // Union a Boost.Geometry ring with a Boost.Geometry multi_polygon.
 // The resulting multi_polygon is corrected to ensure it conforms to
 // the proper geometric concept.
@@ -448,222 +448,221 @@ tessellate(const vector<RealType>& points,
       }
     }
     
-    // // First aglomerate all orphaned pieces that neighbor one another by searching orphan pairs
-    // // TODO: Figure out a more efficient way to do this operation
-    // for (i = 0; i < orphanage.size()-1; ++i){
-    //   for (j = i+1; j < orphanage.size(); ++j){
-    //     BGring unionRing, orphan1 = orphanage[i], orphan2 = orphanage[j];
-    //     for (typename BGring::const_iterator pointItr = orphan1.begin();
-    //          pointItr != orphan1.end()-1; ++pointItr) {
-    //       typename BGring::const_iterator it = orphan2.find(*pointItr);
-    //       if (it != orphan2.end()){
-    //         boost::geometry::union_( orphan1, orphan2, unionRing );
-    //         // TODO: store the unionRing into the resized orphanage
-    //       }
-    //     }
-    //   }
-    // }
+    // First aglomerate all orphaned pieces that neighbor one another by searching orphan pairs
+    // TODO: Figure out a more efficient way to do this operation
+    BGmulti_polygon orphanUnion;
+    for (typename map<int, vector<BGring> >::iterator itr = 
+	   orphanage.begin(); itr != orphanage.end(); ++itr) {
+      for (i = 0; i != itr->second.size(); ++i) {
+	createBGUnion(itr->second[i], orphanUnion);
+      }
+    }
+    
+//     // Blago!
+//     cerr << "After aglomeration, total number of orphans = " << orphanUnion.size() << endl;
+//     for (i = 0; i < orphanUnion.size(); ++i) {
+//       cerr << "Orphan " << i << endl;
+//       for (typename BGring::const_iterator itr = orphanUnion[i].outer().begin();
+// 	   itr != orphanUnion[i].outer().end()-1; ++itr) {
+// 	cerr << (*itr).realx(mLow[0],mdx) << " " << (*itr).realy(mLow[1],mdx) << endl;
+//       }
+//     }
+//     // Blago!
 
-    for (map<int,vector<BGring> >::const_iterator itr = orphanage.begin();
-         itr != orphanage.end(); ++itr){
-      int parent = itr->first;
-      // cerr << "***Cell " << parent << " has " << itr->second.size() << " orphans:" << endl;
-      for (i = 0; i != itr->second.size(); ++i){	
-	BGring orphan = itr->second[i];
-	std::set<int> orphanNeighbors;
-	for (typename BGring::const_iterator pointItr = orphan.begin();
-	     pointItr != orphan.end()-1; ++pointItr) {
-	  std::map<IntPoint, std::set<int> >::iterator it = point2neighbors.find(*pointItr);
-	  if (it != point2neighbors.end()){
-	    std::set<int> neighborSet = it->second;
-	    for (std::set<int>::const_iterator setItr = neighborSet.begin();
-		 setItr != neighborSet.end(); ++setItr){
-	      orphanNeighbors.insert(*setItr);
-	    }
-	    orphanNeighbors.erase(parent);
-	  }
+   
+    for (i = 0; i < orphanUnion.size(); ++i) {
+      BGring orphan = orphanUnion[i].outer();
+      set<int> orphanNeighbors;
+      for (typename BGring::const_iterator pointItr = orphan.begin();
+	   pointItr != orphan.end()-1; ++pointItr) {
+	map<IntPoint, set<int> >::iterator it = point2neighbors.find(*pointItr);
+	if (it != point2neighbors.end()){
+	  set<int> neighborSet = it->second;
+	  orphanNeighbors.insert(neighborSet.begin(), neighborSet.end());
 	}
-	POLY_ASSERT( orphanNeighbors.size() > 0 );
+      }
+      //orphanNeighbors.erase(parent);
+      POLY_ASSERT( orphanNeighbors.size() > 0 );
+      
+      
+//       // Blago!
+//       cerr << "Orphaned piece has neighbors";
+//       for( set<int>::const_iterator iii = orphanNeighbors.begin();
+// 	   iii != orphanNeighbors.end(); ++iii){
+// 	cerr << " " << *iii;
+// 	cerr << endl;
+// 	for (typename BGring::const_iterator itr = cellRings[*iii].begin();
+// 	     itr != cellRings[*iii].end()-1; ++itr){
+// 	  cerr << (*itr).realx(mLow[0],mdx) << " " << (*itr).realy(mLow[1],mdx) << endl;
+// 	}
+//       }
+//       cerr << endl;
+//       // Blago!
+      
+      
+      // If the orphan only has a single neighbor, we can skip a lot of work.
+      // No need to tessellate - simply union the orphan with its neighbor cell.
+      vector<BGring> subCellRings;
+      if (orphanNeighbors.size() > 1){
 	
-	
-	// Blago!
-	cerr << "Orphaned piece has neighbors";
-	for( std::set<int>::const_iterator iii = orphanNeighbors.begin();
-	     iii != orphanNeighbors.end(); ++iii){
-	  cerr << " " << *iii;
-	}
-	cerr << endl;
-	// Blago!
-
-	
-	// If the orphan only has a single neighbor, we can skip a lot of work.
-	// No need to tessellate - simply union the orphan with its neighbor cell.
-	vector<BGring> subCellRings;
-	if (orphanNeighbors.size() > 1){
-	    
-	  // Compute the sub-tessellation from orphan's neighboring points. Union the
-	  // orphan and its immediate neighbors to get the tessellation boundary
-	  std::vector<RealType> subpoints;
-	  BGmulti_polygon neighborCells;
-	  createBGUnion(orphan,neighborCells);          
-	  for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
-	       nbItr != orphanNeighbors.end(); ++nbItr){
-	    subpoints.push_back( points[2*(*nbItr)  ] );
-	    subpoints.push_back( points[2*(*nbItr)+1] );
-	    createBGUnion(cellRings[*nbItr],neighborCells);
-	  }
-	  POLY_ASSERT2( neighborCells.size() > 0, "Union produced empty set!" );
-	  if (neighborCells.size() > 1){
-	    cerr << "Blago!" << endl;
-	    for (i = 0; i != neighborCells.size(); ++i){
-	      cerr << "Sub-polygon " << i << " in the union has bounding ring" << endl;
-	      for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
-		   itr != neighborCells[i].outer().end(); ++itr){
-		cerr << (*itr)
-		     << "(" << (*itr).realx(mLow[0],mdx) 
-		     << "," << (*itr).realy(mLow[1],mdx) << ")" << endl;
-	      }
-	      POLY_ASSERT(0);
-	    }
-	  }
-	  
-	  BGring boundaryRing = neighborCells[0].outer();
-	  
-	  // TODO: Make sure union-ing rings that share a common face results in 
-	  //       a closed boundary, has no repeated nodes, etc. etc.
-	  
-	  // Extract the boundary points from the union
-	  //
-	  // TODO: Check whether converting the PLC points back to doubles to compute
-	  //       the sub-tessellation gives a valid full tessellation after the
-	  //       cell adoption loop concludes
-	  std::vector<RealType> subPLCpoints;
-	  int nSides = 0;
-	  for (typename BGring::const_iterator itr = boundaryRing.begin();
-	       itr != boundaryRing.end() - 1; ++itr, ++nSides) {
-	    subPLCpoints.push_back( (*itr).realx(mLow[0],mdx) );
-	    subPLCpoints.push_back( (*itr).realy(mLow[1],mdx) );
-	  }
-	  
-	  // Form the bounding PLC
-	  PLC<2, RealType> subPLC;
-	  subPLC.facets.resize(nSides, std::vector<int>(2) );
-	  for (unsigned ii = 0; ii < nSides; ++ii) {
-	    subPLC.facets[ii][0] = ii;
-	    subPLC.facets[ii][1] = (ii+1) % nSides;
-	  }
-	  
-	  map<int, vector<BGring> > subOrphanage;
-	  this->computeCellRings(subpoints, subPLCpoints, subPLC,
-                                 subCellRings, subOrphanage);
-	}
-	
-	// We're only concerned with the cells in the sub-tessellation whose generators
-	// are immediate neighbors of the orphaned chunk. These are the only cells which can
-	// "adopt" the orphan based on a local Voronoi principle
-	for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+	// Compute the sub-tessellation from orphan's neighboring points. Union the
+	// orphan and its immediate neighbors to get the tessellation boundary
+	vector<RealType> subpoints;
+	BGmulti_polygon neighborCells;
+	createBGUnion(orphan,neighborCells);          
+	for (set<int>::const_iterator nbItr = orphanNeighbors.begin();
 	     nbItr != orphanNeighbors.end(); ++nbItr){
-	  std::set<int>::iterator it = orphanNeighbors.find(*nbItr);
-	  POLY_ASSERT( it != orphanNeighbors.end() );
-	  int subIndex = std::distance(orphanNeighbors.begin(), it);
-	  POLY_ASSERT( subIndex < orphanNeighbors.size() );
-	  int thisIndex = *it;
-	  POLY_ASSERT( thisIndex < numGenerators );
-	  BGring thisRing;
-	  
-	  if (orphanNeighbors.size() > 1){
-	    thisRing = subCellRings[subIndex];
-	    
-	    // Blago!
-	    cerr << endl << "Cell " << thisIndex << endl;
-	    cerr << endl << "SUBMESH CELL:" << endl;
-	    for (typename BGring::const_iterator itr = thisRing.begin();
-	         itr != thisRing.end(); ++itr){
-	      cerr << (*itr).realx(mLow[0],mdx) << " " 
-	           << (*itr).realy(mLow[1],mdx) << endl;
-	    }
-	    // Blago!
-	    
-	    
-	    // Simplify the resulting ring. Removes points that are within some minimum
-	    // distance to their neighbors. Setting distance = 1 merges ring elements
-	    // that are within one quantized mesh spacing. This essentially removes
-	    // repeated cell nodes having length-zero cell faces. An unfortunate
-	    // consequence of using a third-party lib to do all our unions/intersections
-	    BGring simplifiedRing;
-	    boost::geometry::simplify(thisRing, simplifiedRing, 1);
-	    thisRing = simplifiedRing;
-	  }	
-	  
-	  // If the orphan has only a single neighbor, just compute its union with
-	  // that neighbor's cell ring from the full tessellation
-	  else{
-	    thisRing = orphan;
-	  }
-          
-
-          // Blago!
-          cerr << endl << "Cell " << thisIndex << endl;
-          cerr << endl << "Original Cell:" << endl;
-          for (typename BGring::const_iterator itr = cellRings[thisIndex].begin();
-               itr != cellRings[thisIndex].end(); ++itr){
-            cerr << (*itr).realx(mLow[0],mdx) << " " 
-                 << (*itr).realy(mLow[1],mdx) << endl;
-          }
-          cerr << endl << "Updated Cell:" << endl;
-          for (typename BGring::const_iterator itr = thisRing.begin();
-               itr != thisRing.end(); ++itr){
-            cerr << (*itr).realx(mLow[0],mdx) << " " 
-                 << (*itr).realy(mLow[1],mdx) << endl;
-          }
-          // Blago!
-
-
-	  // Union this new cell ring with the original cell ring from the full tessellation
-	  std::vector<BGring> unionRing;
-	  boost::geometry::union_( thisRing, cellRings[thisIndex], unionRing );
-          if(unionRing.size() > 1){
-            cerr << "Blago!" << endl << "Cell " << thisIndex
-                 << " has more than one cell ring:" << endl;
-            for( i=0; i<unionRing.size(); ++i){
-              cerr << endl << "Ring " << i << ":" << endl;
-              for (typename BGring::const_iterator itr = thisRing.begin();
-                   itr != thisRing.end(); ++itr){
-                cerr << (*itr).realx(mLow[0],mdx) << " " 
-                     << (*itr).realy(mLow[1],mdx) << " "
-                     << (*itr) << endl;
-              }
-            }
-          }
-	  POLY_ASSERT(unionRing.size() == 1);
-	  thisRing = unionRing[0];
-	  
-	  // Simplify the final ring. 
-	  BGring simplifiedRing;
-	  boost::geometry::simplify(thisRing, simplifiedRing, 1);
-	  thisRing = simplifiedRing;
-	  
-	  
-	  // Blago!
-	  cerr << endl << "Cell " << thisIndex << endl;
-	  cerr << endl << "FINAL SUBMESH CELL:" << endl;
-	  for (typename BGring::const_iterator itr = thisRing.begin();
-	       itr != thisRing.end(); ++itr){
-	    cerr << (*itr).realx(mLow[0],mdx) << " " 
-	         << (*itr).realy(mLow[1],mdx) << endl;
-	  }
-	  for (typename BGring::const_iterator itr = thisRing.begin();
-	       itr != thisRing.end(); ++itr){
-	    cerr << *itr << endl;
-	  }
-	  // Blago!
-	  
-	  
-	  cellRings[thisIndex] = thisRing;
+	  subpoints.push_back( points[2*(*nbItr)  ] );
+	  subpoints.push_back( points[2*(*nbItr)+1] );
+	  createBGUnion(cellRings[*nbItr],neighborCells);
 	}
+	POLY_ASSERT2( neighborCells.size() > 0, "Union produced empty set!" );
+	if ( neighborCells.size() > 1){
+	  cerr << "Blago!" << endl;
+	  for (i = 0; i != neighborCells.size(); ++i){
+	    cerr << "Sub-polygon " << i << " in the union has bounding ring" << endl;
+	    for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
+		 itr != neighborCells[i].outer().end(); ++itr){
+	      cerr << (*itr)
+		   << "(" << (*itr).realx(mLow[0],mdx) 
+		   << "," << (*itr).realy(mLow[1],mdx) << ")" << endl;
+	    }
+	    POLY_ASSERT(0);
+	  }
+	}
+	
+	BGring boundaryRing = neighborCells[0].outer();
+	
+	// TODO: Make sure union-ing rings that share a common face results in 
+	//       a closed boundary, has no repeated nodes, etc. etc.
+	
+	// Extract the boundary points from the union
+	//
+	// TODO: Check whether converting the PLC points back to doubles to compute
+	//       the sub-tessellation gives a valid full tessellation after the
+	//       cell adoption loop concludes
+	vector<RealType> subPLCpoints;
+	int nSides = 0;
+	for (typename BGring::const_iterator itr = boundaryRing.begin();
+	     itr != boundaryRing.end() - 1; ++itr, ++nSides) {
+	  subPLCpoints.push_back( (*itr).realx(mLow[0],mdx) );
+	  subPLCpoints.push_back( (*itr).realy(mLow[1],mdx) );
+	}
+	
+	// Form the bounding PLC
+	PLC<2, RealType> subPLC;
+	subPLC.facets.resize(nSides, vector<int>(2) );
+	for (unsigned ii = 0; ii < nSides; ++ii) {
+	  subPLC.facets[ii][0] = ii;
+	  subPLC.facets[ii][1] = (ii+1) % nSides;
+	}
+	
+	map<int, vector<BGring> > subOrphanage;
+	this->computeCellRings(subpoints, subPLCpoints, subPLC,
+			       subCellRings, subOrphanage);
+      }
+
+      // We're only concerned with the cells in the sub-tessellation whose generators
+      // are immediate neighbors of the orphaned chunk. These are the only cells which can
+      // "adopt" the orphan based on a local Voronoi principle
+      for (set<int>::const_iterator nbItr = orphanNeighbors.begin();
+	   nbItr != orphanNeighbors.end(); ++nbItr){
+	set<int>::iterator it = orphanNeighbors.find(*nbItr);
+	POLY_ASSERT( it != orphanNeighbors.end() );
+	int subIndex = distance(orphanNeighbors.begin(), it);
+	POLY_ASSERT( subIndex < orphanNeighbors.size() );
+	int thisIndex = *nbItr;
+	POLY_ASSERT( thisIndex < numGenerators );
+	BGring thisRing;
+	
+	if (orphanNeighbors.size() > 1){
+	  thisRing = subCellRings[subIndex];
+	  
+
+// 	  // Blago!
+// 	  cerr << endl << "SubCell " << subIndex << ", OrigCell " << thisIndex << endl;
+// 	  cerr << endl << "SUBMESH CELL:" << endl;
+// 	  for (typename BGring::const_iterator itr = thisRing.begin();
+// 	       itr != thisRing.end(); ++itr){
+// 	    cerr << (*itr).realx(mLow[0],mdx) << " " 
+// 		 << (*itr).realy(mLow[1],mdx);// << endl;
+// 	    cerr << (*itr) << endl;
+// 	  }
+// 	  // Blago!
+	    
+	  
+	  // Simplify the resulting ring. Removes points that are within some minimum
+	  // distance to their neighbors. Setting distance = 1 merges ring elements
+	  // that are within one quantized mesh spacing. This essentially removes
+	  // repeated cell nodes having length-zero cell faces. An unfortunate
+	  // consequence of using a third-party lib to do all our unions/intersections
+	  BGring simplifiedRing;
+	  boost::geometry::simplify(thisRing, simplifiedRing, 2);
+	  thisRing = simplifiedRing;
+
+
+// 	  // Blago!
+// 	  cerr << endl << "SubCell " << subIndex << ", OrigCell " << thisIndex << endl;
+// 	  cerr << endl << "SIMPLIFIED CELL:" << endl;
+// 	  for (typename BGring::const_iterator itr = thisRing.begin();
+// 	       itr != thisRing.end(); ++itr){
+// 	    cerr << (*itr).realx(mLow[0],mdx) << " " 
+// 		 << (*itr).realy(mLow[1],mdx) << endl;
+// 	  }
+// 	  // Blago!
+	}	
+	
+	// If the orphan has only a single neighbor, just compute its union with
+	// that neighbor's cell ring from the full tessellation
+	else{
+	  thisRing = orphan;
+	}
+        
+	// Union this new cell ring with the original cell ring from the full tessellation
+	vector<BGring> unionRing;
+	boost::geometry::union_( thisRing, cellRings[thisIndex], unionRing );
+	if(unionRing.size() > 1){
+	  cerr << "Blago!" << endl << "Cell " << thisIndex
+	       << " has more than one cell ring:" << endl;
+	  for( i=0; i<unionRing.size(); ++i){
+	    cerr << endl << "Ring " << i << ":" << endl;
+	    for (typename BGring::const_iterator itr = unionRing[i].begin();
+		 itr != unionRing[i].end(); ++itr){
+	      cerr << (*itr).realx(mLow[0],mdx) << " " 
+		   << (*itr).realy(mLow[1],mdx) << " "
+		   << (*itr) << endl;
+	    }
+	  }
+	}
+	POLY_ASSERT(unionRing.size() == 1);
+	thisRing = unionRing[0];
+	
+	// Simplify the final ring. 
+	BGring simplifiedRing;
+	boost::geometry::simplify(thisRing, simplifiedRing, 1);
+	thisRing = simplifiedRing;
+	  
+	  
+	// // Blago!
+	// cerr << endl << "SubCell " << subIndex << ", OrigCell " << thisIndex << endl;
+	// cerr << endl << "FINAL SUBMESH CELL:" << endl;
+	// for (typename BGring::const_iterator itr = thisRing.begin();
+	//      itr != thisRing.end(); ++itr){
+	//   cerr << (*itr).realx(mLow[0],mdx) << " " 
+	//        << (*itr).realy(mLow[1],mdx) << endl;
+	// }
+	// for (typename BGring::const_iterator itr = thisRing.begin();
+	//        itr != thisRing.end(); ++itr){
+	//   cerr << *itr << endl;
+	// }
+	// Blago!
+	  
+	  
+	cellRings[thisIndex] = thisRing;
       }
     }
   }
+  //}
   //*********************** End Adoption Algorithm ************************
 
 
@@ -845,13 +844,15 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
   icell2 = pointIndexPairs[1].second;
 
   // Node position
-  p1   = pointIndexPairs[icell1].first;
-  p2   = pointIndexPairs[icell2].first;
+  p1   = pointIndexPairs[0].first;
+  p2   = pointIndexPairs[1].first;
+  midpt = RealPoint( 0.5*(p1.x + p2.x),
+		     0.5*(p1.y + p2.y) );
   r1.x = p2.x - p1.x;
   r1.y = p2.y - p1.y;
   geometry::unitVector<2,RealType>(&r1.x);
-  r2.x = -r1.y;
-  r2.y =  r1.x;
+  r2.x =  r1.y;
+  r2.y = -r1.x;
   
   // Extra inf node used to bound the first cell
   r1 *= -1.0;
@@ -919,8 +920,8 @@ computeVoronoiFromCollinearPoints(const vector<RealType>& points,
     r1.x = p2.x - p1.x;
     r1.y = p2.y - p1.y;
     geometry::unitVector<2,RealType>(&r1.x);
-    r2.x = -r1.y;
-    r2.y =  r1.x;
+    r2.x =  r1.y;
+    r2.y = -r1.x;
     
     // Node 0: endpt of interior face
     test = geometry::rayCircleIntersection(&midpt.x, &r2.x, cboxc, rinf, 1.0e-10, &node.x);
@@ -1204,7 +1205,7 @@ computeVoronoi(const vector<RealType>& points,
     POLY_ASSERT(pindex < numGenerators);
     
     set<EdgeHash> meshEdges;
-    for (std::set<unsigned>::const_iterator triItr = tris.begin();
+    for (set<unsigned>::const_iterator triItr = tris.begin();
          triItr != tris.end(); ++triItr){
       i = *triItr;
       POLY_ASSERT(i < delaunay.numberoftriangles);
@@ -1348,6 +1349,7 @@ computeCellRings(const vector<RealType>& points,
      this->computeVoronoi(points,mesh);
   }
 
+
 //   // Blago!
 // #if HAVE_SILO
 //    vector<double> index(mesh.cells.size());
@@ -1374,7 +1376,7 @@ computeCellRings(const vector<RealType>& points,
   const RealType cboxc[2] = {0.5*(mLow[0]+mHigh[0]), 0.5*(mLow[1]+mHigh[1])};
      
   // Quantize the PLCpoints
-  std::vector<IntPoint> IntPLCPoints(numPLCpoints);
+  vector<IntPoint> IntPLCPoints(numPLCpoints);
   for (i = 0; i < numPLCpoints; ++i){
     IntPLCPoints[i] = IntPoint( PLCpoints[2*i], PLCpoints[2*i+1],
 				mLow[0], mLow[1], mdx );
