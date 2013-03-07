@@ -107,17 +107,17 @@ int main(int argc, char** argv)
       ++i;
    }
 
-   // // Test 4: Empty orphan neighbor set
-   // {
-   //    srand(10489611);
-   //    cout << "\nTest 4: Empty orphan neighbor set" << endl;
-   //    Generators<2,double> generators(boundary);
-   //    generators.randomPoints(20);
-   //    Tessellation<2,double> mesh;
-   //    tessellate2D(generators.mPoints, boundary, triangle, mesh);
-   //    outputMesh(boundary, mesh, i);
-   //    ++i;
-   // }
+   // Test 4: Empty orphan neighbor set
+   {
+      srand(10489611);
+      cout << "\nTest 4: Empty orphan neighbor set" << endl;
+      Generators<2,double> generators(boundary);
+      generators.randomPoints(20);
+      Tessellation<2,double> mesh;
+      tessellate2D(generators.mPoints, boundary, triangle, mesh);
+      outputMesh(boundary, mesh, i);
+      ++i;
+   }
 
    // Test 5: Boost.Geometry calls invalid overlay exception
    {

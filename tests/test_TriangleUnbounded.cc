@@ -19,6 +19,30 @@ using namespace polytope;
 
 
 // -----------------------------------------------------------------------
+// checkMesh
+// -----------------------------------------------------------------------
+void checkMesh(const Tessellation<2,double>& mesh,
+               const unsigned ncells,
+               const unsigned nnodes,
+               const unsigned nfaces,
+               const unsigned ninfNodes,
+               const unsigned ninfFaces) {
+  POLY_CHECK(mesh.cells.size()   == ncells);
+  POLY_CHECK(mesh.nodes.size()/2 == nnodes);
+  POLY_CHECK(mesh.faces.size()   == nfaces);
+  unsigned infNodeCount=0;
+  for(unsigned i = 0; i < mesh.infNodes.size(); ++i){
+    if( mesh.infNodes[i] == 1 ) ++infNodeCount;
+  }
+  POLY_CHECK(infNodeCount == ninfNodes);
+  unsigned infFaceCount=0;
+  for(unsigned i = 0; i < mesh.infFaces.size(); ++i){
+    if( mesh.infFaces[i] == 1 ) ++infFaceCount;
+  }
+  POLY_CHECK(infFaceCount == ninfFaces);
+}
+
+// -----------------------------------------------------------------------
 // outputMesh
 // -----------------------------------------------------------------------
 void outputMesh(Tessellation<2,double>& mesh, int ntest) {
@@ -64,10 +88,11 @@ int main(int argc, char** argv)
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh,N,N+1,2*N,N,N);
     ++test;
   }
 
-  // Test 2: Circle of generators
+  // Test 2: Two uniform rows of generators
   {
     cout << "\nTest 2: Two uniform rows of generators" << endl;
     int N = 10;
@@ -79,6 +104,7 @@ int main(int argc, char** argv)
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
     ++test;
   }
 
@@ -100,6 +126,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTest 4: 2x2 Cartesian generators" << endl;
     vector<double> points;
+    int N = 2;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(1.0);
@@ -107,6 +134,7 @@ int main(int argc, char** argv)
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh, 4, 5, 8, 4, 4);
     ++test;
   }
 
@@ -119,32 +147,49 @@ int main(int argc, char** argv)
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh, 2, 4, 5, 4, 4);
     ++test;
   }
 
   // Test 6: Line of generators, uniform
   {
     cout << "\nTest 6: Uniform line of generators" << endl;
-    vector<double> points(20, 0);
-    for (unsigned i = 0; i < 10; ++i)  points[2*i] = double(i);
+    int N=10;
+    vector<double> points(2*N, 0);
+    for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
     ++test;
   }
 
   // Test 7: Line of generators, non-uniform
   {
     cout << "\nTest 7: Non-uniform line of generators" << endl;
-    vector<double> points(20);
-    for (unsigned i = 0; i < 10; ++i)  points[2*i] = double(i) + random01() - 0.5;
+    int N = 10;
+    vector<double> points(2*N);
+    for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i) + random01() - 0.5;
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
     ++test;
   }
 
-
+  // Test 8: Line of generators, non-uniform, shuffled
+  {
+    cout << "\nTest 8: Non-uniform line of generators, shuffled" << endl;
+    int N = 10;
+    vector<double> points(2*N);
+    int indices[10] = {5,7,1,2,8,0,3,9,4,6};
+    for (unsigned i = 0; i < N; ++i)  points[2*i] = double(indices[i]) + random01() - 0.5;
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
+    ++test;
+  }
 
 
   cout << "PASS" << endl;
