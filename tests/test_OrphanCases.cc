@@ -67,7 +67,8 @@ int main(int argc, char** argv)
    TriangleTessellator<double> triangle;
    
    // Circular region with star-shaped hole
-   boundary.computeDefaultBoundary(5);
+   int bType = 5;
+   boundary.setDefaultBoundary(bType);
 
    int i = 1;
 

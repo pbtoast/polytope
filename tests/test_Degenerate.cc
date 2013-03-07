@@ -73,8 +73,8 @@ void generateMesh(Tessellator<2,double>& tessellator)
 {
    // Set the boundary
    Boundary2D<double> boundary;
-   boundary.unitSquare();
-   Generators<2,double> generators( boundary );
+   boundary.setUnitSquare();
+   Generators<2,double> generators(boundary);
 
    unsigned nx = 10;
    std::vector<unsigned> nxny(2,nx);

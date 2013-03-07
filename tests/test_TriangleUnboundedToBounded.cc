@@ -44,7 +44,8 @@ int main(int argc, char** argv)
   // }
 
   Boundary2D<double> boundary;
-  boundary.computeDefaultBoundary(3);
+  int bType = 3;
+  boundary.setDefaultBoundary(bType);
   Generators<2,double> generators(boundary);
   generators.randomPoints(20);
 

@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
    // Initialize the bounding PLC
    int bType = 7;
    Boundary2D<double> boundary;
-   boundary.computeDefaultBoundary( bType );
+   boundary.setDefaultBoundary(bType);
    
    // Generate random points on all processors
    unsigned N = 800;

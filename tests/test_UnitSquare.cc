@@ -50,7 +50,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
 {
    // Set the boundary
    Boundary2D<double> boundary;
-   boundary.unitSquare();
+   boundary.setUnitSquare();
    Generators<2,double> generators( boundary );
    
    for (unsigned nx = 2; nx != 100; ++nx){

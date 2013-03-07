@@ -14,9 +14,7 @@
 #include "polytope.hh"
 
 #if HAVE_MPI
-// extern "C" {
 #include "mpi.h"
-// }
 #endif
 
 #define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; } //exit(-1); }
