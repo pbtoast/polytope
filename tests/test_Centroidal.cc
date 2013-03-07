@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
    // Set up boundary and disperse random generator locations
    Boundary2D<double> boundary;
-   boundary.donut();
+   boundary.setDonut();
    Generators<2,double> generators(boundary);
    generators.randomPoints(nPoints);
    std::vector<double> points;

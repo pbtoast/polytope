@@ -69,10 +69,10 @@ double testBoundary(Boundary2D<double>& boundary,
 double testAllBoundaries(Tessellator<2,double>& tessellator)
 {
    double result = 0.0;
-   for (int bid = 0; bid < 7; ++bid){
+   for (int bid = 0; bid < 8; ++bid){
       cout << endl << "Testing boundary type " << bid << endl;
       Boundary2D<double> boundary;
-      boundary.computeDefaultBoundary(bid);
+      boundary.setDefaultBoundary(bid);
       result = std::max(result, testBoundary( boundary, tessellator ));
    }
    return result;

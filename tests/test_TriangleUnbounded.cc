@@ -1,4 +1,6 @@
-// 
+// TriangleUnbounded
+// Try to tessellate a series of degenerate unbounded tessellations and
+// check that the correct number of cells, nodes, and faces result
 
 #include <iostream>
 #include <vector>

@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 #endif
 
   Boundary2D<double> boundary;
-  boundary.unitSquare();
+  boundary.setUnitSquare();
   Generators<2,double> generators(boundary);
   
   double point1[2] = {-0.25, -0.125};  generators.addGenerator(point1);

@@ -34,7 +34,7 @@ void outputResult(Tessellator<2,double>& tessellator,
 {
    Boundary2D<double> boundary;
 
-   boundary.computeDefaultBoundary(bType);
+   boundary.setDefaultBoundary(bType);
    Generators<2,double> generators( boundary );
 
    generators.randomPoints( nPoints );
@@ -105,10 +105,10 @@ void testBoundary(Boundary2D<double>& boundary,
 // -----------------------------------------------------------------------
 void testAllBoundaries(Tessellator<2,double>& tessellator)
 {
-   for (int bid = 0; bid < 7; ++bid){
+   for (int bid = 0; bid < 9; ++bid){
       cout << "Testing boundary type " << bid << endl;
       Boundary2D<double> boundary;
-      boundary.computeDefaultBoundary(bid);
+      boundary.setDefaultBoundary(bid);
       testBoundary( boundary, tessellator );
    }
 }
@@ -126,7 +126,7 @@ int main(int argc, char** argv)
    TriangleTessellator<double> triangle;
    //testAllBoundaries(triangle);
    
-   outputResult(triangle,7,500);
+   outputResult(triangle,8,5);
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
    //
