@@ -1,3 +1,23 @@
+Release 0.5.9
+
+changeset:
+  278:c3c28b740513
+
+Bugfix:
+
+- Extensive testing, particularly of the orphaned pieces of cells for complex
+  boundaries in 2D tessellations.
+- TriangleTessellator has been refactored to more closely match the structure
+  used in TetgenTessellator.
+- David has put in a fair amount of work debugging the DistributedTessellator,
+  which seems fairly robust now.
+
+Added capability:
+
+- Initial implementation of the 3D Tetgen tessellator.  Currently only supports
+  unbounded tessellations.
+
+--------------------------------------------------------------------------------
 Release 0.5.8
 
 changeset:
@@ -7,7 +27,7 @@ Bugfix:
 
 - For bounded tessellations using TriangleTessellator, cells may leave orphaned
   pieces for complicated boundaries. Added algorithm to distribute the orphaned
-  piece among its neighbors using a local Voronoi mesh
+  piece among its neighbors using a local Voronoi mesh.
 
 Added capability:
 

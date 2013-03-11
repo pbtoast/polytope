@@ -221,9 +221,8 @@ findOtherTetIndices(const int* indices,
 // Constructor.
 //------------------------------------------------------------------------------
 TetgenTessellator::
-TetgenTessellator(const bool directComputation):
-  Tessellator<3, double>(),
-  mDirectComputation(directComputation) {
+TetgenTessellator():
+  Tessellator<3, double>() {
 }
 
 //------------------------------------------------------------------------------
@@ -240,11 +239,7 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            Tessellation<3, double>& mesh) const {
-  if (mDirectComputation) {
-    this->computeVoronoiNatively(points, mesh);
-  } else {
-    this->computeVoronoiThroughTetrahedralization(points, mesh);
-  }
+  this->computeVoronoiThroughTetrahedralization(points, mesh);
 }
 
 //------------------------------------------------------------------------------
