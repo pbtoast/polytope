@@ -45,7 +45,9 @@ int main(int argc, char** argv) {
    MPI_Init(&argc, &argv);
 
    // Seed the random number generator the same on all processes.
-   srand(10489591);
+   srand(10489592);
+   
+   bool assignRandomly = true;
    
    // Figure out our parallel configuration.
    int rank, numProcs;
@@ -53,59 +55,68 @@ int main(int argc, char** argv) {
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
    // Initialize the bounding PLC
-   int bType = 7;
+   int bType = 8;
    Boundary2D<double> boundary;
    boundary.setDefaultBoundary(bType);
    
    // Generate random points on all processors
-   unsigned N = 800;
+   unsigned N = 1000;
    Generators<2,double> generators( boundary );
    generators.randomPoints( N );
    
-   // // Assign random points to each processor
-   // vector<double> myGenerators;
-   // for (unsigned i = 0; i < N; ++i){
-   //    if( i%numProcs == rank ){
-   //       myGenerators.push_back( generators.mPoints[2*i]   );
-   //       myGenerators.push_back( generators.mPoints[2*i+1] );
-   //    }
-   // }
-
-   // Assign points to processors in quasi-Voronoi fashion
-   vector<double> xproc, yproc, myGenerators;
-   double p[2];
-   xproc.reserve(numProcs);
-   yproc.reserve(numProcs);
-   for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
-     boundary.getPointInside(p);
-     xproc.push_back(p[0]);
-     yproc.push_back(p[1]);
-   }
-   for (unsigned i = 0; i < N; ++i){
-     unsigned owner = 0;
-     double minDist2 = distance2(generators.mPoints[2*i], 
-                                 generators.mPoints[2*i+1], 
-                                 xproc[0], yproc[0]);
-     for (unsigned iproc = 1; iproc < numProcs; ++iproc) {
-       const double d2 = distance2(generators.mPoints[2*i], 
-                                   generators.mPoints[2*i+1], 
-                                   xproc[iproc], yproc[iproc]);
-       if( d2 < minDist2 ){
-         owner = iproc;
-         minDist2 = d2;
+   if( rank == 0 ) cerr << "Points generated" << endl;
+   
+   vector<double> myGenerators;
+   
+   // Assign random points to each processor
+   if( assignRandomly ){
+     for (unsigned i = 0; i < N; ++i){
+       if( i%numProcs == rank ){
+         myGenerators.push_back( generators.mPoints[2*i]   );
+         myGenerators.push_back( generators.mPoints[2*i+1] );
        }
      }
-     if (rank == owner) {
-       myGenerators.push_back(generators.mPoints[2*i  ]);
-       myGenerators.push_back(generators.mPoints[2*i+1]);
+   }
+   // Assign points to processors in quasi-Voronoi fashion
+   else{
+     vector<double> xproc, yproc;
+     double p[2];
+     xproc.reserve(numProcs);
+     yproc.reserve(numProcs);
+     for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
+       boundary.getPointInside(p);
+       xproc.push_back(p[0]);
+       yproc.push_back(p[1]);
+     }
+     for (unsigned i = 0; i < N; ++i){
+       unsigned owner = 0;
+       double minDist2 = distance2(generators.mPoints[2*i], 
+                                   generators.mPoints[2*i+1], 
+                                   xproc[0], yproc[0]);
+       for (unsigned iproc = 1; iproc < numProcs; ++iproc) {
+         const double d2 = distance2(generators.mPoints[2*i], 
+                                     generators.mPoints[2*i+1], 
+                                     xproc[iproc], yproc[iproc]);
+         if( d2 < minDist2 ){
+           owner = iproc;
+           minDist2 = d2;
+         }
+       }
+       if (rank == owner) {
+         myGenerators.push_back(generators.mPoints[2*i  ]);
+         myGenerators.push_back(generators.mPoints[2*i+1]);
+       }
      }
    }
-
    
+   if( rank == 0 ) cerr << "Points assigned to processors" << endl;
+
    polytope::Tessellation<2, double> mesh;
    polytope::DistributedTessellator<2, double> distTest
       (new polytope::TriangleTessellator<double>(), true, true);
    distTest.tessellate(myGenerators, boundary.mPLCpoints, boundary.mPLC, mesh);
+
+   if( rank == 0 ) cerr << "Generated tessellation" << endl;
 
    // Do some sanity checks on the stuff in the shared info.
    unsigned numNeighborDomains = mesh.neighborDomains.size();
@@ -120,6 +131,8 @@ int main(int argc, char** argv) {
       POLY_CHECK(*max_element(mesh.sharedNodes[k].begin(), mesh.sharedNodes[k].end()) < nnodes);
       POLY_CHECK(mesh.sharedFaces[k].size() == 0 or *max_element(mesh.sharedFaces[k].begin(), mesh.sharedFaces[k].end()) < nfaces);
    }
+
+   if( rank == 0 ) cerr << "Checks passed" << endl;
 
    // Figure out which of our nodes and faces we actually own.
    vector<unsigned> ownNodes(nnodes, 1), ownFaces(nfaces, 1);

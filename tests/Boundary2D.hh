@@ -426,7 +426,7 @@ public:
     const RealType holePoints[8] = {0.05, -0.05,
 				    0.10,  0.10,
 				    0.20, -0.30,
-				   -0.30, -0.15};
+				   -0.25, -0.15};
     for (unsigned p = 0; p < nHolePoints; ++p){
       mPLCpoints.push_back( holePoints[2*p  ] );
       mPLCpoints.push_back( holePoints[2*p+1] );
