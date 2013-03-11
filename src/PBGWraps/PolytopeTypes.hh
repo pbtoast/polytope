@@ -160,27 +160,6 @@ void setsharedFaces( Tessellation<Dimension, RealType>& self,
                      std::vector<std::vector<unsigned> >* sharedFacesIn )
 { self.sharedFaces = *sharedFacesIn; }
 
-
-// //------------------------------------------------------------------------------
-// // Getting preprocessor variables
-// //------------------------------------------------------------------------------
-// bool haveTriangle(){ 
-// #if HAVE_TRIANGLE
-//    return true;
-// #else
-//    return false;
-// #endif
-// }
-
-// bool haveTetgen(){ 
-// #if HAVE_TETGEN
-//    return true;
-// #else
-//    return false;
-// #endif
-// }
-
-
 }
 
 #endif

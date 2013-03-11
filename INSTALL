@@ -61,7 +61,12 @@ use_python=1
         the python search path.
 
 python_exe=<path>
-        Explicit path to python executable.
+        Explicit path to python executable. Currently assumes a Python directory
+	structure of 
+	1) <root>/bin for the executable
+	2) <root>/include/python<version>/ to find Python.h
+	3) <root>/lib/python/ or <root>/lib/python<version>/ to find 
+	   libpython<version>.a and site-packages/pybindgen
 
 python_version=2.7
         Set the python version.
