@@ -56,6 +56,16 @@ use_silo=0
         Choose to build with silo file capability (1) or without (0).
         Defaults to 1 if silo can be found.
 
+use_python=1
+        Try to build python bindings.  Requires pybindgen installed somewhere in 
+        the python search path.
+
+python_exe=<path>
+        Explicit path to python executable.
+
+python_version=2.7
+        Set the python version.
+
 ------------------------------------------------------------------------------
                       O T H E R   C O N S I D E R A T I O N S
 ------------------------------------------------------------------------------
