@@ -1439,8 +1439,7 @@ computeCellRings(const vector<RealType>& points,
 						 1.0e-10,
 						 &pinf.x);
 	  POLY_ASSERT(test);
-          // cerr << "  new node   : (" << pinf.x << "," << pinf.y << ")" << endl;
-	  
+          
           // Add the fictitious inf node
 	  IntNode = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mdx);
 	  cellBoundary.push_back(IntNode);
@@ -1472,6 +1471,18 @@ computeCellRings(const vector<RealType>& points,
         inside = boost::geometry::within(X, cellIntersections[j]);
         if( inside )  k = j;
 	else          orphanage[i].push_back( cellIntersections[j] );
+      }
+      // If none of the cell intersections contain the point, check if
+      // it's on the boundary of the intersection itself
+      if( k == cellIntersections.size() ){
+        for (j = 0; j != cellIntersections.size(); ++j) {
+          bool onBoundary = false;
+          for (typename BGring::const_iterator itr = cellIntersections[j].begin();
+               itr != cellIntersections[j].end(); ++itr) {
+            onBoundary += (X == *itr);
+          }
+          if( onBoundary ) k = j;
+        }
       }
       POLY_ASSERT(k < cellIntersections.size());
       cellRings[i] = cellIntersections[k];
