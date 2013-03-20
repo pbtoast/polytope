@@ -41,7 +41,7 @@ void checkMesh(const Tessellation<2,double>& mesh,
   for(unsigned i = 0; i < mesh.infFaces.size(); ++i){
     if( mesh.infFaces[i] == 1 ) ++infFaceCount;
   }
-  POLY_CHECK(infFaceCount == ninfFaces);
+  POLY_CHECK2(infFaceCount == ninfFaces, infFaceCount << " != " << ninfFaces);
 }
 
 // -----------------------------------------------------------------------
@@ -149,6 +149,7 @@ int main(int argc, char** argv)
     Tessellation<2,double> mesh;
     triangle.tessellate(points, mesh);
     outputMesh(mesh, test);
+    cerr << mesh;
     checkMesh(mesh, 2, 4, 5, 4, 4);
     ++test;
   }

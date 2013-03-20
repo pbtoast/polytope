@@ -12,8 +12,43 @@
 #include "polytope_parallel_utilities.hh"
 #endif
 
+extern double orient2d(double* a, double* b, double* c);
+extern int scale_expansion(int elen, double* e, double b, double* h);
+extern int grow_expansion(int elen, double* e, double b, double* h);
+
 namespace polytope {
 namespace geometry {
+
+//------------------------------------------------------------------------------
+// computeCircumcenter
+//------------------------------------------------------------------------------
+inline
+double
+computeSquaredNorm(double* A) {
+  int i=0;
+  double axax[2], ayay[2], tmp[2];
+  i += scale_expansion(1, &A[0], A[0], axax);
+  i += scale_expansion(1, &A[1], A[1], ayay);
+  i += grow_expansion(1, &axax[1], ayay[1], tmp);
+  return tmp[1];
+}
+
+//------------------------------------------------------------------------------
+// computeCircumcenter
+//------------------------------------------------------------------------------
+inline
+void
+computeCircumcenter(double* A, double* B, double* C, double* X) {
+  double Anorm = computeSquaredNorm(A);
+  double Bnorm = computeSquaredNorm(B);
+  double Cnorm = computeSquaredNorm(C);
+  double D = 2*orient2d(A,B,C);
+  double a0[2] = {Anorm, A[1]},  a1[2] = {A[0], Anorm};
+  double b0[2] = {Bnorm, B[1]},  b1[2] = {B[0], Bnorm};
+  double c0[2] = {Cnorm, C[1]},  c1[2] = {C[0], Cnorm};
+  X[0] = orient2d(a0,b0,c0)/D;
+  X[1] = orient2d(a1,b1,c1)/D;
+}
 
 //------------------------------------------------------------------------------
 // Distance between points.

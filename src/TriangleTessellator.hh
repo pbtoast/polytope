@@ -84,42 +84,54 @@ private:
   static CoordHash coordMax;
   static double degeneracy;
 
-  // Compute an unbounded tessellation
-  void computeVoronoi(const std::vector<RealType>& points,
-                      Tessellation<2, RealType>& mesh) const;
-
-  
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
   // ------------------------------------------------- //
 
-  // Compute an unbounded tessellation from two-point data
-  void computeVoronoiFromTwoPoints(const std::vector<RealType>& points,
-                                   Tessellation<2, RealType>& mesh) const;
+  // Compute an unbounded tessellation
+  void computeVoronoiUnbounded(const std::vector<RealType>& points,
+			       Tessellation<2, RealType>& mesh) const;
 
-  // Compute an unbounded tessellation from more-than-two points
-  void computeVoronoiFromManyPoints(const std::vector<RealType>& points,
-                                    Tessellation<2, RealType>& mesh) const;
-   
-  // Compute an unbounded tessellation from collinear points
-  void computeVoronoiFromCollinearPoints(const std::vector<RealType>& points,
-                                         Tessellation<2, RealType>& mesh) const;
-   
-  // Computes the triangularization using Triangle
-  void computeDelaunay(const std::vector<RealType>& points,
-                       triangulateio& delaunay) const;
+  // Compute a bounded tessellation
+  void computeVoronoiBounded(const std::vector<RealType>& points,
+			     const std::vector<RealType>& PLCpoints,
+			     const PLC<2, RealType>& geometry,
+			     Tessellation<2, RealType>& mesh) const;
+
+  // Compute node IDs around each generator and their quantized locations
+  void computeCellNodes(const std::vector<RealType>& points,
+			std::map<IntPoint, std::pair<int,int> >& circumceterMap,
+			std::map<int, std::vector<unsigned> >& cellNodes,
+			std::vector<unsigned>& infNodes) const;
   
-  // Compute cell rings from an unbounded tessellation
+  
+  // Compute node IDs around collinear generators and their quantized locations
+  void computeCellNodesCollinear(const std::vector<RealType>& points,
+				 std::map<IntPoint, std::pair<int,int> >& circumcenterMap,
+				 std::map<int, std::vector<unsigned> >& cellNodes,
+				 std::vector<unsigned>& infNodes) const;
+
+  
+  // Compute bounded cell rings from collection of unbounded node locations
   void computeCellRings(const std::vector<RealType>& points,
 			const std::vector<RealType>& PLCpoints,
 			const PLC<2, RealType>& geometry,
 			std::vector<BGring>& cellRings,
-			std::map<int, std::vector<BGring> >& orphanage) const;
+			bool performCellAdoption) const;
 
+  // Computes the triangularization using Triangle
+  void computeDelaunay(const std::vector<RealType>& points,
+                       triangulateio& delaunay) const;
+  
+  // Algorithm for assigning orphaned cells to neighboring cell rings
+  void adoptionAlgorithm(const std::vector<RealType>& points,
+			 std::vector<BGring>& cellRings,
+			 std::vector<BGring>& orphanage) const;
+  
   // Bounding box used to quantize points and mitigate degeneracies
-  mutable std::vector<RealType> mLow;
-  mutable std::vector<RealType> mHigh;
-  mutable RealType mdx;
+  mutable std::vector<RealType> mLowOuter, mLowInner;
+  mutable std::vector<RealType> mHighOuter, mHighInner;
+  mutable RealType mdxOuter, mdxInner;
 
 };
 
