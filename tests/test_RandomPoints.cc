@@ -126,7 +126,7 @@ int main(int argc, char** argv)
    TriangleTessellator<double> triangle;
    //testAllBoundaries(triangle);
    
-   outputResult(triangle,8,5);
+   outputResult(triangle,3,20);
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
    //
