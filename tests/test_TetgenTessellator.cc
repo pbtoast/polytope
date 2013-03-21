@@ -18,7 +18,7 @@ void unboundedTessellation(const unsigned nx,
 
   // Create the tessellation.
   Tessellation<3, double> mesh;
-  TetgenTessellator tetgen(false);
+  TetgenTessellator tetgen;
   tetgen.tessellate(generators, mesh);
 
   // Write out the file if we can.

@@ -26,25 +26,26 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// outputMesh
+// outputSiloMesh
 // -----------------------------------------------------------------------
-void outputMesh(Boundary2D<double>& boundary,
-                Tessellation<2,double>& mesh, 
-                int ntest) {
-   POLY_ASSERT( mesh.cells.size() == 20 );
-   double area = computeTessellationArea(mesh);
-   cout << "Tessellation Area = " << area << endl;
-   cout << "Relative error    = " << (boundary.mArea-area)/boundary.mArea << endl;
-   
+void outputSiloMesh(Tessellation<2,double>& mesh,
+                    std::vector<double>& points,
+                    int ntest) {
 #if HAVE_SILO
    vector<double> index(mesh.cells.size());
    vector<double> genx (mesh.cells.size());
    vector<double> geny (mesh.cells.size());
    for (int i = 0; i < mesh.cells.size(); ++i){
       index[i] = double(i);
+      if(!points.empty()){
+         genx[i] = points[2*i];
+         geny[i] = points[2*i+1];
+      }
    }
    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
    cellFields["cell_index"   ] = &index[0];
+   cellFields["cell_center_x"] = &genx[0];
+   cellFields["cell_center_y"] = &geny[0];
    ostringstream os;
    os << "test_OrphanCases_test_" << ntest;
    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
@@ -52,6 +53,19 @@ void outputMesh(Boundary2D<double>& boundary,
 #endif
 }
 
+// -----------------------------------------------------------------------
+// outputMesh
+// -----------------------------------------------------------------------
+void outputMesh(Boundary2D<double>& boundary,
+                std::vector<double>& points,
+                Tessellation<2,double>& mesh, 
+                int ntest) {
+   POLY_ASSERT( mesh.cells.size() == 20 );
+   double area = computeTessellationArea(mesh);
+   cout << "Tessellation Area = " << area << endl;
+   cout << "Relative error    = " << (boundary.mArea-area)/boundary.mArea << endl;
+   outputSiloMesh(mesh, points, ntest);
+}
 
 // -----------------------------------------------------------------------
 // main
@@ -80,7 +94,7 @@ int main(int argc, char** argv)
       generators.randomPoints(20);
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints, boundary, triangle, mesh);
-      outputMesh(boundary, mesh, i);
+      outputMesh(boundary, generators.mPoints, mesh, i);
       ++i;
    }
 
@@ -92,7 +106,7 @@ int main(int argc, char** argv)
       generators.randomPoints(20);
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints, boundary, triangle, mesh);
-      outputMesh(boundary, mesh, i);
+      outputMesh(boundary, generators.mPoints, mesh, i);
       ++i;
    }
 
@@ -104,7 +118,7 @@ int main(int argc, char** argv)
       generators.randomPoints(20);
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints, boundary, triangle, mesh);
-      outputMesh(boundary, mesh, i);
+      outputMesh(boundary, generators.mPoints, mesh, i);
       ++i;
    }
 
@@ -116,7 +130,7 @@ int main(int argc, char** argv)
       generators.randomPoints(20);
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints, boundary, triangle, mesh);
-      outputMesh(boundary, mesh, i);
+      outputMesh(boundary, generators.mPoints, mesh, i);
       ++i;
    }
 
@@ -128,7 +142,34 @@ int main(int argc, char** argv)
       generators.randomPoints(20);
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints, boundary, triangle, mesh);
-      outputMesh(boundary, mesh, i);
+      outputMesh(boundary, generators.mPoints, mesh, i);
+      ++i;
+   }
+
+   // Test 6: Nonconvex boundary with three internal generators
+   {
+      cout << "\nTest 6: Nonconvex boundary with three internal generators" << endl;
+      std::vector<double> points;
+      points.push_back(0.05); points.push_back(0.60);
+      points.push_back(0.40); points.push_back(0.10);
+      points.push_back(0.60); points.push_back(0.50);
+      std::vector<double> PLCpoints;
+      PLCpoints.push_back(0.0); PLCpoints.push_back(0.0);
+      PLCpoints.push_back(0.1); PLCpoints.push_back(0.0);
+      PLCpoints.push_back(0.2); PLCpoints.push_back(0.8);
+      PLCpoints.push_back(0.3); PLCpoints.push_back(0.0);
+      PLCpoints.push_back(1.0); PLCpoints.push_back(0.0);
+      PLCpoints.push_back(1.0); PLCpoints.push_back(1.0);
+      PLCpoints.push_back(0.0); PLCpoints.push_back(1.0);
+      PLC<2,double> boundary;
+      boundary.facets.resize(7, std::vector<int>(2));
+      for (int i = 0; i < 7; ++i){
+         boundary.facets[i][0] = i;
+         boundary.facets[i][1] = (i+1) % 7;
+      }
+      Tessellation<2,double> mesh;
+      triangle.tessellate(points, PLCpoints, boundary, mesh);
+      outputSiloMesh(mesh, points, i);
       ++i;
    }
 
