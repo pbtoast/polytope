@@ -83,6 +83,8 @@ int main(int argc, char** argv)
       }
    }
 
+   cout << "PASS" << endl;
+
 #if HAVE_MPI
    MPI_Finalize();
 #endif

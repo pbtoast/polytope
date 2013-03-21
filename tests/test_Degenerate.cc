@@ -126,9 +126,11 @@ int main(int argc, char** argv)
    generateMesh(triangle);
 #endif   
 
-   cout << "\nVoro 2D Tessellator:\n" << endl;
-   VoroPP_2d<double> voro;
-   generateMesh(voro);
+   // NOTE: Voro does not give sensible results at this time
+   //
+   // cout << "\nVoro 2D Tessellator:\n" << endl;
+   // VoroPP_2d<double> voro;
+   // generateMesh(voro);
 
 #if HAVE_MPI
   MPI_Finalize();

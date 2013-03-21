@@ -12,15 +12,20 @@
 #include "polytope_parallel_utilities.hh"
 #endif
 
+// --- These live in predicates.cc
+// Compute the orientation of point c relative to points a and b
 extern double orient2d(double* a, double* b, double* c);
+// Sets h = b*e
 extern int scale_expansion(int elen, double* e, double b, double* h);
+// Sets h = e + b
 extern int grow_expansion(int elen, double* e, double b, double* h);
 
 namespace polytope {
 namespace geometry {
 
+
 //------------------------------------------------------------------------------
-// computeCircumcenter
+// computeNorm
 //------------------------------------------------------------------------------
 inline
 double
@@ -36,6 +41,7 @@ computeSquaredNorm(double* A) {
 //------------------------------------------------------------------------------
 // computeCircumcenter
 //------------------------------------------------------------------------------
+// Compute the circumcenter using fast predicates
 inline
 void
 computeCircumcenter(double* A, double* B, double* C, double* X) {
@@ -216,8 +222,7 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  //return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
-  return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
 }
 
 //------------------------------------------------------------------------------
