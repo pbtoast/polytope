@@ -25,7 +25,7 @@ public:
   typedef double RealType;
 
   // Constructor, destructor.
-  TetgenTessellator(const bool directComputation = false);
+  TetgenTessellator();
   ~TetgenTessellator();
 
   // Tessellate the given generators (unbounded).
@@ -47,10 +47,6 @@ public:
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return false; }
 
-  // Attributes.
-  bool directComputation() const { return mDirectComputation; }
-  void directComputation(const bool x) { mDirectComputation = x; }
-
 private:
   //-------------------- Private interface --------------------
   typedef int64_t CoordHash;
@@ -60,8 +56,6 @@ private:
   static CoordHash coordMax;
   static RealType degeneracy;
 
-  bool mDirectComputation;
-
   // Internal method to compute the tessellation directly.
   void computeVoronoiNatively(const std::vector<RealType>& points,
                               Tessellation<3, RealType>& mesh) const;
@@ -69,9 +63,6 @@ private:
   // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
   void computeVoronoiThroughTetrahedralization(const std::vector<RealType>& points,
                                                Tessellation<3, RealType>& mesh) const;
-
-  // Forbidden methods.
-  TetgenTessellator();
 };
 
 }

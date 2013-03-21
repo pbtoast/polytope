@@ -70,8 +70,8 @@ class Tessellator:
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
         x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
-                                          param("double *", "low"),#, transfer_ownership=True),
-                                          param("double *", "high"),#, transfer_ownership=True),
+                                          param("double *", "low"),
+                                          param("double *", "high"),
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
         x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
@@ -105,13 +105,11 @@ class Tessellator:
     def generateTetgenTessellatorBindings(self, x, ndim):
 
         # Constructors
-        x.add_constructor([param("const bool", "directComputation")])
+        x.add_constructor([])
 
         # Methods
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
-        x.add_method("directComputation", retval("bool"), [], is_const=True)
-        x.add_method("directComputation", None, [param("const bool", "x")])
-
+        
         return
     
     
