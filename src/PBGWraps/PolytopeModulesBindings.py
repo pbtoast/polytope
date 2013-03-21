@@ -74,10 +74,6 @@ print "Parsing pybindgen packages: ", pkgs
 #-------------------------------------------------------------------------------
 mod = Module("PolytopeModules")
 
-# mod.add_include('"PolytopeTypes.hh"')
-# mod.add_function("haveTriangle", retval("bool"), [])
-# mod.add_function("haveTetgen", retval("bool"), [])
-
 # For now we rely on the custom rolled wrappings in CXXContainers to wrap up the
 # C++ containers.  Hopefully pybindgen's native support for these things will 
 # improve and we can get rid of that at some point!
