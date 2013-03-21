@@ -78,9 +78,9 @@ int main(int argc, char** argv)
 
   Tessellation<2,double> mesh;
 
-  // Test 1: Circle of generators
+  // Circle of generators
   {
-    cout << "\nTest 1: Circle of generators" << endl;
+    cout << "\nTest " << test << ": Circle of generators" << endl;
     int N = 18;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i){
@@ -94,9 +94,27 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 2: Two uniform rows of generators
+  // Circle of generators, random center
   {
-    cout << "\nTest 2: Two uniform rows of generators" << endl;
+    cout << "\nTest " << test << ": Circle of generators, random center" << endl;
+    int N = 18;
+    vector<double> points(2*N);
+    double center[2] = {random01(), random01()};
+    for (unsigned i = 0; i < N; ++i){
+       double theta = 2.0*M_PI*i/(N+1);
+       points[2*i  ] = center[0] + cos(theta);
+       points[2*i+1] = center[1] + sin(theta);
+    }
+    Tessellation<2,double> mesh;
+    triangle.tessellate(points, mesh);
+    outputMesh(mesh, test);
+    checkMesh(mesh,N,N+1,2*N,N,N);
+    ++test;
+  }
+
+  // Two uniform rows of generators
+  {
+    cout << "\nTest " << test << ": Two uniform rows of generators" << endl;
     int N = 10;
     vector<double> points(4*N);
     for (unsigned i = 0; i < N; ++i){
@@ -110,9 +128,9 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 3: Collinear generators with one non-collinear
+  // Collinear generators with one non-collinear
   {
-    cout << "\nTest 3: Collinear generators, except one" << endl;
+    cout << "\nTest " << test << ": Collinear generators, except one" << endl;
     int N = 10;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
@@ -140,9 +158,9 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 5: Two generators
+  // Two generators
   {
-    cout << "\nTest 5: Two generators" << endl;
+    cout << "\nTest " << test << ": Two generators" << endl;
     vector<double> points;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
@@ -154,9 +172,9 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 6: Line of generators, uniform
+  // Line of generators, uniform
   {
-    cout << "\nTest 6: Uniform line of generators" << endl;
+    cout << "\nTest " << test << ": Uniform line of generators" << endl;
     int N=10;
     vector<double> points(2*N, 0);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
@@ -167,9 +185,9 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 7: Line of generators, non-uniform
+  // Line of generators, non-uniform
   {
-    cout << "\nTest 7: Non-uniform line of generators" << endl;
+    cout << "\nTest " << test << ": Non-uniform line of generators" << endl;
     int N = 10;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i) + random01() - 0.5;
@@ -180,9 +198,9 @@ int main(int argc, char** argv)
     ++test;
   }
 
-  // Test 8: Line of generators, non-uniform, shuffled
+  // Line of generators, non-uniform, shuffled
   {
-    cout << "\nTest 8: Non-uniform line of generators, shuffled" << endl;
+    cout << "\nTest " << test << ": Non-uniform line of generators, shuffled" << endl;
     int N = 10;
     vector<double> points(2*N);
     int indices[10] = {5,7,1,2,8,0,3,9,4,6};
