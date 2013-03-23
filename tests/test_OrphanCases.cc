@@ -163,9 +163,9 @@ int main(int argc, char** argv)
       PLCpoints.push_back(0.0); PLCpoints.push_back(1.0);
       PLC<2,double> boundary;
       boundary.facets.resize(7, std::vector<int>(2));
-      for (int i = 0; i < 7; ++i){
-         boundary.facets[i][0] = i;
-         boundary.facets[i][1] = (i+1) % 7;
+      for (int j = 0; j < 7; ++j){
+         boundary.facets[j][0] = j;
+         boundary.facets[j][1] = (j+1) % 7;
       }
       Tessellation<2,double> mesh;
       triangle.tessellate(points, PLCpoints, boundary, mesh);

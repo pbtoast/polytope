@@ -508,6 +508,55 @@ rayCircleIntersection(const RealType* p_ray,
 }
 
 //------------------------------------------------------------------------------
+// Find the ray-circle intersection, assuming the ray's origin is inside the 
+// circle.
+// Arguments:
+//   p_ray : point origin of ray.
+//   n_ray : unit normal in direction of ray.
+// p_circle: center of the circle.
+// r_circle: radius of the circle.
+//     tol : the tolerance for zero (check for parallel lines and such)
+//  result : the intersection point
+//------------------------------------------------------------------------------
+template<typename RealType> 
+bool
+rayCircleIntersectionNormalized(const RealType* p_ray,
+                                const RealType* n_ray,
+                                const RealType* p_circle,
+                                const RealType r_circle,
+                                const RealType& tol,
+                                RealType* result) {
+  POLY_ASSERT2((distance<2, RealType>(p_ray, p_circle) <= r_circle), 
+               "(" << p_ray[0] << " " << p_ray[1] << ") (" 
+               << p_circle[0] << " " << p_circle[1] << ")" << " : " 
+               << (distance<2, RealType>(p_ray, p_circle)) << " " << r_circle);
+  POLY_ASSERT(std::abs(n_ray[0]*n_ray[0] + n_ray[1]*n_ray[1] - 1.0) < 1.0e-10);
+  const RealType rs0[2] = {(p_ray[0] - p_circle[0])/r_circle,
+                           (p_ray[1] - p_circle[1])/r_circle};
+  const RealType b = 2.0*dot<2, RealType>(n_ray, rs0);
+  const RealType c = dot<2, RealType>(rs0, rs0) - 1.0;
+  RealType d = b*b - 4.0*c;
+  POLY_ASSERT(d >= -tol);
+  if (d < tol) {
+    // Glancing intersection at the edge of the circle -- it must be the origin of the ray!
+    result[0] = p_ray[0]; result[1] = p_ray[1];
+    return true;
+  } else {
+    d = sqrt(d);
+    const RealType t = 0.5*std::max(-b - d, -b + d);
+    POLY_ASSERT(t >= 0.0);
+    result[0] = p_ray[0] + t*n_ray[0];
+    result[1] = p_ray[1] + t*n_ray[1];
+  }
+  const RealType zero[2] = {0.0, 0.0};
+  std::cerr << result[0] << " " << result[1] << std::endl;
+  POLY_ASSERT(std::abs(distance<2, RealType>(result, zero) - 1.0) < tol);
+  result[0] = p_circle[0] + r_circle*result[0];
+  result[1] = p_circle[1] + r_circle*result[1];
+  return true;
+}
+
+//------------------------------------------------------------------------------
 // Find the closest point of intersection for ray and a box.
 // Returns an int indicating which plane is intersected:
 // -1 : no intersection
