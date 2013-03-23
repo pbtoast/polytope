@@ -20,6 +20,35 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
+// outputSiloMesh
+// -----------------------------------------------------------------------
+void outputSiloMesh(Tessellation<2,double>& mesh,
+                    std::vector<double>& points,
+                    int ntest) {
+#if HAVE_SILO
+   vector<double> index(mesh.cells.size());
+   vector<double> genx (mesh.cells.size());
+   vector<double> geny (mesh.cells.size());
+   for (int i = 0; i < mesh.cells.size(); ++i){
+      index[i] = double(i);
+      if(!points.empty()){
+         genx[i] = points[2*i];
+         geny[i] = points[2*i+1];
+      }
+   }
+   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+   cellFields["cell_index"   ] = &index[0];
+   cellFields["cell_center_x"] = &genx[0];
+   cellFields["cell_center_y"] = &geny[0];
+   ostringstream os;
+   os << "test_Circumcenters_test_" << ntest;
+   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+                                          faceFields, cellFields, os.str());
+#endif
+}
+
+
+// -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
@@ -68,8 +97,15 @@ int main(int argc, char** argv)
      triangle.tessellate(points,PLCpoints,boundary,mesh);
      //triangle.tessellate(points,mesh);
 
+     outputSiloMesh(mesh,points,i);
+
      cout << "          Number of nodes = " << mesh.nodes.size()/2 << endl;
      cout << "          Number of faces = " << mesh.faces.size() << endl << endl;
+     cout << "  Nodes:" << endl;
+     for (int j=0; j != mesh.nodes.size()/2; ++j){
+        cout << scientific << setprecision(numeric_limits<double>::digits)
+             <<"    (" << mesh.nodes[2*j] << "," << mesh.nodes[2*j+1] << ")" << endl;
+     }
   }
 
   cout << "PASS" << endl;

@@ -146,7 +146,6 @@ int main(int argc, char** argv)
   {
     cout << "\nTest 4: 2x2 Cartesian generators" << endl;
     vector<double> points;
-    int N = 2;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(1.0);

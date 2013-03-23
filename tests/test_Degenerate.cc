@@ -81,8 +81,8 @@ void generateMesh(Tessellator<2,double>& tessellator)
    
    // Create generators
    cout << "Generator locations randomly perturbed by" << endl;
-   double epsilon = 2.0e-16;
-   for ( int i = 0; i != 10; ++i, epsilon *= 10)
+   double epsilon = 2.0e-8;
+   for ( int i = 0; i != 8; ++i, epsilon *= 10)
    {
       cout << "+/- " << epsilon/2 << "...";
       generators.cartesianPoints( nxny );         // reset locations
