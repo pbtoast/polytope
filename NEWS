@@ -1,3 +1,21 @@
+Releaes 0.5.10
+
+changeset:
+  292.7ace19fe234f
+
+Bugfix:
+
+- The method for detecting and eliminating degenerate nodes has been refined
+  in TriangleTessellator to make it more robust to large circumcenter positions
+- TriangleTessellator has been reorganized to speed up bounded tessellations
+- More test boundaries and cases for the orphaned cell algorithm
+
+Added capability:
+
+- Triangle circumcenters are now computed with exact predicates to improve
+  robustness of the 2D algorithm
+
+--------------------------------------------------------------------------------
 Release 0.5.9
 
 changeset:
