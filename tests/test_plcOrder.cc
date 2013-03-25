@@ -89,6 +89,7 @@ PLC<2,double> makePLC( int order )
       box.facets[3].resize(2); box.facets[3][0] = 0;  box.facets[3][1] = 3;
       return box;
    }
+   return box;
 }
 
 //------------------------------------------------------------------------

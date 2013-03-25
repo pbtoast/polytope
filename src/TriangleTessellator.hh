@@ -23,11 +23,10 @@ struct triangulateio;
 #include <boost/geometry/multi/geometries/multi_point.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 
-namespace BG = boost::geometry;
 
 typedef int64_t CoordHash;
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, BG::cs::cartesian, x, y)
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, BG::cs::cartesian, x, y)
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, boost::geometry::cs::cartesian, x, y)
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y)
 
 namespace polytope 
 {
@@ -69,17 +68,17 @@ private:
   typedef std::pair<int, int> EdgeHash;
   typedef Point2<CoordHash> IntPoint;
   typedef Point2<double> RealPoint;
-  typedef BG::model::polygon<IntPoint,    // point type
-                             false>       // clockwise
+  typedef boost::geometry::model::polygon<IntPoint,    // point type
+                                          false>       // clockwise
     BGpolygon;
-  typedef BG::model::ring<IntPoint,       // point type
-                          false>          // clockwise
+  typedef boost::geometry::model::ring<IntPoint,       // point type
+                                       false>          // clockwise
     BGring;
-  typedef BG::model::polygon<RealPoint,   // point type
-                             false>       // clockwise
+  typedef boost::geometry::model::polygon<RealPoint,   // point type
+                                          false>       // clockwise
     realBGpolygon;
-  typedef BG::model::multi_point<IntPoint> BGmulti_point;
-  typedef BG::model::multi_polygon<BGpolygon> BGmulti_polygon;
+  typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
+  typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
   static CoordHash coordMax;
   static double degeneracy;
