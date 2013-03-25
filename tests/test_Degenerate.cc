@@ -22,7 +22,7 @@
 #include "mpi.h"
 #endif
 
-#define POLY_CHECK_BOOL(x) if (!(x)) { cout << "FAIL: "; return false; }
+#define POLY_CHECK_BOOL(x) if (!(x)) { return false; }
 
 using namespace std;
 using namespace polytope;
@@ -81,7 +81,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
    
    // Create generators
    cout << "Generator locations randomly perturbed by" << endl;
-   double epsilon = 2.0e-8;
+   double epsilon = 2.0e-12;
    for ( int i = 0; i != 8; ++i, epsilon *= 10)
    {
       cout << "+/- " << epsilon/2 << "...";
@@ -93,7 +93,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       if( isCartesian ){ 
          cout << "PASS" << endl; 
       }else{
-         cout << "Minimum face length = " << minLength(mesh) << endl;
+         cout << "Degeneracy reached! Minimum face length = " << minLength(mesh) << endl;
       }
 
 #if HAVE_SILO
@@ -131,6 +131,8 @@ int main(int argc, char** argv)
    // cout << "\nVoro 2D Tessellator:\n" << endl;
    // VoroPP_2d<double> voro;
    // generateMesh(voro);
+
+   cout << "PASS" << endl;
 
 #if HAVE_MPI
   MPI_Finalize();
