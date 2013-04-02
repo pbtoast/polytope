@@ -11,11 +11,13 @@
 #define HAVE_SILO @HAVE_SILO@
 #define HAVE_TRIANGLE @HAVE_TRIANGLE@
 #define HAVE_TETGEN @HAVE_TETGEN@
+#define HAVE_BOOST_VORONOI @HAVE_BOOST_VORONOI@
 
 // Classes within the library.
 #include "VoroPP_2d.hh"
 #include "VoroPP_3d.hh"
 #include "TriangleTessellator.hh"
+#include "BoostTessellator.hh"
 #include "TetgenTessellator.hh"
 #include "SiloWriter.hh"
 #include "SiloReader.hh"

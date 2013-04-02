@@ -52,8 +52,8 @@ endif ()
 
 # Find Boost.
 # set(Boost_DEBUG 1)
-set(Boost_ADDITIONAL_VERSIONS "1.51")
-find_package(Boost "1.51")
+set(Boost_ADDITIONAL_VERSIONS "1.51" "1.52" "1.53")
+find_package(Boost)# "1.51")
 if (USING_XLC) 
   set(Boost_FOUND false)
   set(HAVE_BOOST false)
@@ -63,9 +63,18 @@ if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
   set(HAVE_BOOST true)
   message("-- Found BOOST installation at ${Boost_INCLUDE_DIR}")
+  if (Boost_MINOR_VERSION GREATER 51)
+    if (EXISTS ${Boost_INCLUDE_DIR}/boost/polygon/voronoi.hpp)
+      set(HAVE_BOOST_VORONOI true)
+      message("-- Found BOOST VORONOI in ${Boost_INCLUDE_DIR}/boost/polygon")
+    else ()
+      set(HAVE_BOOST_VORONOI false)
+    endif ()
+  endif ()
 else ()
   message("-- Unable to find required package BOOST.")
   set(HAVE_BOOST false)
+  set(HAVE_BOOST_VORONOI false)
 endif ()
 
 if (Boost_FOUND)
@@ -219,7 +228,8 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh" 
+               "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh"
+	       "${PROJECT_SOURCE_DIR}/src/BoostTessellator.hh"
                "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_3d.hh" 
