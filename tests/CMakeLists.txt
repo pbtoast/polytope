@@ -53,6 +53,8 @@ POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE" )
 POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE" )
 POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE" )
 #POLYTOPE_ADD_TEST( "ShockNozzleMesh"             "TRIANGLE" )
+POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST"    )
+
 
 # Distributed tessellator tests
 POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )

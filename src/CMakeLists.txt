@@ -11,6 +11,10 @@ if (TRIANGLE_FOUND)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TriangleTessellator.cc)
 endif()
 
+if (HAVE_BOOST_VORONOI)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostTessellator.cc)
+endif ()
+
 if (TETGEN_FOUND)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
   add_library(tetgen tetgen.cxx predicates.cc)

@@ -49,9 +49,10 @@ pairCompareFirst( std::pair<T1,T2> x, std::pair<T1,T2> y ) {
 //------------------------------------------------------------------------------
 // Update the map of thingies to unique indices.
 //------------------------------------------------------------------------------
-template<typename Key>
+template<typename Key,
+	 typename Comparator>
 int
-addKeyToMap(const Key& key, std::map<Key, int>& key2id) {
+addKeyToMap(const Key& key, std::map<Key, int, Comparator>& key2id) {
   const typename std::map<Key, int>::const_iterator itr = key2id.find(key);
   int result;
   if (itr == key2id.end()) {
