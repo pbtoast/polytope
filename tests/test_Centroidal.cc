@@ -48,43 +48,43 @@ int main(int argc, char** argv)
    // Initialize mesh and tessellator
    Tessellation<2,double> mesh;
    TriangleTessellator<double> triangle;
-
+   
    for( int iter = 0; iter < nIter; ++iter ){
-      mesh.clear();
-      triangle.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-      
+     mesh.clear();
+     triangle.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+     
 #if HAVE_SILO
-      vector<double> index(points.size()/2);
-      vector<double> genx (points.size()/2);
-      vector<double> geny (points.size()/2);
-      for (int i = 0; i < mesh.cells.size()/2; ++i){
-         index[i] = double(i);
-         genx[i]  = points[2*i];
-         geny[i]  = points[2*i+1];
-      }
-      map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-      cellFields["cell_index"   ] = &index[0];
-      cellFields["cell_center_x"] = &genx[0];
-      cellFields["cell_center_y"] = &geny[0];
-      ostringstream os;
-      os << "test_Centroidal_" << nPoints << "points_" << iter;
-      char dirname[1024];
-      snprintf(dirname, 1024, "%s-%d", os.str().c_str(), 0);
-      string masterDirName = dirname;
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                             faceFields, cellFields, os.str());
+     vector<double> index(points.size()/2);
+     vector<double> genx (points.size()/2);
+     vector<double> geny (points.size()/2);
+     for (int i = 0; i < mesh.cells.size()/2; ++i){
+       index[i] = double(i);
+       genx[i]  = points[2*i];
+       geny[i]  = points[2*i+1];
+     }
+     map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+     cellFields["cell_index"   ] = &index[0];
+     cellFields["cell_center_x"] = &genx[0];
+     cellFields["cell_center_y"] = &geny[0];
+     ostringstream os;
+     os << "test_Centroidal_" << nPoints << "points_" << iter;
+     char dirname[1024];
+     snprintf(dirname, 1024, "%s-%d", os.str().c_str(), 0);
+     string masterDirName = dirname;
+     polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+					    faceFields, cellFields, os.str());
 #endif
-      
-      for (int i = 0; i < mesh.cells.size(); ++i){
-         double tmp[2];
-         geometry::computeCellCentroid(mesh, i, tmp);
-         points[2*i  ] = 0.5*(points[2*i  ] + tmp[0]);
-         points[2*i+1] = 0.5*(points[2*i+1] + tmp[1]);
-      }
+     
+     for (unsigned i = 0; i < mesh.cells.size(); ++i){
+       double cent[2], area;
+       geometry::computeCellCentroidAndSignedArea(mesh, i, 1.0e-12, cent, area);
+       points[2*i  ] = 0.5*(points[2*i  ] + cent[0]);
+       points[2*i+1] = 0.5*(points[2*i+1] + cent[1]);
+     }
    }
-
+   
    cout << "PASS" << endl;
-
+   
 #if HAVE_MPI
    MPI_Finalize();
 #endif

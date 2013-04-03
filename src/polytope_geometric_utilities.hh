@@ -25,38 +25,6 @@ namespace geometry {
 
 
 //------------------------------------------------------------------------------
-// computeNorm
-//------------------------------------------------------------------------------
-inline
-double
-computeSquaredNorm(double* A) {
-  int i=0;
-  double axax[2], ayay[2], tmp[2];
-  i += scale_expansion(1, &A[0], A[0], axax);
-  i += scale_expansion(1, &A[1], A[1], ayay);
-  i += grow_expansion(1, &axax[1], ayay[1], tmp);
-  return tmp[1];
-}
-
-//------------------------------------------------------------------------------
-// computeCircumcenter
-//------------------------------------------------------------------------------
-// Compute the circumcenter using fast predicates
-inline
-void
-computeCircumcenter(double* A, double* B, double* C, double* X) {
-  double Anorm = computeSquaredNorm(A);
-  double Bnorm = computeSquaredNorm(B);
-  double Cnorm = computeSquaredNorm(C);
-  double D = 2*orient2d(A,B,C);
-  double a0[2] = {Anorm, A[1]},  a1[2] = {A[0], Anorm};
-  double b0[2] = {Bnorm, B[1]},  b1[2] = {B[0], Bnorm};
-  double c0[2] = {Cnorm, C[1]},  c1[2] = {C[0], Cnorm};
-  X[0] = orient2d(a0,b0,c0)/D;
-  X[1] = orient2d(a1,b1,c1)/D;
-}
-
-//------------------------------------------------------------------------------
 // Distance between points.
 //------------------------------------------------------------------------------
 // Functor's for use in partial specializations.
@@ -633,6 +601,41 @@ computeCellCentroid(const Tessellation<Dimension, RealType>& mesh,
 }
 
 //------------------------------------------------------------------------------
+// Compute the cell centroid and signed area.
+// Taken from http://www.wikipedia.org/wiki/Centroid
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+computeCellCentroidAndSignedArea(const Tessellation<2, RealType>& mesh,
+				 const unsigned ci,
+				 const RealType& tol,
+				 RealType* ccent,
+				 RealType& area) {
+  POLY_ASSERT(ci < mesh.cells.size());
+  unsigned iface, n0, n1;
+  RealType d, x0, x1, y0, y1;
+  for (std::vector<int>::const_iterator itr = mesh.cells[ci].begin();
+       itr != mesh.cells[ci].end(); ++itr) {
+    iface = (*itr < 0) ? ~(*itr) : *itr;
+    POLY_ASSERT(iface < mesh.faces.size());
+    POLY_ASSERT(mesh.faces[iface].size() == 2);
+    n0 = (*itr < 0) ? mesh.faces[iface][1] : mesh.faces[iface][0];
+    n1 = (*itr < 0) ? mesh.faces[iface][0] : mesh.faces[iface][1];
+    POLY_ASSERT(n0 < mesh.nodes.size()/2 and n1 < mesh.nodes.size()/2);
+    x0 = mesh.nodes[2*n0];  y0 = mesh.nodes[2*n0+1];
+    x1 = mesh.nodes[2*n1];  y1 = mesh.nodes[2*n1+1];
+    d = x0*y1 - y0*x1;
+    area     += d;
+    ccent[0] += d*(x0+x1);
+    ccent[1] += d*(y0+y1);
+  }
+  POLY_ASSERT(std::abs(area) > tol);
+  area     /= 2.0;
+  ccent[0] /= (6*area);
+  ccent[1] /= (6*area);
+}
+
+//------------------------------------------------------------------------------
 // Compute the centroid and unit normal of a Tessellation face.
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -678,6 +681,40 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   cross<3, RealType>(ab, ac, fhat);
   unitVector<3, RealType>(fhat);
 }
+
+//------------------------------------------------------------------------------
+// computeSquaredNorm
+// Computed with Shewchuck's fast predicates
+//------------------------------------------------------------------------------
+inline
+double
+computeSquaredNorm(double* A) {
+  int i=0;
+  double axax[2], ayay[2], tmp[2];
+  i += scale_expansion(1, &A[0], A[0], axax);
+  i += scale_expansion(1, &A[1], A[1], ayay);
+  i += grow_expansion(1, &axax[1], ayay[1], tmp);
+  return tmp[1];
+}
+
+//------------------------------------------------------------------------------
+// computeCircumcenter
+// Computed with Shewchuck's fast predicates
+//------------------------------------------------------------------------------
+inline
+void
+computeCircumcenter(double* A, double* B, double* C, double* X) {
+  double Anorm = computeSquaredNorm(A);
+  double Bnorm = computeSquaredNorm(B);
+  double Cnorm = computeSquaredNorm(C);
+  double D = 2*orient2d(A,B,C);
+  double a0[2] = {Anorm, A[1]},  a1[2] = {A[0], Anorm};
+  double b0[2] = {Bnorm, B[1]},  b1[2] = {B[0], Bnorm};
+  double c0[2] = {Cnorm, C[1]},  c1[2] = {C[0], Cnorm};
+  X[0] = orient2d(a0,b0,c0)/D;
+  X[1] = orient2d(a1,b1,c1)/D;
+}
+
 
 //------------------------------------------------------------------------------
 // This function computes the circumcenter of a triangle with vertices
