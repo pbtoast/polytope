@@ -398,9 +398,9 @@ computeCellRings(const vector<RealType>& points,
     // Blago!
     cerr << "\nCell " << cellIndex << endl;
     for (typename BGring::const_iterator itr = cellRings[cellIndex].begin();
-	 itr != cellRings[cellIndex].end(); ++itr) {
+         itr != cellRings[cellIndex].end(); ++itr) {
       cerr << (*itr).realx(mLow[0],mDelta) << " "
-	   << (*itr).realy(mLow[1],mDelta) << endl;
+           << (*itr).realy(mLow[1],mDelta) << endl;
     }
     // Blago!
     
@@ -463,8 +463,6 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   const int numGenerators = points.size()/2;
   int i;
 
-  cerr << 1 << endl;
-
   // Convert point generators to Polytope integer points
   vector<IntPoint> generators(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
@@ -472,21 +470,15 @@ computeVoronoiUnbounded(const vector<RealType>& points,
 			     mLow[0], mLow[1], mDelta);
   }
 
-  cerr << 2 << endl;
-
   // Sort the input points
   // NOTE: Boost.Polygon will do this by default.
   // TODO: Store the pre-sorted indices and store the tessellation cell
   //       info in terms of these original indices
   sort(generators.begin(), generators.end());
 
-  cerr << 3 << endl;
-
   // The Boost.Polygon Voronoi Diagram object
   VD voronoi;
   construct_voronoi(generators.begin(), generators.end(), &voronoi);
-
-  cerr << 4 << endl;
 
   // Set the "color" of each edge and use it as a local index
   bool test;
@@ -508,25 +500,27 @@ computeVoronoiUnbounded(const vector<RealType>& points,
       if (edge->is_infinite())  infCells.insert(cellIndex);
 
 
-      // // Blago!
-      // cout << endl << "Edge index " << colorIndex << endl;
-      // cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
-      // cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
-      // cout << "   Vertex 0:" << endl;
-      // if (edge->vertex0()) {
-      //    cout << "      position = (" << edge->vertex0()->x() << ","
-      //         << edge->vertex0()->y() << ")" << endl;
-      // } else {
-      //    cout << "      Inf node" << endl;
-      // }
-      // cout << "   Vertex 1:" << endl;
-      // if (edge->vertex1()) {
-      //    cout << "      position = (" << edge->vertex1()->x() << ","
-      //         << edge->vertex1()->y() << ")" << endl;
-      // } else {
-      //    cout << "      Inf node" << endl;
-      // }
-      // // Blago!
+      // Blago!
+      cout << endl << "Edge index " << colorIndex << endl;
+      cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
+      cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
+      cout << "   Vertex 0:" << endl;
+      if (edge->vertex0()) {
+         IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
+         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+              << vert.realy(mLow[1],mDelta) << ")" << endl;
+      } else {
+         cout << "      Inf node" << endl;
+      }
+      cout << "   Vertex 1:" << endl;
+      if (edge->vertex1()) {
+         IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
+         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+              << vert.realy(mLow[1],mDelta) << ")" << endl;
+      } else {
+         cout << "      Inf node" << endl;
+      }
+      // Blago!
 
       if (edge->twin()->color() == 0) {
         faceIndex = colorIndex-1;
@@ -660,6 +654,15 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   POLY_ASSERT(mesh.faceCells.size() == numFaces);
   POLY_ASSERT(mesh.infNodes.size()  == mesh.nodes.size()/2);
   POLY_ASSERT(mesh.infFaces.size()  == numFaces);
+
+  // Blago!
+  cerr << "Inf cells: ";
+  for (set<int>::const_iterator itr = infCells.begin();
+       itr != infCells.end(); ++itr) {
+     cerr << *itr << " ";
+  }
+  cerr << endl;
+  // Blago!
 
   // Infinite cells by convention are bounded by inf faces. These connect
   // the inf nodes around an unbounded cell.
