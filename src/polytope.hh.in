@@ -19,6 +19,7 @@
 #include "TriangleTessellator.hh"
 #include "BoostTessellator.hh"
 #include "TetgenTessellator.hh"
+#include "MeshEditor.hh"
 #include "SiloWriter.hh"
 #include "SiloReader.hh"
 
