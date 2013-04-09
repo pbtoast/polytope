@@ -126,6 +126,12 @@ int main(int argc, char** argv)
    generateMesh(triangle);
 #endif   
 
+#if HAVE_BOOST_VORONOI
+   cout << "\nBoost Tessellator:\n" << endl;
+   BoostTessellator<double> boostVoronoi;
+   generateMesh(boostVoronoi);
+#endif
+
    // NOTE: Voro does not give sensible results at this time
    //
    // cout << "\nVoro 2D Tessellator:\n" << endl;

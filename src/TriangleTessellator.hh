@@ -25,8 +25,8 @@ struct triangulateio;
 
 
 typedef int64_t CoordHash;
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, boost::geometry::cs::cartesian, x, y)
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y)
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, boost::geometry::cs::cartesian, x, y);
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
 
 namespace polytope 
 {

@@ -78,8 +78,9 @@ int main(int argc, char** argv)
   points.push_back(1.5);  points.push_back(1.5);
   points.push_back(2.5);  points.push_back(1.5);
   
-  TriangleTessellator<double> triangle;
-  
+  //TriangleTessellator<double> tessellator;
+  BoostTessellator<double> tessellator;
+
   int N = 34;
   double vert1[2] = {0.5, 0.5}, vert2[2] = {2.5, 0.5}, circumcenter[2];
   double displacement = 1.0;
@@ -94,8 +95,8 @@ int main(int argc, char** argv)
           << circumcenter[1] << ")" << endl;
      points[1] = 0.5 + displacement;
      Tessellation<2,double> mesh;
-     triangle.tessellate(points,PLCpoints,boundary,mesh);
-     //triangle.tessellate(points,mesh);
+     //tessellator.tessellate(points,PLCpoints,boundary,mesh);
+     tessellator.tessellate(points,mesh);
 
      outputSiloMesh(mesh,points,i);
 
