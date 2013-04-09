@@ -54,6 +54,7 @@ POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE" )
 POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE" )
 #POLYTOPE_ADD_TEST( "ShockNozzleMesh"             "TRIANGLE" )
 POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST"    )
+POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE" )
 
 
 # Distributed tessellator tests
