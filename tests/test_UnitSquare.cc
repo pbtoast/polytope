@@ -89,10 +89,19 @@ int main(int argc, char** argv)
    cout << "Triangle: PASS" << endl;
 #endif   
 
+#if HAVE_BOOST_VORONOI
+   cout << "\nBoost Tessellator:\n" << endl;
+   BoostTessellator<double> boostVoronoi;
+   generateMesh(boostVoronoi);
+   cout << "Boost: PASS" << endl;
+#endif
+
    cout << "\nVoro 2D Tessellator:\n" << endl;
    VoroPP_2d<double> voro;
    generateMesh(voro);
    cout << "Voro 2D: PASS" << endl;
+
+   cout << "PASS" << endl;
 
 #if HAVE_MPI
    MPI_Finalize();
