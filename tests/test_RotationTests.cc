@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 #endif
 
    // Flow field
-   const unsigned flowType = 2;
+   const unsigned flowType = 3;
    POLY_ASSERT(flowType >= 1 and flowType <= 3);
 
    // The generators
@@ -144,6 +144,12 @@ int main(int argc, char** argv)
          points.push_back(xi);
          points.push_back(yi);
       }
+   }
+
+   if (flowType == 1 or flowType == 3) {
+     for (unsigned i = 0; i != points.size(); ++i) {
+       points[i] = 0.5 + (points[i]-0.5)/sqrt(2);
+     }
    }
 
    // The PLC points for a unit square
@@ -193,10 +199,12 @@ int main(int argc, char** argv)
    // Update the point positions and generate the mesh
    double time = 0.0;
    while (time < Tmax) {
+      cout << time << endl;
       mesh.clear();
       getVelocities(points, flowType, velocityField);
       for (unsigned i = 0; i != points.size(); ++i) {
          points[i] += dt*velocityField[i];
+	 POLY_ASSERT(xmin <= points[i] and points[i] <= xmax);
       }
       time += dt;
       ++step;

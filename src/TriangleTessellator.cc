@@ -434,6 +434,11 @@ computeCellNodes(const vector<RealType>& points,
   // Create the Voronoi nodes from the list of triangles. Each triangle 
   // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
 
+//   // Blago!
+//   vector<int> badTris;
+//   // Blago!
+
+
   // Find the circumcenters of each triangle, and build the set of triangles
   // associated with each generator.
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
@@ -458,9 +463,22 @@ computeCellNodes(const vector<RealType>& points,
 				  &delaunay.pointlist[2*qindex],
 				  &delaunay.pointlist[2*rindex],
 				  &circumcenters[i].x);
-    // if (std::abs(orient2d(&delaunay.pointlist[2*pindex],
-    //                       &delaunay.pointlist[2*qindex],
-    //                       &delaunay.pointlist[2*rindex])) > degeneracy) {
+//     POLY_ASSERT(orient2d(&delaunay.pointlist[2*pindex],
+//                          &delaunay.pointlist[2*qindex],
+//                          &delaunay.pointlist[2*rindex]) != 0);
+//     cerr << i << ":   ";
+//     cerr << delaunay.pointlist[2*pindex  ] << " "
+// 	 << delaunay.pointlist[2*pindex+1] << " "
+// 	 << delaunay.pointlist[2*qindex  ] << " "
+// 	 << delaunay.pointlist[2*qindex+1] << " "
+// 	 << delaunay.pointlist[2*rindex  ] << " "
+// 	 << delaunay.pointlist[2*rindex+1] << ":   "
+// 	 << circumcenters[i] << endl;
+    if (std::abs(orient2d(&delaunay.pointlist[2*pindex],
+			  &delaunay.pointlist[2*qindex],
+			  &delaunay.pointlist[2*rindex])) > 1.0e-12) {
+//       badTris.push_back(i);
+//     }
       gen2tri[pindex].insert(i);
       gen2tri[qindex].insert(i);
       gen2tri[rindex].insert(i);
@@ -471,9 +489,53 @@ computeCellNodes(const vector<RealType>& points,
       lowc [1] = min(lowc [1], circumcenters[i].y);
       highc[0] = max(highc[0], circumcenters[i].x);
       highc[1] = max(highc[1], circumcenters[i].y);
-    // }
+    }
   }
   POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+
+
+//   // Blago!
+//   cerr << "Bad Triangles:" << endl;
+//   for (vector<int>::const_iterator itr = badTris.begin();
+//        itr != badTris.end(); ++itr) {
+//     pindex = delaunay.trianglelist[3*(*itr)  ];
+//     qindex = delaunay.trianglelist[3*(*itr)+1];
+//     rindex = delaunay.trianglelist[3*(*itr)+2];
+//     pq = internal::hashEdge(pindex, qindex);
+//     pr = internal::hashEdge(pindex, rindex);
+//     qr = internal::hashEdge(qindex, rindex);
+//     cerr << "Triangle " << *itr << ":" << endl;
+//     cerr << "  Generator vertices" << endl
+// 	 << "    " << delaunay.pointlist[2*pindex  ]
+//  	 << " " << delaunay.pointlist[2*pindex+1]
+//  	 << " " << delaunay.pointlist[2*qindex  ]
+//  	 << " " << delaunay.pointlist[2*qindex+1]
+//  	 << " " << delaunay.pointlist[2*rindex  ]
+//  	 << " " << delaunay.pointlist[2*rindex+1] << endl;
+//     cerr << "  Circumcenter:" << endl
+// 	 << "    " << circumcenters[*itr] << endl;
+//     cerr << "  Triangles neighboring its vertices:";
+//     cerr << endl << "    " << pindex << ": ";
+//     for (set<unsigned>::const_iterator itr2 = gen2tri[pindex].begin();
+// 	 itr2 != gen2tri[pindex].end(); ++itr2) cerr << *itr2 << " ";
+//     cerr << endl << "    " << qindex << ": ";
+//     for (set<unsigned>::const_iterator itr2 = gen2tri[qindex].begin();
+// 	 itr2 != gen2tri[qindex].end(); ++itr2) cerr << *itr2 << " ";
+//     cerr << endl << "    " << rindex << ": ";
+//     for (set<unsigned>::const_iterator itr2 = gen2tri[rindex].begin();
+// 	 itr2 != gen2tri[rindex].end(); ++itr2) cerr << *itr2 << " ";
+//     cerr << endl;
+//     cerr << "  Triangles neighboring its edges:";
+//     cerr << endl << "    (" << pindex << "," << qindex << "): ";
+//     for (j = 0; j != edge2tri[pq].size(); ++j) cerr << edge2tri[pq][j] << " ";
+//     cerr << endl << "    (" << qindex << "," << rindex << "): ";
+//     for (j = 0; j != edge2tri[qr].size(); ++j) cerr << edge2tri[pq][j] << " ";
+//     cerr << endl << "    (" << pindex << "," << rindex << "): ";
+//     for (j = 0; j != edge2tri[pr].size(); ++j) cerr << edge2tri[pq][j] << " ";
+//     cerr << endl;
+//   }
+//   // Blago!
+
 
   // The circumcenters may all lie inside the convex hull of the
   // generators for an unbounded tessellation. Include the generator
@@ -505,16 +567,16 @@ computeCellNodes(const vector<RealType>& points,
   const double cboxsize = 2.0*rinf;
   mdxOuter = max(degeneracy, cboxsize/coordMax);
 
-  // // Blago!
-  // cerr << "Outer Bounding Box = "
-  //      << "(" << mLowOuter[0] << "," << mHighOuter[0] << ")X"
-  //      << "(" << mLowOuter[1] << "," << mHighOuter[1] << ")" << endl;
-  // cerr << "Outer Mesh Spacing = " << mdxOuter << endl;
-  // cerr << "Inner Bounding Box = "
-  //      << "(" << mLowInner[0] << "," << mHighInner[0] << ")X"
-  //      << "(" << mLowInner[1] << "," << mHighInner[1] << ")" << endl;
-  // cerr << "Inner Mesh Spacing = " << mdxInner << endl << endl;
-  // // Blago!
+//   // Blago!
+//   cerr << "Outer Bounding Box = "
+//        << "(" << mLowOuter[0] << "," << mHighOuter[0] << ")X"
+//        << "(" << mLowOuter[1] << "," << mHighOuter[1] << ")" << endl;
+//   cerr << "Outer Mesh Spacing = " << mdxOuter << endl;
+//   cerr << "Inner Bounding Box = "
+//        << "(" << mLowInner[0] << "," << mHighInner[0] << ")X"
+//        << "(" << mLowInner[1] << "," << mHighInner[1] << ")" << endl;
+//   cerr << "Inner Mesh Spacing = " << mdxInner << endl << endl;
+//   // Blago!
   
   // Determine which circumcenters lie inside fine-scale bounding box
   // Map circumcenters and triangle indices to global id's
@@ -700,16 +762,16 @@ computeCellNodesCollinear(const vector<RealType>& points,
   const double cboxsize = 2.0*rinf;
   mdxOuter = max(degeneracy, cboxsize/coordMax);
 
-  // // Blago!
-  // cerr << "Outer Bounding Box = "
-  //      << "(" << mLowOuter[0] << "," << mHighOuter[0] << ")X"
-  //      << "(" << mLowOuter[1] << "," << mHighOuter[1] << ")" << endl;
-  // cerr << "Outer Mesh Spacing = " << mdxOuter << endl;
-  // cerr << "Inner Bounding Box = "
-  //      << "(" << mLowInner[0] << "," << mHighInner[0] << ")X"
-  //      << "(" << mLowInner[1] << "," << mHighInner[1] << ")" << endl;
-  // cerr << "Inner Mesh Spacing = " << mdxInner << endl << endl;
-  // // Blago!
+//   // Blago!
+//   cerr << "Outer Bounding Box = "
+//        << "(" << mLowOuter[0] << "," << mHighOuter[0] << ")X"
+//        << "(" << mLowOuter[1] << "," << mHighOuter[1] << ")" << endl;
+//   cerr << "Outer Mesh Spacing = " << mdxOuter << endl;
+//   cerr << "Inner Bounding Box = "
+//        << "(" << mLowInner[0] << "," << mHighInner[0] << ")X"
+//        << "(" << mLowInner[1] << "," << mHighInner[1] << ")" << endl;
+//   cerr << "Inner Mesh Spacing = " << mdxInner << endl << endl;
+//   // Blago!
 
   // Number of nodes
   const int nnodes = 2*numGenerators;
