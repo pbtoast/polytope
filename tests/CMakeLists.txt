@@ -9,10 +9,12 @@
 #      POLYTOPE_ADD_TEST( name dependency_list )
 #
 # The current set of dependencies is
-#      MPI       : MPI is used
-#      TETGEN    : Tetgen Tessellator is used
-#      BOOST     : Boost library is used
-#      TRIANGLE  : Triangle Tessellator is used
+#      MPI           : MPI is used
+#      TETGEN        : Tetgen Tessellator is used
+#      BOOST         : Boost library is used
+#      TRIANGLE      : Triangle Tessellator is used
+#      BOOST_VORONOI : Boost v1.52 or greater is used having the
+#                      Boost.Polygon Voronoi library
 #
 # NOTES:
 # (1) An empty string in the dependency list means the test will always build
@@ -39,27 +41,27 @@ POLYTOPE_ADD_TEST( "MeshEditor"      "" )
 # Serial tessellator tests
 # NOTE: I am temporarily removing the Voro++ tests to speed
 #       up testing. No work is currently being done on Voro++
-POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"    )
-POLYTOPE_ADD_TEST( "Degenerate"                  "BOOST"    )
-POLYTOPE_ADD_TEST( "TriangleTessellator"         "TRIANGLE" )
-POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE" )
-POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE" )
-POLYTOPE_ADD_TEST( "OrphanedCell"                "TRIANGLE" )
-POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE" )
-POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"   )
-#POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""         )
-#POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""         )
-POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE" )
-POLYTOPE_ADD_TEST( "plcOrder"                    "TRIANGLE" )
-POLYTOPE_ADD_TEST( "TriangleUnbounded"           "TRIANGLE" )
-POLYTOPE_ADD_TEST( "TriangleUnboundedToBounded"  "TRIANGLE" )
-POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE" )
-POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE" )
-POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE" )
-#POLYTOPE_ADD_TEST( "ShockNozzleMesh"             "TRIANGLE" )
-POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST"    )
-POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE" )
-POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE" )
+POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "Degenerate"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "TriangleTessellator"         "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "OrphanedCell"                "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
+#POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""              )
+#POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""              )
+POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "plcOrder"                    "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "TriangleUnbounded"           "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "TriangleUnboundedToBounded"  "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
+#POLYTOPE_ADD_TEST( "ShockNozzleMesh"             "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
+POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
 
 
 # Distributed tessellator tests
