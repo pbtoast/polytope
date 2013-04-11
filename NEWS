@@ -1,7 +1,31 @@
-Releaes 0.5.10
+Release 0.5.11
 
 changeset:
-  292.7ace19fe234f
+  301:f2f026c57719
+
+Bugfix:
+
+- Triangle was found to produce triangles using collinear points, leading to
+  infinite circumcenter positions. Modifications made to make sure this error
+  does not impact the Voronoi dual
+- Updated the algorithm for computing cell centroids
+
+Added capability:
+
+- Introducing the BoostTessellator! Building Polytope with Boost v1.52 or higher
+  will wrap the 2D Boost.Polygon tessellator. This is a fast sweepline routine
+  based on Fortune's Algorithm. The BoostTessellator currently works for
+  unbounded and simple bounded problems and will be rigorously tested in the
+  near future.
+- The MeshEditor class includes routines for detecting and cleaning edges whose
+  length falls below some local relative tolerance. This includes methods for 
+  deleting specified cell/face/node indices in a consistent manner. 
+
+--------------------------------------------------------------------------------
+Release 0.5.10
+
+changeset:
+  292:7ace19fe234f
 
 Bugfix:
 
