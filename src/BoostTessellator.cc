@@ -395,14 +395,14 @@ computeCellRings(const vector<RealType>& points,
 							 cellBoundary.end()));
     POLY_ASSERT(cellRings[cellIndex].size() > 0);
 
-    // Blago!
-    cerr << "\nCell " << cellIndex << endl;
-    for (typename BGring::const_iterator itr = cellRings[cellIndex].begin();
-         itr != cellRings[cellIndex].end(); ++itr) {
-      cerr << (*itr).realx(mLow[0],mDelta) << " "
-           << (*itr).realy(mLow[1],mDelta) << endl;
-    }
-    // Blago!
+    // // Blago!
+    // cerr << "\nCell " << cellIndex << endl;
+    // for (typename BGring::const_iterator itr = cellRings[cellIndex].begin();
+    //      itr != cellRings[cellIndex].end(); ++itr) {
+    //   cerr << (*itr).realx(mLow[0],mDelta) << " "
+    //        << (*itr).realy(mLow[1],mDelta) << endl;
+    // }
+    // // Blago!
     
 
     // Intersect with the boundary to get the bounded cell.
@@ -500,27 +500,27 @@ computeVoronoiUnbounded(const vector<RealType>& points,
       if (edge->is_infinite())  infCells.insert(cellIndex);
 
 
-      // Blago!
-      cout << endl << "Edge index " << colorIndex << endl;
-      cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
-      cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
-      cout << "   Vertex 0:" << endl;
-      if (edge->vertex0()) {
-         IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
-         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
-              << vert.realy(mLow[1],mDelta) << ")" << endl;
-      } else {
-         cout << "      Inf node" << endl;
-      }
-      cout << "   Vertex 1:" << endl;
-      if (edge->vertex1()) {
-         IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
-         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
-              << vert.realy(mLow[1],mDelta) << ")" << endl;
-      } else {
-         cout << "      Inf node" << endl;
-      }
-      // Blago!
+      // // Blago!
+      // cout << endl << "Edge index " << colorIndex << endl;
+      // cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
+      // cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
+      // cout << "   Vertex 0:" << endl;
+      // if (edge->vertex0()) {
+      //    IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
+      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //         << vert.realy(mLow[1],mDelta) << ")" << endl;
+      // } else {
+      //    cout << "      Inf node" << endl;
+      // }
+      // cout << "   Vertex 1:" << endl;
+      // if (edge->vertex1()) {
+      //    IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
+      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //         << vert.realy(mLow[1],mDelta) << ")" << endl;
+      // } else {
+      //    cout << "      Inf node" << endl;
+      // }
+      // // Blago!
 
       if (edge->twin()->color() == 0) {
         faceIndex = colorIndex-1;
@@ -655,14 +655,14 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   POLY_ASSERT(mesh.infNodes.size()  == mesh.nodes.size()/2);
   POLY_ASSERT(mesh.infFaces.size()  == numFaces);
 
-  // Blago!
-  cerr << "Inf cells: ";
-  for (set<int>::const_iterator itr = infCells.begin();
-       itr != infCells.end(); ++itr) {
-     cerr << *itr << " ";
-  }
-  cerr << endl;
-  // Blago!
+  // // Blago!
+  // cerr << "Inf cells: ";
+  // for (set<int>::const_iterator itr = infCells.begin();
+  //      itr != infCells.end(); ++itr) {
+  //    cerr << *itr << " ";
+  // }
+  // cerr << endl;
+  // // Blago!
 
   // Infinite cells by convention are bounded by inf faces. These connect
   // the inf nodes around an unbounded cell.

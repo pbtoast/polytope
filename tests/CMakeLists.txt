@@ -33,8 +33,12 @@ POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
 POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
 POLYTOPE_ADD_TEST( "within_2d"       "" )
 POLYTOPE_ADD_TEST( "intersect_2d"    "" )
+POLYTOPE_ADD_TEST( "MeshEditor"      "" )
+
 
 # Serial tessellator tests
+# NOTE: I am temporarily removing the Voro++ tests to speed
+#       up testing. No work is currently being done on Voro++
 POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"    )
 POLYTOPE_ADD_TEST( "Degenerate"                  "BOOST"    )
 POLYTOPE_ADD_TEST( "TriangleTessellator"         "TRIANGLE" )
@@ -43,8 +47,8 @@ POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE" )
 POLYTOPE_ADD_TEST( "OrphanedCell"                "TRIANGLE" )
 POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE" )
 POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"   )
-POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""         )
-POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""         )
+#POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""         )
+#POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""         )
 POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE" )
 POLYTOPE_ADD_TEST( "plcOrder"                    "TRIANGLE" )
 POLYTOPE_ADD_TEST( "TriangleUnbounded"           "TRIANGLE" )
@@ -55,6 +59,7 @@ POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE" )
 #POLYTOPE_ADD_TEST( "ShockNozzleMesh"             "TRIANGLE" )
 POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST"    )
 POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE" )
+POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE" )
 
 
 # Distributed tessellator tests

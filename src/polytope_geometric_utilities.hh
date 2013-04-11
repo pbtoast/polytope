@@ -614,6 +614,7 @@ computeCellCentroidAndSignedArea(const Tessellation<2, RealType>& mesh,
   POLY_ASSERT(ci < mesh.cells.size());
   unsigned iface, n0, n1;
   RealType d, x0, x1, y0, y1;
+  ccent[0] = 0.0; ccent[1] = 0.0;  area = 0.0;
   for (std::vector<int>::const_iterator itr = mesh.cells[ci].begin();
        itr != mesh.cells[ci].end(); ++itr) {
     iface = (*itr < 0) ? ~(*itr) : *itr;
@@ -622,6 +623,7 @@ computeCellCentroidAndSignedArea(const Tessellation<2, RealType>& mesh,
     n0 = (*itr < 0) ? mesh.faces[iface][1] : mesh.faces[iface][0];
     n1 = (*itr < 0) ? mesh.faces[iface][0] : mesh.faces[iface][1];
     POLY_ASSERT(n0 < mesh.nodes.size()/2 and n1 < mesh.nodes.size()/2);
+    POLY_ASSERT(n0 != n1);
     x0 = mesh.nodes[2*n0];  y0 = mesh.nodes[2*n0+1];
     x1 = mesh.nodes[2*n1];  y1 = mesh.nodes[2*n1+1];
     d = x0*y1 - y0*x1;

@@ -59,11 +59,19 @@ private:
   //-----------------------===== Private Interface =====----------------------//
 
   // Compute face and node masks to clean small edges
-  bool flagEdgesForCleaning(const RealType edgeTol);
-
+  bool flagEdgesForCleaning(const RealType edgeTol,
+                            std::vector<unsigned>& cellMap,
+                            std::vector<unsigned>& faceMap,
+                            std::vector<unsigned>& nodeMap);
+  
   // Does the work of recomputing mesh based on cell/face/node masks
-  void cleanMesh() ;
+  void cleanMesh(std::vector<unsigned>& cellMap,
+                 std::vector<unsigned>& faceMap,
+                 std::vector<unsigned>& nodeMap);
 
+  // First computes the new->old element maps then passes to routine above
+  void cleanMesh();
+  
   // Used by the delete[Element] routines to build up the necessary element
   // masks used by cleanMesh()
   void computeMasks();
@@ -81,6 +89,10 @@ private:
 
   // The element masks
   std::vector<unsigned> mCellMask, mFaceMask, mNodeMask;
+
+   // Disallowed
+   MeshEditor();
+   MeshEditor(const MeshEditor&);
 };
 
 

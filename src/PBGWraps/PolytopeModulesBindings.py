@@ -60,7 +60,7 @@ settings.allow_subclassing = True
 settings.deprecated_virtuals = False
 
 # The set packages we're going to process.
-pkgs_string = "CXXContainers PLC Tessellation Tessellator"
+pkgs_string = "CXXContainers MeshEditor PLC Tessellation Tessellator"
 pkgs = pkgs_string.split()
 
 # Extract the desired output files.

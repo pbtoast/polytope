@@ -82,6 +82,9 @@ main(int argc, char** argv)
                                          faceFields, cellFields, os.str());
 #endif
 
+
+  cout << "PASS" << endl;
+
 #if HAVE_MPI
   MPI_Finalize();
 #endif

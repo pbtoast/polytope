@@ -8,6 +8,7 @@
 #include "Tessellator.hh"
 #include "TriangleTessellator.hh"
 #include "TetgenTessellator.hh"
+#include "MeshEditor.hh"
 
 //#include "VoroPP_2d.hh"
 //#include "VoroPP_3d.hh"
@@ -42,6 +43,12 @@ typedef TetgenTessellator TetgenTessellator3d;
 
 // typedef VoroPP_2d<double> VoroTessellator2d;
 // typedef VoroPP_3d<double> VoroTessellator3d;
+
+//------------------------------------------------------------------------------
+// MeshEditor names
+//------------------------------------------------------------------------------
+typedef MeshEditor<2, double> MeshEditor2d;
+typedef MeshEditor<3, double> MeshEditor3d;
 
 
 //------------------------------------------------------------------------------
