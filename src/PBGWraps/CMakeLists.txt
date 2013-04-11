@@ -1,7 +1,7 @@
 #
 # Change this list to add/remove modules wrapped by PyBindGen:
 #
-set(LIST_OF_WRAPPED_CLASSES "CXXContainers" "PLC" "Tessellation" "Tessellator")
+set(LIST_OF_WRAPPED_CLASSES "CXXContainers" "MeshEditor" "PLC" "Tessellation" "Tessellator")
 
 
 

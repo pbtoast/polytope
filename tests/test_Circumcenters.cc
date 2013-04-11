@@ -41,9 +41,10 @@ void outputSiloMesh(Tessellation<2,double>& mesh,
    cellFields["cell_center_x"] = &genx[0];
    cellFields["cell_center_y"] = &geny[0];
    ostringstream os;
-   os << "test_Circumcenters_test_" << ntest;
+   os << "test_Circumcenters";
    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str());
+                                          faceFields, cellFields, os.str(),
+                                          ntest, 0.0);
 #endif
 }
 
@@ -78,8 +79,8 @@ int main(int argc, char** argv)
   points.push_back(1.5);  points.push_back(1.5);
   points.push_back(2.5);  points.push_back(1.5);
   
-  //TriangleTessellator<double> tessellator;
-  BoostTessellator<double> tessellator;
+  TriangleTessellator<double> tessellator;
+  //BoostTessellator<double> tessellator;
 
   int N = 34;
   double vert1[2] = {0.5, 0.5}, vert2[2] = {2.5, 0.5}, circumcenter[2];
@@ -95,18 +96,18 @@ int main(int argc, char** argv)
           << circumcenter[1] << ")" << endl;
      points[1] = 0.5 + displacement;
      Tessellation<2,double> mesh;
-     //tessellator.tessellate(points,PLCpoints,boundary,mesh);
-     tessellator.tessellate(points,mesh);
+     tessellator.tessellate(points,PLCpoints,boundary,mesh);
+     //tessellator.tessellate(points,mesh);
 
      outputSiloMesh(mesh,points,i);
 
      cout << "          Number of nodes = " << mesh.nodes.size()/2 << endl;
      cout << "          Number of faces = " << mesh.faces.size() << endl << endl;
-     cout << "  Nodes:" << endl;
-     for (int j=0; j != mesh.nodes.size()/2; ++j){
-        cout << scientific << setprecision(numeric_limits<double>::digits)
-             <<"    (" << mesh.nodes[2*j] << "," << mesh.nodes[2*j+1] << ")" << endl;
-     }
+     // cout << "  Nodes:" << endl;
+     // for (int j=0; j != mesh.nodes.size()/2; ++j){
+     //    cout << scientific << setprecision(numeric_limits<double>::digits)
+     //         <<"    (" << mesh.nodes[2*j] << "," << mesh.nodes[2*j+1] << ")" << endl;
+     // }
   }
 
   cout << "PASS" << endl;
