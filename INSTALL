@@ -51,6 +51,8 @@ prefix=<path>
 
 boost_root=<path>
         Explicitly choose the path to the Boost installation.
+	If using Boost v1.52 or higher, it additionally searches the associated 
+	include	directory for the Boost.Polygon Voronoi library.
 
 use_silo=0
         Choose to build with silo file capability (1) or without (0).
