@@ -9,6 +9,10 @@
 #include <limits>
 #include "float.h"
 
+#include <boost/iterator/transform_iterator.hpp>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+
 #include "polytope.hh" // Pulls in POLY_ASSERT
 #include "within.hh"
 #include "nearestPoint.hh"
@@ -47,7 +51,6 @@ template<typename RealType>
 void
 computeInfiniteEdgeDirection(const VD::edge_type* edge,
                              const vector<IntPoint>& points,
-			     const RealType* endpt,
 			     const RealType* low,
 			     const RealType delta,
                              RealType* direction) {
@@ -61,11 +64,11 @@ computeInfiniteEdgeDirection(const VD::edge_type* edge,
   POLY_ASSERT(index1 < points.size() and index2 < points.size());
   const IntPoint p1 = points[index1];
   const IntPoint p2 = points[index2];
-  RealType midpt[2] = {0.5*(p1.realx(low[0],delta) + p2.realx(low[0],delta)), 
-		       0.5*(p1.realy(low[1],delta) + p2.realy(low[1],delta))};
-  direction[0] = midpt[0] - endpt[0];
-  direction[1] = midpt[1] - endpt[1];
-  geometry::unitVector<2, double>(direction);
+  RealType r[2] = {p2.realx(low[0],delta) - p1.realx(low[0],delta),
+                   p2.realy(low[1],delta) - p1.realy(low[1],delta)};
+  if (edge->vertex0()) {direction[0] = -r[1];  direction[1] =  r[0];}
+  else                 {direction[0] =  r[1];  direction[1] = -r[0];}
+  geometry::unitVector<2, RealType>(direction);
 }
 
 
@@ -167,6 +170,7 @@ tessellate(const vector<RealType>& points,
   mRinf = rinf;
   mCenter.push_back(0.5*(mLow[0] + mHigh[0]));
   mCenter.push_back(0.5*(mLow[1] + mHigh[1]));
+  mCoordMax = coordMax;
 
   this->computeVoronoiUnbounded(points, mesh);
 }
@@ -229,6 +233,7 @@ tessellate(const vector<RealType>& points,
   mRinf = rinf;
   mCenter.push_back(0.5*(mLow[0] + mHigh[0]));
   mCenter.push_back(0.5*(mLow[1] + mHigh[1]));
+  mCoordMax = coordMax;
 
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
 }
@@ -266,26 +271,38 @@ computeCellRings(const vector<RealType>& points,
   
   // Convert point generators to Polytope integer points
   vector<IntPoint> generators(numGenerators);
+  // vector<pair<IntPoint, int> > generatorToIndex(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
     generators[i] = IntPoint(points[2*i], points[2*i+1],
-			     mLow[0], mLow[1], mDelta);
+        		     mLow[0], mLow[1], mDelta);
+    // generatorToIndex[i] = make_pair(IntPoint(points[2*i], points[2*i+1],
+    //                                          mLow[0], mLow[1], mDelta), i);
   }
-
+  
   // Sort the input points
   // NOTE: Boost.Polygon will do this by default.
   // TODO: Store the pre-sorted indices and store the tessellation cell
   //       info in terms of these original indices
   sort(generators.begin(), generators.end());
+  // sort(generatorToIndex.begin(), generatorToIndex.end(),
+  //      internal::pairCompareFirst<IntPoint, int> );
+
+  boost::function<IntPoint(pair<IntPoint, int>&)> f = boost::bind(&pair<IntPoint, int>::first, _1);
+  
 
   // The Boost.Polygon Voronoi Diagram object
   VD voronoi;
   construct_voronoi(generators.begin(), generators.end(), &voronoi);
+  // construct_voronoi(boost::make_transform_iterator(generatorToIndex.begin(), f),
+  //                   boost::make_transform_iterator(generatorToIndex.end(),   f),
+  //                   &voronoi);
 
   // Build up the ring of integer nodes around each generator directly from 
   bool test, inside;
-  int nodeIndex, cellIndex=0;
+  int cellIndex=0;
+  CoordHash x, y;
   RealPoint direction, pinf, endpt;
-  IntPoint X, finiteVertex, node;
+  IntPoint finiteVertex, node;
   size_t colorIndex = 1;
   map<VD::vertex_type, int, vertexCompare> vertexToNodeIndex;
   vector<BGring> orphanage;
@@ -298,94 +315,115 @@ computeCellRings(const vector<RealType>& points,
       POLY_ASSERT2(colorIndex < numeric_limits<size_t>::max()/32, "BoostTessellator Error: "
                    << "overflow of maximum allowable face index");
 
-      // Check if the edge on the opposite side of the face has been given a "color".
-      // If it hasn't add the vertex info of this edge.
-      //if (edge->twin()->color() == 0) {
-        edge->color(colorIndex);
-        ++colorIndex;
-        
-        // Input cell-to-face info into mesh.cells
-        POLY_ASSERT(cellIndex < voronoi.num_cells());
-        POLY_ASSERT(cellItr->source_index() == cellIndex);
-        
-	// The two vertex pointers for this edge
-        // NOTE: If edge is infinite, one of these pointers is null
-        const VD::vertex_type* v0 = edge->vertex0();
-        const VD::vertex_type* v1 = edge->vertex1();
+      // // Blago!
+      // cout << endl << "Edge index " << colorIndex << endl;
+      // cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
+      // cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
+      // cout << "   Vertex 0:" << endl;
+      // if (edge->vertex0()) {
+      //    IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
+      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //         << vert.realy(mLow[1],mDelta) << ")" << vert << endl;
+      // } else {
+      //    cout << "      Inf node" << endl;
+      // }
+      // cout << "   Vertex 1:" << endl;
+      // if (edge->vertex1()) {
+      //    IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
+      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //         << vert.realy(mLow[1],mDelta) << ")" << vert << endl;
+      // } else {
+      //    cout << "      Inf node" << endl;
+      // }
+      // // Blago!
 
-        // Finite edge: Add both vertices to the map
-        if (edge->is_finite()) {
-	  POLY_ASSERT(v0 and v1);
-	  // vertex 0
-//           k = vertexToNodeIndex.size();
-//           nodeIndex = internal::addKeyToMap(*v0, vertexToNodeIndex);
-//           if (nodeIndex == k) {
-	    node = IntPoint(v0->x(), v0->y());
-	    cellBoundary.push_back(node);
-//           }
-          
-// 	  // vertex 1
-//           k = vertexToNodeIndex.size();
-//           nodeIndex = internal::addKeyToMap(*v1, vertexToNodeIndex);
-//           if (nodeIndex == k) {
-// 	    node = IntPoint(v1->x(), v1->y());
-// 	    cellBoundary.push_back(node);
-//           }
-        }
+      edge->color(colorIndex);
+      ++colorIndex;
+      
+      // Input cell-to-face info into mesh.cells
+      POLY_ASSERT(cellIndex < voronoi.num_cells());
+      POLY_ASSERT(cellItr->source_index() == cellIndex);
+      
+      // The two vertex pointers for this edge
+      // NOTE: If edge is infinite, one of these pointers is null
+      const VD::vertex_type* v0 = edge->vertex0();
+      const VD::vertex_type* v1 = edge->vertex1();
+      
+      // Finite edge: Add vertex 0
+      if (edge->is_finite()) {
+        POLY_ASSERT(v0 and v1);
+        x = (v0->x() < 0) ? 0 : (v0->x() > mCoordMax) ? mCoordMax : v0->x();
+        y = (v0->y() < 0) ? 0 : (v0->y() > mCoordMax) ? mCoordMax : v0->y();
+        node = IntPoint(x, y);
+        // node = IntPoint(v0->x(), v0->y());
+        cellBoundary.push_back(node);
+      }
+      
+      // Infinite edge: Determine the direction of the ray pointing to infinity.
+      // Add the origin vertex of the ray and the projected point
+      else {
+        const VD::vertex_type* vfin = (edge->vertex0()) ? edge->vertex0() : edge->vertex1();
+        x = (vfin->x() < 0) ? 0 : (vfin->x() > mCoordMax) ? mCoordMax : vfin->x();
+        y = (vfin->y() < 0) ? 0 : (vfin->y() > mCoordMax) ? mCoordMax : vfin->y();
+        finiteVertex = IntPoint(x,y);
+        endpt = RealPoint(finiteVertex.realx(mLow[0],mDelta),
+                          finiteVertex.realy(mLow[1],mDelta));
 
-        // Infinite edge: Determine the direction of the ray pointing to infinity.
-        // Add the origin vertex of the ray and the projected point
+        // const VD::cell_type* cell1 = edge->cell();
+        // const VD::cell_type* cell2 = edge->twin()->cell();
+        // // Assume only point-generators for the time being
+        // POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
+        // size_t index1 = cell1->source_index();
+        // size_t index2 = cell2->source_index();
+        // POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
+        // const IntPoint p1 = generatorToIndex[index1].first;
+        // const IntPoint p2 = generatorToIndex[index2].first;
+        // RealType r[2] = {p2.realx(mLow[0],mDelta) - p1.realx(mLow[0],mDelta),
+        //                  p2.realy(mLow[1],mDelta) - p1.realy(mLow[1],mDelta)};
+        // if (edge->vertex0()) {direction.x = -r[1];  direction.y =  r[0];}
+        // else                 {direction.x =  r[1];  direction.y = -r[0];}
+        computeInfiniteEdgeDirection(edge, generators, &mLow[0], mDelta, &direction.x);
+        
+        // // Blago!
+        // int i1 = edge->cell()->source_index();
+        // int i2 = edge->twin()->cell()->source_index();
+        // cerr << "\nProjected Inf Node:" << endl
+        //      << "   endpoint    : " << endpt << endl
+        //      << "   direction   : " << direction << endl
+        //      << "   cell Index 1: " << i1 << endl
+        //      << "   cell Index 2: " << i2 << endl
+        //      << "   point 1     : " << generators[i1].realx(mLow[0], mDelta)
+        //      << " " << generators[i1].realy(mLow[1], mDelta) << endl
+        //      << "   point 2     : " << generators[i2].realx(mLow[0], mDelta)
+        //      << " " << generators[i2].realy(mLow[1], mDelta) << endl;
+        // // Blago!
+        
+        test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
+                                               &mCenter[0], mRinf, 1.0e-6, &pinf.x);
+        POLY_ASSERT(test);
+
+        // // Blago!
+        // cerr << "   projected pt: " << pinf << endl;
+        // // Blago!
+
+        // Vertex 0 exists, vertex 1 is a projected infNode. Add them in order
+        if (v0) {
+          // vertex 0
+          x = (v0->x() < 0) ? 0 : (v0->x() > mCoordMax) ? mCoordMax : v0->x();
+          y = (v0->y() < 0) ? 0 : (v0->y() > mCoordMax) ? mCoordMax : v0->y();
+          node = IntPoint(x, y);
+          // node = IntPoint(v0->x(), v0->y());
+          cellBoundary.push_back(node);
+          // infinite vertex 1
+          node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
+          cellBoundary.push_back(node);
+        } 
+
+        // Vertex 0 is a projected infNode. Only add vertex 0
         else {
-          finiteVertex = (edge->vertex0())                       ?
-	    IntPoint(edge->vertex0()->x(), edge->vertex0()->y()) :
-	    IntPoint(edge->vertex1()->x(), edge->vertex1()->y());
-	  endpt = RealPoint(finiteVertex.realx(mLow[0],mDelta),
-			    finiteVertex.realy(mLow[1],mDelta));
-	  computeInfiniteEdgeDirection(edge, generators, &endpt.x, &mLow[0], mDelta, &direction.x);
-	  test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
-                                                 &mCenter[0], mRinf, 1.0e-6, &pinf.x);
-          POLY_ASSERT(test);
-
-          // Vertex 0 exists, vertex 1 is a projected infNode. Add them in order
-          if (v0) {
-	    // vertex 0
-//             k = vertexToNodeIndex.size();
-//             nodeIndex = internal::addKeyToMap(*v0, vertexToNodeIndex);
-//             if (nodeIndex == k) {
-              node = IntPoint(v0->x(), v0->y());
-	      cellBoundary.push_back(node);
-//             }
-
-	    // infinite vertex 1
-//             k = vertexToNodeIndex.size();
-//             nodeIndex = internal::addKeyToMap(VD::vertex_type(pinf.x,pinf.y),
-//                                               vertexToNodeIndex);
-//             if (nodeIndex == k) {
-	      node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
-	      cellBoundary.push_back(node);
-//             }
-          } 
-          
-          // Vertex 0 is a projected infNode, vertex 1 exists. Add them in order
-          else {
-	    // infinite vertex 0
-//             k = vertexToNodeIndex.size();
-//             nodeIndex = internal::addKeyToMap(VD::vertex_type(pinf.x,pinf.y),
-//                                               vertexToNodeIndex);
-//             if (nodeIndex == k) {
-	      node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
-	      cellBoundary.push_back(node);
-//             }
-            
-// 	    // vertex 1
-// 	    k = vertexToNodeIndex.size();
-//             nodeIndex = internal::addKeyToMap(*v1, vertexToNodeIndex);
-//             if (nodeIndex == k) {
-//               node = IntPoint(v1->x(), v1->y());
-// 	      cellBoundary.push_back(node);
-//             }
-          }
-	  //}
+          node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
+          cellBoundary.push_back(node);
+        }
       }
       edge = edge->next();
     } while (edge != cellItr->incident_edge());
@@ -408,6 +446,7 @@ computeCellRings(const vector<RealType>& points,
     // Intersect with the boundary to get the bounded cell.
     // Since for complex boundaries this may return more than one polygon, we find
     // the one that contains the generator.
+    BGring simpRing;
     vector<BGring> cellIntersections;
     boost::geometry::intersection(boundary, cellRings[cellIndex], cellIntersections);
     if (cellIntersections.size() == 0) {
@@ -419,28 +458,51 @@ computeCellRings(const vector<RealType>& points,
     if (cellIntersections.size() == 1) {
       cellRings[cellIndex] = cellIntersections[0];
     } else {
-      X = IntPoint(points[2*cellIndex], points[2*cellIndex+1], 
-		   mLow[0], mLow[1], mDelta);
       k = cellIntersections.size();
       for (j = 0; j != cellIntersections.size(); ++j) {
-        inside = boost::geometry::within(X, cellIntersections[j]);
-        if( inside )  k = j;
-	else          orphanage.push_back( cellIntersections[j] );
+        inside = boost::geometry::within(generators[cellIndex], cellIntersections[j]);
+        // inside = boost::geometry::within(generatorToIndex[cellIndex].first, cellIntersections[j]);
+        if(inside)  k = j;
+	else        orphanage.push_back( cellIntersections[j] );
       }
       // If none of the cell intersections contain the point, check if
       // it's on the boundary of the intersection itself
       if (k == cellIntersections.size()) {
-         for (j = 0; j != cellIntersections.size(); ++j) {
-            bool onBoundary = false;
-            for (typename BGring::const_iterator itr = cellIntersections[j].begin();
-                 itr != cellIntersections[j].end(); ++itr) {
-               onBoundary += (X == *itr);
-            }
-            if (onBoundary) k = j;
-         }
+        for (j = 0; j != cellIntersections.size(); ++j) {
+          bool onBoundary = false;
+          for (typename BGring::const_iterator itr = cellIntersections[j].begin();
+               itr != cellIntersections[j].end(); ++itr) {
+            onBoundary += (generators[cellIndex] == *itr);
+            // onBoundary += (generatorToIndex[cellIndex].first == *itr);
+          }
+          if (onBoundary) k = j;
+        }
       }
+
+      // // Blago!
+      // cerr << "\nCell " << cellIndex << endl;
+      // cerr << "\nGenerator " << generators[cellIndex].realx(mLow[0],mDelta) 
+      //      << " " << generators[cellIndex].realy(mLow[1],mDelta) << endl;
+      // cerr << "\nRing:" << endl;
+      // for (typename BGring::const_iterator itr = cellRings[cellIndex].begin();
+      //      itr != cellRings[cellIndex].end(); ++itr) {
+      //   cerr << (*itr).realx(mLow[0],mDelta) << " "
+      //        << (*itr).realy(mLow[1],mDelta) << endl;
+      // }
+      // cerr << "\nBoundary:" << endl;
+      // for (typename BGring::const_iterator itr = boundary.outer().begin();
+      //      itr != boundary.outer().end(); ++itr) {
+      //   cerr << (*itr).realx(mLow[0],mDelta) << " "
+      //        << (*itr).realy(mLow[1],mDelta) << endl;
+      // }
+      // // Blago!
+
       POLY_ASSERT(k < cellIntersections.size());
       cellRings[cellIndex] = cellIntersections[k];
+      // boost::geometry::correct(cellRings[cellIndex]);
+      // boost::geometry::simplify(cellRings[cellIndex],simpRing,1);
+      boost::geometry::unique(cellRings[cellIndex]);
+      // cellRings[cellIndex] = simpRing;
     }
   }
 
@@ -450,6 +512,10 @@ computeCellRings(const vector<RealType>& points,
     POLY_ASSERT2(false, "Adoption has not been implemented for "
 		 << "the BoostTessellator yet");
   }
+
+  // Post-conditions
+  POLY_ASSERT(cellRings.size() == numGenerators);
+
 }
 //------------------------------------------------------------------------------
 
@@ -499,28 +565,27 @@ computeVoronoiUnbounded(const vector<RealType>& points,
       // Store the indices of all infinite cells
       if (edge->is_infinite())  infCells.insert(cellIndex);
 
-
-      // // Blago!
-      // cout << endl << "Edge index " << colorIndex << endl;
-      // cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
-      // cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
-      // cout << "   Vertex 0:" << endl;
-      // if (edge->vertex0()) {
-      //    IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
-      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
-      //         << vert.realy(mLow[1],mDelta) << ")" << endl;
-      // } else {
-      //    cout << "      Inf node" << endl;
-      // }
-      // cout << "   Vertex 1:" << endl;
-      // if (edge->vertex1()) {
-      //    IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
-      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
-      //         << vert.realy(mLow[1],mDelta) << ")" << endl;
-      // } else {
-      //    cout << "      Inf node" << endl;
-      // }
-      // // Blago!
+      // Blago!
+      cout << endl << "Edge index " << colorIndex << endl;
+      cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
+      cout << "   Is it primary? " << ((edge->is_primary()) ? "yes" : "no" ) << endl;
+      cout << "   Vertex 0:" << endl;
+      if (edge->vertex0()) {
+         IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
+         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+              << vert.realy(mLow[1],mDelta) << ")" << endl;
+      } else {
+         cout << "      Inf node" << endl;
+      }
+      cout << "   Vertex 1:" << endl;
+      if (edge->vertex1()) {
+         IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
+         cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+              << vert.realy(mLow[1],mDelta) << ")" << endl;
+      } else {
+         cout << "      Inf node" << endl;
+      }
+      // Blago!
 
       if (edge->twin()->color() == 0) {
         faceIndex = colorIndex-1;
@@ -587,7 +652,7 @@ computeVoronoiUnbounded(const vector<RealType>& points,
 	    IntPoint(edge->vertex1()->x(), edge->vertex1()->y());
 	  endpt = RealPoint(finiteVertex.realx(mLow[0],mDelta),
 			    finiteVertex.realy(mLow[1],mDelta));
-	  computeInfiniteEdgeDirection(edge, generators, &endpt.x, &mLow[0], mDelta, &direction.x);
+	  computeInfiniteEdgeDirection(edge, generators, &mLow[0], mDelta, &direction.x);
 	  test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
                                                  &mCenter[0], mRinf, 1.0e-6, &pinf.x);
           POLY_ASSERT(test);
@@ -707,7 +772,8 @@ computeVoronoiUnbounded(const vector<RealType>& points,
      mesh.cells[icell].insert(faceItr0, numFaces);
      ++numFaces;
   }
-  // A few repeat sanity checks
+
+  // Post-conditions
   POLY_ASSERT(mesh.faces.size()     == numFaces);
   POLY_ASSERT(mesh.faceCells.size() == numFaces);
   POLY_ASSERT(mesh.infFaces.size()  == numFaces);
@@ -737,10 +803,18 @@ computeVoronoiBounded(const vector<RealType>& points,
   int iedge;
   mesh.cells = vector<vector<int> >(numGenerators);
   for (i = 0; i != numGenerators; ++i) { 
+    POLY_ASSERT(cellRings[i].size() > 2);
+    boost::geometry::unique(cellRings[i]);
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end()-1; ++itr) {
       const IntPoint& pX1 = *itr;
       const IntPoint& pX2 = *(itr + 1);
+      if (*itr == *(itr+1)) {
+         for (typename BGring::const_iterator itr = cellRings[i].begin();
+              itr != cellRings[i].end()-1; ++itr) {
+            cerr << (*itr).realx(mLow[0],mDelta) << " " << (*itr).realy(mLow[0],mDelta) << " " << *itr << endl;
+         }
+      }
       POLY_ASSERT(*itr != *(itr + 1));
       j = internal::addKeyToMap(pX1, point2node);
       k = internal::addKeyToMap(pX2, point2node);

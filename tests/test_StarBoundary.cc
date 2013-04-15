@@ -46,14 +46,9 @@ void outputMesh(Tessellation<2,double>& mesh,
 }
 
 // -----------------------------------------------------------------------
-// main
+// test
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#if HAVE_MPI
-  MPI_Init(&argc, &argv);
-#endif
-
+void test(Tessellator<2,double>& tessellator) {
   unsigned i;
   int test = 1;
   
@@ -130,8 +125,35 @@ int main(int argc, char** argv)
     outputMesh(mesh,generators.mPoints,test);
     ++test;
   }
- 
+}
 
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv)
+{
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
+
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    test(tessellator);  
+  }
+#endif   
+
+
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif
+   
   cout << "PASS" << endl;
 
 #if HAVE_MPI

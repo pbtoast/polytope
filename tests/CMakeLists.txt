@@ -42,7 +42,8 @@ POLYTOPE_ADD_TEST( "MeshEditor"      "" )
 # NOTE: I am temporarily removing the Voro++ tests to speed
 #       up testing. No work is currently being done on Voro++
 POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
-POLYTOPE_ADD_TEST( "Degenerate"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "TriangleTessellator"         "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE"      )

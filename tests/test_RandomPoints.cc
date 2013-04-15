@@ -124,9 +124,15 @@ int main(int argc, char** argv)
 
    cout << "\nTriangle Tessellator:\n" << endl;
    TriangleTessellator<double> triangle;
-   //testAllBoundaries(triangle);
-   
-   outputResult(triangle,3,20);
+   testAllBoundaries(triangle);
+
+   //outputResult(tessellator,3,20);
+
+#if HAVE_BOOST_VORONOI
+   cout << "\nBoost Tessellator:\n" << endl;
+   BoostTessellator<double> boost;
+   testAllBoundaries(boost);
+#endif      
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
    //

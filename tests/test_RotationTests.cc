@@ -136,112 +136,109 @@ void outputMesh(Tessellation<2,double>& mesh,
 // -----------------------------------------------------------------------
 // runTest
 // -----------------------------------------------------------------------
-void runTest(const unsigned flowType) {
-   POLY_ASSERT(flowType >= 1 and flowType <= 4);
-
-   // Boundary size parameters
-   const unsigned nx = 50;
-   const double xmin = 0.0, xmax = 1.0;
-   const double ymin = 0.0, ymax = 1.0;
-   const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
+void runTest(Tessellator<2,double>& tessellator,
+             const unsigned flowType) {
+  POLY_ASSERT(flowType >= 1 and flowType <= 4);
+  
+  // Boundary size parameters
+  const unsigned nx = 50;
+  const double xmin = 0.0, xmax = 1.0;
+  const double ymin = 0.0, ymax = 1.0;
+  const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
    
-   // Time stepping and point-resizing stuff
-   double dt, Tmax, scaleFactor;
-   switch(flowType){
-   case 1:
-      dt = 2.0;
-      Tmax = 628.0/2;
-      scaleFactor = sqrt(2);
-      cout << "\nTest 1: Solid Rotation Flow\n" << endl;
-      break;
-   case 2:
-      dt = sqrt(2)*dx;
-      Tmax = 4.0;
-      scaleFactor = 1.0;
-      cout << "\nTest 2: Single Vortex Flow\n" << endl;
-      break;
-   case 3:
-      dt = sqrt(2)*dx;
-      Tmax = 4.0;
-      scaleFactor = 2.0;
-      cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
-      break;
-   case 4:
-      dt = sqrt(2)*dx;
-      Tmax = 2.0;
-      scaleFactor = sqrt(2);
-      cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
-      break;
-   }
+  // Time stepping and point-resizing stuff
+  double dt, Tmax, scaleFactor;
+  switch(flowType){
+  case 1:
+    dt = 2.0;
+    Tmax = 628.0/2;
+    scaleFactor = sqrt(2);
+    cout << "\nTest 1: Solid Rotation Flow\n" << endl;
+    break;
+  case 2:
+    dt = sqrt(2)*dx;
+    Tmax = 4.0;
+    scaleFactor = 1.0;
+    cout << "\nTest 2: Single Vortex Flow\n" << endl;
+    break;
+  case 3:
+    dt = sqrt(2)*dx;
+    Tmax = 4.0;
+    scaleFactor = 2.0;
+    cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
+    break;
+  case 4:
+    dt = sqrt(2)*dx;
+    Tmax = 2.0;
+    scaleFactor = sqrt(2);
+    cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
+    break;
+  }
 
-   // The PLC points for a unit square
-   vector<double> PLCpoints;
-   PLCpoints.push_back(xmin);  PLCpoints.push_back(ymin);
-   PLCpoints.push_back(xmax);  PLCpoints.push_back(ymin);
-   PLCpoints.push_back(xmax);  PLCpoints.push_back(ymax);
-   PLCpoints.push_back(xmin);  PLCpoints.push_back(ymax);
+  // The PLC points for a unit square
+  vector<double> PLCpoints;
+  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymin);
+  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymin);
+  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymax);
+  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymax);
 
-   // The unit square PLC facets
-   PLC<2,double> boundary;
-   boundary.facets.resize(4, vector<int>(2));
-   for (int i = 0; i != 4; ++i) {
-      boundary.facets[i][0] = i;
-      boundary.facets[i][1] = (i+1)%4;
-   }
+  // The unit square PLC facets
+  PLC<2,double> boundary;
+  boundary.facets.resize(4, vector<int>(2));
+  for (int i = 0; i != 4; ++i) {
+    boundary.facets[i][0] = i;
+    boundary.facets[i][1] = (i+1)%4;
+  }
    
-   // The generator set
-   vector<double> points;
-   unsigned ix, iy;
-   double xi, yi;
-   for (iy = 0; iy != nx; ++iy) {
-      yi = ymin + (iy + 0.5)*dy;
-      for (ix = 0; ix != nx; ++ix) {
-         xi = xmin + (ix + 0.5)*dx;
-         points.push_back(xi);
-         points.push_back(yi);
-      }
-   }
+  // The generator set
+  vector<double> points;
+  unsigned ix, iy;
+  double xi, yi;
+  for (iy = 0; iy != nx; ++iy) {
+    yi = ymin + (iy + 0.5)*dy;
+    for (ix = 0; ix != nx; ++ix) {
+      xi = xmin + (ix + 0.5)*dx;
+      points.push_back(xi);
+      points.push_back(yi);
+    }
+  }
 
-   // Resize the generator so we dont' fling them out of the boundary
-   for (unsigned i = 0; i != points.size(); ++i) {
-      points[i] = 0.5 + (points[i]-0.5)/scaleFactor;  
-   }
+  // Resize the generator so we dont' fling them out of the boundary
+  for (unsigned i = 0; i != points.size(); ++i) {
+    points[i] = 0.5 + (points[i]-0.5)/scaleFactor;  
+  }
 
-   // The tessellator
-   TriangleTessellator<double> tessellator;
+  // The velocity field
+  vector<double> velocityField(points.size());
 
-   // The velocity field
-   vector<double> velocityField(points.size());
-
-
-   // The initial tessellation
-   unsigned step = 0;
-   double time = 0.0;
-   Tessellation<2,double> mesh;
-   MeshEditor<2,double> meshEditor(mesh);
-   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-   outputMesh(mesh, points, flowType, step, time);
+  // The initial tessellation
+  unsigned step = 0;
+  double time = 0.0;
+  Tessellation<2,double> mesh;
+  MeshEditor<2,double> meshEditor(mesh);
+  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh, points, flowType, step, time);
    
-   // Update the point positions and generate the mesh
-   vector<double> halfTimePositions(points.size());
-   while (time < Tmax) {
-      if (step % 5 == 0) cout << (time/Tmax)*100 << "%" << endl;
-      mesh.clear();
-      getVelocities(points, flowType, velocityField);
-      for (unsigned i = 0; i != points.size(); ++i) {
-         halfTimePositions[i] = points[i] + dt*velocityField[i];
-      }
-      getVelocities(halfTimePositions, flowType, velocityField);
-      for (unsigned i = 0; i != points.size(); ++i) {
-         points[i] += dt*velocityField[i];
-	 POLY_ASSERT(xmin <= points[i] and points[i] <= xmax);
-      }
-      time += dt;
-      ++step;
-      tessellator.tessellate(points, PLCpoints, boundary, mesh);
-      meshEditor.cleanEdges(0.001);
-      outputMesh(mesh, points, flowType, step, time);
-   }
+  // Update the point positions and generate the mesh
+  vector<double> halfTimePositions(points.size());
+  while (time < Tmax) {
+    if (step % 5 == 0) cout << (time/Tmax)*100 << "%" << endl;
+    mesh.clear();
+    getVelocities(points, flowType, velocityField);
+    for (unsigned i = 0; i != points.size(); ++i) {
+      halfTimePositions[i] = points[i] + dt*velocityField[i];
+    }
+    getVelocities(halfTimePositions, flowType, velocityField);
+    for (unsigned i = 0; i != points.size(); ++i) {
+      points[i] += dt*velocityField[i];
+      POLY_ASSERT(xmin <= points[i] and points[i] <= xmax);
+    }
+    time += dt;
+    ++step;
+    tessellator.tessellate(points, PLCpoints, boundary, mesh);
+    meshEditor.cleanEdges(0.001);
+    outputMesh(mesh, points, flowType, step, time);
+  }
 }
 
 
@@ -251,15 +248,32 @@ void runTest(const unsigned flowType) {
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
-   for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(flowTest); 
 
-   cout << "PASS" << endl;
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);  
+  }
+#endif   
+
+
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+  }
+#endif
+   
+
+  cout << "PASS" << endl;
 
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

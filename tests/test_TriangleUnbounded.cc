@@ -64,18 +64,13 @@ void outputMesh(Tessellation<2,double>& mesh, int ntest) {
 #endif
 }
 
-// -----------------------------------------------------------------------
-// main
-// -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#if HAVE_MPI
-   MPI_Init(&argc, &argv);
-#endif
 
+// -----------------------------------------------------------------------
+// test
+// -----------------------------------------------------------------------
+void test(Tessellator<2,double>& tessellator) {
   int test = 1;
-  TriangleTessellator<double> triangle;
-
+  
   Tessellation<2,double> mesh;
 
   // Circle of generators
@@ -88,7 +83,7 @@ int main(int argc, char** argv)
        points[2*i] = cos(theta);  points[2*i+1] = sin(theta);
     }
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh,N,N+1,2*N,N,N);
     ++test;
@@ -106,7 +101,7 @@ int main(int argc, char** argv)
        points[2*i+1] = center[1] + sin(theta);
     }
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh,N,N+1,2*N,N,N);
     ++test;
@@ -122,7 +117,7 @@ int main(int argc, char** argv)
        points[4*i+2] = i;  points[4*i+3] =  1.0;
     }
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
     ++test;
@@ -137,7 +132,7 @@ int main(int argc, char** argv)
     points.push_back(4.5);
     points.push_back(1.0);
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     ++test;
   }
@@ -151,7 +146,7 @@ int main(int argc, char** argv)
     points.push_back(1.0); points.push_back(1.0);
     points.push_back(0.0); points.push_back(1.0);
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh, 4, 5, 8, 4, 4);
     ++test;
@@ -164,7 +159,7 @@ int main(int argc, char** argv)
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     cerr << mesh;
     checkMesh(mesh, 2, 4, 5, 4, 4);
@@ -178,7 +173,7 @@ int main(int argc, char** argv)
     vector<double> points(2*N, 0);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
     ++test;
@@ -191,7 +186,7 @@ int main(int argc, char** argv)
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i) + random01() - 0.5;
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
     ++test;
@@ -205,17 +200,45 @@ int main(int argc, char** argv)
     int indices[10] = {5,7,1,2,8,0,3,9,4,6};
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(indices[i]) + random01() - 0.5;
     Tessellation<2,double> mesh;
-    triangle.tessellate(points, mesh);
+    tessellator.tessellate(points, mesh);
     outputMesh(mesh, test);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
     ++test;
-  }
+  } 
+}
 
+
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv)
+{
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    test(tessellator);  
+  }
+#endif   
+
+
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif
+  
 
   cout << "PASS" << endl;
 
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }
