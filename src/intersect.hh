@@ -33,7 +33,7 @@ struct IntersectFacetsFunctor<2, RealType> {
                        std::vector<RealType>& result) {
     unsigned i, j, numIntersections=0;
     RealType intersectionPoint[2];
-    bool intersects;
+    bool intersects, addPoint;
     const unsigned numFacets = facets.size();
     for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
       POLY_ASSERT(facets[ifacet].size() == 2);
@@ -44,7 +44,17 @@ struct IntersectFacetsFunctor<2, RealType> {
       intersects = geometry::segmentIntersection2D(point1, point2,
                                                    &vertices[2*i], &vertices[2*j],
                                                    intersectionPoint);
-      if( intersects ){
+      addPoint = false;
+      if(intersects) {
+        if (numIntersections == 0) addPoint = true;
+        else {
+          if (intersectionPoint[0] != result.back() - 1 and
+              intersectionPoint[1] != result.back() ) addPoint = true;
+          else addPoint = false;
+        }
+      }
+      
+      if (addPoint) {
         ++numIntersections;
         result.push_back(intersectionPoint[0]);
         result.push_back(intersectionPoint[1]);
@@ -88,7 +98,7 @@ intersect(const RealType* point1,
   std::vector<unsigned> holeIntersections(numHoles);
   for (unsigned ihole = 0; ihole != plc.holes.size(); ++ihole) {
     holeIntersections[ihole] = intersectFacets<Dimension, RealType>(point1, point2, numVertices, vertices, plc.holes[ihole], result);
-    //numIntersections += holeIntersections[ihole];
+    numIntersections += holeIntersections[ihole];
   }
   return numIntersections;
 }

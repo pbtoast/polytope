@@ -126,6 +126,7 @@ private:
   // Bounding box used to quantize points and mitigate degeneracies
   mutable std::vector<RealType> mLow, mHigh, mCenter;
   mutable RealType mDelta, mRinf;
+  mutable CoordHash mCoordMax;
 
 };
 

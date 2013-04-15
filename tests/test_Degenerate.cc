@@ -67,6 +67,34 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 }
 
 // -----------------------------------------------------------------------
+// outputMesh
+// -----------------------------------------------------------------------
+void outputMesh(Tessellation<2,double>& mesh, 
+                const vector<double>& points,
+                int nstep) {
+#if HAVE_SILO
+   vector<double> index(mesh.cells.size());
+   vector<double> genx (mesh.cells.size());
+   vector<double> geny (mesh.cells.size());
+   for (int i = 0; i < mesh.cells.size(); ++i){
+      index[i] = double(i);
+      genx[i] = points[2*i  ];
+      geny[i] = points[2*i+1];
+   }
+   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+   cellFields["cell_index"   ] = &index[0];
+   cellFields["cell_center_x"] = &genx[0];
+   cellFields["cell_center_y"] = &geny[0];
+   ostringstream os;
+   os << "test_Degenerate";
+   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+                                          faceFields, cellFields, os.str(),
+                                          nstep, 0.0);
+#endif
+}
+
+
+// -----------------------------------------------------------------------
 // generateMesh
 // -----------------------------------------------------------------------
 void generateMesh(Tessellator<2,double>& tessellator)
@@ -85,34 +113,21 @@ void generateMesh(Tessellator<2,double>& tessellator)
    for ( int i = 0; i != 8; ++i, epsilon *= 10)
    {
       cout << "+/- " << epsilon/2 << "...";
-      generators.cartesianPoints( nxny );         // reset locations
-      generators.perturb( epsilon );              // perturb
+      generators.cartesianPoints(nxny);         // reset locations
+      generators.perturb(epsilon);              // perturb
       Tessellation<2,double> mesh;
       tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+      outputMesh(mesh, generators.mPoints, i);
       bool isCartesian = checkIfCartesian(mesh,nx,nx);
-      if( isCartesian ){ 
-         cout << "PASS" << endl; 
-      }else{
-         cout << "Degeneracy reached! Minimum face length = " << minLength(mesh) << endl;
-      }
-
-#if HAVE_SILO
-      vector<double> index( mesh.cells.size());
-      for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-      map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-      cellFields["cell_index"] = &index[0];
-      ostringstream os;
-      os << "test_Degenerate_" << epsilon;
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                             faceFields, cellFields, os.str());
-#endif
+      if(isCartesian)  cout << "Degeneracy resolved" << endl; 
+      else
+        cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
    }
 }
 
 
 // -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
+// main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -121,22 +136,26 @@ int main(int argc, char** argv)
 #endif
 
 #if HAVE_TRIANGLE
-   cout << "\nTriangle Tessellator:\n" << endl;
-   TriangleTessellator<double> triangle;
-   generateMesh(triangle);
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    //generateMesh(tessellator);
+  }
 #endif   
 
 #if HAVE_BOOST_VORONOI
-   cout << "\nBoost Tessellator:\n" << endl;
-   BoostTessellator<double> boostVoronoi;
-   generateMesh(boostVoronoi);
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    generateMesh(tessellator);
+  }
 #endif
 
-   // NOTE: Voro does not give sensible results at this time
-   //
-   // cout << "\nVoro 2D Tessellator:\n" << endl;
-   // VoroPP_2d<double> voro;
-   // generateMesh(voro);
+  // NOTE: Voro doesn't give sensible results at this time
+  //
+  // cout << "\nVoro 2D Tessellator:\n" << endl;
+  // VoroPP_2d<double> voro;
+  // generateMesh(voro);
 
    cout << "PASS" << endl;
 

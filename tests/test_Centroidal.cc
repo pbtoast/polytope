@@ -61,6 +61,35 @@ void outputMesh(Tessellation<2,double>& mesh,
 }
 
 
+// -----------------------------------------------------------------------
+// test
+// -----------------------------------------------------------------------
+void test(Tessellator<2,double>& tessellator) {
+  const unsigned nPoints = 100;     // Number of generators
+  const unsigned nIter   = 100;     // Number of iterations
+
+  // Set up boundary and disperse random generator locations
+  Boundary2D<double> boundary;
+  boundary.setDonut();
+  Generators<2,double> generators(boundary);
+  generators.randomPoints(nPoints);
+  std::vector<double> points;
+  for (unsigned i = 0; i != nPoints; ++i) {
+    if (boundary.testInside(&generators.mPoints[2*i])) {
+      std::copy(&generators.mPoints[2*i], &generators.mPoints[2*i+2], std::back_inserter(points));
+    }
+  }
+   
+  // Initialize mesh and tessellator
+  Tessellation<2,double> mesh;
+
+  for( int iter = 0; iter < nIter; ++iter ){
+    mesh.clear();
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh, points, iter);
+    lloyd(mesh,points);
+  }
+}
 
 
 // -----------------------------------------------------------------------
@@ -69,39 +98,29 @@ void outputMesh(Tessellation<2,double>& mesh,
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
    
-   unsigned nPoints = 100;     // Number of generators
-   unsigned nIter   = 100;      // Number of iterations
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif   
 
-   // Set up boundary and disperse random generator locations
-   Boundary2D<double> boundary;
-   boundary.setDonut();
-   Generators<2,double> generators(boundary);
-   generators.randomPoints(nPoints);
-   std::vector<double> points;
-   for (unsigned i = 0; i != nPoints; ++i) {
-     if (boundary.testInside(&generators.mPoints[2*i])) {
-       std::copy(&generators.mPoints[2*i], &generators.mPoints[2*i+2], std::back_inserter(points));
-     }
-   }
-   
-   // Initialize mesh and tessellator
-   Tessellation<2,double> mesh;
-   TriangleTessellator<double> triangle;
-   
-   for( int iter = 0; iter < nIter; ++iter ){
-     mesh.clear();
-     triangle.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-     outputMesh(mesh, points, iter);
-     lloyd(mesh,points);
-   }
-   
-   cout << "PASS" << endl;
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif
+
+  cout << "PASS" << endl;
    
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

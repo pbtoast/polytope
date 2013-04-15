@@ -448,10 +448,14 @@ rayCircleIntersection(const RealType* p_ray,
                       const RealType r_circle,
                       const RealType& tol,
                       RealType* result) {
-  POLY_ASSERT2((distance<2, RealType>(p_ray, p_circle) <= r_circle), 
-               "(" << p_ray[0] << " " << p_ray[1] << ") (" 
-               << p_circle[0] << " " << p_circle[1] << ")" << " : " 
-               << (distance<2, RealType>(p_ray, p_circle)) << " " << r_circle);
+  if (distance<2, RealType>(p_ray, p_circle) > r_circle) {
+    result[0] = p_ray[0];  result[1] = p_ray[1];
+    return true;
+  }
+  // POLY_ASSERT2((distance<2, RealType>(p_ray, p_circle) <= r_circle), 
+  //              "(" << p_ray[0] << " " << p_ray[1] << ") (" 
+  //              << p_circle[0] << " " << p_circle[1] << ")" << " : " 
+  //              << (distance<2, RealType>(p_ray, p_circle)) << " " << r_circle);
   POLY_ASSERT(std::abs(n_ray[0]*n_ray[0] + n_ray[1]*n_ray[1] - 1.0) < 1.0e-10);
   const RealType rs0[2] = {p_ray[0] - p_circle[0],
                            p_ray[1] - p_circle[1]};

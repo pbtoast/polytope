@@ -50,14 +50,9 @@ void outputSiloMesh(Tessellation<2,double>& mesh,
 
 
 // -----------------------------------------------------------------------
-// main
+// test
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#if HAVE_MPI
-   MPI_Init(&argc, &argv);
-#endif
-
+void test(Tessellator<2,double>& tessellator) {
   vector<double> PLCpoints;
   PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
   PLCpoints.push_back(3.0);  PLCpoints.push_back(0.0);
@@ -78,9 +73,6 @@ int main(int argc, char** argv)
   points.push_back(0.5);  points.push_back(1.5);
   points.push_back(1.5);  points.push_back(1.5);
   points.push_back(2.5);  points.push_back(1.5);
-  
-  TriangleTessellator<double> tessellator;
-  //BoostTessellator<double> tessellator;
 
   int N = 34;
   double vert1[2] = {0.5, 0.5}, vert2[2] = {2.5, 0.5}, circumcenter[2];
@@ -109,6 +101,26 @@ int main(int argc, char** argv)
      //         <<"    (" << mesh.nodes[2*j] << "," << mesh.nodes[2*j+1] << ")" << endl;
      // }
   }
+}
+
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv)
+{
+#if HAVE_MPI
+   MPI_Init(&argc, &argv);
+#endif
+
+  cout << "\nTriangle Tessellator:\n" << endl;
+  TriangleTessellator<double> triangle;
+  test(triangle);
+  
+#if HAVE_BOOST_VORONOI
+  cout << "\nBoost Tessellator:\n" << endl;  
+  BoostTessellator<double> boost;
+  test(boost);
+#endif      
 
   cout << "PASS" << endl;
 

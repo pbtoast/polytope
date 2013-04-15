@@ -78,33 +78,35 @@ void generateMesh(Tessellator<2,double>& tessellator)
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
 
 #if HAVE_TRIANGLE
-   cout << "\nTriangle Tessellator:\n" << endl;
-   TriangleTessellator<double> triangle;
-   generateMesh(triangle);
-   cout << "Triangle: PASS" << endl;
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    generateMesh(tessellator);
+  }
 #endif   
 
 #if HAVE_BOOST_VORONOI
-   cout << "\nBoost Tessellator:\n" << endl;
-   BoostTessellator<double> boostVoronoi;
-   generateMesh(boostVoronoi);
-   cout << "Boost: PASS" << endl;
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    generateMesh(tessellator);
+  }
 #endif
 
-   cout << "\nVoro 2D Tessellator:\n" << endl;
-   VoroPP_2d<double> voro;
-   generateMesh(voro);
-   cout << "Voro 2D: PASS" << endl;
+   // cout << "\nVoro 2D Tessellator:\n" << endl;
+   // VoroPP_2d<double> voro;
+   // generateMesh(voro);
+   // cout << "Voro 2D: PASS" << endl;
 
-   cout << "PASS" << endl;
+  cout << "PASS" << endl;
 
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

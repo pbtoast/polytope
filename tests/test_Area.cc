@@ -80,7 +80,7 @@ double testAllBoundaries(Tessellator<2,double>& tessellator)
 
 
 // -----------------------------------------------------------------------
-// the test
+// main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -88,16 +88,28 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
-  cout << "\nTriangle Tessellator:\n" << endl;
-  TriangleTessellator<double> triangle;
-  const double maxError = testAllBoundaries(triangle);
-   
-  const double tol = 0.1;
-  if (maxError > tol) {
-     cout << "FAIL" << endl;
-  } else {
-     cout << "PASS" << endl;
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    const double maxError = testAllBoundaries(tessellator);   
+    const double tol = 0.1;
+    if (maxError > tol) cout << "FAIL" << endl;
   }
+#endif
+
+
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    const double maxError = testAllBoundaries(tessellator);   
+    const double tol = 0.1;
+    if (maxError > tol) cout << "FAIL" << endl;
+  }
+#endif
+
+  cout << "PASS" << endl;
 
 #if HAVE_MPI
   MPI_Finalize();
