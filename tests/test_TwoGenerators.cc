@@ -24,36 +24,28 @@ using namespace polytope;
 
 
 // -----------------------------------------------------------------------
-// main
+// test
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#if HAVE_MPI
-   MPI_Init(&argc, &argv);
-#endif
+void test(Tessellator<2,double>& tessellator) {
 
+  // output name
+  string testName = "TwoGenerators_" + tessellator.name();
+
+  // the domain boundary
   Boundary2D<double> boundary;
   boundary.setUnitSquare();
-  Generators<2,double> generators(boundary);
+
+  // generators
+  vector<double> points;
+  points.push_back(-0.25);  points.push_back(-0.125);
+  points.push_back( 0.25);  points.push_back( 0.125);
   
-  double point1[2] = {-0.25, -0.125};  generators.addGenerator(point1);
-  double point2[2] = { 0.25,  0.125};  generators.addGenerator(point2);
-  
+  // Make that mesh!
   Tessellation<2,double> mesh;
-  TriangleTessellator<double> triangle;
-  triangle.tessellate( generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh );
-  
-#if HAVE_SILO
-  vector<double> index( mesh.cells.size());
-  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"] = &index[0];
-  ostringstream os;
-  os << "test_twoGenerators_mesh";
-  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                         faceFields, cellFields, os.str());
-#endif
-  
+  tessellator.tessellate( points, boundary.mPLCpoints, boundary.mPLC, mesh );
+  outputMesh(mesh, testName, points);
+
+  // Some post-conditions
   POLY_CHECK(mesh.nodes.size()/2 == 6);
   POLY_CHECK(mesh.cells.size()   == 2);
   POLY_CHECK(mesh.faces.size()   == 7);
@@ -65,11 +57,37 @@ int main(int argc, char** argv)
                << "              Area  = " << area << endl
                << "              Error = " << boundary.mArea - area << endl
                << "   Fractional error = " << fracerr << endl );
+}
+
+
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv)
+{
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    test(tessellator);
+  }
+
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif      
+
 
   cout << "PASS" << endl;
-
+  
 #if HAVE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

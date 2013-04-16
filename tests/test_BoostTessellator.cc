@@ -25,8 +25,8 @@ main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
-  const CoordHash coordMax = (1LL << 26);
-  const double degeneracy = 1.5e-8;
+  // Output name
+  string testName = "BoostTessellator";
 
   // Create the generators.
   vector<double> points;
@@ -71,16 +71,7 @@ main(int argc, char** argv)
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
   cout << mesh << endl;
 
-#if HAVE_SILO
-  vector<double> index(mesh.cells.size());
-  for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-  map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"] = &index[0];
-  ostringstream os;
-  os << "test_BoostTessellator_mesh";
-  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                         faceFields, cellFields, os.str());
-#endif
+  outputMesh(mesh,testName,points);
 
 
   cout << "PASS" << endl;

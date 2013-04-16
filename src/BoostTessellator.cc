@@ -271,12 +271,12 @@ computeCellRings(const vector<RealType>& points,
   
   // Convert point generators to Polytope integer points
   vector<IntPoint> generators(numGenerators);
-  // vector<pair<IntPoint, int> > generatorToIndex(numGenerators);
+  vector<pair<IntPoint, int> > generatorToIndex(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
     generators[i] = IntPoint(points[2*i], points[2*i+1],
         		     mLow[0], mLow[1], mDelta);
-    // generatorToIndex[i] = make_pair(IntPoint(points[2*i], points[2*i+1],
-    //                                          mLow[0], mLow[1], mDelta), i);
+    generatorToIndex[i] = make_pair(IntPoint(points[2*i], points[2*i+1],
+                                             mLow[0], mLow[1], mDelta), i);
   }
   
   // Sort the input points
@@ -284,22 +284,25 @@ computeCellRings(const vector<RealType>& points,
   // TODO: Store the pre-sorted indices and store the tessellation cell
   //       info in terms of these original indices
   sort(generators.begin(), generators.end());
-  // sort(generatorToIndex.begin(), generatorToIndex.end(),
-  //      internal::pairCompareFirst<IntPoint, int> );
+  sort(generatorToIndex.begin(), generatorToIndex.end(),
+       internal::pairCompareFirst<IntPoint, int> );
 
-  boost::function<IntPoint(pair<IntPoint, int>&)> f = boost::bind(&pair<IntPoint, int>::first, _1);
+  // Some Boost voodoo to iterate over the first element of each pair
+  typedef vector<pair<IntPoint, int> >::value_type value_type;
+  boost::function<IntPoint(value_type&)> f = boost::bind(&value_type::first, _1);
   
 
   // The Boost.Polygon Voronoi Diagram object
   VD voronoi;
-  construct_voronoi(generators.begin(), generators.end(), &voronoi);
-  // construct_voronoi(boost::make_transform_iterator(generatorToIndex.begin(), f),
-  //                   boost::make_transform_iterator(generatorToIndex.end(),   f),
-  //                   &voronoi);
+//   construct_voronoi(generators.begin(), generators.end(), &voronoi);
+  construct_voronoi(boost::make_transform_iterator(generatorToIndex.begin(), f),
+                    boost::make_transform_iterator(generatorToIndex.end(),   f),
+                    &voronoi);
+  POLY_ASSERT(voronoi.num_cells() == numGenerators);
 
   // Build up the ring of integer nodes around each generator directly from 
   bool test, inside;
-  int cellIndex=0;
+  int sortedIndex=0, cellIndex;
   CoordHash x, y;
   RealPoint direction, pinf, endpt;
   IntPoint finiteVertex, node;
@@ -308,12 +311,16 @@ computeCellRings(const vector<RealType>& points,
   vector<BGring> orphanage;
   cellRings.resize(numGenerators);
   for (VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
-       cellItr != voronoi.cells().end(); ++cellItr, ++cellIndex) {
+       cellItr != voronoi.cells().end(); ++cellItr, ++sortedIndex) {
     vector<IntPoint> cellBoundary;
     const VD::edge_type* edge = cellItr->incident_edge();
     do {
       POLY_ASSERT2(colorIndex < numeric_limits<size_t>::max()/32, "BoostTessellator Error: "
                    << "overflow of maximum allowable face index");
+      POLY_ASSERT(sortedIndex == cellItr->source_index());
+      POLY_ASSERT(sortedIndex <  numGenerators);
+      cellIndex = generatorToIndex[sortedIndex].second;
+      POLY_ASSERT(cellIndex   <  numGenerators);
 
       // // Blago!
       // cout << endl << "Edge index " << colorIndex << endl;
@@ -340,10 +347,6 @@ computeCellRings(const vector<RealType>& points,
       edge->color(colorIndex);
       ++colorIndex;
       
-      // Input cell-to-face info into mesh.cells
-      POLY_ASSERT(cellIndex < voronoi.num_cells());
-      POLY_ASSERT(cellItr->source_index() == cellIndex);
-      
       // The two vertex pointers for this edge
       // NOTE: If edge is infinite, one of these pointers is null
       const VD::vertex_type* v0 = edge->vertex0();
@@ -355,7 +358,6 @@ computeCellRings(const vector<RealType>& points,
         x = (v0->x() < 0) ? 0 : (v0->x() > mCoordMax) ? mCoordMax : v0->x();
         y = (v0->y() < 0) ? 0 : (v0->y() > mCoordMax) ? mCoordMax : v0->y();
         node = IntPoint(x, y);
-        // node = IntPoint(v0->x(), v0->y());
         cellBoundary.push_back(node);
       }
       
@@ -369,20 +371,21 @@ computeCellRings(const vector<RealType>& points,
         endpt = RealPoint(finiteVertex.realx(mLow[0],mDelta),
                           finiteVertex.realy(mLow[1],mDelta));
 
-        // const VD::cell_type* cell1 = edge->cell();
-        // const VD::cell_type* cell2 = edge->twin()->cell();
-        // // Assume only point-generators for the time being
-        // POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
-        // size_t index1 = cell1->source_index();
-        // size_t index2 = cell2->source_index();
-        // POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
-        // const IntPoint p1 = generatorToIndex[index1].first;
-        // const IntPoint p2 = generatorToIndex[index2].first;
-        // RealType r[2] = {p2.realx(mLow[0],mDelta) - p1.realx(mLow[0],mDelta),
-        //                  p2.realy(mLow[1],mDelta) - p1.realy(mLow[1],mDelta)};
-        // if (edge->vertex0()) {direction.x = -r[1];  direction.y =  r[0];}
-        // else                 {direction.x =  r[1];  direction.y = -r[0];}
-        computeInfiniteEdgeDirection(edge, generators, &mLow[0], mDelta, &direction.x);
+        const VD::cell_type* cell1 = edge->cell();
+        const VD::cell_type* cell2 = edge->twin()->cell();
+        // Assume only point-generators for the time being
+        POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
+        size_t index1 = cell1->source_index();
+        size_t index2 = cell2->source_index();
+        POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
+        const IntPoint p1 = generatorToIndex[index1].first;
+        const IntPoint p2 = generatorToIndex[index2].first;
+        RealType r[2] = {p2.realx(mLow[0],mDelta) - p1.realx(mLow[0],mDelta),
+                         p2.realy(mLow[1],mDelta) - p1.realy(mLow[1],mDelta)};
+        if (edge->vertex0()) {direction.x = -r[1];  direction.y =  r[0];}
+        else                 {direction.x =  r[1];  direction.y = -r[0];}
+	geometry::unitVector<2, RealType>(&direction.x);
+//         computeInfiniteEdgeDirection(edge, generators, &mLow[0], mDelta, &direction.x);
         
         // // Blago!
         // int i1 = edge->cell()->source_index();
@@ -412,7 +415,6 @@ computeCellRings(const vector<RealType>& points,
           x = (v0->x() < 0) ? 0 : (v0->x() > mCoordMax) ? mCoordMax : v0->x();
           y = (v0->y() < 0) ? 0 : (v0->y() > mCoordMax) ? mCoordMax : v0->y();
           node = IntPoint(x, y);
-          // node = IntPoint(v0->x(), v0->y());
           cellBoundary.push_back(node);
           // infinite vertex 1
           node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
@@ -460,8 +462,8 @@ computeCellRings(const vector<RealType>& points,
     } else {
       k = cellIntersections.size();
       for (j = 0; j != cellIntersections.size(); ++j) {
-        inside = boost::geometry::within(generators[cellIndex], cellIntersections[j]);
-        // inside = boost::geometry::within(generatorToIndex[cellIndex].first, cellIntersections[j]);
+//         inside = boost::geometry::within(generators[cellIndex], cellIntersections[j]);
+        inside = boost::geometry::within(generatorToIndex[sortedIndex].first, cellIntersections[j]);
         if(inside)  k = j;
 	else        orphanage.push_back( cellIntersections[j] );
       }
@@ -472,8 +474,8 @@ computeCellRings(const vector<RealType>& points,
           bool onBoundary = false;
           for (typename BGring::const_iterator itr = cellIntersections[j].begin();
                itr != cellIntersections[j].end(); ++itr) {
-            onBoundary += (generators[cellIndex] == *itr);
-            // onBoundary += (generatorToIndex[cellIndex].first == *itr);
+//             onBoundary += (generators[cellIndex] == *itr);
+            onBoundary += (generatorToIndex[sortedIndex].first == *itr);
           }
           if (onBoundary) k = j;
         }
@@ -499,10 +501,7 @@ computeCellRings(const vector<RealType>& points,
 
       POLY_ASSERT(k < cellIntersections.size());
       cellRings[cellIndex] = cellIntersections[k];
-      // boost::geometry::correct(cellRings[cellIndex]);
-      // boost::geometry::simplify(cellRings[cellIndex],simpRing,1);
       boost::geometry::unique(cellRings[cellIndex]);
-      // cellRings[cellIndex] = simpRing;
     }
   }
 

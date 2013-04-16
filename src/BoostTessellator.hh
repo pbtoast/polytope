@@ -87,6 +87,9 @@ public:
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
 
+  // The name of the tessellator
+  std::string name() const { return "BoostTessellator"; }
+
 private:
   //-------------------- Private interface ---------------------- //
 

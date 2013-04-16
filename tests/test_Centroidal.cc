@@ -33,33 +33,6 @@ void lloyd(Tessellation<2,double>& mesh,
    }
 }
 
-// -----------------------------------------------------------------------
-// outputMesh
-// -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                const vector<double>& points,
-                int nstep) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_Centroidal";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          nstep, 0.0);
-#endif
-}
-
 
 // -----------------------------------------------------------------------
 // test
@@ -67,6 +40,8 @@ void outputMesh(Tessellation<2,double>& mesh,
 void test(Tessellator<2,double>& tessellator) {
   const unsigned nPoints = 100;     // Number of generators
   const unsigned nIter   = 100;     // Number of iterations
+
+  string testName = "Centroidal_" + tessellator.name();
 
   // Set up boundary and disperse random generator locations
   Boundary2D<double> boundary;
@@ -86,7 +61,7 @@ void test(Tessellator<2,double>& tessellator) {
   for( int iter = 0; iter < nIter; ++iter ){
     mesh.clear();
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, points, iter);
+    outputMesh(mesh, testName, points, iter);
     lloyd(mesh,points);
   }
 }

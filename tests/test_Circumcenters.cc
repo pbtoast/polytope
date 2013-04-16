@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "polytope.hh"
+#include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
@@ -20,39 +21,11 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// outputSiloMesh
-// -----------------------------------------------------------------------
-void outputSiloMesh(Tessellation<2,double>& mesh,
-                    std::vector<double>& points,
-                    int ntest) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      if(!points.empty()){
-         genx[i] = points[2*i];
-         geny[i] = points[2*i+1];
-      }
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_Circumcenters";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          ntest, 0.0);
-#endif
-}
-
-
-// -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
+  string testName = "Circumcenters_" + tessellator.name();
+
   vector<double> PLCpoints;
   PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
   PLCpoints.push_back(3.0);  PLCpoints.push_back(0.0);
@@ -91,7 +64,7 @@ void test(Tessellator<2,double>& tessellator) {
      tessellator.tessellate(points,PLCpoints,boundary,mesh);
      //tessellator.tessellate(points,mesh);
 
-     outputSiloMesh(mesh,points,i);
+     outputMesh(mesh, testName, points, i);
 
      cout << "          Number of nodes = " << mesh.nodes.size()/2 << endl;
      cout << "          Number of faces = " << mesh.faces.size() << endl << endl;

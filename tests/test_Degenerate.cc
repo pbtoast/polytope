@@ -67,62 +67,36 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 }
 
 // -----------------------------------------------------------------------
-// outputMesh
+// test
 // -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                const vector<double>& points,
-                int nstep) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_Degenerate";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          nstep, 0.0);
-#endif
-}
-
-
-// -----------------------------------------------------------------------
-// generateMesh
-// -----------------------------------------------------------------------
-void generateMesh(Tessellator<2,double>& tessellator)
+void test(Tessellator<2,double>& tessellator)
 {
-   // Set the boundary
-   Boundary2D<double> boundary;
-   boundary.setUnitSquare();
-   Generators<2,double> generators(boundary);
+  // name for the output
+  string testName = "Degenerate_" + tessellator.name();
 
-   unsigned nx = 10;
-   std::vector<unsigned> nxny(2,nx);
-   
-   // Create generators
-   cout << "Generator locations randomly perturbed by" << endl;
-   double epsilon = 2.0e-12;
-   for ( int i = 0; i != 8; ++i, epsilon *= 10)
-   {
-      cout << "+/- " << epsilon/2 << "...";
-      generators.cartesianPoints(nxny);         // reset locations
-      generators.perturb(epsilon);              // perturb
-      Tessellation<2,double> mesh;
-      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
-      outputMesh(mesh, generators.mPoints, i);
-      bool isCartesian = checkIfCartesian(mesh,nx,nx);
-      if(isCartesian)  cout << "Degeneracy resolved" << endl; 
-      else
-        cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
-   }
+  // Set the boundary
+  Boundary2D<double> boundary;
+  boundary.setUnitSquare();
+  Generators<2,double> generators(boundary);
+  
+  unsigned nx = 10;
+  std::vector<unsigned> nxny(2,nx);
+  
+  // Create generators
+  cout << "Generator locations randomly perturbed by" << endl;
+  double epsilon = 2.0e-12;
+  for ( int i = 0; i != 8; ++i, epsilon *= 10) {
+    cout << "+/- " << epsilon/2 << "...";
+    generators.cartesianPoints(nxny);         // reset locations
+    generators.perturb(epsilon);              // perturb
+    Tessellation<2,double> mesh;
+    tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+    outputMesh(mesh, testName, generators.mPoints, i);
+    bool isCartesian = checkIfCartesian(mesh,nx,nx);
+    if(isCartesian)  cout << "Degeneracy resolved" << endl; 
+    else
+      cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
+  }
 }
 
 
@@ -139,7 +113,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    //generateMesh(tessellator);
+    //test(tessellator);
   }
 #endif   
 
@@ -147,7 +121,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    generateMesh(tessellator);
+    test(tessellator);
   }
 #endif
 
@@ -155,7 +129,7 @@ int main(int argc, char** argv)
   //
   // cout << "\nVoro 2D Tessellator:\n" << endl;
   // VoroPP_2d<double> voro;
-  // generateMesh(voro);
+  // test(voro);
 
    cout << "PASS" << endl;
 

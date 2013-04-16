@@ -60,7 +60,9 @@ public:
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
-   
+
+  // Return the tessellator name
+  std::string name() const { return "TriangleTessellator"; }
 
 private:
   //-------------------- Private interface ---------------------- //

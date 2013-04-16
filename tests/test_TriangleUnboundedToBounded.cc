@@ -27,7 +27,7 @@ using namespace polytope;
 int main(int argc, char** argv)
 {
 #if HAVE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
   // unsigned nPoints = 5;
@@ -43,38 +43,23 @@ int main(int argc, char** argv)
   //    points.push_back(pts[2*i+1]);
   // }
 
+  const string testName = "TriangleUnboundedToBounded";
+  const int bType = 3;
+  
+  // Boundary data
   Boundary2D<double> boundary;
-  int bType = 3;
   boundary.setDefaultBoundary(bType);
+
+  // Generator data
   Generators<2,double> generators(boundary);
   generators.randomPoints(20);
 
   Tessellation<2,double> mesh;
-  TriangleTessellator<double> triangle;
-
+  TriangleTessellator<double> tessellator;
 
   // Do the unbounded tessellation
-  triangle.tessellate( generators.mPoints, mesh );
-#if HAVE_SILO
-  {
-    vector<double> index(mesh.cells.size());
-    vector<double> genx (mesh.cells.size());
-    vector<double> geny (mesh.cells.size());
-    for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = generators.mPoints[2*i];
-      geny[i]  = generators.mPoints[2*i+1];
-    }
-    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["cell_index"] = &index[0];
-    cellFields["cell_center_x"] = &genx[0];
-    cellFields["cell_center_y"] = &geny[0];
-    ostringstream os;
-    os << "test_unbounded_mesh";
-    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                           faceFields, cellFields, os.str());
-  }
-#endif
+  tessellator.tessellate( generators.mPoints, mesh );
+  outputMesh(mesh, testName, generators.mPoints, 1);
 
   // const unsigned nSides = 4;
   // std::vector<double> PLCpoints;
@@ -92,27 +77,9 @@ int main(int argc, char** argv)
   
   // Now do the bounded version
   mesh.clear();
-  triangle.tessellate( generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh );
-#if HAVE_SILO
-  {
-    vector<double> index(mesh.cells.size());
-    vector<double> genx (mesh.cells.size());
-    vector<double> geny (mesh.cells.size());
-    for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = generators.mPoints[2*i];
-      geny[i]  = generators.mPoints[2*i+1];
-    }
-    map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["cell_index"] = &index[0];
-    cellFields["cell_center_x"] = &genx[0];
-    cellFields["cell_center_y"] = &geny[0];
-    ostringstream os;
-    os << "test_bounded_mesh";
-    polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                           faceFields, cellFields, os.str());
-  }
-#endif
+  tessellator.tessellate( generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh );
+  outputMesh(mesh, testName, generators.mPoints, 2);
+
   
   cout << "PASS" << endl;
 

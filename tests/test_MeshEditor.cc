@@ -23,28 +23,6 @@ using namespace polytope;
 
 
 // -----------------------------------------------------------------------
-// outputSiloMesh
-// -----------------------------------------------------------------------
-void outputSiloMesh(Tessellation<2,double>& mesh,
-                    int ntest) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   ostringstream os;
-   os << "test_MeshEditor";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          ntest, 0.0);
-#endif
-}
-
-
-
-// -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
@@ -53,6 +31,7 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
+   string testName = "MeshEditor";
    int itest = 1;
 
    // Test 1: Single cell, one small face
@@ -82,10 +61,10 @@ int main(int argc, char** argv)
       for (int i = 0; i != 2*nnodes; ++i) mesh.nodes[i] = nodePoints[i];
       MeshEditor<2,double> meshEditor(mesh);
       cout << mesh << endl;
-      outputSiloMesh(mesh, itest);
+      outputMesh(mesh, testName, itest);
       meshEditor.cleanEdges(edgeTol);
       cout << mesh << endl;
-      outputSiloMesh(mesh, itest);
+      outputMesh(mesh, testName, itest);
       ++itest;
    }
 

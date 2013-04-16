@@ -29,41 +29,28 @@ using namespace polytope;
 // outputResult
 // -----------------------------------------------------------------------
 void outputResult(Tessellator<2,double>& tessellator,
-		  int bType,
-		  unsigned nPoints)
-{
-   Boundary2D<double> boundary;
+		  const int bType,
+		  const unsigned nPoints) {
+  // output name
+  ostringstream os;
+  os << "RandomPoints_" << tessellator.name() << "_" << bType;
+  string testName = os.str();
 
-   boundary.setDefaultBoundary(bType);
-   Generators<2,double> generators( boundary );
-
-   generators.randomPoints( nPoints );
-
-   Tessellation<2,double> mesh;
-   tessellate2D(generators.mPoints,boundary,tessellator,mesh);
-   POLY_ASSERT( mesh.cells.size() == nPoints );
-   double area = computeTessellationArea(mesh);
-   cout << "Tessellation Area = " << area << endl;
-   cout << "Relative error    = " << (boundary.mArea-area)/boundary.mArea << endl;
-   
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = generators.mPoints[2*i];
-      geny[i]  = generators.mPoints[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_RandomPoints_boundary_" << bType << "_" << nPoints << "points";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str());
-#endif
+  // Boundary data
+  Boundary2D<double> boundary;
+  boundary.setDefaultBoundary(bType);
+  
+  // Generator data
+  Generators<2,double> generators( boundary );
+  generators.randomPoints(nPoints);
+  
+  Tessellation<2,double> mesh;
+  tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+  POLY_ASSERT( mesh.cells.size() == nPoints );
+  double area = computeTessellationArea(mesh);
+  cout << "Tessellation Area = " << area << endl;
+  cout << "Relative error    = " << (boundary.mArea-area)/boundary.mArea << endl;  
+  outputMesh(mesh, testName, generators.mPoints);
 }
 
 
@@ -71,46 +58,39 @@ void outputResult(Tessellator<2,double>& tessellator,
 // testBoundary
 // -----------------------------------------------------------------------
 void testBoundary(Boundary2D<double>& boundary,
-                  Tessellator<2,double>& tessellator)
-{
-   Generators<2,double> generators( boundary );
-   unsigned nPoints = 1;
-   Tessellation<2,double> mesh;
-   for( unsigned n = 0; n < 3; ++n ){
-      POLY_ASSERT( mesh.empty() );
-      nPoints = nPoints * 10;
-      cout << nPoints << " points...";
+                  Tessellator<2,double>& tessellator) {
+  // output name
+  ostringstream os;
+  os << "RandomPoints_" << tessellator.name() << "_" << boundary.mType;
+  string testName = os.str();
 
-      generators.randomPoints( nPoints );      
-      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
-
-      POLY_ASSERT( mesh.cells.size() == nPoints );
-      cout << "PASS" << endl;
-#if HAVE_SILO
-      vector<double> index( mesh.cells.size());
-      for (int i = 0; i < mesh.cells.size(); ++i) index[i] = double(i);
-      map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-      cellFields["cell_index"] = &index[0];
-      ostringstream os;
-      os << "test_RandomPoints_boundary_" << boundary.mType << "_" << nPoints << "_points";
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                             faceFields, cellFields, os.str());
-#endif
-      mesh.clear();   
-   }
+  Generators<2,double> generators( boundary );
+  unsigned nPoints = 1;
+  Tessellation<2,double> mesh;
+  for( unsigned n = 0; n < 3; ++n ){
+    POLY_ASSERT(mesh.empty());
+    nPoints = nPoints * 10;
+    
+    cout << nPoints << " points...";
+    generators.randomPoints( nPoints );      
+    tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+    cout << "got meshed!" << endl;
+    
+    outputMesh(mesh, testName, generators.mPoints, n);
+    mesh.clear();   
+  }
 }
 
 // -----------------------------------------------------------------------
 // testAllBoundaries
 // -----------------------------------------------------------------------
-void testAllBoundaries(Tessellator<2,double>& tessellator)
-{
-   for (int bid = 0; bid < 9; ++bid){
-      cout << "Testing boundary type " << bid << endl;
-      Boundary2D<double> boundary;
-      boundary.setDefaultBoundary(bid);
-      testBoundary( boundary, tessellator );
-   }
+void testAllBoundaries(Tessellator<2,double>& tessellator) {
+  for (int bid = 0; bid < 9; ++bid){
+    cout << "Testing boundary type " << bid << endl;
+    Boundary2D<double> boundary;
+    boundary.setDefaultBoundary(bid);
+    testBoundary(boundary, tessellator);
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -122,16 +102,19 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
-   cout << "\nTriangle Tessellator:\n" << endl;
-   TriangleTessellator<double> triangle;
-   testAllBoundaries(triangle);
-
-   //outputResult(tessellator,3,20);
-
+   {
+     cout << "\nTriangle Tessellator:\n" << endl;
+     TriangleTessellator<double> tessellator;
+     testAllBoundaries(tessellator);
+     //outputResult(tessellator,3,20);
+   }
+   
 #if HAVE_BOOST_VORONOI
-   cout << "\nBoost Tessellator:\n" << endl;
-   BoostTessellator<double> boost;
-   testAllBoundaries(boost);
+   {
+     cout << "\nBoost Tessellator:\n" << endl;
+     BoostTessellator<double> tessellator;
+     testAllBoundaries(tessellator);
+   }
 #endif      
 
    // NOTE: Voro++ currently lacks PLC boundary capabilities
@@ -141,6 +124,7 @@ int main(int argc, char** argv)
    // testAllBoundaries(voro);
 
    cout << "PASS" << endl;
+
 #if HAVE_MPI
    MPI_Finalize();
 #endif

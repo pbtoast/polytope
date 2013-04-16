@@ -104,36 +104,6 @@ void getVelocities(const vector<double>& points,
 
 
 // -----------------------------------------------------------------------
-// outputMesh
-// -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                const vector<double>& points,
-                const unsigned flowType,
-                int nstep,
-                double time) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_RotationTests_test_" << flowType;
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          nstep, time);
-#endif
-}
-
-
-// -----------------------------------------------------------------------
 // runTest
 // -----------------------------------------------------------------------
 void runTest(Tessellator<2,double>& tessellator,
@@ -145,6 +115,11 @@ void runTest(Tessellator<2,double>& tessellator,
   const double xmin = 0.0, xmax = 1.0;
   const double ymin = 0.0, ymax = 1.0;
   const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
+
+  // Test name for output
+  ostringstream os;
+  os << "RotationTests_" << tessellator.name() << "_" << flowType;
+  string testName = os.str();
    
   // Time stepping and point-resizing stuff
   double dt, Tmax, scaleFactor;
@@ -217,7 +192,7 @@ void runTest(Tessellator<2,double>& tessellator,
   Tessellation<2,double> mesh;
   MeshEditor<2,double> meshEditor(mesh);
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh, points, flowType, step, time);
+  outputMesh(mesh, testName, points, step, time);
    
   // Update the point positions and generate the mesh
   vector<double> halfTimePositions(points.size());
@@ -237,7 +212,7 @@ void runTest(Tessellator<2,double>& tessellator,
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
     meshEditor.cleanEdges(0.001);
-    outputMesh(mesh, points, flowType, step, time);
+    outputMesh(mesh, testName, points, step, time);
   }
 }
 
