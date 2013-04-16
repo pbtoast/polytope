@@ -47,6 +47,9 @@ public:
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return false; }
 
+  // Return the name of this tessellator
+  std::string name() const { return "TetgenTessellator"; }
+
 private:
   //-------------------- Private interface --------------------
   typedef int64_t CoordHash;

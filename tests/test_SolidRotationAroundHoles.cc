@@ -39,31 +39,97 @@ void computeConstantVorticityFlow(const vector<double>& points,
 
 
 // -----------------------------------------------------------------------
-// outputMesh
+// test
 // -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                const vector<double>& points,
-                int nstep,
-                double time) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_SolidRotationAroundHoles";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          nstep, time);
-#endif
+void test(Tessellator<2,double>& tessellator) {
+  // Initialize star-hole boundary, tessellator, and generator set
+  Boundary2D<double> boundary;
+  boundary.setDefaultBoundary(5);
+  vector<double> points;
+  
+  // Test name for output
+  string testName = "SolidRotationAroundHoles_" + tessellator.name();
+  
+  // Timestepping parameters
+  const double dt = 1.0;
+  const double Tmax = 628.0/2;
+  
+  // Boundary parameters
+  const double boundRadius = 1.0;
+  const double theta0 = 2*M_PI/5;
+  const double outerRadius = 0.75;
+  const double innerRadius = outerRadius*(sin(theta0/4.0) / sin(3*theta0/4.0));
+  
+  // Initialize a mask to determine if a generator will 
+  // move CCW (1), CW(-1), or stay fixed (0)
+  vector<int> velMask;
+  
+  // Add generators between boundRadius and outerRadius
+  const unsigned numRows = 6;
+  const unsigned nArcs   = 90;
+  const unsigned maxArc  = nArcs - 45;
+  const bool alternateFlowDirection = true;
+  const double dr = (boundRadius - outerRadius) / numRows;
+  for (unsigned i = 0; i != numRows; ++i) {
+    double r = outerRadius + (i+0.5)*dr;
+    // unsigned nArcs = 6*i;
+    for (unsigned j = 0; j != maxArc; ++j) {
+      int direction = 1;
+      if (alternateFlowDirection) direction -= 2*(i%2);
+      double theta = 2*M_PI*double(j)/double(nArcs);
+      double x = boundary.mCenter[0] + r*cos(theta);
+      double y = boundary.mCenter[1] + r*sin(theta);
+      points.push_back(x);
+      points.push_back(y);
+      velMask.push_back(direction);
+      velMask.push_back(direction);
+    }
+  }
+  
+  // Add additional generators that will remain fixed.
+  double r = 0.5*(innerRadius + outerRadius);
+  unsigned numFixed = 4;
+  for (unsigned i = 0; i != numFixed; ++i) {
+    double theta = M_PI/2 + (i + 3.5)*theta0;
+    double x = boundary.mCenter[0] + r*cos(theta);
+    double y = boundary.mCenter[0] + r*sin(theta);
+    points.push_back(x);
+    points.push_back(y);
+    velMask.push_back(0);
+    velMask.push_back(0);
+  }
+  
+  // The velocity field
+  vector<double> velocityField(points.size());
+  POLY_ASSERT(velMask.size() == points.size());
+  
+  // The initial tessellation
+  unsigned step = 0;
+  double time = 0.0;
+  Tessellation<2,double> mesh;
+  MeshEditor<2,double> meshEditor(mesh);
+  tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+  outputMesh(mesh, testName, points, step, time);
+  
+  // Update the point positions and generate the mesh
+  vector<double> halfTimePositions(points.size());
+  while (time < Tmax) {
+    cout << time << endl;
+    mesh.clear();
+    computeConstantVorticityFlow(points, velocityField);
+    for (unsigned i = 0; i != points.size(); ++i) {
+      halfTimePositions[i] = points[i] + 0.5*dt*velocityField[i]*velMask[i];
+    }
+    computeConstantVorticityFlow(halfTimePositions, velocityField);
+    for (unsigned i = 0; i != points.size(); ++i) {
+      points[i] += dt*velocityField[i]*velMask[i];
+    }
+    time += dt;
+    ++step;
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    meshEditor.cleanEdges(0.001);
+    outputMesh(mesh, testName, points, step, time);
+  }
 }
 
 
@@ -76,92 +142,21 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
-   // Initialize star-hole boundary, tessellator, and generator set
-   Boundary2D<double> boundary;
-   boundary.setDefaultBoundary(5);
-   TriangleTessellator<double> tessellator;
-   vector<double> points;
 
-   // Timestepping parameters
-   const double dt = 1.0;
-   const double Tmax = 628.0/2;
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator<double> tessellator;
+    test(tessellator);
+  }
 
-   // Boundary parameters
-   const double boundRadius = 1.0;
-   const double theta0 = 2*M_PI/5;
-   const double outerRadius = 0.75;
-   const double innerRadius = outerRadius*(sin(theta0/4.0) / sin(3*theta0/4.0));
 
-   // Initialize a mask to determine if a generator will 
-   // move CCW (1), CW(-1), or stay fixed (0)
-   vector<int> velMask;
-
-   // Add generators between boundRadius and outerRadius
-   const unsigned numRows = 6;
-   const unsigned nArcs   = 90;
-   const unsigned maxArc  = nArcs - 45;
-   const bool alternateFlowDirection = true;
-   const double dr = (boundRadius - outerRadius) / numRows;
-   for (unsigned i = 0; i != numRows; ++i) {
-      double r = outerRadius + (i+0.5)*dr;
-      // unsigned nArcs = 6*i;
-      for (unsigned j = 0; j != maxArc; ++j) {
-         int direction = 1;
-         if (alternateFlowDirection) direction -= 2*(i%2);
-         double theta = 2*M_PI*double(j)/double(nArcs);
-         double x = boundary.mCenter[0] + r*cos(theta);
-         double y = boundary.mCenter[1] + r*sin(theta);
-         points.push_back(x);
-         points.push_back(y);
-         velMask.push_back(direction);
-         velMask.push_back(direction);
-      }
-   }
-
-   // Add additional generators that will remain fixed.
-   double r = 0.5*(innerRadius + outerRadius);
-   unsigned numFixed = 4;
-   for (unsigned i = 0; i != numFixed; ++i) {
-      double theta = M_PI/2 + (i + 3.5)*theta0;
-      double x = boundary.mCenter[0] + r*cos(theta);
-      double y = boundary.mCenter[0] + r*sin(theta);
-      points.push_back(x);
-      points.push_back(y);
-      velMask.push_back(0);
-      velMask.push_back(0);
-   }
-   
-   // The velocity field
-   vector<double> velocityField(points.size());
-   POLY_ASSERT(velMask.size() == points.size());
-
-   // The initial tessellation
-   unsigned step = 0;
-   double time = 0.0;
-   Tessellation<2,double> mesh;
-   MeshEditor<2,double> meshEditor(mesh);
-   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-   outputMesh(mesh, points, step, time);
-   
-   // Update the point positions and generate the mesh
-   vector<double> halfTimePositions(points.size());
-   while (time < Tmax) {
-      cout << time << endl;
-      mesh.clear();
-      computeConstantVorticityFlow(points, velocityField);
-      for (unsigned i = 0; i != points.size(); ++i) {
-         halfTimePositions[i] = points[i] + 0.5*dt*velocityField[i]*velMask[i];
-      }
-      computeConstantVorticityFlow(halfTimePositions, velocityField);
-      for (unsigned i = 0; i != points.size(); ++i) {
-         points[i] += dt*velocityField[i]*velMask[i];
-      }
-      time += dt;
-      ++step;
-      tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-      meshEditor.cleanEdges(0.001);
-      outputMesh(mesh, points, step, time);
-   }
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator<double> tessellator;
+    test(tessellator);
+  }
+#endif
 
 
    cout << "PASS" << endl;

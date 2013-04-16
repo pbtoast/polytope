@@ -86,6 +86,8 @@ class Tessellator
   //! hell associated with elaborate inheritance hierarchies.
   virtual bool handlesPLCs() const = 0;
 
+  virtual std::string name() const = 0;
+
   protected:
 
   //! This helper method creates a piecewise linear complex (PLC) 

@@ -20,42 +20,16 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// outputMesh
-// -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                std::vector<double>& points,
-                int ntest) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i]  = points[2*i];
-      geny[i]  = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_StarBoundary_test_" << ntest;
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str());
-#endif
-}
-
-// -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
   unsigned i;
   int test = 1;
+  string testName = "StarBoundary_" + tessellator.name();
   
   // Set the boundary and tessellator
   Boundary2D<double> boundary;
   boundary.setStarWithHole();
-  TriangleTessellator<double> triangle;
   
   // 9 input generators points
   double gens[18] = {0.11,  0.11,
@@ -77,8 +51,8 @@ void test(Tessellator<2,double>& tessellator) {
       points.push_back(gens[2*i+1]);
     }
     Tessellation<2,double> mesh;
-    triangle.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,points,test);
+    tessellator.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
+    outputMesh(mesh,testName,points,test);
     ++test;
   }
   
@@ -95,10 +69,10 @@ void test(Tessellator<2,double>& tessellator) {
                   boundary.mPLCpoints.begin(),
                   boundary.mPLCpoints.end());
     Tessellation<2,double> mesh;
-    //triangle.tessellate(points,mesh);
-    //triangle.tessellate(points,points,boundary.mPLC,mesh);
-    triangle.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,points,test);
+    //tessellator.tessellate(points,mesh);
+    //tessellator.tessellate(points,points,boundary.mPLC,mesh);
+    tessellator.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
+    outputMesh(mesh,testName,points,test);
     ++test;
   }
   
@@ -109,8 +83,8 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(800);
     Tessellation<2,double> mesh;
-    triangle.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,generators.mPoints,test);
+    tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
+    outputMesh(mesh,testName,generators.mPoints,test);
     ++test;
   }
   
@@ -121,11 +95,12 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(2000);
     Tessellation<2,double> mesh;
-    triangle.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,generators.mPoints,test);
+    tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
+    outputMesh(mesh,testName,generators.mPoints,test);
     ++test;
   }
 }
+
 
 // -----------------------------------------------------------------------
 // main

@@ -35,6 +35,57 @@ double random01() {
   return double(rand())/RAND_MAX;
 }
 
+
+//------------------------------------------------------------------------------
+// Custom Silo output scripts
+//------------------------------------------------------------------------------
+template <typename RealType>
+void outputMesh(Tessellation<2,RealType>& mesh,
+		std::string prefix,
+		const std::vector<RealType>& points,
+		const unsigned testCycle = 1,
+		const RealType time = 0.0) {
+#if HAVE_SILO
+  vector<double> index(mesh.cells.size());
+  vector<double> genx (mesh.cells.size());
+  vector<double> geny (mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i){
+    index[i] = double(i);
+    if (!points.empty()) {
+      genx[i] = points[2*i  ];
+      geny[i] = points[2*i+1];
+    }
+  }
+  map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"   ] = &index[0];
+  cellFields["cell_center_x"] = &genx[0];
+  cellFields["cell_center_y"] = &geny[0];
+  ostringstream os;
+  os << prefix;
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+					 faceFields, cellFields, os.str(),
+					 testCycle, time);
+#endif
+}
+
+
+template <typename RealType>
+void outputMesh(Tessellation<2,RealType>& mesh,
+		std::string prefix,
+		const unsigned testCycle) {
+  std::vector<RealType> points;
+  outputMesh(mesh, prefix, points, testCycle, 0.0);
+}
+
+template <typename RealType>
+void outputMesh(Tessellation<2,RealType>& mesh,
+		std::string prefix) {
+  std::vector<RealType> points;
+  outputMesh(mesh, prefix, points, 1, 0.0);
+}
+
+
+
 //------------------------------------------------------------------------------
 // Wrapper to tessellate a 2D boundary for both VoroPP_2D and Triangle
 //------------------------------------------------------------------------------

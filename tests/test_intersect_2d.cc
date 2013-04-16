@@ -70,11 +70,6 @@ int main(int argc, char** argv) {
     double p1[2] = {0.0, -6.0}, p2[2] = {0.0, 0.0};
     vector<double> result;
     const unsigned nints = intersect(p1, p2, numVertices, vertices, plc, result);
-    cerr << nints << endl;
-    for (int i = 0; i != result.size()/2; ++i){
-       cerr << i << endl;
-       cerr << result[2*i] << " " << result[2*i+1] << endl;
-    }
     POLY_CHECK(nints == 2 and result.size() == 4);
     POLY_CHECK(result[0] == 0.0 and result[1] == -5.0 and
 	       result[2] == 0.0 and result[3] == -1.0);

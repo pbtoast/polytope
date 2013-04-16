@@ -44,33 +44,14 @@ void checkMesh(const Tessellation<2,double>& mesh,
   POLY_CHECK2(infFaceCount == ninfFaces, infFaceCount << " != " << ninfFaces);
 }
 
-// -----------------------------------------------------------------------
-// outputMesh
-// -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, int ntest) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   ostringstream os;
-   os << "test_TriangleUnbounded_test_" << ntest;
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str());
-#endif
-}
-
 
 // -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
-  int test = 1;
-  
+
+  string testName = "Unbounded_" + tessellator.name();
+  int ntest = 1;  
   Tessellation<2,double> mesh;
 
   // Circle of generators
@@ -84,9 +65,9 @@ void test(Tessellator<2,double>& tessellator) {
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh,N,N+1,2*N,N,N);
-    ++test;
+    ++ntest;
   }
 
   // Circle of generators, random center
@@ -102,9 +83,9 @@ void test(Tessellator<2,double>& tessellator) {
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh,N,N+1,2*N,N,N);
-    ++test;
+    ++ntest;
   }
 
   // Two uniform rows of generators
@@ -118,9 +99,9 @@ void test(Tessellator<2,double>& tessellator) {
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
-    ++test;
+    ++ntest;
   }
 
   // Collinear generators with one non-collinear
@@ -133,8 +114,8 @@ void test(Tessellator<2,double>& tessellator) {
     points.push_back(1.0);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
-    ++test;
+    outputMesh(mesh, testName, points, ntest);
+    ++ntest;
   }
 
   // Test 4: 2x2 Cartesian Generators
@@ -147,9 +128,9 @@ void test(Tessellator<2,double>& tessellator) {
     points.push_back(0.0); points.push_back(1.0);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh, 4, 5, 8, 4, 4);
-    ++test;
+    ++ntest;
   }
 
   // Two generators
@@ -160,10 +141,10 @@ void test(Tessellator<2,double>& tessellator) {
     points.push_back(1.0); points.push_back(0.0);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     cerr << mesh;
     checkMesh(mesh, 2, 4, 5, 4, 4);
-    ++test;
+    ++ntest;
   }
 
   // Line of generators, uniform
@@ -174,9 +155,9 @@ void test(Tessellator<2,double>& tessellator) {
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
-    ++test;
+    ++ntest;
   }
 
   // Line of generators, non-uniform
@@ -187,9 +168,9 @@ void test(Tessellator<2,double>& tessellator) {
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i) + random01() - 0.5;
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
-    ++test;
+    ++ntest;
   }
 
   // Line of generators, non-uniform, shuffled
@@ -201,9 +182,9 @@ void test(Tessellator<2,double>& tessellator) {
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(indices[i]) + random01() - 0.5;
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
-    outputMesh(mesh, test);
+    outputMesh(mesh, testName, points, ntest);
     checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
-    ++test;
+    ++ntest;
   } 
 }
 
