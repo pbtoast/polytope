@@ -1,5 +1,4 @@
-//------------------------------------------------------------------------
-// TriangleTessellator
+
 // 
 // An implemenation of the Tessellator interface that uses the Triangle
 // library by Jonathan Shewchuk.
@@ -13,21 +12,16 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "BoostOrphanage.hh"
 #include "Point.hh"
 struct triangulateio;
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
-#include <boost/geometry/geometries/register/point.hpp>
-#include <boost/geometry/multi/geometries/multi_point.hpp>
-#include <boost/geometry/multi/geometries/multi_polygon.hpp>
-
 
 typedef int64_t CoordHash;
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<CoordHash>, CoordHash, boost::geometry::cs::cartesian, x, y);
-BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
-
+  
 namespace polytope 
 {
 
@@ -79,7 +73,6 @@ private:
   typedef boost::geometry::model::polygon<RealPoint,   // point type
                                           false>       // clockwise
     realBGpolygon;
-  typedef boost::geometry::model::multi_point<IntPoint> BGmulti_point;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
   static CoordHash coordMax;
@@ -88,6 +81,29 @@ private:
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
   // ------------------------------------------------- //
+
+  // Compute node IDs around collinear generators and their quantized locations
+  void computeCellNodesCollinear(const std::vector<RealType>& points,
+				 std::map<IntPoint, std::pair<int,int> >& circumcenterMap,
+				 std::map<int, std::vector<unsigned> >& cellNodes,
+				 std::vector<unsigned>& infNodes) const;
+
+  // Compute node IDs around each generator and their quantized locations
+  void computeCellNodes(const std::vector<RealType>& points,
+			std::map<IntPoint, std::pair<int,int> >& circumceterMap,
+			std::map<int, std::vector<unsigned> >& cellNodes,
+			std::vector<unsigned>& infNodes) const;
+    
+  // Compute bounded cell rings from collection of unbounded node locations
+  void computeCellRings(const std::vector<RealType>& points,
+			const std::vector<RealType>& PLCpoints,
+			const PLC<2, RealType>& geometry,
+			std::vector<BGring>& cellRings,
+			bool performCellAdoption) const;
+
+  // Computes the triangularization using Triangle
+  void computeDelaunay(const std::vector<RealType>& points,
+                       triangulateio& delaunay) const;
 
   // Compute an unbounded tessellation
   void computeVoronoiUnbounded(const std::vector<RealType>& points,
@@ -99,44 +115,44 @@ private:
 			     const PLC<2, RealType>& geometry,
 			     Tessellation<2, RealType>& mesh) const;
 
-  // Compute node IDs around each generator and their quantized locations
-  void computeCellNodes(const std::vector<RealType>& points,
-			std::map<IntPoint, std::pair<int,int> >& circumceterMap,
-			std::map<int, std::vector<unsigned> >& cellNodes,
-			std::vector<unsigned>& infNodes) const;
-  
-  
-  // Compute node IDs around collinear generators and their quantized locations
-  void computeCellNodesCollinear(const std::vector<RealType>& points,
-				 std::map<IntPoint, std::pair<int,int> >& circumcenterMap,
-				 std::map<int, std::vector<unsigned> >& cellNodes,
-				 std::vector<unsigned>& infNodes) const;
+  // ----------------------------------------------------- //
+  // Private tessellate calls used by internal algorithms  //
+  // ----------------------------------------------------- //
 
-  
-  // Compute bounded cell rings from collection of unbounded node locations
-  void computeCellRings(const std::vector<RealType>& points,
-			const std::vector<RealType>& PLCpoints,
-			const PLC<2, RealType>& geometry,
-			std::vector<BGring>& cellRings,
-			bool performCellAdoption) const;
+  // Bounded tessellation with prescribed bounding box
+  void tessellate(const std::vector<RealType>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<2, RealType>& geometry,
+                  const RealType* low,
+                  const RealType* high,
+                  const RealType dx,
+                  Tessellation<2, RealType>& mesh) const;
 
-  // Computes the triangularization using Triangle
-  void computeDelaunay(const std::vector<RealType>& points,
-                       triangulateio& delaunay) const;
-  
-  // Algorithm for assigning orphaned cells to neighboring cell rings
-  void adoptionAlgorithm(const std::vector<RealType>& points,
-			 std::vector<BGring>& cellRings,
-			 std::vector<BGring>& orphanage) const;
-  
-  // Bounding box used to quantize points and mitigate degeneracies
-  mutable std::vector<RealType> mLowOuter, mLowInner;
-  mutable std::vector<RealType> mHighOuter, mHighInner;
-  mutable RealType mdxOuter, mdxInner;
+  // -------------------------- //
+  // Private member variables   //
+  // -------------------------- //
+
+  // Bounding box used to quantize mesh nodes and mitigate degeneracies
+  mutable std::vector<RealType> mLow, mHigh;
+  mutable RealType mDelta;
+   
+  // Outer bounding box to quantize extreme circumcenters
+  mutable std::vector<RealType> mLowOuter, mHighOuter;
+  mutable RealType mDeltaOuter;
+
+  // Infinite bounding circle
+  mutable std::vector<RealType> mCenter;
+  mutable RealType mRinf;
+
+  // Maximum integer coordinate value
+  mutable CoordHash mCoordMax;
+  mutable RealType mDegeneracy;
+
+  friend class BoostOrphanage<RealType>;
 
 };
 
-}
+} //end polytope namespace
 
 #endif
 #endif

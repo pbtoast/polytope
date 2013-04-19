@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
     
     
    // Blago!
-#if USE_SILO
+#if HAVE_SILO
    {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
       for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];

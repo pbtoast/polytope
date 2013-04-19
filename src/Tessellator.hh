@@ -5,6 +5,7 @@
 #include <float.h>
 #include "Tessellation.hh"
 #include "Tessellator.hh"
+#include "OrphanageBase.hh"
 #include "PLC.hh"
 #include "ReducedPLC.hh"
 #include "polytope_internal.hh"
@@ -13,13 +14,15 @@
 namespace polytope
 {
 
+
+
 //! \class Tessellator - An abstract base class for objects that generate 
 //! Voronoi and Voronoi-like tessellations for sets of points and/or 
 //! geometries.
 template<int Dimension, typename RealType>
 class Tessellator
 {
-  public:
+public:
 
   //! Default constructor.
   Tessellator() {}
@@ -285,6 +288,20 @@ class Tessellator
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);
 
+  // Private tessellate to set bounding box and degeneracy spacing
+  virtual void tessellate(const std::vector<RealType>& points,
+                          const std::vector<RealType>& PLCpoints,
+                          const PLC<Dimension, RealType>& geometry,
+                          const RealType* low,
+                          const RealType* high,
+                          const RealType dx,
+                          Tessellation<Dimension, RealType>& mesh) const
+  {
+    error("This Tessellator does not support this tessellate routine");
+  }
+  
+  // Allow the orphanage base class to call any private tessellate(s)
+  friend class OrphanageBase<Dimension, RealType>;
 };
 
 }

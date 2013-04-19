@@ -53,6 +53,31 @@ int main(int argc, char** argv) {
     plc.holes[0][i][1] = 5 + (i + 1) % 5;
   }
 
+
+  {
+     double p[2] = {1.0, 1.0};
+     bool answer = true;
+     int nvert = 16;
+     double verts[32] = {0.0, 2.0, 0.0, 1.0,
+                         0.0, 0.0, 1.0, 0.0,
+                         1.2, 0.0, 1.2, 1.0,
+                         1.2, 1.3, 1.3, 1.3,
+                         1.3, 1.0, 2.0, 1.0,
+                         2.0, 2.0, 1.3, 2.0,
+                         1.3, 1.7, 1.2, 1.7,
+                         1.2, 2.0, 1.0, 2.0};
+     polytope::PLC<2,double> boundary;
+     boundary.facets.resize(nvert, std::vector<int>(2));
+     for (unsigned i = 0; i != nvert; ++i) {
+        boundary.facets[i][0] = i;
+        boundary.facets[i][1] = (i+1)%nvert;
+     }
+     const bool inside = within(p, nvert, verts, boundary);
+     POLY_CHECK2(inside == answer, "WTF!?");
+  }
+
+
+
   // Test some points.  
   unsigned i = 1;
   { // 1)  Inside: fully

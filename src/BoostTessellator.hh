@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "BoostOrphanage.hh"
 #include "Point.hh"
 
 // The Voronoi tools in Boost.Polygon
@@ -21,8 +22,6 @@
 // We use the Boost.Geometry library to handle polygon intersections and such.
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
-#include <boost/geometry/multi/geometries/multi_point.hpp>
-#include <boost/geometry/multi/geometries/multi_polygon.hpp>
 
 // Some useful typedefs
 typedef int64_t CoordHash;
@@ -100,7 +99,6 @@ private:
   typedef boost::geometry::model::ring<IntPoint,       // point type
                                        false>          // clockwise
     BGring;
-  typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
   static CoordHash coordMax;
   static double degeneracy;
@@ -108,6 +106,16 @@ private:
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
   // ------------------------------------------------- //
+
+  // Compute nodes around collinear generators
+  void computeCellNodesCollinear(const std::vector<RealType>& points,
+                                 std::map<IntPoint, std::pair<int, int> >& nodeMap,
+                                 std::map<int, std::vector<unsigned> >& cellNodes) const;
+
+  // Compute the nodes around a generator
+  void computeCellNodes(const std::vector<RealType>& points,
+                         std::map<IntPoint, std::pair<int, int> >& nodeMap,
+                         std::map<int, std::vector<unsigned> >& cellNodes) const;
 
   // Compute bounded cell rings from Boost Voronoi diagram
   void computeCellRings(const std::vector<RealType>& points,
@@ -126,10 +134,35 @@ private:
 			     const PLC<2, RealType>& geometry,
 			     Tessellation<2, RealType>& mesh) const;
 
+  // ----------------------------------------------------- //
+  // Private tessellate calls used by internal algorithms  //
+  // ----------------------------------------------------- //
+
+  // Bounded tessellation with prescribed bounding box
+  void tessellate(const std::vector<RealType>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<2, RealType>& geometry,
+                  const RealType* low,
+                  const RealType* high,
+                  const RealType dx,
+                  Tessellation<2, RealType>& mesh) const;
+
+  // -------------------------- //
+  // Private member variables   //
+  // -------------------------- //
+
   // Bounding box used to quantize points and mitigate degeneracies
-  mutable std::vector<RealType> mLow, mHigh, mCenter;
-  mutable RealType mDelta, mRinf;
+  mutable std::vector<RealType> mLow, mHigh;
+  mutable RealType mDelta;
+
+  // Infinite bounding circle
+  mutable std::vector<RealType> mCenter;
+  mutable RealType mRinf;
+
+  // Maximum integer coordinate value
   mutable CoordHash mCoordMax;
+
+  friend class BoostOrphanage<RealType>;
 
 };
 

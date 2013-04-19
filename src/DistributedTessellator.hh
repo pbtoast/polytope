@@ -87,6 +87,8 @@ public:
   //! hell associated with elaborate inheritance hierarchies.
   virtual bool handlesPLCs() const { return mSerialTessellator->handlesPLCs(); }
 
+  virtual std::string name() const { return mSerialTessellator->name(); }
+
 protected:
   // Define an enum to keep track of which type of tessellation is currently
   // being called.

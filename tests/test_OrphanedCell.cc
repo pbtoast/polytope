@@ -113,7 +113,7 @@ int main(int argc, char** argv)
    const double trueArea = 8.74;
    const double tessArea = computeTessellationArea(mesh);
    const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
-   const double tol      = 1.0e-8;
+   const double tol      = 1.0e-7;
    POLY_CHECK2(fracerr < tol, "Relative error in the tessellation "
 	       << "area exceeds tolerance:" << endl
 	       << "      Area = " << tessArea << endl

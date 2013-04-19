@@ -218,36 +218,82 @@ closestPointOnSegment2D(const RealType* point,
   }
 }
 
+
 //------------------------------------------------------------------------------
 // Determine if the point lies inside unclosed polygon determined by vertices
 //------------------------------------------------------------------------------
 template<typename RealType> 
 bool
-withinPolygon2D(const RealType* point,
-                const unsigned numVertices,
-                const RealType* vertices) {
-   unsigned j = numVertices - 1;
-   bool result = false;
-   for (unsigned i = 0; i < numVertices; ++i ) {
-      // if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
-      //    return true;
-      // }
-      if (((vertices[2*i+1]<= point[1] and vertices[2*j+1] >= point[1])  or
-           (vertices[2*j+1]<= point[1] and vertices[2*i+1] >= point[1])) and
-          (vertices[2*i]   <= point[0] or  vertices[2*j]   <= point[0]) ) {
-         if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
-            return true;
-         }else{
-            result ^= ( vertices[2*i] + 
-                        ( point[1]        - vertices[2*i+1] ) /
-                        ( vertices[2*j+1] - vertices[2*i+1] ) *
-                        ( vertices[2*j]   - vertices[2*i]   ) < point[0] );
-         }
-      }
-      j = i;
-   }
-   return result;
+pointInPolygon(const RealType* point,
+	       const unsigned numVertices,
+	       const RealType* vertices) {
+  unsigned i,j;
+  bool result = false;
+  for (i = 0, j = numVertices-1; i < numVertices; j = i++) {
+    POLY_ASSERT(i < numVertices and j < numVertices);
+    if ( ((vertices[2*i+1] > point[1]) != (vertices[2*j+1] > point[1])) and
+	 ( point[0] < (vertices[2*i] +
+		       (vertices[2*j  ] - vertices[2*i  ]) *
+		       (point[1]        - vertices[2*i+1]) /
+		       (vertices[2*j+1] - vertices[2*i+1]))) )
+      result = not result;
+  }
+  return result;
 }
+
+
+//------------------------------------------------------------------------------
+// Determine if the point lies on a polygon boundary
+//------------------------------------------------------------------------------
+template<typename RealType> 
+bool
+pointOnPolygon(const RealType* point,
+	       const unsigned numVertices,
+	       const RealType* vertices) {
+  unsigned i=0, j;
+  bool result = false;
+  while (i < numVertices and not result) {
+    j = (i+1) % numVertices;
+    POLY_ASSERT(i < numVertices and j < numVertices);
+    result = ( (std::min(vertices[2*i  ],vertices[2*j  ]) <= point[0]) and
+	       (std::max(vertices[2*i  ],vertices[2*j  ]) >= point[0]) and
+	       (std::min(vertices[2*i+1],vertices[2*j+1]) <= point[1]) and
+	       (std::max(vertices[2*i+1],vertices[2*j+1]) >= point[1]) and
+	       collinear<2, RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10) );
+    ++i;
+  }
+  return result;
+}
+
+
+//------------------------------------------------------------------------------
+// // OLD IMPLEMENTATION
+// template<typename RealType> 
+// bool
+// withinPolygon2D(const RealType* point,
+//                 const unsigned numVertices,
+//                 const RealType* vertices) {
+//    unsigned i,j;
+//    bool result = false;
+//    for (i = 0, j = numVertices; i < numVertices; j = i++) {
+//       // if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
+//       //    return true;
+//       // }
+//       if (((vertices[2*i+1]<= point[1] and vertices[2*j+1] >= point[1])  or
+//            (vertices[2*j+1]<= point[1] and vertices[2*i+1] >= point[1])) and
+//           (vertices[2*i]   <= point[0] or  vertices[2*j]   <= point[0]) ) {
+//          if (collinear<2,RealType>(&vertices[2*i], &vertices[2*j], point, 1.0e-10)){
+//             return true;
+//          }else{
+//             result ^= ( vertices[2*i] + 
+//                         ( point[1]        - vertices[2*i+1] ) /
+//                         ( vertices[2*j+1] - vertices[2*i+1] ) *
+//                         ( vertices[2*j]   - vertices[2*i]   ) < point[0] );
+//          }
+//       }
+//    }
+//    return result;
+// }
 
 //------------------------------------------------------------------------------
 // Find the global bounding box for a set of coordinates.

@@ -54,6 +54,9 @@ public:
   // This Tessellator does not handle PLCs... yet.
   bool handlesPLCs() const { return false; }
 
+  // The Tessellator's name
+  std::string name() const { return "VoroTessellator3d"; }
+
   // Access our attributes.
   unsigned nx() const { return mNx; }
   unsigned ny() const { return mNy; }
