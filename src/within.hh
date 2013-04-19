@@ -4,6 +4,8 @@
 // within - determine whether a point lies inside a complex boundary
 //
 // Checks if a point is inside a PLC boundary AND outside holes, if present.
+// By convention, if a point is on a hole boundary, it is classified as inside
+// the full boundary.
 //------------------------------------------------------------------------------
 #include <vector>
 #include <limits>
@@ -26,23 +28,31 @@ template<int Dimension, typename RealType> struct WithinBoundaryFunctor;
 // 2-D specialization.
 template<typename RealType>
 struct WithinBoundaryFunctor<2, RealType> {
-  static bool impl(const RealType* point,
-                   const unsigned numVertices,
-                   const RealType* vertices,
-                   const std::vector<std::vector<int> >& facets) {
+  static int impl(const RealType* point,
+		  const unsigned numVertices,
+		  const RealType* vertices,
+		  const std::vector<std::vector<int> >& facets) {
     const unsigned numFacets = facets.size();
     unsigned i = facets[0][0];
-    bool isInside = geometry::withinPolygon2D( point, numFacets, &vertices[2*i] );
-    return isInside;
+
+    // Check if point is on the boundary of the facet
+    bool onBoundary = geometry::pointOnPolygon(point, numFacets, &vertices[2*i]);
+
+    // Check if point is on the interior
+    bool inBoundary = geometry::pointInPolygon(point, numFacets, &vertices[2*i]);
+
+    if (onBoundary)                        return 2;
+    else if(inBoundary and not onBoundary) return 1;
+    else                                   return 0;
   }
 };
 
 // Functional interface.
 template<int Dimension, typename RealType> 
-bool withinBoundary(const RealType* point,
-                    const unsigned numVertices,
-                    const RealType* vertices,
-                    const std::vector<std::vector<int> >& facets) {
+int withinBoundary(const RealType* point,
+		   const unsigned numVertices,
+		   const RealType* vertices,
+		   const std::vector<std::vector<int> >& facets) {
   return WithinBoundaryFunctor<2, RealType>::impl(point, numVertices, vertices, facets);
 }
 
@@ -57,15 +67,22 @@ within(const RealType* point,
        const unsigned numVertices,
        const RealType* vertices,
        const PLC<Dimension, RealType>& plc) {
+  const int numHoles = plc.holes.size();
+  int i = 0, insideType;
 
   // Check the outer boundary of the PLC.
-  bool isInside = withinBoundary<Dimension, RealType>(point, numVertices, vertices, plc.facets);
+  insideType = withinBoundary<Dimension, RealType>(point, numVertices, vertices, plc.facets);
+  bool inBoundary = (insideType > 0) ? true : false;
 
   // Check each of the holes.
-  for (unsigned ihole = 0; ihole != plc.holes.size(); ++ihole) {
-    isInside ^= withinBoundary<Dimension, RealType>(point, numVertices, vertices, plc.holes[ihole]);
+  bool inHole = false;
+  while (i < numHoles and not inHole) {
+    insideType = withinBoundary<Dimension, RealType>(point, numVertices, vertices, plc.holes[i]);
+    inHole = (insideType == 1) ? true : false;
+    ++i;
   }
-  return isInside;
+
+  return (inBoundary and not inHole);
 }
 
 }

@@ -89,6 +89,8 @@ int main(int argc, char** argv) {
         if (rank == owner) {
           generators.push_back(xi);
           generators.push_back(yi);
+          // cout << scientific << setprecision(numeric_limits<double>::digits)
+          //      << (nx*iy + ix) << ": (" << xi << "," << yi << ")" << endl;
         }
       }
     }
@@ -105,6 +107,17 @@ int main(int argc, char** argv) {
     polytope::DistributedTessellator<2, double> distTest(new polytope::TriangleTessellator<double>(),
                                                          true, true);
     distTest.tessellate(generators, xmin, xmax, mesh);
+
+    // vector<double> PLCpoints;
+    // PLCpoints.push_back(xmin[0]);  PLCpoints.push_back(xmin[1]);
+    // PLCpoints.push_back(xmax[0]);  PLCpoints.push_back(xmin[1]);
+    // PLCpoints.push_back(xmax[0]);  PLCpoints.push_back(xmax[1]);
+    // PLCpoints.push_back(xmin[0]);  PLCpoints.push_back(xmax[1]);
+    // polytope::PLC<2, double> boundary;
+    // boundary.facets.resize(4, vector<int>(2));
+    // for (int i = 0; i != 4; ++i) { boundary.facets[i][0] = i;  boundary.facets[i][1] = (i+1)%4; }
+    // distTest.tessellate(generators, PLCpoints, boundary, mesh);
+
 
     // Do some sanity checks on the stuff in the shared info.
     unsigned numNeighborDomains = mesh.neighborDomains.size();
@@ -212,20 +225,21 @@ int main(int argc, char** argv) {
     // }
     
     
-    // // Blago!
-    // {
-    //   vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
-    //   for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
-    //   for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
-    //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-    //   cellFields["domain"] = &r2[0];
-    //   nodeFields["ownNodes"] = &rownNodes[0];
-    //   faceFields["ownFaces"] = &rownFaces[0];
-    //   ostringstream os;
-    //   os << "test_DistributedTessellator_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-    //   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
-    // }
-    // // Blago!
+    // Blago!
+    {
+       //cout << scientific << setprecision(numeric_limits<double>::digits) << mesh << endl;
+      vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
+      for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
+      for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
+      map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+      cellFields["domain"] = &r2[0];
+      nodeFields["ownNodes"] = &rownNodes[0];
+      faceFields["ownFaces"] = &rownFaces[0];
+      ostringstream os;
+      os << "test_DistributedTriangle_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
+      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+    }
+    // Blago!
 
     // Check the global sizes.
     POLY_CHECK2(nnodesGlobal == (nx + 1)*(nx + 1), nnodesGlobal << " != " << (nx + 1)*(nx + 1));

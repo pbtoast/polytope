@@ -16,6 +16,8 @@
 #include "mpi.h"
 #endif
 
+#define POLY_CHECK_BOOL(x) if (!(x)) { return false; }
+
 using namespace std;
 using namespace polytope;
 
@@ -23,25 +25,26 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // checkMesh
 // -----------------------------------------------------------------------
-void checkMesh(const Tessellation<2,double>& mesh,
+bool checkMesh(const Tessellation<2,double>& mesh,
                const unsigned ncells,
                const unsigned nnodes,
                const unsigned nfaces,
                const unsigned ninfNodes,
                const unsigned ninfFaces) {
-  POLY_CHECK(mesh.cells.size()   == ncells);
-  POLY_CHECK(mesh.nodes.size()/2 == nnodes);
-  POLY_CHECK(mesh.faces.size()   == nfaces);
+  POLY_CHECK_BOOL(mesh.cells.size()   == ncells);
+  POLY_CHECK_BOOL(mesh.nodes.size()/2 == nnodes);
+  POLY_CHECK_BOOL(mesh.faces.size()   == nfaces);
   unsigned infNodeCount=0;
   for(unsigned i = 0; i < mesh.infNodes.size(); ++i){
     if( mesh.infNodes[i] == 1 ) ++infNodeCount;
   }
-  POLY_CHECK(infNodeCount == ninfNodes);
+  POLY_CHECK_BOOL(infNodeCount == ninfNodes);
   unsigned infFaceCount=0;
   for(unsigned i = 0; i < mesh.infFaces.size(); ++i){
     if( mesh.infFaces[i] == 1 ) ++infFaceCount;
   }
-  POLY_CHECK2(infFaceCount == ninfFaces, infFaceCount << " != " << ninfFaces);
+  POLY_CHECK_BOOL(infFaceCount == ninfFaces);
+  return true;
 }
 
 
@@ -51,46 +54,49 @@ void checkMesh(const Tessellation<2,double>& mesh,
 void test(Tessellator<2,double>& tessellator) {
 
   string testName = "Unbounded_" + tessellator.name();
-  int ntest = 1;  
+  int ntest = 1;
+  vector<int> howDidIDo;
   Tessellation<2,double> mesh;
 
   // Circle of generators
   {
-    cout << "\nTest " << test << ": Circle of generators" << endl;
+    cout << "\nTest " << ntest << ": Circle of generators" << endl;
     int N = 18;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i){
-       double theta = 2.0*M_PI*i/(N+1);
+       double theta = 2.0*M_PI*double(i)/double(N);
        points[2*i] = cos(theta);  points[2*i+1] = sin(theta);
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh,N,N+1,2*N,N,N);
+    bool pass = checkMesh(mesh,N,N+1,2*N,N,N);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Circle of generators, random center
   {
-    cout << "\nTest " << test << ": Circle of generators, random center" << endl;
+    cout << "\nTest " << ntest << ": Circle of generators, random center" << endl;
     int N = 18;
     vector<double> points(2*N);
     double center[2] = {random01(), random01()};
     for (unsigned i = 0; i < N; ++i){
-       double theta = 2.0*M_PI*i/(N+1);
+       double theta = 2.0*M_PI*double(i)/double(N);
        points[2*i  ] = center[0] + cos(theta);
        points[2*i+1] = center[1] + sin(theta);
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh,N,N+1,2*N,N,N);
+    bool pass = checkMesh(mesh,N,N+1,2*N,N,N);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Two uniform rows of generators
   {
-    cout << "\nTest " << test << ": Two uniform rows of generators" << endl;
+    cout << "\nTest " << ntest << ": Two uniform rows of generators" << endl;
     int N = 10;
     vector<double> points(4*N);
     for (unsigned i = 0; i < N; ++i){
@@ -100,13 +106,14 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
+    bool pass = checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Collinear generators with one non-collinear
   {
-    cout << "\nTest " << test << ": Collinear generators, except one" << endl;
+    cout << "\nTest " << ntest << ": Collinear generators, except one" << endl;
     int N = 10;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
@@ -129,53 +136,56 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh, 4, 5, 8, 4, 4);
+    bool pass = checkMesh(mesh, 4, 5, 8, 4, 4);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Two generators
   {
-    cout << "\nTest " << test << ": Two generators" << endl;
+    cout << "\nTest " << ntest << ": Two generators" << endl;
     vector<double> points;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    cerr << mesh;
-    checkMesh(mesh, 2, 4, 5, 4, 4);
+    bool pass = checkMesh(mesh, 2, 4, 5, 4, 4);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Line of generators, uniform
   {
-    cout << "\nTest " << test << ": Uniform line of generators" << endl;
+    cout << "\nTest " << ntest << ": Uniform line of generators" << endl;
     int N=10;
     vector<double> points(2*N, 0);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i);
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
+    bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Line of generators, non-uniform
   {
-    cout << "\nTest " << test << ": Non-uniform line of generators" << endl;
+    cout << "\nTest " << ntest << ": Non-uniform line of generators" << endl;
     int N = 10;
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i)  points[2*i] = double(i) + random01() - 0.5;
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
+    bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
   // Line of generators, non-uniform, shuffled
   {
-    cout << "\nTest " << test << ": Non-uniform line of generators, shuffled" << endl;
+    cout << "\nTest " << ntest << ": Non-uniform line of generators, shuffled" << endl;
     int N = 10;
     vector<double> points(2*N);
     int indices[10] = {5,7,1,2,8,0,3,9,4,6};
@@ -183,9 +193,16 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
+    bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
+    if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   } 
+
+  if (!howDidIDo.empty()) {
+    for (unsigned i = 0; i != howDidIDo.size(); ++i)
+      cout << "Failed Test " << howDidIDo[i] << endl;
+    POLY_ASSERT(false);
+  }
 }
 
 

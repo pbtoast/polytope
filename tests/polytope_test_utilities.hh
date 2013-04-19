@@ -46,9 +46,9 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
 #if HAVE_SILO
-  vector<double> index(mesh.cells.size());
-  vector<double> genx (mesh.cells.size());
-  vector<double> geny (mesh.cells.size());
+  std::vector<double> index(mesh.cells.size());
+  std::vector<double> genx (mesh.cells.size());
+  std::vector<double> geny (mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
     if (!points.empty()) {
@@ -56,11 +56,11 @@ void outputMesh(Tessellation<2,RealType>& mesh,
       geny[i] = points[2*i+1];
     }
   }
-  map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
+  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"   ] = &index[0];
   cellFields["cell_center_x"] = &genx[0];
   cellFields["cell_center_y"] = &geny[0];
-  ostringstream os;
+  std::ostringstream os;
   os << prefix;
   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
 					 faceFields, cellFields, os.str(),
@@ -106,7 +106,7 @@ void tessellate2D(std::vector<RealType>& points,
 // Make a 2D Boost.Geometry point
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::point<RealType,2,cart> makePoint2D( std::vector<RealType>& position ){
+BG::model::point<RealType,2,cart> makePoint2D(std::vector<RealType>& position) {
    POLY_ASSERT( position.size() == 2 );
    BG::model::point<RealType,2,cart> point;
    BG::set<0>(point, position[0]);
@@ -118,7 +118,7 @@ BG::model::point<RealType,2,cart> makePoint2D( std::vector<RealType>& position )
 // Make a 3D Boost.Geometry point
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::point<RealType,3,cart> makePoint3D( std::vector<RealType>& position ){
+BG::model::point<RealType,3,cart> makePoint3D(std::vector<RealType>& position) {
    POLY_ASSERT( position.size() == 3 );
    BG::model::point<RealType,3,cart> point;
    BG::set<0>(point, position[0]);
@@ -132,11 +132,10 @@ BG::model::point<RealType,3,cart> makePoint3D( std::vector<RealType>& position )
 //------------------------------------------------------------------------------
 template <typename RealType>
 BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
-makePolygon( std::vector<RealType>& points )
-{
+makePolygon( std::vector<RealType>& points ) {
    typedef BG::model::point<RealType,2,cart> RealPoint;
    BG::model::polygon<RealPoint,false> polygon;
-   for( unsigned i = 0; i < points.size()/2; ++i ){
+   for (unsigned i = 0; i < points.size()/2; ++i) {
       BG::append( polygon, RealPoint(points[2*i],points[2*i+1]) );
    }
    BG::append( polygon, RealPoint(points[0],points[1]) );
@@ -148,8 +147,7 @@ makePolygon( std::vector<RealType>& points )
 //------------------------------------------------------------------------------
 template <typename RealType>
 BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
-makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints )
-{
+makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
    typedef BG::model::point<RealType,2,cart> RealPoint;
    typedef BG::model::polygon<RealPoint,false> BGpolygon;
    
@@ -166,7 +164,7 @@ makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints )
    
    // Walk the facets composing each hole and add the first node
    const unsigned nHoles = PLC.holes.size();
-   if( nHoles > 0 ){
+   if (nHoles > 0) {
       typename BGpolygon::inner_container_type& holes = polygon.inners();
       holes.resize(nHoles);
       for (unsigned ihole = 0; ihole != nHoles; ++ihole){
@@ -186,10 +184,10 @@ makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints )
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
 //------------------------------------------------------------------------------
 template <typename RealType>
-RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ){
+RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ) {
    typedef BG::model::point<RealType,2,cart> RealPoint;
    RealType area = 0;
-   for (unsigned i = 0; i != mesh.cells.size(); ++i){
+   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
       std::vector<RealType> nodeCell;
       for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
            faceItr != mesh.cells[i].end(); ++faceItr){
