@@ -40,7 +40,7 @@ void test(Tessellator<2,double>& tessellator) {
                     -0.30, -0.32,
                      0.45, -0.55,
                      0.55,  0.05,
-                     0.80,  0.20};
+                     0.80,  0.22};
 
   // Test 1: Input generators, no points on boundary
   {

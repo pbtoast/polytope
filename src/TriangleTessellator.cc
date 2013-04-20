@@ -17,7 +17,6 @@
 #include "nearestPoint.hh"
 #include "within.hh"
 #include "intersect.hh"
-#include "Clipper2d.hh"
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -398,10 +397,10 @@ tessellate(const vector<RealType>& points,
 
   // Finalize bounding box
   mLow.resize(2);  mHigh.resize(2);
-  mLow [0] = min(mLow [0], cen[0] - rinf);
-  mHigh[0] = max(mHigh[0], cen[0] + rinf);
-  mLow [1] = min(mLow [1], cen[1] - rinf);  
-  mHigh[1] = max(mHigh[1], cen[1] + rinf);
+  mLow [0] = cen[0] - rinf;
+  mHigh[0] = cen[0] + rinf;
+  mLow [1] = cen[1] - rinf;  
+  mHigh[1] = cen[1] + rinf;
   mDelta = max(degeneracy, 2.0*rinf/coordMax);
   POLY_ASSERT(mLow[0] <= mHigh[0] and mLow[1] <= mHigh[1]);
 
@@ -1262,8 +1261,30 @@ computeCellRings(const vector<RealType>& points,
     
     // Remove any repeated points
     boost::geometry::unique(cellRings[i]);
+
+
+    // // Blago!
+    // cerr << endl << "Final clipped cell ring " << i << endl;
+    // for (typename BGring::iterator itr = cellRings[i].begin();
+    //      itr != cellRings[i].end(); ++itr) {
+    //   cerr << (*itr).realx(mLow[0], mDelta) << " "
+    //        << (*itr).realy(mLow[1], mDelta) << endl;
+    // }
+    // // Blago!
+
   }
-  
+
+  // // Blago!
+  // for (i = 0; i != orphans.size(); ++i) {
+  //   cerr << endl << "Orphan " << i << endl;
+  //   for (typename BGring::iterator itr = orphans[i].begin();
+  //        itr != orphans[i].end(); ++itr) {
+  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
+  //          << (*itr).realy(mLow[1], mDelta) << endl;
+  //   }
+  // }
+  // // Blago!
+
   // If any orphaned cells exist, run the adoption algorithm
   // and modify the neighboring cell rings
   if (!orphans.empty()) {
@@ -1472,16 +1493,24 @@ tessellate(const std::vector<RealType>& points,
 
   // Finalize bounding box
   mLow.resize(2);  mHigh.resize(2);
-  mLow [0] = min(mLow [0], cen[0] - rinf);
-  mHigh[0] = max(mHigh[0], cen[0] + rinf);
-  mLow [1] = min(mLow [1], cen[1] - rinf);  
-  mHigh[1] = max(mHigh[1], cen[1] + rinf);
+  mLow [0] = min(low [0], cen[0] - rinf);
+  mHigh[0] = max(high[0], cen[0] + rinf);
+  mLow [1] = min(low [1], cen[1] - rinf);  
+  mHigh[1] = max(high[1], cen[1] + rinf);
   mDelta = dx;
+
+  // // Blago!
+  // cerr << "Stored radius   = " << mRinf << endl
+  //      << "Computed radius = " << rinf << endl
+  //      << "Stored center   = (" << mCenter[0] << "," << mCenter[1] << ")" << endl
+  //      << "Computed center = (" << cen[0] << "," << cen[1] << ")" << endl;
+  // // Blago!
 
   // Store the bounding circle data
   mRinf = rinf;
-  mCenter.push_back(0.5*(mLow[0] + mHigh[0]));
-  mCenter.push_back(0.5*(mLow[1] + mHigh[1]));
+  mCenter.resize(2);
+  mCenter[0] = 0.5*(mLow[0] + mHigh[0]);
+  mCenter[1] = 0.5*(mLow[1] + mHigh[1]);
   mCoordMax = coordMax;
   mDegeneracy = degeneracy;
 
@@ -1489,9 +1518,28 @@ tessellate(const std::vector<RealType>& points,
   mLowOuter.assign(  2,  numeric_limits<RealType>::max() );
   mHighOuter.assign( 2, -numeric_limits<RealType>::max() );
   mDeltaOuter = 0;
+
+  // // Blago!
+  // cerr << "Input Bounding Box = "
+  //      << "(" << low[0] << "," << high[0] << ")X"
+  //      << "(" << low[1] << "," << high[1] << ")" << endl;
+  // cerr << "Outer Bounding Box = "
+  //      << "(" << mLowOuter[0] << "," << mHighOuter[0] << ")X"
+  //      << "(" << mLowOuter[1] << "," << mHighOuter[1] << ")" << endl;
+  // cerr << "Outer Mesh Spacing = " << mDeltaOuter << endl;
+  // cerr << "Inner Bounding Box = "
+  //      << "(" << mLow[0] << "," << mHigh[0] << ")X"
+  //      << "(" << mLow[1] << "," << mHigh[1] << ")" << endl;
+  // cerr << "Inner Mesh Spacing = " << mDelta << endl;
+  // cerr << "Bounding radius    = " << mRinf << endl;
+  // cerr << "Circle center      = "
+  //      << "(" << mCenter[0] << "," << mCenter[1] << ")" << endl;
+  // // Blago!  
   
   // Post-conditions
-  POLY_ASSERT(dx == max(degeneracy, 2.0*rinf/coordMax));
+  POLY_ASSERT2(dx == max(degeneracy, 2.0*rinf/coordMax),
+               "\nInput spacing    : " << dx << 
+               "\nComputed spacing : " << (2.0*rinf/coordMax));
   POLY_ASSERT(mLow[0] <= mHigh[0] and mLow[1] <= mHigh[1]);
 
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);

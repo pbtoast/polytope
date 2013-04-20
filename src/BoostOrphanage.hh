@@ -285,29 +285,55 @@ public:
         POLY_ASSERT(thisRing.size() > 2);
         POLY_ASSERT(thisRing.front() == thisRing.back());
         
-        // // Union may produce cell rings containing faces broken into multiple
-        // // pieces by redundant hanging nodes. This manifests as three (or more)
-        // // collinear nodes. We clip them as a final connection step
-        // BGring finalRing;
-        // bool collinear;
-        // for (typename BGring::const_iterator itr = thisRing.begin()+1;
-        //      itr != thisRing.end()-1; ++itr) {
-        //   collinear = geometry::collinear<2,CoordHash>(&(*(itr-1)).x,
-        //   					     &(*(itr  )).x,
-        //   					     &(*(itr+1)).x,
-        //   					     1);
-        //   if(!collinear) boost::geometry::append(finalRing,*itr);
+        // // Blago!
+        // std::cerr << "\nCell " << thisIndex << " before final cleaning" << std::endl;
+        // for (typename BGring::const_iterator itr = thisRing.begin();
+        //      itr != thisRing.end(); ++itr){
+        //    std::cerr << (*itr).realx(low[0], dx) << " " 
+        //              << (*itr).realy(low[1], dx) << " "
+        //              << (*itr) << std::endl;
         // }
-        // // Check the beginning/end point
-        // collinear = geometry::collinear<2,CoordHash>(&(*(thisRing.end()-1  )).x,
-        //   					   &(*(thisRing.end()    )).x,
-        //   					   &(*(thisRing.begin()+1)).x,
-        //   					   1);
-        // if(!collinear) boost::geometry::append(finalRing,*(thisRing.begin()));
-        // POLY_ASSERT(finalRing.front() == finalRing.back());
-        // thisRing = finalRing;
-        // // TODO: Ensure the first and last entries of finalRing are the same
-      
+        // // Blago!
+
+        // Union may produce cell rings containing faces broken into multiple
+        // pieces by redundant hanging nodes. This manifests as three (or more)
+        // collinear nodes. We clip them as a final connection step
+        BGring finalRing;
+        bool collinear;
+        for (typename BGring::const_iterator itr = thisRing.begin()+1;
+             itr != thisRing.end()-1; ++itr) {
+          collinear = geometry::collinear<2,CoordHash>(&(*(itr-1)).x,
+                                                       &(*(itr  )).x,
+                                                       &(*(itr+1)).x,
+                                                       1);
+          if(!collinear) boost::geometry::append(finalRing,*itr);
+        }
+        
+        // Check the beginning/end point
+        collinear = geometry::collinear<2,CoordHash>(&(*(thisRing.end()-2  )).x,
+                                                     &(*(thisRing.begin()  )).x,
+                                                     &(*(thisRing.begin()+1)).x,
+                                                     1);
+        if(!collinear) boost::geometry::append(finalRing,*(thisRing.begin()));
+
+        // Close the ring
+        boost::geometry::correct(finalRing);
+        POLY_ASSERT(finalRing.size() > 2);
+        POLY_ASSERT(finalRing.front() == finalRing.back());
+        thisRing = finalRing;
+
+
+        // // Blago!
+        // std::cerr << "\nCell " << thisIndex << " after final cleaning" << std::endl;
+        // for (typename BGring::const_iterator itr = thisRing.begin();
+        //      itr != thisRing.end(); ++itr){
+        //    std::cerr << (*itr).realx(low[0], dx) << " " 
+        //              << (*itr).realy(low[1], dx) << " "
+        //              << (*itr) << std::endl;
+        // }
+        // // Blago!
+        
+        // Replace the corresponding cell ring
         cellRings[thisIndex] = thisRing;
       }
     }

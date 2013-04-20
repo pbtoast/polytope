@@ -19,7 +19,6 @@
 #include "within.hh"
 #include "nearestPoint.hh"
 #include "intersect.hh"
-#include "Clipper2d.hh"
 
 namespace polytope {
 
@@ -201,10 +200,10 @@ tessellate(const vector<RealType>& points,
   
   // Final bounding box dimensions for quantization
   mLow.resize(2);  mHigh.resize(2);
-  mLow [0] = min(low [0], cen[0]-rinf);
-  mHigh[0] = max(high[0], cen[0]+rinf);
-  mLow [1] = min(low [1], cen[1]-rinf);
-  mHigh[1] = max(high[1], cen[1]+rinf);
+  mLow [0] = cen[0] - rinf;
+  mHigh[0] = cen[0] + rinf;
+  mLow [1] = cen[1] - rinf;
+  mHigh[1] = cen[1] + rinf;
   mDelta = max(degeneracy, 2.0*rinf/coordMax);
   POLY_ASSERT(mLow[0] <= mHigh[0] and mLow[1] <= mHigh[1]);
 
@@ -562,11 +561,13 @@ computeCellRings(const vector<RealType>& points,
   int i, j;
 
   // Check for collinearity and use the appropriate routine
-  if (numGenerators == 2)
+  bool collinear;
+  if (numGenerators == 2) {
+    collinear = true;
     this->computeCellNodesCollinear(points, nodeMap, cellNodes);
-  else {
-    bool collinear = true;
+  } else {
     i = 2;
+    collinear = true;
     while (collinear and i != numGenerators) {
       collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], &points[2*i], 1.0e-10);
       ++i;
@@ -597,25 +598,60 @@ computeCellRings(const vector<RealType>& points,
   // Create a reverse look-up map of IDs to circumcenters
   POLY_ASSERT(!nodeMap.empty());
   map<int, IntPoint> id2nodes;
+  vector<int> projectedNodes(nodeMap.size());
   for (map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
        itr != nodeMap.end(); ++itr) {
     i = itr->second.first;
+    POLY_ASSERT(i < nodeMap.size());
     id2nodes[i] = itr->first;
+    projectedNodes[i] = (itr->second.second == 0) ? 1 : 0;
   }
   POLY_ASSERT(id2nodes.size() == nodeMap.size());  
 
   // Construct the cell rings
-  unsigned nodeIndex;
+  unsigned i1, i2, numIntersections;
   IntPoint node;
+  RealPoint n1, n2, ninf;
   vector<BGring> orphans;
   cellRings.resize(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
     vector<IntPoint> cellBoundary;
     for (j = 0; j != cellNodes[i].size(); ++j) {
-      nodeIndex = cellNodes[i][j];
-      POLY_ASSERT(nodeIndex < id2nodes.size());
-      node = id2nodes[nodeIndex];
+      i1 = cellNodes[i][j];
+      i2 = cellNodes[i][(j+1) % cellNodes[i].size()];
+      POLY_ASSERT(i1 < id2nodes.size() and i2 < id2nodes.size());
+      node = id2nodes[i1];
+      // Add the first node of this edge
       cellBoundary.push_back(node);
+
+      // If both nodes of this edge are outside the boundary,
+      // check that the edge does not intersect the PLC
+      if (!collinear and projectedNodes[i1] == 1 and projectedNodes[i2] == 1) {
+        n1 = RealPoint(id2nodes[i1].realx(mLow[0], mDelta),
+                       id2nodes[i1].realy(mLow[1], mDelta));
+        n2 = RealPoint(id2nodes[i2].realx(mLow[0], mDelta),
+                       id2nodes[i2].realy(mLow[1], mDelta));
+        vector<RealType> result;
+        numIntersections = intersect(&n1.x, &n2.x, numPLCpoints,
+                                     &PLCpoints[0], geometry, result);
+        
+        // If they intersect, project a new node outward perpendicular to this
+        // edge so that the clipped cell is contained in the PLC boundary
+        if (numIntersections > 0) {
+          RealType r[2]     = {n2.x - n1.x, n2.y - n1.y};
+          RealType rperp[2] = {r[1]       , -r[0]      };
+          geometry::unitVector<2,RealType>(rperp);
+          bool test = geometry::rayCircleIntersection(&points[2*i],
+                                                      rperp,
+                                                      &mCenter[0],
+                                                      mRinf,
+                                                      1.0e-8,
+                                                      &ninf.x);
+          POLY_ASSERT(test);
+          node = IntPoint(ninf.x, ninf.y, mLow[0], mLow[1], mDelta);
+          cellBoundary.push_back(node);
+        }
+      }
     }
     POLY_ASSERT(!cellBoundary.empty());
     cellBoundary.push_back(cellBoundary[0]);
@@ -625,6 +661,16 @@ computeCellRings(const vector<RealType>& points,
     POLY_ASSERT(!cellRings[i].empty());
     POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
     
+    // // Blago!
+    // cerr << "\nPre-clipped ring " << i << endl;
+    // for (typename BGring::iterator itr = cellRings[i].begin();
+    //      itr != cellRings[i].end(); ++itr) {
+    //   cerr << (*itr).realx(mLow[0], mDelta) << " "
+    //        << (*itr).realy(mLow[1], mDelta);
+    //   // cerr << (*itr) << endl;
+    // }
+    // // Blago!
+
     // Compute the boundary intersections
     clipper.clipCell(IntPoint(points[2*i], points[2*i+1], mLow[0], mLow[1], mDelta),
                      cellRings[i],
@@ -632,11 +678,36 @@ computeCellRings(const vector<RealType>& points,
     
     // Remove any repeated points
     boost::geometry::unique(cellRings[i]);
+    // BGring simpRing;
+    // boost::geometry::simplify(cellRings[i], simpRing, 2);
+    // cellRings[i] = simpRing;
+
+    // // Blago!
+    // cerr << "Post-clipped ring " << i << endl;
+    // for (typename BGring::iterator itr = cellRings[i].begin();
+    //      itr != cellRings[i].end(); ++itr) {
+    //   cerr << (*itr).realx(mLow[0], mDelta) << " "
+    //        << (*itr).realy(mLow[1], mDelta);
+    //   cerr << (*itr) << endl;
+    // }
+    // // Blago!
+
   }
+
+  // // Blago!
+  // for (i = 0; i != orphans.size(); ++i) {
+  //   cerr << endl << "Orphan " << i << endl;
+  //   for (typename BGring::iterator itr = orphans[i].begin();
+  //        itr != orphans[i].end(); ++itr) {
+  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
+  //          << (*itr).realy(mLow[1], mDelta) << endl;
+  //   }
+  // }
+  // // Blago!
 
   // If any orphaned cells exist, run the adoption algorithm
   // and modify the neighboring cell rings
-  if (!orphans.empty()) {
+  if (!orphans.empty() and performCellAdoption) {
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, &mLow[0], &mHigh[0], mDelta, cellRings, orphans);
   }
@@ -707,7 +778,7 @@ computeVoronoiBounded(const vector<RealType>& points,
 		      const PLC<2, RealType>& geometry,
 		      Tessellation<2, RealType>& mesh) const {
   vector<BGring> cellRings;
-  this->computeCellRings(points, PLCpoints, geometry, cellRings, false);
+  this->computeCellRings(points, PLCpoints, geometry, cellRings, true);
 
   constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, &mLow[0], mDelta, mesh);
 }
@@ -756,17 +827,44 @@ tessellate(const std::vector<RealType>& points,
   mHigh[1] = max(high[1], cen[1]+rinf);
   mDelta = dx;
 
+  // // Blago!
+  // cerr << "Stored radius   = " << mRinf << endl
+  //      << "Computed radius = " << rinf << endl
+  //      << "Stored center   = (" << mCenter[0] << "," << mCenter[1] << ")" << endl
+  //      << "Computed center = (" << cen[0] << "," << cen[1] << ")" << endl;
+  // // Blago!
+
   // Store the bounding circle data
   mRinf = rinf;
-  mCenter.push_back(0.5*(mLow[0] + mHigh[0]));
-  mCenter.push_back(0.5*(mLow[1] + mHigh[1]));
+  mCenter.resize(2);
+  mCenter[0] = 0.5*(mLow[0] + mHigh[0]);
+  mCenter[1] = 0.5*(mLow[1] + mHigh[1]);
   mCoordMax = coordMax;
 
+  // // Blago!
+  // cerr << "Input Bounding Box = "
+  //      << "(" << low[0] << "," << high[0] << ")X"
+  //      << "(" << low[1] << "," << high[1] << ")" << endl;
+  // cerr << "Inner Bounding Box = "
+  //      << "(" << mLow[0] << "," << mHigh[0] << ")X"
+  //      << "(" << mLow[1] << "," << mHigh[1] << ")" << endl;
+  // cerr << "Inner Mesh Spacing = " << mDelta << endl;
+  // cerr << "Bounding radius    = " << mRinf << endl;
+  // cerr << "Circle center      = "
+  //      << "(" << mCenter[0] << "," << mCenter[1] << ")" << endl;
+  // // Blago!  
+
   // Post-conditions
-  POLY_ASSERT(dx == max(degeneracy, 2.0*rinf/coordMax));
+  POLY_ASSERT2(dx == max(degeneracy, 2.0*rinf/coordMax),
+               "\nInput spacing    : " << dx << 
+               "\nComputed spacing : " << (2.0*rinf/coordMax));
   POLY_ASSERT(mLow[0] <= mHigh[0] and mLow[1] <= mHigh[1]);
 
-  this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
+  vector<BGring> cellRings;
+  this->computeCellRings(points, PLCpoints, geometry, cellRings, false);
+
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, 
+                               geometry, &mLow[0], mDelta, mesh);
 }
 //------------------------------------------------------------------------------
 

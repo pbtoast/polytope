@@ -114,6 +114,7 @@ int main(int argc, char** argv)
      cout << "\nBoost Tessellator:\n" << endl;
      BoostTessellator<double> tessellator;
      testAllBoundaries(tessellator);
+     //outputResult(tessellator,8,6);
    }
 #endif      
 
