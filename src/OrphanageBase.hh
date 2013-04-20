@@ -20,11 +20,10 @@
 #include <map>
 #include <vector>
 
-//#include "Tessellator.hh"
 
 namespace polytope {
 
-
+// Forward declaration
 template<int Dimension, typename RealType> class Tessellator;
 
 

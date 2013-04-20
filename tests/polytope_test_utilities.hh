@@ -37,7 +37,7 @@ double random01() {
 
 
 //------------------------------------------------------------------------------
-// Custom Silo output scripts
+// A simple mesh output function for the SiloWriter
 //------------------------------------------------------------------------------
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
@@ -68,7 +68,9 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 #endif
 }
 
-
+//------------------------------------------------------------------------------
+// Some specialized subsets of outputMesh
+//------------------------------------------------------------------------------
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
 		std::string prefix,
@@ -76,13 +78,14 @@ void outputMesh(Tessellation<2,RealType>& mesh,
   std::vector<RealType> points;
   outputMesh(mesh, prefix, points, testCycle, 0.0);
 }
-
+//------------------------------------------------------------------------------
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
 		std::string prefix) {
   std::vector<RealType> points;
   outputMesh(mesh, prefix, points, 1, 0.0);
 }
+//------------------------------------------------------------------------------
 
 
 

@@ -12,6 +12,7 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "Point.hh"
 struct triangulateio;

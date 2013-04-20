@@ -7,6 +7,7 @@
 #include "Tessellation.hh"
 #include "Tessellator.hh"
 #include "TriangleTessellator.hh"
+#include "BoostTessellator.hh"
 #include "TetgenTessellator.hh"
 #include "MeshEditor.hh"
 
@@ -39,6 +40,10 @@ typedef TriangleTessellator<double> TriangleTessellator2d;
 
 #if HAVE_TETGEN
 typedef TetgenTessellator TetgenTessellator3d;
+#endif
+
+#if HAVE_BOOST_VORONOI
+typedef BoostTessellator<double> BoostTessellator2d;
 #endif
 
 // typedef VoroPP_2d<double> VoroTessellator2d;

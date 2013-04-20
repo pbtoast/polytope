@@ -1,6 +1,8 @@
 #ifndef POLYTOPE_CLIPPER2D_HH
 #define POLYTOPE_CLIPPER2D_HH
 
+#if HAVE_BOOST
+
 #include <vector>
 
 #include "Point.hh"
@@ -29,12 +31,10 @@ public:
 
   // Constructor
   Clipper2d(PolygonType& boundary):
-     mBoundary(boundary) {
-  };
+     mBoundary(boundary) {}
 
   // Destructor
-  ~Clipper2d() {
-  };
+  ~Clipper2d() {}
 
   // Boost.Geometry routine for performing the cell intersections. If more
   // than one ring is returned, we locate the one containing the initial 
@@ -42,14 +42,14 @@ public:
   void clipCell(const PointType& cellGenerator,
                 RingType& cellRing,
                 std::vector<RingType>& orphans) {
-    bool inside;
+    bool inside, onBoundary;
     unsigned j, k;
     std::vector<RingType> cellIntersections;
     boost::geometry::intersection(mBoundary, cellRing, cellIntersections);
     if (cellIntersections.size() == 0) {
-       std::cerr << cellGenerator.x << " " << cellGenerator.y << std::endl 
-                 << boost::geometry::dsv(cellRing) << std::endl
-                 << boost::geometry::dsv(mBoundary) << std::endl;
+      std::cerr << cellGenerator.x << " " << cellGenerator.y << std::endl 
+                << boost::geometry::dsv(cellRing) << std::endl
+                << boost::geometry::dsv(mBoundary) << std::endl;
     }
     POLY_ASSERT(cellIntersections.size() > 0);
     
@@ -62,19 +62,14 @@ public:
       k = cellIntersections.size();
       for (j = 0; j != cellIntersections.size(); ++j) {
         inside = boost::geometry::within(cellGenerator, cellIntersections[j]);
-        if(inside)  k = j;
-	else        orphans.push_back( cellIntersections[j] );
-      }
-      // If none of the cell intersections contain the point, check if
-      // it's a vertex of the boundary
-      if (k == cellIntersections.size()) {
-        for (j = 0; j != cellIntersections.size(); ++j) {
-          bool onBoundary = false;
+        if (inside) k = j;
+        else {
+          onBoundary = false;
           for (typename RingType::const_iterator itr = cellIntersections[j].begin();
-               itr != cellIntersections[j].end(); ++itr) {
-            onBoundary += (cellGenerator == *itr);
-          }
-          if(onBoundary) k = j;
+             itr != cellIntersections[j].end(); 
+             ++itr)  onBoundary += (cellGenerator == *itr);
+          if (onBoundary) k = j;
+          else            orphans.push_back(cellIntersections[j]);
         }
       }
       POLY_ASSERT(k < cellIntersections.size());
@@ -89,4 +84,5 @@ public:
 
 } //end namespace polytope
 
+#endif
 #endif

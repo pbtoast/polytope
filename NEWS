@@ -1,3 +1,24 @@
+Release 0.5.12
+
+changeset:
+
+
+Bugfix:
+
+- Significant testing of the BoostTessellator has increased its robustness
+- Expansion of the unit tests to include moving generators and controlling
+  topological changes in degenerate meshes.
+
+Added capability:
+
+- The BoostTessellator computes both bounded and unbounded meshes with similar
+  reliability to the TriangleTessellator now. A Python interface is also
+  available for the BoostTessellator.
+- Large reorganization of the source code to expose code shared by both 2D
+  tessellators. Provides a new development direction for wrapping additional
+  tessellators in the future.
+
+--------------------------------------------------------------------------------
 Release 0.5.11
 
 changeset:

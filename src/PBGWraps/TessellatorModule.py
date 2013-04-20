@@ -26,13 +26,16 @@ class Tessellator:
 
         self.TriangleTessellator2d = addObject(polytope, "TriangleTessellator2d", parent=self.Tessellator2d)
         
+        self.BoostTessellator2d = addObject(polytope, "BoostTessellator2d", parent=self.Tessellator2d)
+
         self.TetgenTessellator3d = addObject(polytope, "TetgenTessellator3d", parent=self.Tessellator3d)
         
         # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
         # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
 
         self.objs = [self.Tessellator2d, self.Tessellator3d,
-                     self.TriangleTessellator2d, self.TetgenTessellator3d]
+                     self.TriangleTessellator2d, self.BoostTessellator2d,
+                     self.TetgenTessellator3d]
 
         return
     
@@ -45,6 +48,8 @@ class Tessellator:
         self.generateTessellatorBindings(self.Tessellator3d, 3)
 
         self.generateTriangleTessellatorBindings(self.TriangleTessellator2d, 2)
+
+        self.generateBoostTessellatorBindings(self.BoostTessellator2d, 2)
 
         self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
         
@@ -79,7 +84,8 @@ class Tessellator:
                                           constrefparam(PLC, "geometry"),
                                           refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
-        x.add_method("handlesPLCs", retval('bool'), [], is_pure_virtual=True, is_const=True)
+        x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
         
         # Attributes
         
@@ -96,6 +102,21 @@ class Tessellator:
 
         # Methods
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (BoostTessellator)
+    #---------------------------------------------------------------------------
+    def generateBoostTessellatorBindings(self, x, ndim):
+
+        # Constructors
+        x.add_constructor([])
+
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         
         return
 
@@ -109,6 +130,7 @@ class Tessellator:
 
         # Methods
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         
         return
     
