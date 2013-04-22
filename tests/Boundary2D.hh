@@ -93,6 +93,9 @@ public:
   //------------------------------------------------------------------------
   void setDefaultBoundary(int bType)
   {
+    mCenter[0] = 0.0;
+    mCenter[1] = 0.0;
+
     switch(bType){
     case square:
       this->setUnitSquare();

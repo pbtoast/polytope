@@ -16,17 +16,12 @@ using namespace std;
 using namespace polytope;
 
 //------------------------------------------------------------------------
-// main
+// test1
 //------------------------------------------------------------------------
-int 
-main(int argc, char** argv) 
-{
-#if HAVE_MPI
-  MPI_Init(&argc, &argv);
-#endif
-
+void test1(Tessellator<2,double>& tessellator) {
+  
   // Output name
-  string testName = "BoostTessellator";
+  string testName = "BoostTessellator_test1";
 
   // Create the generators.
   vector<double> points;
@@ -66,12 +61,72 @@ main(int argc, char** argv)
   }
 
   Tessellation<2,double> mesh;
-  BoostTessellator<double> tessellator;
+  tessellator.tessellate(points, mesh);
+  //tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh,testName,points);
+}
+
+
+//------------------------------------------------------------------------
+// test2
+//------------------------------------------------------------------------
+void test2(Tessellator<2,double>& tessellator) {
+  
+  // Output name
+  string testName = "BoostTessellator_test2";
+
+  // Rectangular boundary
+  vector<double> PLCpoints;
+  PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
+  PLCpoints.push_back(1.0);  PLCpoints.push_back(0.0);
+  PLCpoints.push_back(1.0);  PLCpoints.push_back(0.5);
+  PLCpoints.push_back(0.0);  PLCpoints.push_back(0.5);
+
+  // Three generators
+  vector<double> points;
+  points.push_back(0.2);  points.push_back(0.25    );
+  points.push_back(0.6);  points.push_back(0.25    );
+  points.push_back(0.8);  points.push_back(0.25001);
+
+  // Facets
+  PLC<2,double> boundary;
+  int nSides = 4;
+  boundary.facets.resize(nSides, vector<int>(2));
+  for (int i = 0; i != nSides; ++i) {
+    boundary.facets[i][0] = i;
+    boundary.facets[i][1] = (i+1)%nSides;
+  }
+  
+  Tessellation<2,double> mesh;
   //tessellator.tessellate(points, mesh);
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  cout << mesh << endl;
-
   outputMesh(mesh,testName,points);
+
+  cout << mesh << endl;
+}
+
+
+//------------------------------------------------------------------------
+// main
+//------------------------------------------------------------------------
+int 
+main(int argc, char** argv) 
+{
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
+  BoostTessellator<double> tessellator;
+  
+  {
+    cout << "Test 1" << endl;
+    test1(tessellator);
+  }
+
+  {
+    cout << "Test 2" << endl;
+    test2(tessellator);
+  }
 
 
   cout << "PASS" << endl;

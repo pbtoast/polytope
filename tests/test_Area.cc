@@ -35,47 +35,48 @@ using namespace polytope;
 // testBoundary
 // -----------------------------------------------------------------------
 double testBoundary(Boundary2D<double>& boundary,
-                    Tessellator<2,double>& tessellator)
-{
-   Generators<2,double> generators( boundary );
-   unsigned nPoints = 10;
-   Tessellation<2,double> mesh;
-   cout << "Area of boundary = " << boundary.mArea << endl;
-   double result = 0.0;
-   for( unsigned n = 0; n < 3; ++n ){
-      POLY_ASSERT( mesh.empty() );
-      nPoints = nPoints * 10;
-      cout << nPoints << " points..." << endl;
-
-      generators.randomPoints( nPoints );
-      tessellate2D(generators.mPoints, boundary, tessellator, mesh);
-
-      const double area = computeTessellationArea( mesh );
-      const double fracerr = std::abs(boundary.mArea - area)/boundary.mArea;
-      result = std::max(result, fracerr);
-      cout << "              Area  = " << area << endl;
-      cout << "              Error = " << boundary.mArea - area << endl;
-      cout << "   Fractional error = " << fracerr << endl;
-
-      mesh.clear();   
-   }
-   return result;
+                    Tessellator<2,double>& tessellator) {
+  Generators<2,double> generators( boundary );
+  unsigned nPoints = 10;
+  Tessellation<2,double> mesh;
+  cout << "Area of boundary = " << boundary.mArea << endl;
+  double result = 0.0;
+  for( unsigned n = 0; n < 3; ++n ){
+    POLY_ASSERT(mesh.empty());
+    nPoints = nPoints * 10;
+    cout << nPoints << " points..." << endl;
+    
+    generators.randomPoints( nPoints );
+    tessellator.tessellate(generators.mPoints,
+			   boundary.mPLCpoints,
+			   boundary.mPLC,
+			   mesh);
+    
+    const double area = computeTessellationArea( mesh );
+    const double fracerr = std::abs(boundary.mArea - area)/boundary.mArea;
+    result = std::max(result, fracerr);
+    cout << "              Area  = " << area << endl;
+    cout << "              Error = " << boundary.mArea - area << endl;
+    cout << "   Fractional error = " << fracerr << endl;
+    
+    mesh.clear();   
+  }
+  return result;
 }
 
 
 // -----------------------------------------------------------------------
 // testAllBoundaries
 // -----------------------------------------------------------------------
-double testAllBoundaries(Tessellator<2,double>& tessellator)
-{
-   double result = 0.0;
-   for (int bid = 0; bid < 8; ++bid){
-      cout << endl << "Testing boundary type " << bid << endl;
-      Boundary2D<double> boundary;
-      boundary.setDefaultBoundary(bid);
-      result = std::max(result, testBoundary( boundary, tessellator ));
-   }
-   return result;
+double testAllBoundaries(Tessellator<2,double>& tessellator) {
+  double result = 0.0;
+  for (int bid = 0; bid != 8; ++bid){
+    cout << endl << "Testing boundary type " << bid << endl;
+    Boundary2D<double> boundary;
+    boundary.setDefaultBoundary(bid);
+    result = std::max(result, testBoundary(boundary, tessellator));
+  }
+  return result;
 }
 
 
