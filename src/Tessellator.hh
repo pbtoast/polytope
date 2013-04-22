@@ -10,6 +10,7 @@
 #include "ReducedPLC.hh"
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
+#include "polytope_tessellator_utilities.hh"
 
 namespace polytope
 {

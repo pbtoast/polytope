@@ -11,7 +11,6 @@
 #include "float.h"
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TriangleTessellator.hh.
-#include "polytope_tessellator_utilities.hh"
 
 #include "convexHull_2d.hh"
 #include "nearestPoint.hh"
@@ -386,7 +385,7 @@ tessellate(const vector<RealType>& points,
   // Compute the bounding box for this problem
   RealType low[2], high[2];
   geometry::computeBoundingBox<2,RealType>(PLCpoints, true, low, high);
-  POLY_ASSERT(low[0] < high[0] and low[1] < high[1]);  
+  POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);  
   
   // Infinite-radius circle for inf nodes
   const RealType box[2] = {high[0] - low[0],
