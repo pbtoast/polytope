@@ -24,6 +24,9 @@ using namespace polytope;
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
+  const int N = 34;
+  double displacement = 1.0;
+
   string testName = "Circumcenters_" + tessellator.name();
 
   vector<double> PLCpoints;
@@ -47,9 +50,7 @@ void test(Tessellator<2,double>& tessellator) {
   points.push_back(1.5);  points.push_back(1.5);
   points.push_back(2.5);  points.push_back(1.5);
 
-  int N = 34;
   double vert1[2] = {0.5, 0.5}, vert2[2] = {2.5, 0.5}, circumcenter[2];
-  double displacement = 1.0;
   for (int i=0; i != N; ++i) {
      displacement *= 0.5;
      double vert3[2] = {1.5,0.5+displacement};

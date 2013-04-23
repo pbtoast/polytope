@@ -61,9 +61,15 @@ void test1(Tessellator<2,double>& tessellator) {
   }
 
   Tessellation<2,double> mesh;
+
+  // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  //tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points);
+  outputMesh(mesh,testName,points,1);
+  mesh.clear();
+
+  // Tessellate bounded
+  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh,testName,points,2);
 }
 
 
@@ -84,9 +90,10 @@ void test2(Tessellator<2,double>& tessellator) {
 
   // Three generators
   vector<double> points;
-  points.push_back(0.2);  points.push_back(0.25    );
-  points.push_back(0.6);  points.push_back(0.25    );
+  points.push_back(0.2);  points.push_back(0.25   );
+  points.push_back(0.6);  points.push_back(0.25   );
   points.push_back(0.8);  points.push_back(0.25001);
+  //points.push_back(0.8);  points.push_back(0.24999);
 
   // Facets
   PLC<2,double> boundary;
@@ -98,11 +105,17 @@ void test2(Tessellator<2,double>& tessellator) {
   }
   
   Tessellation<2,double> mesh;
-  //tessellator.tessellate(points, mesh);
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points);
 
-  cout << mesh << endl;
+  // Tessellate unbounded
+  tessellator.tessellate(points, mesh);
+  outputMesh(mesh,testName,points,1);
+  mesh.clear();
+
+  // Tessellate bounded
+  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh,testName,points,2);
+
+  //cout << mesh << endl;
 }
 
 
@@ -119,12 +132,12 @@ main(int argc, char** argv)
   BoostTessellator<double> tessellator;
   
   {
-    cout << "Test 1" << endl;
+    cout << "\nTest 1" << endl;
     test1(tessellator);
   }
 
   {
-    cout << "Test 2" << endl;
+    cout << "\nTest 2" << endl;
     test2(tessellator);
   }
 

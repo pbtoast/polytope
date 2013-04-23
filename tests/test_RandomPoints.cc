@@ -106,7 +106,7 @@ int main(int argc, char** argv)
      cout << "\nTriangle Tessellator:\n" << endl;
      TriangleTessellator<double> tessellator;
      testAllBoundaries(tessellator);
-     //outputResult(tessellator,3,20);
+     //outputResult(tessellator,0,10);
    }
    
 #if HAVE_BOOST_VORONOI

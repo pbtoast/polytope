@@ -20,6 +20,9 @@
 #include "nearestPoint.hh"
 #include "intersect.hh"
 
+// Fast predicate for determining colinearity of points.
+extern double orient2d(double* pa, double* pb, double* pc);
+
 namespace polytope {
 
 using namespace std;
@@ -67,7 +70,6 @@ computeInfiniteEdgeDirection(const VD::edge_type* edge,
                              const vector<pair<IntPoint, int> >& generatorToIndex,
 			     const RealType* low,
 			     const RealType delta,
-			     const CoordHash coordMax,
                              RealType* direction) {
   const VD::cell_type* cell1 = edge->cell();
   const VD::cell_type* cell2 = edge->twin()->cell();
@@ -81,11 +83,8 @@ computeInfiniteEdgeDirection(const VD::edge_type* edge,
   const IntPoint p2 = generatorToIndex[index2].first;
   RealType r[2] = {p2.realx(low[0],delta) - p1.realx(low[0],delta),
                    p2.realy(low[1],delta) - p1.realy(low[1],delta)};
-  if (isFinite(edge->vertex0(), coordMax)) {
-    direction[0] = -r[1];  direction[1] =  r[0];
-  } else {
-    direction[0] =  r[1];  direction[1] = -r[0];
-  }
+  if (edge->vertex0()) { direction[0] = -r[1];  direction[1] =  r[0]; }
+  else                 { direction[0] =  r[1];  direction[1] = -r[0]; }
   geometry::unitVector<2, RealType>(direction);
 }
 
@@ -231,7 +230,7 @@ template<typename RealType>
 void
 BoostTessellator<RealType>::
 computeCellNodesCollinear(const vector<RealType>& points,
-                          map<IntPoint, pair<int,int> >& nodeMap,
+                          map<PointType, pair<int,int> >& nodeMap,
                           map<int, vector<unsigned> >& cellNodes) const{
   const unsigned numGenerators = points.size()/2;
   int i;
@@ -358,9 +357,10 @@ computeCellNodesCollinear(const vector<RealType>& points,
   cellNodes[icell1].push_back(inode);
 
   POLY_ASSERT(nodeList.size() == nnodes);
-  IntPoint IntNode;
+  PointType IntNode;
   for (i = 0; i != nnodes; ++i) {
-    IntNode = IntPoint(nodeList[i].x, nodeList[i].y, mLow[0], mLow[1], mDelta);
+    // IntNode = PointType(nodeList[i].x, nodeList[i].y, mLow[0], mLow[1], mDelta);
+    IntNode = PointType(nodeList[i].x, nodeList[i].y);
     nodeMap[IntNode] = make_pair(i,0);
   }
 
@@ -375,7 +375,7 @@ template<typename RealType>
 void
 BoostTessellator<RealType>::
 computeCellNodes(const vector<RealType>& points,
-                 map<IntPoint, pair<int,int> >& nodeMap,
+                 map<PointType, pair<int,int> >& nodeMap,
                  map<int, vector<unsigned> >& cellNodes) const{
   const int numGenerators = points.size()/2;
   int i, j;
@@ -392,7 +392,7 @@ computeCellNodes(const vector<RealType>& points,
   // Boost, for making us do this.
   sort(generatorToIndex.begin(), generatorToIndex.end(),
        internal::pairCompareFirst<IntPoint, int> );
-
+  
   // Some Boost voodoo to iterate over the first element of each generator-index pair
   typedef vector<pair<IntPoint, int> >::value_type value_type;
   boost::function<IntPoint(value_type&)> f = boost::bind(&value_type::first, _1);
@@ -404,17 +404,48 @@ computeCellNodes(const vector<RealType>& points,
                     &voronoi);
   POLY_ASSERT(voronoi.num_cells() == numGenerators);
 
-  // Set the "color" of each edge and use it as a local index
-  bool test, infiniteFlag;
+
+  // Blago!
+  RealType low [2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
+  for (i = 0; i != numGenerators; ++i) {
+    low [0] = min(low [0], points[2*i  ]);
+    low [1] = min(low [1], points[2*i+1]);
+    high[0] = max(high[0], points[2*i  ]);
+    high[1] = max(high[1], points[2*i+1]);
+  }
+
+  // cerr << "\nVertices:" << endl;
+  for (VD::const_vertex_iterator itr = voronoi.vertices().begin();
+       itr != voronoi.vertices().end(); ++itr) {
+    low [0] = min(low [0], (mLow[0] + mDelta*itr->x()));
+    low [1] = min(low [1], (mLow[1] + mDelta*itr->y()));
+    high[0] = max(high[0], (mLow[0] + mDelta*itr->x()));
+    high[1] = max(high[1], (mLow[1] + mDelta*itr->y()));
+    // cerr << itr->x() << " " << itr->y() << endl;
+  }
+
+  RealType center[2]  = {0.5*(low[0] + high[0]), 0.5*(low[1] + high[1])};
+  RealType box[2]     = {high[0] - low[0], high[1] - low[1]};
+  const RealType rinf = 2.0*max(box[0], box[1]);
+
+  mCenter[0] = center[0];
+  mCenter[1] = center[1];
+  mRinf = rinf;
+  // Blago!
+
+
+
+  // Iterate over the edges. Boost has organized them CCW around each generator.
+  bool test;
   int sortedIndex=0, cellIndex;
-  IntPoint node;
+  PointType vert, node;
   RealPoint direction, pinf, endpt, midpt;
-  map<IntPoint, int> node2id;
+  map<PointType, int> node2id;
   for (VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); ++cellItr, ++sortedIndex) {
     const VD::edge_type* edge = cellItr->incident_edge();
     vector<unsigned> nodeChain;
-    infiniteFlag = false;
     do {
       // Some pre-conditions
       POLY_ASSERT(sortedIndex == cellItr->source_index());
@@ -423,23 +454,25 @@ computeCellNodes(const vector<RealType>& points,
       POLY_ASSERT(cellIndex   <  numGenerators);
       
       // // Blago!
-      // cout << endl << "Cell " << cellIndex << endl;
-      // cout << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
-      // cout << "   Vertex 0:" << endl;
+      // if (cellIndex == 2 or cellIndex == 2350 or cellIndex == 2497) {
+      // cerr << endl << "Cell " << cellIndex << endl;
+      // cerr << "   Infinite edge? " << ((edge->is_infinite()) ? "yes" : "no") << endl;
+      // cerr << "   Vertex 0:" << endl;
       // if (edge->vertex0()) {
       //    IntPoint vert = IntPoint(edge->vertex0()->x(),edge->vertex0()->y());
-      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //    cerr << "      position = (" << vert.realx(mLow[0],mDelta) << ","
       //         << vert.realy(mLow[1],mDelta) << ")" << vert << endl;
       // } else {
-      //    cout << "      Inf node" << endl;
+      //    cerr << "      Inf node" << endl;
       // }
-      // cout << "   Vertex 1:" << endl;
+      // cerr << "   Vertex 1:" << endl;
       // if (edge->vertex1()) {
       //    IntPoint vert = IntPoint(edge->vertex1()->x(),edge->vertex1()->y());
-      //    cout << "      position = (" << vert.realx(mLow[0],mDelta) << ","
+      //    cerr << "      position = (" << vert.realx(mLow[0],mDelta) << ","
       //         << vert.realy(mLow[1],mDelta) << ")" << vert << endl;
       // } else {
-      //    cout << "      Inf node" << endl;
+      //    cerr << "      Inf node" << endl;
+      // }
       // }
       // // Blago!
 
@@ -449,8 +482,10 @@ computeCellNodes(const vector<RealType>& points,
       const VD::vertex_type* v1 = edge->vertex1();
 
       // Finite edge: just add vertex 0 to the cell nodes
-      if (isFinite(v0,mCoordMax) and isFinite(v1,mCoordMax)) {
-        node = IntPoint(v0->x(), v0->y());
+      // if (isFinite(v0,mCoordMax) and isFinite(v1,mCoordMax)) {
+      if (v0 and v1) {
+        vert = PointType(v0->x(), v0->y());
+        node = PointType(vert.realx(mLow[0], mDelta), vert.realy(mLow[1], mDelta));
         j = internal::addKeyToMap(node, node2id);
         nodeChain.push_back(j);
         if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,1);
@@ -458,10 +493,13 @@ computeCellNodes(const vector<RealType>& points,
       
       // Infinite edge: Determine the direction of the ray pointing to infinity.
       // Add the origin vertex of the ray and the projected point
-      else if (isFinite(v0,mCoordMax) or isFinite(v1,mCoordMax)) {
-        const VD::vertex_type* vfin = (isFinite(v0,mCoordMax)) ? v0 : v1;
-        node = IntPoint(vfin->x(), vfin->y());
-        endpt = RealPoint(node.realx(mLow[0], mDelta), node.realy(mLow[1], mDelta));
+      // else if (isFinite(v0,mCoordMax) or isFinite(v1,mCoordMax)) {
+      else {
+        POLY_ASSERT(v0 or v1);
+        const VD::vertex_type* vfin = (v0) ? v0 : v1;
+        vert  = PointType(vfin->x(), vfin->y());
+        node  = PointType(vert.realx(mLow[0], mDelta), vert.realy(mLow[1], mDelta));
+        endpt = RealPoint(vert.realx(mLow[0], mDelta), vert.realy(mLow[1], mDelta));
         
         // Determine the edge direction pointing to infinity
         const VD::cell_type *cell1 = edge->cell(), *cell2 = edge->twin()->cell();
@@ -469,39 +507,44 @@ computeCellNodes(const vector<RealType>& points,
         POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
         size_t index1 = cell1->source_index(), index2 = cell2->source_index();
         POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
-        const IntPoint p1 = generatorToIndex[index1].first;
-        const IntPoint p2 = generatorToIndex[index2].first;
-        RealType r[2] = {p2.realx(mLow[0],mDelta) - p1.realx(mLow[0],mDelta),
-                         p2.realy(mLow[1],mDelta) - p1.realy(mLow[1],mDelta)};
-        if (isFinite(v0,mCoordMax)) {direction.x = -r[1];  direction.y =  r[0];}
-        else                        {direction.x =  r[1];  direction.y = -r[0];}
+        const unsigned cellIndex1 = generatorToIndex[index1].second;
+        const unsigned cellIndex2 = generatorToIndex[index2].second;
+        RealType r[2] = {points[2*cellIndex2  ] - points[2*cellIndex1  ],
+                         points[2*cellIndex2+1] - points[2*cellIndex1+1]};
+        if (v0) {direction.x = -r[1];  direction.y =  r[0];}
+        else    {direction.x =  r[1];  direction.y = -r[0];}
 	geometry::unitVector<2, RealType>(&direction.x);
+        
+        // Project the finite vertex to the infinite shell
+        // test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
+        //                                        &mCenter[0], mRinf, 1.0e-8, &pinf.x);
+        test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
+                                               center, rinf, 1.0e-10, &pinf.x);
+        POLY_ASSERT(test);
 
         // // Blago!
+        // if (cellIndex == 2 or cellIndex == 2350 or cellIndex == 2497) {
         // cerr << "Projected Inf Node:" << endl
         //      << "   endpoint    : " << endpt << endl
         //      << "   direction   : " << direction << endl
-        //      << "   cell Index 1: " << index1 << endl
-        //      << "   cell Index 2: " << index2 << endl
-        //      << "   point 1     : " << p1.realx(mLow[0], mDelta)
-        //      << " " << p1.realy(mLow[1], mDelta) << endl
-        //      << "   point 2     : " << p2.realx(mLow[0], mDelta)
-        //      << " " << p2.realy(mLow[1], mDelta) << endl;
+        //      << "   cell Index 1: " << cellIndex1 << endl
+        //      << "   cell Index 2: " << cellIndex2 << endl
+        //      << "   point 1     : " << points[2*cellIndex1] << " " << points[2*cellIndex1+1] << endl
+        //      << "   point 2     : " << points[2*cellIndex2] << " " << points[2*cellIndex2+1] << endl
+        //      << "   projected pt: " << pinf << endl;
+        // }
         // // Blago!
-
-        // Project the finite vertex to the infinite shell
-        test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
-                                               &mCenter[0], mRinf, 1.0e-8, &pinf.x);
-        POLY_ASSERT(test);
-
+        
+        
         // Vertex 0 is finite, vertex 1 is the projected infNode. Add them in order
-        if (isFinite(v0, mCoordMax)) {
+        // if (isFinite(v0, mCoordMax)) {
+        if (v0) {
           // Vertex 0
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
           if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,1);
           // Vertex 1
-          node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
+          node = PointType(pinf.x, pinf.y);
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
           if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
@@ -509,63 +552,17 @@ computeCellNodes(const vector<RealType>& points,
         
         // Vertex 0 is the projected infNode. Only add vertex 0.
         else {
-          node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
+          node = PointType(pinf.x, pinf.y);
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
           if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
         }
       }
 
-      // A bi-infinite edge. Project both vertices to infinity
-      else {
-	if (true) { //!infiniteFlag) {
-	  // Determine the edge direction
-	  const VD::cell_type *cell1 = edge->cell(), *cell2 = edge->twin()->cell();
-	  // Assume only point-generators for the time being
-	  POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
-	  size_t index1 = cell1->source_index(), index2 = cell2->source_index();
-	  POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
-	  const IntPoint p1 = generatorToIndex[index1].first;
-	  const IntPoint p2 = generatorToIndex[index2].first;
-	  RealType r[2] = {p2.realx(mLow[0],mDelta) - p1.realx(mLow[0],mDelta),
-			   p2.realy(mLow[1],mDelta) - p1.realy(mLow[1],mDelta)};
-	  direction.x = r[1];  direction.y = -r[0];
-	  geometry::unitVector<2, RealType>(&direction.x);
-	  
-	  // The midpoint between the two cell generators
-	  midpt.x = 0.5*(p1.realx(mLow[0],mDelta) + p2.realx(mLow[0],mDelta));
-	  midpt.y = 0.5*(p1.realy(mLow[1],mDelta) + p2.realy(mLow[1],mDelta));
-
-	  // Project vertex 0 to the infinite shell
-	  test = geometry::rayCircleIntersection(&midpt.x, &direction.x,
-						 &mCenter[0], mRinf, 1.0e-8, &pinf.x);
-	  POLY_ASSERT(test);
-	  
-	  // Add vertex 0
-	  node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
-	  j = internal::addKeyToMap(node, node2id);
-	  nodeChain.push_back(j);
-	  if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
-	  
-	  // Project vertex 1 to the infinite shell
-	  direction *= -1;
-	  test = geometry::rayCircleIntersection(&midpt.x, &direction.x,
-						 &mCenter[0], mRinf, 1.0e-8, &pinf.x);
-	  POLY_ASSERT(test);
-	  
-	  // Add vertex 1
-	  node = IntPoint(pinf.x, pinf.y, mLow[0], mLow[1], mDelta);
-	  j = internal::addKeyToMap(node, node2id);
-	  nodeChain.push_back(j);
-	  if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
-	  
-	  infiniteFlag = true;
-	}
-      }
       edge = edge->next();
     } while (edge != cellItr->incident_edge());
     POLY_ASSERT(!nodeChain.empty());
-
+    
     // Remove repeated node indices in the chain
     vector<unsigned>::iterator it = std::unique(nodeChain.begin(), nodeChain.end());
     nodeChain.resize(std::distance(nodeChain.begin(), it));
@@ -573,26 +570,23 @@ computeCellNodes(const vector<RealType>& points,
     POLY_ASSERT(!nodeChain.empty());
     
     // // Blago!
-    // cerr << "Cell " << cellIndex << endl;
+    // cerr << "\nCell " << cellIndex << endl;
     // for (j = 0; j != nodeChain.size(); ++j) cerr << nodeChain[j] << " ";
-    // cerr << endl;
     // // Blago!
 
     cellNodes[cellIndex] = nodeChain;
   }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-  POLY_ASSERT(!nodeMap.empty());
 
   // // Blago!
-  // for (i = 0; i != numGenerators; ++i) { 
-  //   cerr << "Cell " << i << endl;
-  //   int len = cellNodes[i].size();
-  //   for (j = 0; j != cellNodes[i].size(); ++j) {
-  //      cerr << "(" << cellNodes[i][j] << "," << cellNodes[i][(j+1)%len] << ") ";
-  //   }
-  //   cerr << endl << endl;
+  // cerr << endl << "nodeMap:" << endl;
+  // for (map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
+  //      itr != nodeMap.end(); ++itr) {
+  //   cerr << itr->first << "\t<-->\t" << itr->second.first << endl;
   // }
   // // Blago!
+
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+  POLY_ASSERT(!nodeMap.empty());
 }
 //------------------------------------------------------------------------------
 
@@ -603,13 +597,13 @@ BoostTessellator<RealType>::
 computeCellRings(const vector<RealType>& points,
 		 const vector<RealType>& PLCpoints,
 		 const PLC<2, RealType>& geometry,
-		 vector<BGring>& cellRings,
+		 vector<IntRing>& cellRings,
 		 bool performCellAdoption) const {
   const unsigned numGenerators = points.size()/2;
   const unsigned numPLCpoints  = PLCpoints.size()/2;
-  map<IntPoint, pair<int, int> > nodeMap;
+  map<PointType, pair<int, int> > nodeMap;
   map<int, vector<unsigned> > cellNodes;
-  int i, j;
+  int i, j, k;
 
   // Check for collinearity and use the appropriate routine
   bool collinear;
@@ -623,7 +617,7 @@ computeCellRings(const vector<RealType>& points,
       collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], &points[2*i], 1.0e-10);
       ++i;
     }
-
+    
     if (collinear)
       this->computeCellNodesCollinear(points, nodeMap, cellNodes);
     else
@@ -631,26 +625,28 @@ computeCellRings(const vector<RealType>& points,
   }
   POLY_ASSERT(cellNodes.size() == numGenerators);
   POLY_ASSERT(!nodeMap.empty());
-
+  
   // Quantize the PLC points
-  vector<IntPoint> IntPLCPoints(numPLCpoints);
+  vector<PointType> IntPLCPoints(numPLCpoints);
   for (i = 0; i != numPLCpoints; ++i) {
-    IntPLCPoints[i] = IntPoint(PLCpoints[2*i], PLCpoints[2*i+1],
-			       mLow[0], mLow[1], mDelta);
+    // IntPLCPoints[i] = PointType(PLCpoints[2*i], PLCpoints[2*i+1],
+    //                             mLow[0], mLow[1], mDelta);
+    IntPLCPoints[i] = PointType(PLCpoints[2*i], PLCpoints[2*i+1]);
   }
-
+  
   // Generate the quantized boundary to handle Boost.Geometry intersections
   BGpolygon boundary;
   constructBoostBoundary(IntPLCPoints, geometry, boundary);
   
   // Initialize the object to handle cell intersections
-  Clipper2d<CoordHash> clipper(boundary);
-
-  // Create a reverse look-up map of IDs to circumcenters
+  // Clipper2d<CoordHash> clipper(boundary);
+  Clipper2d<RealType> clipper(boundary);
+  
+  // Create a reverse look-up map of IDs to nodes
   POLY_ASSERT(!nodeMap.empty());
-  map<int, IntPoint> id2nodes;
+  map<int, PointType> id2nodes;
   vector<int> projectedNodes(nodeMap.size());
-  for (map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
+  for (map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
        itr != nodeMap.end(); ++itr) {
     i = itr->second.first;
     POLY_ASSERT(i < nodeMap.size());
@@ -661,12 +657,26 @@ computeCellRings(const vector<RealType>& points,
 
   // Construct the cell rings
   unsigned i1, i2, numIntersections;
-  IntPoint node;
+  PointType node;
   RealPoint n1, n2, ninf;
   vector<BGring> orphans;
   cellRings.resize(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
-    vector<IntPoint> cellBoundary;
+    vector<PointType> cellBoundary;
+    BGring ring;
+    POLY_ASSERT(cellNodes[i].size() > 1);
+    
+    // // Blago!
+    // cerr << "\nCell " << i << endl;
+    // for (j = 0; j != cellNodes[i].size(); ++j) {
+    //    i1 = cellNodes[i][j];
+    //    i2 = cellNodes[i][(j+1) % cellNodes[i].size()];
+    //    n1 = id2nodes[i1];
+    //    n2 = id2nodes[i2];
+    //    cerr << orient2d(&n1.x, &n2.x, (double*)&points[2*i]) << " ";
+    // }
+    // // Blago!
+    
     for (j = 0; j != cellNodes[i].size(); ++j) {
       i1 = cellNodes[i][j];
       i2 = cellNodes[i][(j+1) % cellNodes[i].size()];
@@ -678,10 +688,8 @@ computeCellRings(const vector<RealType>& points,
       // If both nodes of this edge are outside the boundary,
       // check that the edge does not intersect the PLC
       if (!collinear and projectedNodes[i1] == 1 and projectedNodes[i2] == 1) {
-        n1 = RealPoint(id2nodes[i1].realx(mLow[0], mDelta),
-                       id2nodes[i1].realy(mLow[1], mDelta));
-        n2 = RealPoint(id2nodes[i2].realx(mLow[0], mDelta),
-                       id2nodes[i2].realy(mLow[1], mDelta));
+        n1 = id2nodes[i1];
+        n2 = id2nodes[i2];
         vector<RealType> result;
         numIntersections = intersect(&n1.x, &n2.x, numPLCpoints,
                                      &PLCpoints[0], geometry, result);
@@ -689,6 +697,7 @@ computeCellRings(const vector<RealType>& points,
         // If they intersect, project a new node outward perpendicular to this
         // edge so that the clipped cell is contained in the PLC boundary
         if (numIntersections > 0) {
+          POLY_ASSERT(result.size()/2 == numIntersections);
           RealType r[2]     = {n2.x - n1.x, n2.y - n1.y};
           RealType rperp[2] = {r[1]       , -r[0]      };
           geometry::unitVector<2,RealType>(rperp);
@@ -699,68 +708,91 @@ computeCellRings(const vector<RealType>& points,
                                                       1.0e-8,
                                                       &ninf.x);
           POLY_ASSERT(test);
-          node = IntPoint(ninf.x, ninf.y, mLow[0], mLow[1], mDelta);
+          // node = PointType(ninf.x, ninf.y, mLow[0], mLow[1], mDelta);
+          node = PointType(ninf.x, ninf.y);
           cellBoundary.push_back(node);
         }
       }
     }
     POLY_ASSERT(!cellBoundary.empty());
     cellBoundary.push_back(cellBoundary[0]);
-    boost::geometry::assign(cellRings[i], BGring(cellBoundary.begin(), 
-                                                 cellBoundary.end()));
-    boost::geometry::correct(cellRings[i]);
-    POLY_ASSERT(!cellRings[i].empty());
-    POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
+    boost::geometry::assign(ring, BGring(cellBoundary.begin(), 
+                                         cellBoundary.end()));
+    // boost::geometry::correct(ring);
+    // boost::geometry::unique(ring);
+    // BGring simpRing;
+    // boost::geometry::simplify(ring, simpRing, 2*mDelta);
+    // ring = simpRing;
+    POLY_ASSERT(!ring.empty());
+    POLY_ASSERT(ring.front() == ring.back());
     
     // // Blago!
-    // cerr << "\nPre-clipped ring " << i << endl;
-    // for (typename BGring::iterator itr = cellRings[i].begin();
-    //      itr != cellRings[i].end(); ++itr) {
-    //   cerr << (*itr).realx(mLow[0], mDelta) << " "
-    //        << (*itr).realy(mLow[1], mDelta) << endl;
-    //   // cerr << (*itr) << endl;
+    // if (i == 3 or i == 2350 or i == 2497) {
+    // cerr << "Pre-clipped ring " << i << endl;
+    // for (typename BGring::iterator itr = ring.begin(); itr != ring.end(); ++itr) 
+    //    cerr << (*itr).x << " " << (*itr).y << endl;
     // }
     // // Blago!
 
     // Compute the boundary intersections
-    clipper.clipCell(IntPoint(points[2*i], points[2*i+1], mLow[0], mLow[1], mDelta),
-                     cellRings[i],
-                     orphans);
+    clipper.clipCell(PointType(points[2*i], points[2*i+1]), ring, orphans);
     
     // Remove any repeated points
-    boost::geometry::unique(cellRings[i]);
-    // BGring simpRing;
-    // boost::geometry::simplify(cellRings[i], simpRing, 2);
-    // cellRings[i] = simpRing;
-
+    // boost::geometry::unique(ring);
+    
     // // Blago!
+    // if (i == 3 or i == 2350 or i == 2497) {
     // cerr << "Post-clipped ring " << i << endl;
-    // for (typename BGring::iterator itr = cellRings[i].begin();
-    //      itr != cellRings[i].end(); ++itr) {
-    //   cerr << (*itr).realx(mLow[0], mDelta) << " "
-    //        << (*itr).realy(mLow[1], mDelta);
-    //   cerr << (*itr) << endl;
+    // for (typename BGring::iterator itr = ring.begin(); itr != ring.end(); ++itr) 
+    //    cerr << (*itr).x << " " << (*itr).y << endl;
     // }
     // // Blago!
+    
+    // Quantize the clipped ring 
+    vector<IntPoint> IntCellBoundary;
+    for (typename BGring::iterator itr = ring.begin(); itr!= ring.end(); ++itr)
+      IntCellBoundary.push_back(IntPoint((*itr).x, (*itr).y, mLow[0], mLow[1], mDelta));
+    boost::geometry::assign(cellRings[i], IntRing(IntCellBoundary.begin(),
+                                                  IntCellBoundary.end()));
+    // boost::geometry::correct(cellRings[i]);
+    boost::geometry::unique(cellRings[i]);
+    POLY_ASSERT(!cellRings[i].empty());
+    POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
 
+    // // Blago!
+    // if (i == 3 or i == 2350 or i == 2497) {
+    // cerr << "Post-quantized ring " << i << endl;
+    // for (typename IntRing::iterator itr = cellRings[i].begin(); 
+    //      itr != cellRings[i].end(); ++itr) 
+    //    cerr << (*itr).realx(mLow[0], mDelta) << " " 
+    //         << (*itr).realy(mLow[1], mDelta) << endl;
+    // }
+    // // Blago!
   }
-
-  // // Blago!
-  // for (i = 0; i != orphans.size(); ++i) {
-  //   cerr << endl << "Orphan " << i << endl;
-  //   for (typename BGring::iterator itr = orphans[i].begin();
-  //        itr != orphans[i].end(); ++itr) {
-  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
-  //          << (*itr).realy(mLow[1], mDelta) << endl;
-  //   }
-  // }
-  // // Blago!
 
   // If any orphaned cells exist, run the adoption algorithm
   // and modify the neighboring cell rings
-  if (!orphans.empty() and performCellAdoption) {
+  if (!orphans.empty() and performCellAdoption) {      
+    // Quantize the orphans
+    vector<IntRing> IntOrphans(orphans.size());
+    for (k = 0; k != orphans.size(); ++k) {
+      vector<IntPoint> IntOrphanBoundary;
+      for (typename BGring::iterator itr = orphans[k].begin();
+           itr!= orphans[k].end(); ++itr) {
+        IntOrphanBoundary.push_back(IntPoint((*itr).x, (*itr).y, 
+                                             mLow[0], mLow[1], mDelta));
+      } 
+      boost::geometry::assign(IntOrphans[k], 
+                              IntRing(IntOrphanBoundary.begin(),
+                                      IntOrphanBoundary.end()));
+      boost::geometry::correct(IntOrphans[k]);
+      boost::geometry::unique(IntOrphans[k]);
+      POLY_ASSERT(!IntOrphans[k].empty());
+      POLY_ASSERT(IntOrphans[k].front() == IntOrphans[k].back());
+    }
+    
     BoostOrphanage<RealType> orphanage(this);
-    orphanage.adoptOrphans(points, &mLow[0], &mHigh[0], mDelta, cellRings, orphans);
+    orphanage.adoptOrphans(points, &mLow[0], &mHigh[0], mDelta, cellRings, IntOrphans);
   }
   
   // Post-conditions
@@ -775,7 +807,7 @@ BoostTessellator<RealType>::
 computeVoronoiUnbounded(const vector<RealType>& points,
 			Tessellation<2, RealType>& mesh) const{
   const int numGenerators = points.size()/2;
-  map<IntPoint, pair<int, int> > nodeMap;
+  map<PointType, pair<int, int> > nodeMap;
   map<int, vector<unsigned> > cellNodes;
   int i;
 
@@ -803,14 +835,14 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   const unsigned numNodes = nodeMap.size();
   mesh.nodes.resize(2*numNodes);
   mesh.infNodes.resize(numNodes);
-  for (map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
+  for (map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
        itr != nodeMap.end(); ++itr) {
     i = itr->second.first;
     inside = itr->second.second;
     POLY_ASSERT(i >= 0 and i < numNodes);
     POLY_ASSERT(inside == 0 or inside == 1);
-    mesh.nodes[2*i  ] = itr->first.realx(mLow[0], mDelta);
-    mesh.nodes[2*i+1] = itr->first.realy(mLow[1], mDelta);
+    mesh.nodes[2*i  ] = itr->first.x;//.realx(mLow[0], mDelta);
+    mesh.nodes[2*i+1] = itr->first.y;//.realy(mLow[1], mDelta);
     mesh.infNodes[i] = (inside == 1) ? 0 : 1;
   }
   POLY_ASSERT(mesh.infNodes.size() == mesh.nodes.size()/2);
@@ -828,7 +860,7 @@ computeVoronoiBounded(const vector<RealType>& points,
 		      const vector<RealType>& PLCpoints,
 		      const PLC<2, RealType>& geometry,
 		      Tessellation<2, RealType>& mesh) const {
-  vector<BGring> cellRings;
+  vector<IntRing> cellRings;
   this->computeCellRings(points, PLCpoints, geometry, cellRings, true);
 
   constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, &mLow[0], mDelta, mesh);
@@ -911,7 +943,7 @@ tessellate(const std::vector<RealType>& points,
                "\nComputed spacing : " << (2.0*rinf/coordMax));
   POLY_ASSERT(mLow[0] <= mHigh[0] and mLow[1] <= mHigh[1]);
 
-  vector<BGring> cellRings;
+  vector<IntRing> cellRings;
   this->computeCellRings(points, PLCpoints, geometry, cellRings, false);
 
   constructBoundedMeshTopology(cellRings, points, PLCpoints, 

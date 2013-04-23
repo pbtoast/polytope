@@ -16,6 +16,7 @@
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "Point.hh"
+#include "polytope_tessellator_utilities.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
@@ -29,8 +30,13 @@ typedef int64_t CoordHash;
 typedef std::pair<int, int> EdgeHash;
 typedef polytope::Point2<CoordHash> IntPoint;
 typedef polytope::Point2<double> RealPoint;
+typedef RealPoint PointType;
 
-typedef boost::polygon::voronoi_diagram<double> VD;
+// Boost.Geometry typedefs
+typedef boost::geometry::model::polygon<PointType, false> BGpolygon;
+typedef boost::geometry::model::ring   <PointType, false> BGring;
+typedef boost::geometry::model::polygon<IntPoint , false> IntPolygon;
+typedef boost::geometry::model::ring   <IntPoint , false> IntRing;
 
 //------------------------------------------------------------------------
 // Map Polytope's point class to Boost.Polygon
@@ -50,8 +56,59 @@ struct point_traits<IntPoint> {
   }
 };
 
+
+// //------------------------------------------------------------------------
+// // Custom comparison operator
+// //------------------------------------------------------------------------
+// struct polytope_ulp_comparison {
+//   enum Result {
+//     LESS  = -1,
+//     EQUAL =  0,
+//     MORE  =  1
+//   };
+//    
+//   Result operator()(CoordHash a, CoordHash b, unsigned int maxUlps) const {
+//     if (a == b)
+//       return EQUAL;
+//     if (a >  b) {
+//       Result res = operator()(b, a, maxUlps);
+//       if (res == EQUAL) return res;
+//       return (res == LESS) ? MORE : LESS;
+//     }
+//   }
+// };
+// 
+// 
+// //------------------------------------------------------------------------
+// // Custom voronoi diagram traits
+// //------------------------------------------------------------------------
+// struct polytope_voronoi_diagram_traits {
+//    typedef CoordHash coordinate_type;
+//    typedef voronoi_cell<coordinate_type> cell_type;
+//    typedef voronoi_vertex<coordinate_type> vertex_type;
+//    typedef voronoi_edge<coordinate_type> edge_type;
+//    typedef struct {
+//    public:
+//       enum {ULPS = 128};
+//       bool operator()(const vertex_type &v1, const vertex_type &v2) const {
+//          return (ulp_cmp(v1.x(), v2.x(), ULPS) == polytope_ulp_comparison::EQUAL and
+//                  ulp_cmp(v1.y(), v2.y(), ULPS) == polytope_ulp_comparison::EQUAL);
+//       }
+//    private:
+//       polytope_ulp_comparison ulp_cmp;
+//    } vertex_equality_predicate_type;
+// };
+
 } //end boost namespace
 } //end polygon namespace
+
+
+//------------------------------------------------------------------------
+// The Boost.Polygon Voronoi diagram object
+//------------------------------------------------------------------------
+// typedef boost::polygon::voronoi_diagram
+//   <CoordHash,boost::polygon::polytope_voronoi_diagram_traits> VD;
+typedef boost::polygon::voronoi_diagram<double> VD;
 
 
 namespace polytope
@@ -93,14 +150,6 @@ public:
 private:
   //-------------------- Private interface ---------------------- //
 
-  // Handy Boost.Geometry typedefs
-  typedef boost::geometry::model::polygon<IntPoint,    // point type
-                                          false>       // clockwise
-    BGpolygon;
-  typedef boost::geometry::model::ring<IntPoint,       // point type
-                                       false>          // clockwise
-    BGring;
-
   static CoordHash coordMax;
   static double degeneracy;
 
@@ -110,19 +159,19 @@ private:
 
   // Compute nodes around collinear generators
   void computeCellNodesCollinear(const std::vector<RealType>& points,
-                                 std::map<IntPoint, std::pair<int, int> >& nodeMap,
+                                 std::map<PointType, std::pair<int, int> >& nodeMap,
                                  std::map<int, std::vector<unsigned> >& cellNodes) const;
 
   // Compute the nodes around a generator
   void computeCellNodes(const std::vector<RealType>& points,
-                         std::map<IntPoint, std::pair<int, int> >& nodeMap,
+                         std::map<PointType, std::pair<int, int> >& nodeMap,
                          std::map<int, std::vector<unsigned> >& cellNodes) const;
 
   // Compute bounded cell rings from Boost Voronoi diagram
   void computeCellRings(const std::vector<RealType>& points,
 			const std::vector<RealType>& PLCpoints,
 			const PLC<2, RealType>& geometry,
-			std::vector<BGring>& cellRings,
+			std::vector<IntRing>& cellRings,
 			bool performCellAdoption) const;
 
   // Compute an unbounded tessellation

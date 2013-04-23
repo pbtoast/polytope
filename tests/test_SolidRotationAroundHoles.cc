@@ -13,8 +13,8 @@
 #include <cstdlib>
 #include <sstream>
 
-#include "Boundary2D.hh"
 #include "polytope.hh"
+#include "Boundary2D.hh"
 #include "polytope_test_utilities.hh"
 
 #if HAVE_MPI
@@ -154,7 +154,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    test(tessellator);
+    //test(tessellator);
   }
 #endif
 

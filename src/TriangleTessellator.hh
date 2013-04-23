@@ -15,6 +15,7 @@
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "Point.hh"
+#include "polytope_tessellator_utilities.hh"
 struct triangulateio;
 
 // We use the Boost.Geometry library to handle polygon intersections and such.

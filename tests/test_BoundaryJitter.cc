@@ -134,7 +134,7 @@ void jitterPoints(vector<double>& points,
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
-     // Input generator parameters
+  // Input generator parameters
   const unsigned nx = 20;
   const double xmin = -0.5, xmax = 0.5;
   const double ymin = -0.5, ymax = 0.5;
@@ -142,7 +142,7 @@ void test(Tessellator<2,double>& tessellator) {
   POLY_ASSERT(nx > 2);
 
   // Jitter factor
-  const double epsilon = 2.0e-15;
+  const double epsilon = 2.0e-10;
 
   // Set the boundary
   Boundary2D<double> boundary;

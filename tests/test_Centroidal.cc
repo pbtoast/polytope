@@ -40,12 +40,13 @@ void lloyd(Tessellation<2,double>& mesh,
 void lloydTest(Tessellator<2,double>& tessellator) {
   const unsigned nPoints = 100;     // Number of generators
   const unsigned nIter   = 100;     // Number of iterations
-
+  const int btype = 7;
+  
   string testName = "Centroidal_LloydTest_" + tessellator.name();
 
   // Set up boundary and disperse random generator locations
   Boundary2D<double> boundary;
-  boundary.setDonut();
+  boundary.setDefaultBoundary(btype);
   Generators<2,double> generators(boundary);
   generators.randomPoints(nPoints);
   std::vector<double> points;
@@ -78,12 +79,13 @@ void cleaningTest(Tessellator<2,double>& tessellator) {
   const unsigned nPoints = 100;     // Number of generators
   const unsigned nIter   = 100;     // Number of iterations
   const double edgeTol = 0.001;     // Relative small-edge tolerance
+  const int btype = 3;
 
   string testName = "Centroidal_CleaningTest_" + tessellator.name();
 
   // Set up boundary and disperse random generator locations
   Boundary2D<double> boundary;
-  boundary.setDonut();
+  boundary.setDefaultBoundary(btype);  
   Generators<2,double> generators(boundary);
   generators.randomPoints(nPoints);
   std::vector<double> points;

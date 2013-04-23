@@ -8,6 +8,8 @@ Bugfix:
 - Significant testing of the BoostTessellator has increased its robustness
 - Expansion of the unit tests to include moving generators and controlling
   topological changes in degenerate meshes.
+- Fixed the problem of Triangle returning very thin Delaunay triangles at the
+  boundary. TriangleTessellator is more robust now.
 
 Added capability:
 

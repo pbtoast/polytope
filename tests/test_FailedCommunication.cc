@@ -43,8 +43,7 @@ int main(int argc, char** argv) {
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-   POLY_ASSERT2( numProcs == 4, 
-                 "This test is designed to test communication among 4 processors" );
+   POLY_ASSERT2(numProcs == 4, "Run this test using 4 processors");
 
    const double x1 = 0.0, y1 = 0.0;
    const double x2 = 1.0, y2 = 1.0;
