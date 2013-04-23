@@ -114,51 +114,63 @@ if (USE_PYTHON EQUAL 1)
   endif()
 endif()
 
-# Find HDF5.
-set(HDF5_USE_STATIC_LIBRARIES true)
-find_package(HDF5)
-if (${HDF5_FOUND})
-  # Do we have parallel HDF5?
-  if (USE_MPI EQUAL 1)
-    if (${HDF5_IS_PARALLEL})
-      set(HAVE_PARALLEL_HDF5 true)
-    else ()
-      set(HAVE_PARALLEL_HDF5 false)
+#Check for HDF5 and Silo
+if (${USE_SILO} EQUAL 1)
+  # Find HDF5.
+  set(HDF5_USE_STATIC_LIBRARIES true)
+  find_package(HDF5)
+  if (${HDF5_FOUND})
+    # Get rid of'debug' and 'optimized' detritis.
+    list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
+    list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
+    message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
+    
+    # Do we have parallel HDF5?
+    if (USE_MPI EQUAL 1)
+      if (${HDF5_IS_PARALLEL})
+	set(HAVE_PARALLEL_HDF5 true)
+      else ()
+	set(HAVE_PARALLEL_HDF5 false)
+      endif ()
     endif ()
-  endif ()
-endif ()
-if (${HDF5_FOUND})
-  include_directories("${HDF5_INCLUDE_DIRS}")
-  link_directories("${HDF5_LIBRARY_DIRS}")
-  set(HAVE_HDF5 true)
+  else()
+    message("-- hdf5 not found. Skipping.")
+  endif()
+  
+  # If HDF5 is here, look for SILO
+  if (${HDF5_FOUND})
+    find_package(Silo)
+    if (${SILO_FOUND})
+      message("-- Found Silo files ${SILO_INCLUDE_DIRS}")
+    else()
+      message("-- Silo not found. Skipping.")
+    endif()
+  endif()
 
-  # Get rid of 'debug' and 'optimized' detritis.
-  list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
-  list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
-  message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
-else()
-  set(HDF5_LIBRARIES "")
-  set(HAVE_HDF5 false)
-endif ()
-
-# If HDF5 is here, look for Silo.
-if (${USE_SILO} EQUAL 1 AND ${HDF5_FOUND})
-  find_package(Silo)
-  if (${SILO_FOUND})
+  # Add paths only if both SILO and HDF5 found.
+  if (${HDF5_FOUND} AND ${SILO_FOUND})
+    set(HAVE_SILO true)
+    set(HAVE_HDF5 true)
     include_directories("${SILO_INCLUDE_DIRS}")
+    include_directories("${HDF5_INCLUDE_DIRS}")
 #         FIXME: For now, we assume libsiloh5 lives with libhdf5.
 #         link_directories("${SILO_LIBRARY_DIRS}")
-    set (HAVE_SILO true)
-    message("-- Found silo files ${SILO_INCLUDE_DIRS}")
-  else ()
-    set (HAVE_SILO false)
-  endif ()
-else ()
-  set(SILO_FOUND false)
-  set (HAVE_SILO false)
+    link_directories("${HDF5_LIBRARY_DIRS}")
+  else()
+    message("-- Did not find both Silo and hdf5 files. Skipping.")
+    set(HAVE_SILO false)
+    set(HAVE_HDF5 false)
+    set(SILO_LIBRARIES "")
+    set(HDF5_LIBRARIES "")
+  endif()
+else()
+  set(HAVE_SILO false)
+  set(HAVE_HDF5 false)
   set(SILO_LIBRARIES "")
-  message("-- Silo not found.  Skipping.")
-endif ()
+  set(HDF5_LIBRARIES "")
+  message("-- Not using SILO and HDF5.")
+endif()
+
 
 # Enable Triangle if triangle.h and triangle.c are found.
 # We disable this on IBM xlC since Boost.Geometry does not compile correctly there for now.

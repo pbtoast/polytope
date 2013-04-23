@@ -1,6 +1,8 @@
 #ifndef POLYTOPE_GENERATORS_HH
 #define POLYTOPE_GENERATORS_HH
 
+#if HAVE_BOOST
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -195,7 +197,7 @@ public:
    {
       for (unsigned i = 0; i < mPoints.size()/Dimension; ++i){
          for (unsigned n = 0; n < Dimension; ++n){
-            mPoints[n*i] += epsilon*( RealType(::random())/RAND_MAX - 0.5 );
+            mPoints[Dimension*i+n] += epsilon*( RealType(::random())/RAND_MAX - 0.5 );
          }
       }
    }
@@ -213,4 +215,5 @@ public:
 };
 
 
+#endif
 #endif

@@ -226,6 +226,7 @@ int main(int argc, char** argv) {
     
     
     // Blago!
+#if HAVE_SILO
     {
        //cout << scientific << setprecision(numeric_limits<double>::digits) << mesh << endl;
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
@@ -239,6 +240,7 @@ int main(int argc, char** argv) {
       os << "test_DistributedTriangle_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
     }
+#endif
     // Blago!
 
     // Check the global sizes.

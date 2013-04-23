@@ -71,21 +71,24 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator)
 {
+   const unsigned N = 11;
+   const unsigned nx = 20;
+   double epsilon = 2.0e-12;
+
   // name for the output
   string testName = "Degenerate_" + tessellator.name();
 
   // Set the boundary
   Boundary2D<double> boundary;
   boundary.setUnitSquare();
-  Generators<2,double> generators(boundary);
   
-  unsigned nx = 10;
+  // Initialize generator stuff
+  Generators<2,double> generators(boundary);
   std::vector<unsigned> nxny(2,nx);
   
   // Create generators
   cout << "Generator locations randomly perturbed by" << endl;
-  double epsilon = 2.0e-12;
-  for ( int i = 0; i != 8; ++i, epsilon *= 10) {
+  for ( int i = 0; i != N; ++i, epsilon *= 10) {
     cout << "+/- " << epsilon/2 << "...";
     generators.cartesianPoints(nxny);         // reset locations
     generators.perturb(epsilon);              // perturb
@@ -113,7 +116,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    //test(tessellator);
+    test(tessellator);
   }
 #endif   
 

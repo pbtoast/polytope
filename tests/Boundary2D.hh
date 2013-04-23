@@ -1,6 +1,8 @@
 #ifndef POLYTOPE_BOUNDARY2D_HH
 #define POLYTOPE_BOUNDARY2D_HH
 
+#if HAVE_BOOST
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -560,7 +562,13 @@ public:
       inside = within(point, mPLCpoints.size()/2, &mPLCpoints[0], mPLC);
     }
   }
-  
 };
+
+#endif
+
+#else
+
+// Forward declaration
+template<typename RealType> class Boundary2d;
 
 #endif

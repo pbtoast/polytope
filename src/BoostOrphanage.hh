@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "OrphanageBase.hh"
-//#include "polytope_tessellator_utilities.hh"
+#include "polytope_tessellator_utilities.hh"
 #include "Point.hh"
 
 // We use the Boost.Geometry library to handle polygon intersections and such.

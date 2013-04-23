@@ -255,16 +255,16 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
 //------------------------------------------------------------------------------
 template<typename RealType, typename PointType>
 void
-constructBoostBoundary(const std::vector<PointType>& IntPLCPoints,
+constructBoostBoundary(const std::vector<PointType>& PLCPoints,
                        const PLC<2,RealType>& geometry,
                        boost::geometry::model::polygon<PointType,false>& boundary) {
   typedef boost::geometry::model::polygon<PointType,false> BGpolygon;
   int i, j, k;
-  boost::geometry::append( boundary, IntPLCPoints[geometry.facets[0][0]] );
+  boost::geometry::append( boundary, PLCPoints[geometry.facets[0][0]] );
   for (j = 0; j != geometry.facets.size(); ++j){
     POLY_ASSERT(geometry.facets[j].size() == 2);
     i =  geometry.facets[j][1];
-    boost::geometry::append( boundary, IntPLCPoints[i]);
+    boost::geometry::append( boundary, PLCPoints[i]);
   }
   POLY_ASSERT(boundary.outer().size() == geometry.facets.size() + 1);
   POLY_ASSERT(boundary.outer().front() == boundary.outer().back());
@@ -275,11 +275,11 @@ constructBoostBoundary(const std::vector<PointType>& IntPLCPoints,
     typename BGpolygon::inner_container_type& holes = boundary.inners();
     holes.resize(numHoles);
     for (k = 0; k != numHoles; ++k) {
-      boost::geometry::append( holes[k], IntPLCPoints[geometry.holes[k][0][0]] );
+      boost::geometry::append( holes[k], PLCPoints[geometry.holes[k][0][0]] );
       for (j = 0; j != geometry.holes[k].size(); ++j) {
 	POLY_ASSERT(geometry.holes[k][j].size() == 2);
 	i =  geometry.holes[k][j][1];
-	boost::geometry::append( holes[k], IntPLCPoints[i]); 
+	boost::geometry::append( holes[k], PLCPoints[i]); 
       }
       POLY_ASSERT(holes[k].size() == geometry.holes[k].size() + 1 );
       POLY_ASSERT(holes[k].front() == holes[k].back());
@@ -337,6 +337,71 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
   POLY_ASSERT(cellRings.size() == mesh.cells.size());
 }
 
+
+//------------------------------------------------------------------------------
+// intersectBoundingBox
+//
+// Compute the intersection of a line segment and a PLC. Returns number of
+// intersections, intersected facet(s) along PLC, and intersection point(s)
+// INPUT: 
+//    point1, point2 : Line segment endpoints
+//    numVertices    : Number of vertices of bounding box
+//    vertices       : List of vertex coordinates
+//    facets         : Facets of the bounding box
+// OUTPUT:
+//    facetIntersections : Vector of facet indices where intersection(s) occur
+//    result             : Vector of coordinates for intersection(s)
+//------------------------------------------------------------------------------
+template<typename RealType>
+inline
+unsigned intersectBoundingBox(const RealType* point1,
+			      const RealType* point2,
+			      const unsigned numVertices,
+			      const RealType* vertices,
+			      const std::vector<std::vector<int> >& facets,
+			      std::vector<int>& facetIntersections,
+			      std::vector<RealType>& result) {
+  unsigned i, j, numIntersections=0;
+  RealType intersectionPoint[2];
+  bool intersects, addPoint;
+  const unsigned numFacets = facets.size();
+  for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
+    POLY_ASSERT(facets[ifacet].size() == 2);
+    i = facets[ifacet][0];
+    j = facets[ifacet][1];
+    POLY_ASSERT(i >= 0 and i < numVertices);
+    POLY_ASSERT(j >= 0 and j < numVertices);
+    intersects = geometry::segmentIntersection2D(point1, point2,
+						 &vertices[2*i], &vertices[2*j],
+						 intersectionPoint);
+    // Make sure we're not adding the same point twice (i.e. with a corner)
+    addPoint = false;
+    if (intersects) {
+      if (numIntersections == 0) addPoint = true;
+      else {
+        if (intersectionPoint[0] != result.back() - 1 and
+            intersectionPoint[1] != result.back() ) addPoint = true;
+        else addPoint = false;
+      }
+    }
+
+    if (addPoint) {
+      RealType p[2];
+      p[(ifacet+1)%2] = vertices[2*ifacet + (ifacet+1)%2];
+      p[ ifacet   %2] = intersectionPoint[ifacet%2];
+      ++numIntersections;
+      result.push_back(p[0]);
+      result.push_back(p[1]);
+      facetIntersections.push_back(ifacet);
+    }
+  }
+  POLY_ASSERT(numIntersections == result.size()/2);
+  return numIntersections;
+}
+
+
+
+ 
 
 
 } //end namespace polytope
