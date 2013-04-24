@@ -74,29 +74,11 @@ print "Parsing pybindgen packages: ", pkgs
 #-------------------------------------------------------------------------------
 mod = Module("PolytopeModules")
 
-# For now we rely on the custom rolled wrappings in CXXContainers to wrap up the
-# C++ containers.  Hopefully pybindgen's native support for these things will 
-# improve and we can get rid of that at some point!
-
-# # Teach Pybindgen about the wonderful world of STL containers
-# mod.add_container("std::set<unsigned>", "unsigned int", "set",
-#                   custom_name="set_of_uints")
-# mod.add_container("std::vector<int>"     , "int"         , "vector",
-#                   custom_name="vector_of_ints")
-# mod.add_container("std::vector<unsigned>", "unsigned int", "vector",
-#                   custom_name="vector_of_uints")
-# mod.add_container("std::vector<double>"  , "double"      , "vector",
-#                   custom_name="vector_of_doubles")
-# mod.add_container("std::vector<std::vector<int> >"     , "std::vector<int>"     , "vector",
-#                   custom_name="vector_of_vector_of_ints")
-# mod.add_container("std::vector<std::vector<unsigned> >", "std::vector<unsigned>", "vector",
-#                   custom_name="vector_of_vector_of_uints")
-# mod.add_container("std::vector<std::vector<double> >"  , "std::vector<double>"  , "vector",
-#                   custom_name="vector_of_vector_of_doubles")
-# mod.add_container("std::vector<std::set<unsigned> >", "std::set<unsigned>", "vector",
-#                   custom_name="vector_of_set_of_unsigned")
-# mod.add_container("std::vector<std::vector<std::vector<int> > >", "std::vector<std::vector<int> >", "vector", 
-#                   custom_name="vector_of_vector_of_vector_of_ints")
+# Strip the "HAVE_foo" statements off the input string and store as bools
+assert len(sys.argv) == 4
+mod.have_triangle      = (sys.argv[1].capitalize() == "True")
+mod.have_tetgen        = (sys.argv[2].capitalize() == "True")
+mod.have_boost_voronoi = (sys.argv[3].capitalize() == "True")
 
 # Go through each package and add its stuff to the module.
 for p in pkgs:
