@@ -1,3 +1,4 @@
+#-----------------------------------------------------------------------------------
 # - A Python-wrapping module for CMake using PyBindGen
 #
 # Modified from the UseSWIG module from the cmake2.8 release.
@@ -21,7 +22,7 @@
 #
 # To get the names of the generated source
 # use: ${PYBINDGEN_GENERATED_SOURCE}
-#
+#-----------------------------------------------------------------------------------
 
 # Initialize the list of Python source code
 set(PYBINDGEN_SOURCE)
@@ -53,7 +54,11 @@ macro(PYBINDGEN_GENERATE_BINDINGS module_list)
   endforeach()
   add_custom_command(
     OUTPUT ${PYBINDGEN_GENERATED_SOURCE} ${PYBINDGEN_GENERATED_HEADER}
-    COMMAND ${PYTHON_EXE} ${PYBINDGEN_DIR}/${PYBINDGEN_MODULE_NAME}Bindings.py
+    COMMAND ${PYTHON_EXE} 
+      ${PYBINDGEN_DIR}/${PYBINDGEN_MODULE_NAME}Bindings.py
+      ${HAVE_TRIANGLE}
+      ${HAVE_TETGEN}
+      ${HAVE_BOOST_VORONOI}
     DEPENDS ${PYBINDGEN_SOURCE}
     )
 endmacro()

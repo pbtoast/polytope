@@ -21,22 +21,28 @@ class Tessellator:
         polytope = mod.add_cpp_namespace("polytope")
 
         # Expose types
+        self.objs = []
+        
         self.Tessellator2d = addObject(polytope, "Tessellator2d", allow_subclassing=True)
         self.Tessellator3d = addObject(polytope, "Tessellator3d", allow_subclassing=True)
+        self.objs.append(self.Tessellator2d)
+        self.objs.append(self.Tessellator3d)
 
-        self.TriangleTessellator2d = addObject(polytope, "TriangleTessellator2d", parent=self.Tessellator2d)
-        
-        self.BoostTessellator2d = addObject(polytope, "BoostTessellator2d", parent=self.Tessellator2d)
+        if (mod.have_triangle):
+            self.TriangleTessellator2d = addObject(polytope, "TriangleTessellator2d", parent=self.Tessellator2d)
+            self.objs.append(self.TriangleTessellator2d)
 
-        self.TetgenTessellator3d = addObject(polytope, "TetgenTessellator3d", parent=self.Tessellator3d)
+        if (mod.have_boost_voronoi):
+            self.BoostTessellator2d = addObject(polytope, "BoostTessellator2d", parent=self.Tessellator2d)
+            self.objs.append(self.BoostTessellator2d)
+
+        if (mod.have_tetgen):
+            self.TetgenTessellator3d = addObject(polytope, "TetgenTessellator3d", parent=self.Tessellator3d)
+            self.objs.append(self.TetgenTessellator3d)
         
         # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
         # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
-
-        self.objs = [self.Tessellator2d, self.Tessellator3d,
-                     self.TriangleTessellator2d, self.BoostTessellator2d,
-                     self.TetgenTessellator3d]
-
+        
         return
     
     #---------------------------------------------------------------------------
@@ -47,11 +53,14 @@ class Tessellator:
         self.generateTessellatorBindings(self.Tessellator2d, 2)
         self.generateTessellatorBindings(self.Tessellator3d, 3)
 
-        self.generateTriangleTessellatorBindings(self.TriangleTessellator2d, 2)
+        if (mod.have_triangle):
+            self.generateTriangleTessellatorBindings(self.TriangleTessellator2d, 2)
 
-        self.generateBoostTessellatorBindings(self.BoostTessellator2d, 2)
+        if (mod.have_boost_voronoi):
+            self.generateBoostTessellatorBindings(self.BoostTessellator2d, 2)
 
-        self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
+        if (mod.have_tetgen):
+            self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
         
         # self.generateVoroTessellatorBindings(self.VoroTessellator2d, 2)
         # self.generateVoroTessellatorBindings(self.VoroTessellator3d, 3)
