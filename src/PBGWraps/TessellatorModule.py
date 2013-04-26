@@ -23,23 +23,56 @@ class Tessellator:
         # Expose types
         self.objs = []
         
-        self.Tessellator2d = addObject(polytope, "Tessellator2d", allow_subclassing=True)
-        self.Tessellator3d = addObject(polytope, "Tessellator3d", allow_subclassing=True)
+        # --- Base Tessellators
+        self.Tessellator2d = addObject(polytope, 
+                                       "Tessellator2d", 
+                                       allow_subclassing=True)
+        self.Tessellator3d = addObject(polytope, 
+                                       "Tessellator3d", 
+                                       allow_subclassing=True)
         self.objs.append(self.Tessellator2d)
         self.objs.append(self.Tessellator3d)
 
+        # --- The Triangle Tessellator
         if (mod.have_triangle):
-            self.TriangleTessellator2d = addObject(polytope, "TriangleTessellator2d", parent=self.Tessellator2d)
+            self.TriangleTessellator2d = addObject(polytope, 
+                                                   "TriangleTessellator2d", 
+                                                   parent=self.Tessellator2d)
             self.objs.append(self.TriangleTessellator2d)
 
+        # --- The Boost.Voronoi Tessellator
         if (mod.have_boost_voronoi):
-            self.BoostTessellator2d = addObject(polytope, "BoostTessellator2d", parent=self.Tessellator2d)
+            self.BoostTessellator2d = addObject(polytope, 
+                                                "BoostTessellator2d", 
+                                                parent=self.Tessellator2d)
             self.objs.append(self.BoostTessellator2d)
 
+        # --- The Tetgen Tessellator
         if (mod.have_tetgen):
-            self.TetgenTessellator3d = addObject(polytope, "TetgenTessellator3d", parent=self.Tessellator3d)
+            self.TetgenTessellator3d = addObject(polytope, 
+                                                 "TetgenTessellator3d", 
+                                                 parent=self.Tessellator3d)
             self.objs.append(self.TetgenTessellator3d)
         
+        # --- The Distributed and Serial-Distributed Tessellators
+        if (mod.have_mpi):
+            self.DistributedTessellator2d = addObject(polytope,
+                                                      "DistributedTessellator2d",
+                                                      parent=self.Tessellator2d,
+                                                      allow_subclassing=True)
+            self.DistributedTessellator3d = addObject(polytope,
+                                                      "DistributedTessellator3d",
+                                                      parent=self.Tessellator3d,
+                                                      allow_subclassing=True)
+            self.SerialDistributedTessellator2d = addObject(polytope,
+                                                            "SerialDistributedTessellator2d",
+                                                            parent=self.DistributedTessellator2d)
+            self.SerialDistributedTessellator3d = addObject(polytope,
+                                                            "SerialDistributedTessellator3d",
+                                                            parent=self.DistributedTessellator3d)
+            
+
+
         # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
         # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
         
@@ -62,6 +95,12 @@ class Tessellator:
         if (mod.have_tetgen):
             self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
         
+        if (mod.have_mpi):
+            self.generateDistributedTessellatorBindings(self.DistributedTessellator2d, 2)
+            self.generateDistributedTessellatorBindings(self.DistributedTessellator3d, 3)
+            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator2d, 2)
+            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator3d, 3)
+
         # self.generateVoroTessellatorBindings(self.VoroTessellator2d, 2)
         # self.generateVoroTessellatorBindings(self.VoroTessellator3d, 3)
 
@@ -95,9 +134,6 @@ class Tessellator:
                      is_virtual=True, is_const=True)
         x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
-        
-        # Attributes
-        
         
         return
 
@@ -141,9 +177,42 @@ class Tessellator:
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         
+        return    
+    
+    #---------------------------------------------------------------------------
+    # Bindings (DistributedTessellator)
+    #---------------------------------------------------------------------------
+    def generateDistributedTessellatorBindings(self, x, ndim):
+        
+        # Object names
+        TessellatorPtr  = "polytope::Tessellator%id*" % ndim
+        
+        # Constructors
+        x.add_constructor([param(TessellatorPtr, "serialTessellator", transfer_ownership=False),
+                           param("bool", "assumeControl", default_value="true"),
+                           param("bool", "buildCommunicationInfo", default_value="true")])
+        
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        
         return
-    
-    
+
+    #---------------------------------------------------------------------------
+    # Bindings (SerialDistributedTessellator)
+    #---------------------------------------------------------------------------
+    def generateSerialDistributedTessellatorBindings(self, x, ndim):
+        
+        # Object names
+        Tessellator  = "polytope::Tessellator%id" % ndim
+        
+        # Constructors
+        x.add_constructor([inputptrparam(Tessellator, "serialTessellator"),
+                           param("bool", "assumeControl", default_value="true"),
+                           param("bool", "buildCommunicationInfo", default_value="true")])
+                
+        return
+
     """
     #---------------------------------------------------------------------------
     # Bindings (VoroTessellator)

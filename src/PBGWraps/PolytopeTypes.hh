@@ -11,6 +11,11 @@
 #include "TetgenTessellator.hh"
 #include "MeshEditor.hh"
 
+#if HAVE_MPI
+#include "DistributedTessellator.hh"
+#include "SerialDistributedTessellator.hh"
+#endif
+
 //#include "VoroPP_2d.hh"
 //#include "VoroPP_3d.hh"
 
@@ -44,6 +49,13 @@ typedef TetgenTessellator TetgenTessellator3d;
 
 #if HAVE_BOOST_VORONOI
 typedef BoostTessellator<double> BoostTessellator2d;
+#endif
+
+#if HAVE_MPI
+typedef DistributedTessellator<2, double> DistributedTessellator2d;
+typedef DistributedTessellator<3, double> DistributedTessellator3d;
+typedef SerialDistributedTessellator<2, double> SerialDistributedTessellator2d;
+typedef SerialDistributedTessellator<3, double> SerialDistributedTessellator3d;
 #endif
 
 // typedef VoroPP_2d<double> VoroTessellator2d;

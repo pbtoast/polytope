@@ -20,6 +20,10 @@
 #   PYTHON_LIB_DIR
 #     - Python lib (typically obtained from the executable root)
 #
+# Optional variables
+#   PYBINDGEN_ADDITIONAL_ARGS
+#     - Additional arguments to follow the command in PYBINDGEN_GENERATE_BINDINGS
+#
 # To get the names of the generated source
 # use: ${PYBINDGEN_GENERATED_SOURCE}
 #-----------------------------------------------------------------------------------
@@ -56,9 +60,7 @@ macro(PYBINDGEN_GENERATE_BINDINGS module_list)
     OUTPUT ${PYBINDGEN_GENERATED_SOURCE} ${PYBINDGEN_GENERATED_HEADER}
     COMMAND ${PYTHON_EXE} 
       ${PYBINDGEN_DIR}/${PYBINDGEN_MODULE_NAME}Bindings.py
-      ${HAVE_TRIANGLE}
-      ${HAVE_TETGEN}
-      ${HAVE_BOOST_VORONOI}
+      ${PYBINDGEN_ADDITIONAL_ARGS}
     DEPENDS ${PYBINDGEN_SOURCE}
     )
 endmacro()

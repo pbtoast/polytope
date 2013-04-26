@@ -3,10 +3,11 @@
 #
 set(LIST_OF_WRAPPED_CLASSES "CXXContainers" "MeshEditor" "PLC" "Tessellation" "Tessellator")
 
-
-
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePyBindGen.cmake)
+
+# Additional args for Python execute
+set(PYBINDGEN_ADDITIONAL_ARGS ${HAVE_TRIANGLE} ${HAVE_TETGEN} ${HAVE_BOOST_VORONOI} ${HAVE_MPI})
 
 # Call the PyBindGen macros
 PYBINDGEN_GENERATE_BINDINGS( "${LIST_OF_WRAPPED_CLASSES}" )
