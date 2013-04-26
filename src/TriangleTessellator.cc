@@ -941,7 +941,7 @@ computeCellRings(const vector<RealType>& points,
   int i, j, k;
   
   // Check for collinearity and use the appropriate routine
-  bool collinear;
+  bool collinear = true;
   if (numGenerators == 2) {
     this->computeCellNodesCollinear(points, nodeMap, cellNodes, infNodes);
   } else {
@@ -1306,10 +1306,10 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   int i;
 
   // Check for collinearity and use the appropriate routine
+  bool collinear = true;
   if (numGenerators == 2) 
     this->computeCellNodesCollinear(points, nodeMap, cellNodes, infNodes);
   else {
-    bool collinear = true;
     i = 2;
     while (collinear and i != numGenerators) {
       collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], &points[2*i], 1.0e-10);

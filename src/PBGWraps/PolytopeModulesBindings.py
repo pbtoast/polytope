@@ -75,10 +75,11 @@ print "Parsing pybindgen packages: ", pkgs
 mod = Module("PolytopeModules")
 
 # Strip the "HAVE_foo" statements off the input string and store as bools
-assert len(sys.argv) == 4
+assert len(sys.argv) == 5
 mod.have_triangle      = (sys.argv[1].capitalize() == "True")
 mod.have_tetgen        = (sys.argv[2].capitalize() == "True")
 mod.have_boost_voronoi = (sys.argv[3].capitalize() == "True")
+mod.have_mpi           = (sys.argv[4].capitalize() == "True")
 
 # Go through each package and add its stuff to the module.
 for p in pkgs:
