@@ -32,8 +32,7 @@
 #include <boost/geometry/geometries/geometries.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 
-namespace polytope
-{
+namespace polytope {
 
 
 template<typename RealType>

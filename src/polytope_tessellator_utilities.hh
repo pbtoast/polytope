@@ -19,7 +19,7 @@ BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geomet
 
 
 // Fast predicate for determining point orientation
-extern double orient2d(double* pa, double* pb, double* pc);
+//extern double orient2d(double* pa, double* pb, double* pc);
 
 
 namespace polytope {

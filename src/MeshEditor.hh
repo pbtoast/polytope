@@ -1,6 +1,8 @@
 #ifndef POLYTOPE_MESHEDITOR_HH
 #define POLYTOPE_MESHEDITOR_HH
 
+#if HAVE_BOOST
+
 #include <vector>
 #include <iostream>
 
@@ -90,21 +92,12 @@ private:
   // The element masks
   std::vector<unsigned> mCellMask, mFaceMask, mNodeMask;
 
-   // Disallowed
-   MeshEditor();
-   MeshEditor(const MeshEditor&);
+  // Disallowed
+  MeshEditor();
+  MeshEditor(const MeshEditor&);
 };
-
 
 }// end polytope namespace
 
-
-#else
-
-// Forward declaration
-namespace polytope
-{
-  template<int Dimension, typename Realtype> class MeshEditor;
-}
-
+#endif
 #endif

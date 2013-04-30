@@ -35,13 +35,13 @@ POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
 POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
 POLYTOPE_ADD_TEST( "within_2d"       "" )
 POLYTOPE_ADD_TEST( "intersect_2d"    "" )
-POLYTOPE_ADD_TEST( "MeshEditor"      "" )
 
 
 # Serial tessellator tests
 # NOTE: I am temporarily removing the Voro++ tests to speed
 #       up testing. No work is currently being done on Voro++
 POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
 POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "TriangleTessellator"         "TRIANGLE"      )

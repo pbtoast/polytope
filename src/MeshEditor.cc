@@ -4,7 +4,6 @@
 #include <limits>
 #include <numeric>
 
-#include "MeshEditor.hh"
 #include "polytope.hh"
 
 namespace polytope {
