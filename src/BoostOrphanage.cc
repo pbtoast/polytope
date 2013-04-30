@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "polytope.hh"
+#include "BoostOrphanage.hh"
 
 namespace polytope {
 
