@@ -58,7 +58,8 @@ public:
     circlewithstarhole = 5,
     cardioid           = 6,
     trogdor            = 7,
-    starwithhole       = 8
+    starwithhole       = 8,
+    trogdor2           = 9,
   };
   
   // Boundary type
@@ -87,7 +88,7 @@ public:
   void finalize() {
     getBoundingBox();
     boostMyBoundary();
-    mArea = boost::geometry::area( mBGboundary );
+    mArea = boost::geometry::area(mBGboundary);
   }
   
   //------------------------------------------------------------------------
@@ -125,6 +126,9 @@ public:
       break;
     case starwithhole:
       this->setStarWithHole();
+      break;
+    case trogdor2:
+      this->setTrogdor2();
       break;
     }
     
@@ -453,6 +457,61 @@ public:
   }
 
   //------------------------------------------------------------------------
+  // setTrogdor2
+  // No explanation necessary
+  //------------------------------------------------------------------------
+  void setTrogdor2() {
+    const unsigned nSides = 82;
+    const RealType points[164]= {5.2, 2.0, 7.0, 1.5, 7.2, 2.7, 8.0, 1.2,
+				 8.5, 1.2, 8.5, 3.0, 9.5, 1.6, 10.4, 2.0,
+				 9.8, 3.8, 11.4, 3.3, 11.9, 5.6, 11.0, 7.0,
+				 9.8, 7.8, 7.0, 9.0, 5.6, 10.5, 4.9, 9.6,
+				 3.4, 8.8, 4.0, 8.2, 4.1, 6.5, 5.0, 6.6,
+				 5.2, 6.1, 5.0, 6.0, 5.1, 5.5, 5.4, 5.5,
+				 5.3, 5.0, 4.0, 5.0, 3.0, 6.0, 1.5, 7.0,
+				 1.1, 8.0, 0.7, 8.7, 1.3, 9.6, 0.8, 10.2,
+				 0.9, 11.7, 2.0, 12.5, 3.2, 12.3, 3.8, 13.0,
+				 4.6, 13.1, 5.2, 14.0, 4.0, 14.3, 3.0, 14.0,
+				 2.8, 15.0, 1.9, 15.3, 1.3, 16.2, 0.5, 16.6,
+				 2.2, 17.5, 3.6, 15.9, 5.5, 14.3, 6.5, 14.8,
+				 7.5, 17.2, 7.9, 19.0, 9.8, 18.5, 9.7, 17.8,
+				 9.8, 17.0, 9.2, 16.8, 8.8, 16.0, 8.0, 15.9,
+				 7.2, 15.1, 9.6, 15.0, 12.2, 14.0, 14.5, 14.0,
+				 14.9, 14.8, 15.5, 14.8, 16.0, 14.2, 15.8, 12.7,
+				 12.5, 12.7, 13.1, 11.8, 15.5, 11.0, 15.4, 10.5,
+				 13.5, 10.4, 12.0, 11.3, 9.9, 12.1, 8.8, 12.3,
+				 8.7, 12.0, 9.0, 11.0, 11.0, 9.2, 14.0, 7.0,
+				 14.8, 5.0, 14.0, 3.0, 12.0, 1.1, 10.2, 0.5,
+				 8.7, 0.4, 7.2, 0.8};
+
+    mPLC.facets.resize( nSides, std::vector<int>(2) );
+    for (unsigned i = 0; i != nSides; ++i){
+      mPLCpoints.push_back(points[2*i  ]);
+      mPLCpoints.push_back(points[2*i+1]);
+      mPLC.facets[i][0] = i;
+      mPLC.facets[i][1] = (i+1) % nSides;
+    }
+    POLY_ASSERT(mPLCpoints.size()/2 == nSides);
+
+//     const unsigned nHolePoints = 3;
+//     const RealType holePoints[6] = {15.0, 14.0, 15.3, 14.4, 15.6, 14.0};
+    
+//     mPLC.holes[0].resize(nHolePoints);
+//     for (unsigned i = 0; i != nHolePoints; ++i) {
+//       mPLCpoints.push_back(holePoints[2*i  ]);
+//       mPLCpoints.push_back(holePoints[2*i+1]);
+//       unsigned iBegin = mPLCpoints.size()/2 - nHolePoints + i;
+//       unsigned iEnd   = mPLCpoints.size()/2 - nHolePoints + ((i + 1) % nHolePoints);
+//       mPLC.holes[0][i].resize(2);
+//       mPLC.holes[0][i][0] = iBegin;
+//       mPLC.holes[0][i][1] = iEnd;
+//     }
+    
+    mType = trogdor2;
+    this->finalize();
+  }
+
+  //------------------------------------------------------------------------
   //-------------------- ADDITIONAL HELPER FUNCTIONS -----------------------
   //------------------------------------------------------------------------
   
@@ -546,7 +605,7 @@ public:
   //------------------------------------------------------------------------
   void boostMyBoundary() {
     boost::geometry::clear(mBGboundary);
-    mBGboundary = makePolygon<RealType>( mPLC, mPLCpoints );
+    mBGboundary = makePolygon<RealType>(mPLC, mPLCpoints);
   }
   
   

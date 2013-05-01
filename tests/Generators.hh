@@ -59,8 +59,8 @@ public:
       nPoints = nGenerators;
 
       mBoundary.getBoundingBox();
-      POLY_ASSERT( mBoundary.mLow  != 0 );
-      POLY_ASSERT( mBoundary.mHigh != 0 );
+      POLY_ASSERT(mBoundary.mLow  != 0);
+      POLY_ASSERT(mBoundary.mHigh != 0);
       
       for (unsigned iter = 0; iter < nGenerators; ++iter ){
          std::vector<RealType> pos(Dimension,0);
