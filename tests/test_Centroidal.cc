@@ -38,9 +38,9 @@ void lloyd(Tessellation<2,double>& mesh,
 // lloydTest
 // -----------------------------------------------------------------------
 void lloydTest(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints = 100;     // Number of generators
+  const unsigned nPoints = 1000;     // Number of generators
   const unsigned nIter   = 100;     // Number of iterations
-  const int btype = 7;
+  const int btype = 9;
   
   string testName = "Centroidal_LloydTest_" + tessellator.name();
 

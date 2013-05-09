@@ -63,11 +63,11 @@ POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
 POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
 
-
 # Distributed tessellator tests
 POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
 POLYTOPE_ADD_TEST( "SerialDistributedTriangle" "MPI;TRIANGLE" )
 POLYTOPE_ADD_TEST( "FailedCommunication"       "MPI;TRIANGLE" )
 POLYTOPE_ADD_TEST( "DistributedRandomPoints"   "MPI;TRIANGLE" )
+POLYTOPE_ADD_TEST( "DistributedRotationTests"  "MPI;TRIANGLE" )
 #POLYTOPE_ADD_TEST( "DistributedVoroPP_2d"      "MPI"          )
 #POLYTOPE_ADD_TEST( "DistributedVoroPP_3d"      "MPI"          )
