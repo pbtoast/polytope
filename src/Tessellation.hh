@@ -37,6 +37,9 @@ class Tessellation
     infFaces.clear();
     faceCells.clear();
     convexHull.clear();
+    neighborDomains.clear();
+    sharedNodes.clear();
+    sharedFaces.clear();
   }
 
   //! Returns true if the tessellation is empty (not defined), 

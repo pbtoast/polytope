@@ -85,7 +85,7 @@ void testBoundary(Boundary2D<double>& boundary,
 // testAllBoundaries
 // -----------------------------------------------------------------------
 void testAllBoundaries(Tessellator<2,double>& tessellator) {
-  for (int bid = 0; bid < 9; ++bid){
+  for (int bid = 0; bid < 10; ++bid){
     cout << "Testing boundary type " << bid << endl;
     Boundary2D<double> boundary;
     boundary.setDefaultBoundary(bid);

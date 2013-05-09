@@ -486,8 +486,9 @@ public:
 
     mPLC.facets.resize( nSides, std::vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i){
-      mPLCpoints.push_back(points[2*i  ]);
-      mPLCpoints.push_back(points[2*i+1]);
+      unsigned j = nSides - i - 1;
+      mPLCpoints.push_back(points[2*j  ]);
+      mPLCpoints.push_back(points[2*j+1]);
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
     }

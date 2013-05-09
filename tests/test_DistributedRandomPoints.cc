@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
    // Seed the random number generator the same on all processes.
    srand(10489592);
    
-   bool assignRandomly = true;
+   bool assignRandomly = false;
    
    // Figure out our parallel configuration.
    int rank, numProcs;
@@ -55,12 +55,12 @@ int main(int argc, char** argv) {
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
    // Initialize the bounding PLC
-   int bType = 8;
+   int bType = 9;
    Boundary2D<double> boundary;
    boundary.setDefaultBoundary(bType);
    
    // Generate random points on all processors
-   unsigned N = 1000;
+   unsigned N = 2000;
    Generators<2,double> generators( boundary );
    generators.randomPoints( N );
    
@@ -111,9 +111,13 @@ int main(int argc, char** argv) {
    
    if( rank == 0 ) cerr << "Points assigned to processors" << endl;
 
+   POLY_ASSERT(!myGenerators.empty());
+
    polytope::Tessellation<2, double> mesh;
    polytope::DistributedTessellator<2, double> distTest
       (new polytope::TriangleTessellator<double>(), true, true);
+   // polytope::DistributedTessellator<2, double> distTest
+   //    (new polytope::BoostTessellator<double>(), true, true);
    distTest.tessellate(myGenerators, boundary.mPLCpoints, boundary.mPLC, mesh);
 
    if( rank == 0 ) cerr << "Generated tessellation" << endl;
