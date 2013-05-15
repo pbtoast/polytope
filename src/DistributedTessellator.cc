@@ -7,9 +7,7 @@
 #include <map>
 #include <list>
 #include <limits>
-// extern "C" {
 #include "mpi.h"
-// }
 
 #include "polytope.hh"
 #include "Point.hh"
@@ -152,8 +150,9 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point Point;
+  typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   typedef KeyTraits::Key Key;
-  const double degeneracy = 1.0e-12;
+  const double degeneracy = 1.5e-8;
   
   // Parallel configuration.
   int rank, numProcs;
@@ -203,7 +202,127 @@ computeDistributedTessellation(const vector<RealType>& points,
     vector<ConvexHull> domainHulls; // (numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
-      const ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
+      ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
+   
+      // ------------------ Triple tessellation idea  ------------------
+      Tessellation<Dimension, RealType> localMesh;
+      PLC<Dimension, RealType> localPLC;
+      localPLC.facets = localHull.facets;
+      mSerialTessellator->tessellate(points, localHull.points, localPLC, localMesh);
+
+      // // Blago!
+      // {
+      //   vector<double> r2(localMesh.cells.size(), rank);
+      //   vector<double> px(localMesh.cells.size());
+      //   vector<double> py(localMesh.cells.size());
+      //   for (unsigned i = 0; i != localMesh.cells.size(); ++i) {
+      //      px[i] = points[2*i];
+      //      py[i] = points[2*i+1];
+      //   }
+      //   map<string, double*> fields, cellFields;
+      //   cellFields["domain"] = &r2[0];
+      //   cellFields["gen_x"] = &px[0];
+      //   cellFields["gen_y"] = &py[0];
+      //   cerr << "Writing local mesh with " << localMesh.cells.size() << endl;
+      //   polytope::SiloWriter<Dimension, RealType>::write(localMesh, fields, fields, fields, cellFields, "test_DistributedTessellator_localMesh");
+      //   MPI_Barrier(MPI_COMM_WORLD);
+      // }
+      // // Blago!
+
+      set<unsigned> exteriorCells;
+      for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
+        if (localMesh.faceCells[i].size() == 1 ) {
+          unsigned icell = (localMesh.faceCells[i][0] < 0) ? ~localMesh.faceCells[i][0] : localMesh.faceCells[i][0];
+          exteriorCells.insert(icell);
+        }        
+      }
+      
+      vector<RealPoint> exteriorPoints;
+      for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
+        exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
+      }
+      
+      for (set<unsigned>::const_iterator itr = exteriorCells.begin();
+           itr != exteriorCells.end(); ++itr) {
+        RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
+        typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
+        if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
+      }   
+      
+      // // Blago!
+      // cerr << "Before localHull points: " << localHull.points.size()/Dimension << endl;
+      // copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
+      // cerr << endl;
+      // // Blago!
+
+      localHull.points.clear();
+      for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
+           pointItr != exteriorPoints.end(); ++pointItr) {
+        copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
+      }
+
+      // // Blago!
+      // cerr << "After localHull points: " << localHull.points.size()/Dimension << endl;
+      // copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
+      // cerr << endl;
+      // // Blago!
+      // ------------------ End triple tessellation idea ---------------
+      
+
+      // ------------------ Refining long edges of the local hull --------------- 
+      // const double tol = 2.0;
+      // ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
+      // // Walk the facets of the convex hull and find the average length
+      // const unsigned numFacets = localHull.facets.size();
+      // RealType avgFacetLength = 0.0;
+      // vector<RealType> facetLengths(numFacets, 0.0);
+      // vector<unsigned> divideFacets;
+      // unsigned i1, i2;
+      // for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
+      //   i1 = localHull.facets[ifacet][0];
+      //   i2 = localHull.facets[ifacet][1];
+      //   facetLengths[ifacet] = geometry::distance<Dimension, RealType>(&localHull.points[Dimension*i1],
+      //                                                                  &localHull.points[Dimension*i2]);
+      //   avgFacetLength += facetLengths[ifacet];
+      // }
+      // avgFacetLength /= numFacets;
+      // for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
+      //   if (facetLengths[ifacet] > tol*avgFacetLength)  divideFacets.push_back(ifacet);
+      // }
+
+      // if (rank == 6){
+      //    cerr << localHull << endl;
+      //    copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
+      // }
+
+      // // Walk the facets flagged for dividing and split them in half
+      // POLY_ASSERT(localHull.points.size() % Dimension == 0);
+      // unsigned numPoints = localHull.points.size()/Dimension;
+      // int iter = 0;
+      // while (iter < divideFacets.size()) {
+      //   const unsigned ifacet = divideFacets[iter] + iter;        
+      //   i1 = localHull.facets[ifacet][0];
+      //   i2 = localHull.facets[ifacet][1];
+      //   for (unsigned j = 0; j != Dimension; ++j) {
+      //     const RealType midpt = 0.5*(localHull.points[Dimension*i1+j] + 
+      //                                 localHull.points[Dimension*i2+j]);
+      //     localHull.points.push_back(midpt);
+      //   }
+      //   POLY_ASSERT(localHull.facets[ifacet].size() == 2);
+      //   localHull.facets[ifacet][1] = numPoints;
+      //   vector<int> newFacet(2);  newFacet[0] = numPoints;  newFacet[1] = i2;
+      //   localHull.facets.insert(localHull.facets.begin()+ifacet+1, 1, newFacet);
+      //   ++numPoints;
+      //   ++iter;
+      // }
+
+      // if (rank == 6){
+      //    cerr << localHull << endl;
+      //    copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
+      // }
+      // ------------------ End refining long edges of the local hull ---------------
+      
+      // Serialize and send
       vector<char> localBuffer;
       serialize(localHull, localBuffer);
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
@@ -240,12 +359,26 @@ computeDistributedTessellation(const vector<RealType>& points,
     this->tessellationWrapper(hullGenerators, hullMesh);
 
     // // Blago!
-    // vector<double> r2(hullMesh.cells.size(), rank);
-    // map<string, double*> fields, hullCellFields;
-    // hullCellFields["domain"] = &r2[0];
-    // cerr << "Writing hull mesh with " << hullMesh.cells.size() << endl;
-    // polytope::SiloWriter<Dimension, RealType>::write(hullMesh, fields, fields, fields, hullCellFields, "test_DistributedTessellator_hullMesh");
-    // MPI_Barrier(MPI_COMM_WORLD);
+    // {
+    //   vector<double> r2(hullMesh.cells.size(), rank);
+    //   vector<double> r3(hullMesh.cells.size());
+    //   vector<double> px(hullMesh.cells.size());
+    //   vector<double> py(hullMesh.cells.size());
+    //   for (unsigned i = 0; i != hullMesh.cells.size(); ++i) {
+    //     unsigned procOwner = bisectSearch(domainCellOffset, i);
+    //     r3[i] = double(procOwner);
+    //     px[i] = hullGenerators[2*i];
+    //     py[i] = hullGenerators[2*i+1];
+    //   }
+    //   map<string, double*> fields, hullCellFields;
+    //   hullCellFields["domain"] = &r2[0];
+    //   hullCellFields["domainOwner"] = &r3[0];
+    //   hullCellFields["gen_x"] = &px[0];
+    //   hullCellFields["gen_y"] = &py[0];
+    //   cerr << "Writing hull mesh with " << hullMesh.cells.size() << endl;
+    //   polytope::SiloWriter<Dimension, RealType>::write(hullMesh, fields, fields, fields, hullCellFields, "test_DistributedTessellator_hullMesh");
+    //   MPI_Barrier(MPI_COMM_WORLD);
+    // }
     // // Blago!
 
     // Find the set of domains we need to communicate with according to two criteria:
@@ -262,6 +395,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // We need the set of cells that share nodes.
     const vector<set<unsigned> > hullNodeCells = hullMesh.computeNodeCells();
     const vector<set<unsigned> > hullCellToNodes = hullMesh.computeCellToNodes();
+    set<unsigned> cellsOfInterest;
 
     // Now any hulls that have elements adjacent to ours in the hull mesh.
     for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
@@ -269,7 +403,8 @@ computeDistributedTessellation(const vector<RealType>& points,
            nodeItr1 != hullCellToNodes[icell].end(); ++nodeItr1){
         for (set<unsigned>::const_iterator cellItr1 = hullNodeCells[*nodeItr1].begin();
              cellItr1 != hullNodeCells[*nodeItr1].end(); ++cellItr1){
-          
+           cellsOfInterest.insert(*cellItr1);
+
           // Now the nodes of the hulls adjacent to our own. This second layer of adjacency
           // catches neighbors on the full mesh that may not be neighbors on the hull mesh
           // without adding a second communication step
@@ -277,15 +412,22 @@ computeDistributedTessellation(const vector<RealType>& points,
                nodeItr2 != hullCellToNodes[*cellItr1].end(); ++nodeItr2){
             for (set<unsigned>::const_iterator cellItr2 = hullNodeCells[*nodeItr2].begin();
                  cellItr2 != hullNodeCells[*nodeItr2].end(); ++cellItr2){
-              const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr2);
-              if (otherProc != rank) neighborSet.insert(otherProc);
+              cellsOfInterest.insert(*cellItr2);
+              // const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr2);
+              // if (otherProc != rank) neighborSet.insert(otherProc);
             }
           }
         }
       }
     }
 
-
+    // Now add the likely neighbors to our neighbor set
+    for (set<unsigned>::const_iterator cellItr = cellsOfInterest.begin();
+         cellItr != cellsOfInterest.end(); ++cellItr) {
+      const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr);
+      if (otherProc != rank) neighborSet.insert(otherProc);
+    }
+    
     // // Now any hulls that have elements adjacent to ours in the hull mesh.
     // for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
     //   for (typename vector<int>::const_iterator faceItr = hullMesh.cells[icell].begin();
@@ -314,13 +456,19 @@ computeDistributedTessellation(const vector<RealType>& points,
     copy(neighborSet.begin(), neighborSet.end(), back_inserter(mesh.neighborDomains));
     sort(mesh.neighborDomains.begin(), mesh.neighborDomains.end());
 
+    // // Blago!
+    // cerr << "1st communicating with : ";
+    // copy(mesh.neighborDomains.begin(), 
+    //      mesh.neighborDomains.end(), 
+    //      ostream_iterator<unsigned>(cerr, " "));
+    // cerr << endl;
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // // Blago!
+
 #ifndef NDEBUG
     // Make sure everyone is consistent about who talks to whom.
     // This is potentially an expensive check on massively parallel systems!
     {
-      // cerr << "Communicating with : ";
-      // copy(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), ostream_iterator<unsigned>(cerr, " "));
-      // cerr << endl;
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
         unsigned numOthers = mesh.neighborDomains.size();
         vector<unsigned> otherNeighbors(mesh.neighborDomains);
@@ -402,14 +550,24 @@ computeDistributedTessellation(const vector<RealType>& points,
   this->tessellationWrapper(generators, mesh);
 
   // // Blago!
-  // POLY_ASSERT(gen2domain.size() == mesh.cells.size());
-  // vector<double> r2(mesh.cells.size());
-  // for (unsigned i = 0; i != mesh.cells.size(); ++i) r2[i] = gen2domain[i];
-  // map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-  // cellFields["domain"] = &r2[0];
-  // cerr << "Writing mesh with " << mesh.cells.size() << endl;
-  // polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_DistributedTessellator_fullMesh");
-  // MPI_Barrier(MPI_COMM_WORLD);
+  // {   
+  //   POLY_ASSERT(gen2domain.size() == mesh.cells.size());
+  //   vector<double> r2(mesh.cells.size());
+  //   vector<double> px(mesh.cells.size());
+  //   vector<double> py(mesh.cells.size());
+  //   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+  //      r2[i] = gen2domain[i];
+  //      px[i] = generators[2*i];
+  //      py[i] = generators[2*i+1];
+  //   }
+  //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  //   cellFields["domain"] = &r2[0];
+  //   cellFields["gen_x"] = &px[0];
+  //   cellFields["gen_y"] = &py[0];
+  //   cerr << "Writing full mesh with " << mesh.cells.size() << endl;
+  //   polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_DistributedTessellator_fullMesh");
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  // }
   // // Blago!
 
   // If requested, build the communication info for the shared nodes & faces
@@ -467,7 +625,6 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
 
     
-
     // // Blago!
     // for (unsigned procID = 0; procID != numProcs; ++procID) {
     //   if (procID == rank) {
@@ -482,6 +639,8 @@ computeDistributedTessellation(const vector<RealType>& points,
     //   MPI_Barrier(MPI_COMM_WORLD);
     // }
     // // Blago!
+
+
 
     // Remove any duplicate shared nodes.  (Faces should already be unique).
     for (unsigned i = 0; i != mesh.sharedNodes.size(); ++i) {
@@ -565,12 +724,74 @@ computeDistributedTessellation(const vector<RealType>& points,
   // }
   // // Blago!
 
+  // // Blago!
+  // if (rank == 2) {
+  //    vector<unsigned>::iterator it = 
+  //       std::find(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), 9);
+  //    if (it != mesh.neighborDomains.end()) {
+  //       unsigned badID = std::distance(mesh.neighborDomains.begin(), it);
+  //       vector<Point2<double> > badNodes(mesh.sharedNodes[badID].size());
+  //       int ii = 0;
+  //       for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[badID].begin();
+  //            itr != mesh.sharedNodes[badID].end(); ++itr, ++ii) {
+  //          badNodes[ii] = Point2<double>(mesh.nodes[2*(*itr)], mesh.nodes[2*(*itr)+1]);
+  //       }
+  //       cerr << "Shared nodes before deleteCells:\n";
+  //       copy(mesh.sharedNodes[badID].begin(), mesh.sharedNodes[badID].end(), ostream_iterator<unsigned>(cerr, " "));
+  //       cerr << endl;
+  //       copy(badNodes.begin(), badNodes.end(), ostream_iterator<Point2<double> >(cerr, " "));
+  //       cerr << endl;
+  //    }
+  // }
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // // Blago!
+
 
   // Remove the elements of the tessellation corresponding to
   // other domains generators, and renumber the resulting elements.
   vector<unsigned> cellMask(mesh.cells.size(), 1);
   fill(cellMask.begin() + nlocal, cellMask.end(), 0);
   deleteCells(mesh, cellMask);
+
+  // Blago!
+  // if (rank == 2) {
+  //    vector<unsigned>::iterator it = 
+  //       std::find(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), 9);
+  //    if (it != mesh.neighborDomains.end()) {
+  //       unsigned badID = std::distance(mesh.neighborDomains.begin(), it);
+  //       unsigned badNodeID = mesh.sharedNodes[badID][0];
+  //       cerr << "Bad Node " << badNodeID << " @ (" << mesh.nodes[2*badNodeID]
+  //            << "," << mesh.nodes[2*badNodeID+1] << ")" << endl;
+  //    }
+  // }
+  // Blago!
+
+  // // Blago!
+  // for (unsigned iproc = 0; iproc != mesh.neighborDomains.size(); ++iproc) {
+  //    cerr << rank << "\t<-->\t" << mesh.neighborDomains[iproc] 
+  //         << "\t:\t" << mesh.sharedNodes[iproc].size()
+  //         << "\t"    << mesh.sharedFaces[iproc].size() << endl;
+  // }
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // {
+  //   vector<double> r2(mesh.cells.size());
+  //   vector<double> px(mesh.cells.size());
+  //   vector<double> py(mesh.cells.size());
+  //   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+  //      r2[i] = gen2domain[i];
+  //      px[i] = generators[2*i];
+  //      py[i] = generators[2*i+1];
+  //   }
+  //   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  //   cellFields["domain"] = &r2[0];
+  //   cellFields["gen_x"] = &px[0];
+  //   cellFields["gen_y"] = &py[0];
+  //   cerr << "Writing final mesh with " << mesh.cells.size() << endl;
+  //   polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_DistributedTessellator_finalMesh");
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  // }
+  // // Blago!
+
 
   // Remove any neighbors we don't actually share any info with.
   unsigned numNeighbors = mesh.neighborDomains.size();
@@ -583,6 +804,16 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
   }
   numNeighbors = mesh.neighborDomains.size();
+
+  // // Blago!
+  // cerr << "2nd communicating with : ";
+  // copy(mesh.neighborDomains.begin(), 
+  //      mesh.neighborDomains.end(), 
+  //      ostream_iterator<unsigned>(cerr, " "));
+  // cerr << endl;
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // // Blago!
+
 
 
   // // Blago!

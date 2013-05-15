@@ -102,6 +102,65 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
+   // {
+   //   double pts[20] = {1.461680, 0.154941,
+   //                     0.200000, 1.700000,
+   //                     1.100000, 0.496183,
+   //                     0.300000, 0.138247,
+   //                     1.955810, 1.878520,
+   //                     0.150000, 0.850000,
+   //                     1.300000, 0.909823,
+   //                     0.571635, 1.057540,
+   //                     0.143394, 1.422660,
+   //                     1.850000, 0.950000};
+   //   vector<double> points(20);
+   //   for (unsigned i = 0; i != 20; ++i)  points[i] = pts[i];
+   //   TriangleTessellator<double> tessellator;
+   //   Boundary2D<double> boundary;
+   //   boundary.setDefaultBoundary(3);
+   //   cout << "points = [" << endl;
+   //   for (int i = 0; i != points.size()/2; ++i){
+   //      cout << "[" << points[2*i  ] 
+   //           << "," << points[2*i+1] << "],";
+   //   }
+   //   cout << endl << "]" << endl << endl;
+   //   Tessellation<2,double> mesh; 
+   //   // The unbounded tessellation
+   //   tessellator.tessellate(points, mesh);
+   //   cout << "ucells = [";
+   //   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+   //     cout << "[" << endl;
+   //     for (vector<int>::const_iterator faceItr = mesh.cells[i].begin();
+   //          faceItr != mesh.cells[i].end(); ++faceItr) {
+   //       const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+   //       POLY_ASSERT(iface < mesh.faceCells.size());
+   //       const unsigned inode = *faceItr < 0 ? mesh.faces[iface][0] : mesh.faces[iface][1];
+   //       POLY_ASSERT(inode < mesh.nodes.size());
+   //       cout << "[" << mesh.nodes[2*inode] << "," << mesh.nodes[2*inode+1] << "],";
+   //     }
+   //     cout << endl << "],";
+   //   }
+   //   cout << "]" << endl;
+   //   // The bounded tessellation
+   //   mesh.clear();
+   //   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+   //   cout << "bcells = [";
+   //   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+   //     cout << "[" << endl;
+   //     for (vector<int>::const_iterator faceItr = mesh.cells[i].begin();
+   //          faceItr != mesh.cells[i].end(); ++faceItr) {
+   //       const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+   //       POLY_ASSERT(iface < mesh.faceCells.size());
+   //       const unsigned inode = *faceItr < 0 ? mesh.faces[iface][0] : mesh.faces[iface][1];
+   //       POLY_ASSERT(inode < mesh.nodes.size());
+   //       cout << "[" << mesh.nodes[2*inode] << "," << mesh.nodes[2*inode+1] << "],";
+   //     }
+   //     cout << endl << "],";
+   //   }
+   //   cout << "]" << endl;
+   // }
+
+
    {
      cout << "\nTriangle Tessellator:\n" << endl;
      TriangleTessellator<double> tessellator;

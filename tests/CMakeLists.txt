@@ -35,6 +35,7 @@ POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
 POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
 POLYTOPE_ADD_TEST( "within_2d"       "" )
 POLYTOPE_ADD_TEST( "intersect_2d"    "" )
+POLYTOPE_ADD_TEST( "convexIntersect" "" )
 
 
 # Serial tessellator tests
