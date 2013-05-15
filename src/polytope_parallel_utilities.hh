@@ -59,6 +59,7 @@ struct DimensionTraits<2, RealType> {
   typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
   typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point2<CoordHash> Point;
+  typedef polytope::Point2<RealType> RealPoint;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,
@@ -72,6 +73,9 @@ struct DimensionTraits<2, RealType> {
     return Point(ri[0], ri[1], 
                  rlow[0], rlow[1], 
                  dx, i);
+  }
+  static RealPoint constructPoint(const RealType* ri) {
+     return RealPoint(ri[0], ri[1]);
   }
   static Point faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
                             const unsigned iface,
@@ -114,6 +118,7 @@ struct DimensionTraits<3, RealType> {
   typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
   typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point3<CoordHash> Point;
+  typedef polytope::Point3<RealType> RealPoint;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,
@@ -127,6 +132,9 @@ struct DimensionTraits<3, RealType> {
     return Point(ri[0], ri[1], ri[2], 
                  rlow[0], rlow[1], rlow[2],
                  dx, i);
+  }
+  static RealPoint constructPoint(const RealType* ri) {
+    return RealPoint(ri[0], ri[1], ri[2]);
   }
   static Point faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
                             const unsigned iface,

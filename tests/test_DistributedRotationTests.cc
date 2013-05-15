@@ -1,3 +1,4 @@
+
 // RotationTests
 //
 // A collection of rotation fields on the unit square
@@ -17,6 +18,7 @@
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
+#include "checkDistributedTessellation.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
@@ -242,6 +244,7 @@ void runTest(Tessellator<2,double>& tessellator,
   vector<double> halfTimePositions(points.size());
   while (time < Tmax) {
     if (step % 5 == 0 and rank == 0) cout << (time/Tmax)*100 << "%" << endl;
+    if (rank == 0) cout << step << endl;
     mesh.clear();
     mesh.neighborDomains.clear();
     mesh.sharedNodes.clear();
@@ -258,8 +261,13 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    meshEditor.cleanEdges(0.001);
+    // meshEditor.cleanEdges(0.001);
     outputMesh(mesh, testName, points, step, time);
+
+    // Check the correctness of the parallel data structures
+    const string parCheck = checkDistributedTessellation(mesh);
+    POLY_CHECK2(parCheck == "ok", parCheck);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 }
 
@@ -277,6 +285,8 @@ int main(int argc, char** argv)
 #if HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
+    // SerialDistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
+    //                                                     true, true);
     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
                                                   true, true);
     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
@@ -284,14 +294,14 @@ int main(int argc, char** argv)
 #endif   
 
 
-#if HAVE_BOOST_VORONOI
-  {
-    cout << "\nBoost Tessellator:\n" << endl;
-    DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
-                                                  true, true);
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
-  }
-#endif
+// #if HAVE_BOOST_VORONOI
+//   {
+//     cout << "\nBoost Tessellator:\n" << endl;
+//     DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
+//                                                   true, true);
+//     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+//   }
+// #endif
    
 
   cout << "PASS" << endl;

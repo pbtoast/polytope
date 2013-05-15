@@ -448,9 +448,9 @@ computeCellNodes(const vector<RealType>& points,
   // Create the Voronoi nodes from the list of triangles. Each triangle 
   // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
 
-  // Blago!
-  vector<int> badTris;
-  // Blago!
+  // // Blago!
+  // vector<int> badTris;
+  // // Blago!
 
 
   // Find the circumcenters of each triangle, and build the set of triangles
@@ -502,7 +502,7 @@ computeCellNodes(const vector<RealType>& points,
       highc[1] = max(highc[1], circumcenters[i].y);
       ++triCount;
     }
-    else badTris.push_back(i);
+    // else badTris.push_back(i);
   }
   POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
   POLY_ASSERT(triMask.size()       == delaunay.numberoftriangles);
@@ -1397,6 +1397,10 @@ computeDelaunay(const vector<RealType>& points,
   // Determine bounding box for points
   RealType low [2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
   RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
+  low [0] = mLow [0];
+  low [1] = mLow [1];
+  high[0] = mHigh[0];
+  high[1] = mHigh[1];
   for (i = 0; i != numGenerators; ++i) {
      low [0] = min(low [0], points[2*i  ]);
      low [1] = min(low [1], points[2*i+1]);

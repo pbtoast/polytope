@@ -19,9 +19,9 @@ int compare(const RealType& l1x, const RealType& l1y,
             const RealType& px, const RealType& py) {
   const double ztest = (double(l2x - l1x)*double(py - l1y) -
                         double(l2y - l1y)*double(px - l1x));
-  return (ztest < 0.0 ? -1 :
-          ztest > 0.0 ?  1 :
-                         0);
+  return -(ztest < 0.0 ? -1 :
+           ztest > 0.0 ?  1 :
+                          0);
 }
 
 //------------------------------------------------------------------------------

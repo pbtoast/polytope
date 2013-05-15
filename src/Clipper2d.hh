@@ -61,7 +61,8 @@ public:
     else {
       k = cellIntersections.size();
       for (j = 0; j != cellIntersections.size(); ++j) {
-        inside = boost::geometry::within(cellGenerator, cellIntersections[j]);
+        // inside = boost::geometry::within(cellGenerator, cellIntersections[j]);
+        inside = boost::geometry::covered_by(cellGenerator, cellIntersections[j]);
         if (inside) k = j;
         else {
           onBoundary = false;
