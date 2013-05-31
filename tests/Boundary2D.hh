@@ -41,7 +41,7 @@ public:
   // Piecewise linear construct to define the boundary facets + holes
   PLC<2, RealType> mPLC;
   // Vector of generators to define the boundary
-  std::vector<RealType> mPLCpoints;
+  vector<RealType> mPLCpoints;
   // Ranges of bounding box
   RealType mCenter[2], mLow[2], mHigh[2], mArea;
   
@@ -92,9 +92,26 @@ public:
   }
   
   //------------------------------------------------------------------------
-  // computeBoundary
+  // setCustomBoundary
   //------------------------------------------------------------------------
-  void setDefaultBoundary(int bType)
+  void setCustomBoundary(const unsigned numVertices,
+                         const RealType* vertices) {
+    mPLCpoints.resize(2*numVertices);
+    mPLC.facets.resize(numVertices, vector<int>(2));
+    for (unsigned i = 0; i != numVertices; ++i) {
+      mPLCpoints[2*i  ] = vertices[2*i  ];
+      mPLCpoints[2*i+1] = vertices[2*i+1];
+      mPLC.facets[i][0] = i;
+      mPLC.facets[i][1] = (i+1) % numVertices;
+    }
+    
+    this->finalize();
+  }
+
+  //------------------------------------------------------------------------
+  // setDefaultBoundary
+  //------------------------------------------------------------------------
+  void setDefaultBoundary(const int bType)
   {
     mCenter[0] = 0.0;
     mCenter[1] = 0.0;
@@ -209,7 +226,7 @@ public:
     }
     
     // Facets on the inner circle
-    mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);
+    mPLC.holes = vector< vector< vector<int> > >(1);
     mPLC.holes[0].resize(Nh);
     for (unsigned f = 0; f < Nh; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - Nh + f;
@@ -235,7 +252,7 @@ public:
     mPLCpoints.push_back(0.0); mPLCpoints.push_back(2.0);
     
     int nSides = mPLCpoints.size()/2;
-    mPLC.facets.resize( nSides, std::vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i ) {
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
@@ -255,7 +272,7 @@ public:
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.25);
     
-    mPLC.holes.resize(nHoles, std::vector<std::vector<int> >(4, std::vector<int>(nHoles)));
+    mPLC.holes.resize(nHoles, vector<vector<int> >(4, vector<int>(nHoles)));
     for (unsigned i = 0; i != 4; ++i) {
       mPLC.holes[0][i][0] = nSides + i;
       mPLC.holes[0][i][1] = nSides + ((i+1) % 4);
@@ -318,7 +335,7 @@ public:
     }
     
     // Facets on the inner circle
-    mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);      
+    mPLC.holes = vector< vector< vector<int> > >(1);      
     mPLC.holes[0].resize(2*nPoints);
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
@@ -384,7 +401,7 @@ public:
 				 3.5, 7.5, 2.0, 7.0, 2.0, 7.4, 3.3, 8.0,
 				 1.75, 8.0, 1.75, 9.2};
     
-    mPLC.facets.resize( nSides, std::vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i){
       unsigned j = nSides - i - 1;
       mPLCpoints.push_back(points[2*j  ]);
@@ -422,7 +439,7 @@ public:
     }
     
     // Facets on the inner circle
-    mPLC.facets.resize( 2*nPoints, std::vector<int>(2) );
+    mPLC.facets.resize( 2*nPoints, vector<int>(2) );
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
       unsigned fEnd   = mPLCpoints.size()/2 - 2*nPoints + ((f + 1) % (2*nPoints));
@@ -442,7 +459,7 @@ public:
     }
     
     // Facets on the inner circle
-    mPLC.holes = std::vector< std::vector< std::vector<int> > >(1);      
+    mPLC.holes = vector< vector< vector<int> > >(1);      
     mPLC.holes[0].resize(nHolePoints);
     for (unsigned f = 0; f < nHolePoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - nHolePoints + f;
@@ -484,7 +501,7 @@ public:
 				 14.8, 5.0, 14.0, 3.0, 12.0, 1.1, 10.2, 0.5,
 				 8.7, 0.4, 7.2, 0.8};
 
-    mPLC.facets.resize( nSides, std::vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i){
       unsigned j = nSides - i - 1;
       mPLCpoints.push_back(points[2*j  ]);

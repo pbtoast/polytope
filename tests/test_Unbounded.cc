@@ -58,7 +58,7 @@ void test(Tessellator<2,double>& tessellator) {
   vector<int> howDidIDo;
   Tessellation<2,double> mesh;
 
-  // Circle of generators
+  // Test 1: Circle of generators
   {
     cout << "\nTest " << ntest << ": Circle of generators" << endl;
     int N = 18;
@@ -75,7 +75,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Circle of generators, random center
+  // Test 2: Circle of generators, random center
   {
     cout << "\nTest " << ntest << ": Circle of generators, random center" << endl;
     int N = 18;
@@ -94,7 +94,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Two uniform rows of generators
+  // Test 3: Two uniform rows of generators
   {
     cout << "\nTest " << ntest << ": Two uniform rows of generators" << endl;
     int N = 10;
@@ -111,7 +111,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Collinear generators with one non-collinear
+  // Test 4: Collinear generators with one non-collinear
   {
     cout << "\nTest " << ntest << ": Collinear generators, except one" << endl;
     int N = 10;
@@ -125,7 +125,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Test 4: 2x2 Cartesian Generators
+  // Test 5: 2x2 Cartesian Generators
   {
     cout << "\nTest 4: 2x2 Cartesian generators" << endl;
     vector<double> points;
@@ -141,7 +141,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Two generators
+  // Test 6: Two generators
   {
     cout << "\nTest " << ntest << ": Two generators" << endl;
     vector<double> points;
@@ -155,7 +155,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Line of generators, uniform
+  // Test 7: Line of generators, uniform
   {
     cout << "\nTest " << ntest << ": Uniform line of generators" << endl;
     int N=10;
@@ -169,7 +169,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Line of generators, non-uniform
+  // Test 8: Line of generators, non-uniform
   {
     cout << "\nTest " << ntest << ": Non-uniform line of generators" << endl;
     int N = 10;
@@ -183,7 +183,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Line of generators, non-uniform, shuffled
+  // Test 9: Line of generators, non-uniform, shuffled
   {
     cout << "\nTest " << ntest << ": Non-uniform line of generators, shuffled" << endl;
     int N = 10;

@@ -157,22 +157,21 @@ private:
   // Specialized tessellations based on the point set  //
   // ------------------------------------------------- //
 
-  // Compute nodes around collinear generators
-  void computeCellNodesCollinear(const std::vector<RealType>& points,
-                                 std::map<PointType, std::pair<int, int> >& nodeMap,
-                                 std::map<int, std::vector<unsigned> >& cellNodes) const;
-
-  // Compute the nodes around a generator
+  // Compute the nodes around a collection of generators
   void computeCellNodes(const std::vector<RealType>& points,
-                         std::map<PointType, std::pair<int, int> >& nodeMap,
-                         std::map<int, std::vector<unsigned> >& cellNodes) const;
+                        std::map<PointType, std::pair<int, int> >& nodeMap,
+                        std::vector<std::vector<unsigned> >& cellNodes) const;
 
   // Compute bounded cell rings from Boost Voronoi diagram
   void computeCellRings(const std::vector<RealType>& points,
 			const std::vector<RealType>& PLCpoints,
 			const PLC<2, RealType>& geometry,
-			std::vector<IntRing>& cellRings,
-			bool performCellAdoption) const;
+                        const std::map<PointType, std::pair<int, int> >& nodeMap,
+                        std::vector<std::vector<unsigned> >& cellNodes,
+			Clipper2d<RealType>& clipper,
+                        std::vector<IntRing>& cellRings,
+                        const bool collinear,
+			const bool performCellAdoption) const;
 
   // Compute an unbounded tessellation
   void computeVoronoiUnbounded(const std::vector<RealType>& points,
@@ -190,27 +189,17 @@ private:
 
   // Bounded tessellation with prescribed bounding box
   void tessellate(const std::vector<RealType>& points,
-                  const std::vector<RealType>& PLCpoints,
+                  const std::vector<CoordHash>& IntPLCpoints,
                   const PLC<2, RealType>& geometry,
-                  const RealType* low,
-                  const RealType* high,
-                  const RealType dx,
-                  Tessellation<2, RealType>& mesh) const;
+                  const QuantizedCoordinates<2,RealType>& coords,
+                  std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const;
 
   // -------------------------- //
   // Private member variables   //
   // -------------------------- //
 
-  // Bounding box used to quantize points and mitigate degeneracies
-  mutable std::vector<RealType> mLow, mHigh;
-  mutable RealType mDelta;
-
-  // Infinite bounding circle
-  mutable std::vector<RealType> mCenter;
-  mutable RealType mRinf;
-
-  // Maximum integer coordinate value
-  mutable CoordHash mCoordMax;
+  // The quantized coordinates for this tessellator (inner and outer)
+  mutable QuantizedCoordinates<2,RealType> mCoords;
 
   friend class BoostOrphanage<RealType>;
 

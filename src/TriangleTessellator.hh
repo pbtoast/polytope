@@ -1,4 +1,3 @@
-
 // 
 // An implemenation of the Tessellator interface that uses the Triangle
 // library by Jonathan Shewchuk.
@@ -14,6 +13,7 @@
 #include "Tessellator.hh"
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
+#include "QuantizedCoordinates.hh"
 #include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
 struct triangulateio;
@@ -77,29 +77,23 @@ private:
     realBGpolygon;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
-  static CoordHash coordMax;
-  static double degeneracy;
-
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
   // ------------------------------------------------- //
 
-  // Compute node IDs around collinear generators and their quantized locations
-  void computeCellNodesCollinear(const std::vector<RealType>& points,
-				 std::map<IntPoint, std::pair<int,int> >& circumcenterMap,
-				 std::map<int, std::vector<unsigned> >& cellNodes,
-				 std::vector<unsigned>& infNodes) const;
-
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
-			std::map<IntPoint, std::pair<int,int> >& circumceterMap,
-			std::map<int, std::vector<unsigned> >& cellNodes,
+			std::map<IntPoint, std::pair<int,int> >& nodeMap,
+			std::vector<std::vector<unsigned> >& cellNodes,
 			std::vector<unsigned>& infNodes) const;
     
   // Compute bounded cell rings from collection of unbounded node locations
   void computeCellRings(const std::vector<RealType>& points,
-			const std::vector<RealType>& PLCpoints,
-			const PLC<2, RealType>& geometry,
+                        const std::map<IntPoint, std::pair<int,int> >& nodeMap,
+			std::vector<std::vector<unsigned> >& cellNodes,
+                        Clipper2d<CoordHash>& clipper,
+			// const std::vector<RealType>& PLCpoints,
+			// const PLC<2, RealType>& geometry,
 			std::vector<BGring>& cellRings,
 			bool performCellAdoption) const;
 
@@ -123,32 +117,17 @@ private:
 
   // Bounded tessellation with prescribed bounding box
   void tessellate(const std::vector<RealType>& points,
-                  const std::vector<RealType>& PLCpoints,
+                  const std::vector<CoordHash>& IntPLCpoints,
                   const PLC<2, RealType>& geometry,
-                  const RealType* low,
-                  const RealType* high,
-                  const RealType dx,
-                  Tessellation<2, RealType>& mesh) const;
+                  const QuantizedCoordinates<2, RealType>& coords,
+                  std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const;
 
   // -------------------------- //
   // Private member variables   //
   // -------------------------- //
 
-  // Bounding box used to quantize mesh nodes and mitigate degeneracies
-  mutable std::vector<RealType> mLow, mHigh;
-  mutable RealType mDelta;
-   
-  // Outer bounding box to quantize extreme circumcenters
-  mutable std::vector<RealType> mLowOuter, mHighOuter;
-  mutable RealType mDeltaOuter;
-
-  // Infinite bounding circle
-  mutable std::vector<RealType> mCenter;
-  mutable RealType mRinf;
-
-  // Maximum integer coordinate value
-  mutable CoordHash mCoordMax;
-  mutable RealType mDegeneracy;
+  // The quantized coordinates for this tessellator (inner and outer)
+  mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
 
   friend class BoostOrphanage<RealType>;
 

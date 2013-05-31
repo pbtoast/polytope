@@ -12,7 +12,7 @@ use_silo       = 1
 use_python     = 0
 python_exe     = not-set
 python_version = not-set
-
+build_tests    = 1
 
 # This proxies everything to the builddir cmake.
 
@@ -78,6 +78,9 @@ endif
 
 # Choose to build silo or not if available
 CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
+
+# Choose to build the test set or not
+CONFIG_FLAGS += -DTESTING=$(build_tests)
 
 # Explicit path for PyBindGen
 ifeq ($(use_python), 1)

@@ -74,8 +74,8 @@ void computeDeformationFlow(const vector<double>& points,
    for (unsigned i = 0; i != numGenerators; ++i) {
       x = points[2*i  ];
       y = points[2*i+1];
-      velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y + 0.5));
-      velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y + 0.5));
+      velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y - 0.125));
+      velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y - 0.125));
    }
 }
 
@@ -122,30 +122,29 @@ void runTest(Tessellator<2,double>& tessellator,
   string testName = os.str();
    
   // Time stepping and point-resizing stuff
-  double dt, Tmax, scaleFactor;
+  double dt, Tmax, scaleFactor=1.0;
+  vector<double> displace(2,0.0);
   switch(flowType){
   case 1:
     dt = 2.0;
     Tmax = 628.0/2;
-    scaleFactor = sqrt(2);
+    scaleFactor = 1.0/sqrt(2);
     cout << "\nTest 1: Solid Rotation Flow\n" << endl;
     break;
   case 2:
     dt = sqrt(2)*dx;
     Tmax = 4.0;
-    scaleFactor = 1.0;
     cout << "\nTest 2: Single Vortex Flow\n" << endl;
     break;
   case 3:
     dt = sqrt(2)*dx;
     Tmax = 4.0;
-    scaleFactor = 2.0;
     cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
     break;
   case 4:
-    dt = sqrt(2)*dx;
+    dt = 0.5*dx;
     Tmax = 2.0;
-    scaleFactor = sqrt(2);
+    scaleFactor = 1.0/sqrt(2);
     cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
     break;
   }
@@ -179,8 +178,18 @@ void runTest(Tessellator<2,double>& tessellator,
   }
 
   // Resize the generator so we dont' fling them out of the boundary
-  for (unsigned i = 0; i != points.size(); ++i) {
-    points[i] = 0.5 + (points[i]-0.5)/scaleFactor;  
+  if (scaleFactor != 1.0) {
+    for (unsigned i = 0; i != points.size(); ++i) {
+      points[i] = 0.5 + (points[i]-0.5)*scaleFactor;  
+    }
+  }
+
+  // Adjust the scaled point positions, if specified
+  if (displace[0] != 0 or displace[1] != 0) {
+    for (unsigned i = 0; i != points.size()/2; ++i) {
+      points[2*i  ] += displace[0];
+      points[2*i+1] += displace[1];
+    }
   }
 
   // The velocity field
@@ -231,7 +240,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+    for (unsigned flowTest = 4; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
   }
 #endif   
 
