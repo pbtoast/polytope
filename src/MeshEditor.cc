@@ -10,7 +10,6 @@ namespace polytope {
 
 using namespace std;
 
-
 //------------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 MeshEditor<Dimension, RealType>::
@@ -126,14 +125,17 @@ flagEdgesForCleaning(const RealType edgeTol,
       POLY_ASSERT(nfaceNodes >= 2);
       const unsigned maxNodeIndex = (nfaceNodes == 2) ? 1 : nfaceNodes;
       for (unsigned inode = 0; inode != maxNodeIndex; ++inode) {
-	const EdgeType edge = make_pair(iface, inode);
-	typename EdgeMap::left_const_iterator lItr = edgeToID.left.find(edge);
+        inode0 = mMesh.faces[iface][inode];
+        inode1 = mMesh.faces[iface][(inode+1) % nfaceNodes];
+        POLY_ASSERT(inode0 != inode1);
+        POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
+                    inode1 < mMesh.nodes.size()/Dimension);
+        const EdgeType edge = internal::hashEdge(inode0, inode1);
+        //make_pair(iface, inode);
+	
+        typename EdgeMap::left_const_iterator lItr = edgeToID.left.find(edge);
 	if (lItr == edgeToID.left.end()) {
 	  edgeToID.insert(typename EdgeMap::value_type(edge, edgeCount));
-	  inode0 = mMesh.faces[iface][inode];
-	  inode1 = mMesh.faces[iface][(inode+1) % nfaceNodes];
-	  POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
-		      inode1 < mMesh.nodes.size()/Dimension);
 	  length = geometry::distance<Dimension, RealType>
 	    (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
 	  edgeLength.push_back(length);
@@ -150,7 +152,6 @@ flagEdgesForCleaning(const RealType edgeTol,
   POLY_ASSERT(cellToEdges.size() == ncells0);
   const unsigned nedges0 = edgeCount;
 
-
   // Compute the maximum edge length for the cells around an edge
   vector<RealType> maxCellEdgeLength(nedges0, 0.0);
   for (unsigned icell = 0; icell != ncells0; ++icell) {
@@ -164,60 +165,288 @@ flagEdgesForCleaning(const RealType edgeTol,
 	 ++itr) maxCellEdgeLength[*itr] = max(maxCellEdgeLength[*itr], maxCellEdge);
   }
   
-  
-  // Flag the edges we want to remove.  We coalesce mesh nodes by keeping the
-  // n1 index and mapping the n2 index to n1
+  // Flag the edges we want to remove.
   vector<unsigned> edgeMask(nedges0, 1);
-  mNodeMask = std::vector<unsigned>(nnodes0, 1);
-  EdgeType edge;
   vector<unsigned> nodeCollapse(nnodes0);
+  EdgeType edge;
+  mNodeMask = vector<unsigned>(nnodes0, 1);
   for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
-  unsigned n1, n2, iface;
   for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
     typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
     POLY_ASSERT(itr != edgeToID.right.end());
     edge = itr->second;
-    iface = edge.first;
-    // // Blago!
-    // cerr << "Edge " << iedge << ": " 
-    //      << "(" << edge.first << "," << edge.second << ")\t"  
-    //      << "Length = " << edgeLength[iedge] << "\t"
-    //      << "maxLength = " << maxCellEdgeLength[iedge] << endl;
-    // // Blago!
-    n1 = mMesh.faces[iface][edge.second];
-    n2 = mMesh.faces[iface][(edge.second+1) % mMesh.faces[iface].size()];
-    POLY_ASSERT(n1 != n2);
-    POLY_ASSERT(n1 < nnodes0 and n2 < nnodes0);
+    inode0 = edge.first;
+    inode1 = edge.second;
     if (edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
-	mNodeMask[n1] == 1 and mNodeMask[n2] == 1) {
+	mNodeMask[inode0] == 1 and mNodeMask[inode1] == 1) {
       edgesClean = false;
       edgeMask[iedge] = 0;
-
-      // mNodeMask[n1] = 2;
-      // mNodeMask[n2] = 0;
-      // nodeMap[n2] = n1;
-
-      // mNodeMask[n1] = 0;
-      // mNodeMask[n2] = 2;
-      // nodeMap[n1] = n2;
-
-      mNodeMask[n1] = (n1 < n2 ? 2 : 0);
-      mNodeMask[n2] = (n1 < n2 ? 0 : 2);
-      nodeCollapse[max(n1,n2)] = min(n1,n2);
+      mNodeMask[inode0] = 2;
+      mNodeMask[inode1] = 0;
+      nodeCollapse[inode1] = inode0;
     }
   }
   replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
 
-  // Build up the node map from original indices to new indices
-  unsigned nodeCount = 0;
-  nodeMap.resize(nnodes0);
-  for (unsigned i = 0; i != nnodes0; ++i) {
-     POLY_ASSERT(nodeCollapse[i] <= i);
-     nodeMap[i] = (mNodeMask[i] == 1 ? nodeCount : nodeMap[nodeCollapse[i]]);
-     nodeCount += mNodeMask[i];
-  }
-  POLY_ASSERT(nodeCount == std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0));
+  
+#if HAVE_MPI
+  // Parallel configuration.
+  int rank, numProcs;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
+  // TODO: Put in an all-reduced switch based on the edgesClean flag. After all, if
+  //       all processors have clean mesh, why bother communicating?
+
+  // Construct a list of shared edges, sorted the same on each proc. Construct and 
+  // communicate the masks and make the local edge mask consistent across domains.
+  // Of course, none of this is necessary if we're running in serial, so...
+  if (numProcs > 1) {
+
+    // // Create reverse loopup from edge to collection of neighboring cells
+    // map<EdgeType, vector<unsigned> > edgeToCells;
+    // for (map<unsigned, vector<unsigned> >::const_iterator cellItr = cellToEdges.begin();
+    //      cellItr != cellToEdges.end(); ++cellItr) {
+    //   vector<unsigned> 
+    // }
+
+    // Construct shared edge list
+    vector<vector<EdgeType> > sharedEdges   (mMesh.neighborDomains.size());
+    vector<vector<unsigned> > sharedEdgeMask(mMesh.neighborDomains.size());
+    vector<vector<unsigned> > sharedEdgeReverse(nedges0);
+    vector<vector<unsigned> > sharedNodeReverse(nnodes0);
+    vector<map<unsigned,unsigned> > domainNodeMaps(mMesh.neighborDomains.size());
+    unsigned ineighbor = 0;
+    for (vector<unsigned>::const_iterator otherItr = mMesh.neighborDomains.begin();
+         otherItr != mMesh.neighborDomains.end(); ++otherItr, ++ineighbor) {
+      
+      // Create reverse lookup from nodeID to position in sharedNodes list
+      map<unsigned, unsigned> nodeIndexToSharePosition;
+      for (vector<unsigned>::const_iterator nodeItr = mMesh.sharedNodes[ineighbor].begin();
+           nodeItr != mMesh.sharedNodes[ineighbor].end(); ++nodeItr) {
+        POLY_ASSERT(nodeIndexToSharePosition.find(*nodeItr) == nodeIndexToSharePosition.end());
+        unsigned result = nodeIndexToSharePosition.size();
+        nodeIndexToSharePosition[*nodeItr] = result;
+        sharedNodeReverse[*nodeItr].push_back(ineighbor);
+      }
+      POLY_ASSERT(nodeIndexToSharePosition.size() == mMesh.sharedNodes[ineighbor].size());
+      domainNodeMaps[ineighbor] = nodeIndexToSharePosition;
+
+      // Consider all edges on this domain. The shared ones consist of two shared nodes.
+      for (typename EdgeMap::left_const_iterator edgeItr = edgeToID.left.begin();
+           edgeItr != edgeToID.left.end(); ++edgeItr) {
+        const EdgeType edge  = edgeItr->first;
+        const unsigned iedge = edgeItr->second;
+        inode0 = edge.first;
+        inode1 = edge.second;
+        POLY_ASSERT(inode0 < inode1);
+        POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
+                    inode1 < mMesh.nodes.size()/Dimension);
+        map<unsigned,unsigned>::const_iterator it0 = nodeIndexToSharePosition.find(inode0);
+        map<unsigned,unsigned>::const_iterator it1 = nodeIndexToSharePosition.find(inode1);
+        if (it0 != nodeIndexToSharePosition.end() and 
+            it1 != nodeIndexToSharePosition.end()) {
+          const EdgeType sharedEdge = internal::hashEdge(it0->second, it1->second);
+          sharedEdges[ineighbor].push_back(sharedEdge);
+          sharedEdgeReverse[iedge].push_back(ineighbor);
+        }
+      }
+
+      // Sort the sharedEdges list
+      sort(sharedEdges[ineighbor].begin(), sharedEdges[ineighbor].end(),
+           internal::pairCompare<unsigned, unsigned>);        
+
+      // // Blago!
+      // cerr << rank << " <--> " << mMesh.neighborDomains[ineighbor] << " :" << endl;
+      // cerr << "   Nodes: ";
+      // copy(mMesh.sharedNodes[ineighbor].begin(), mMesh.sharedNodes[ineighbor].end(), 
+      //      ostream_iterator<unsigned>(cerr, " "));
+      // cerr << endl << "   Edges:";
+      // for (unsigned ii = 0; ii != sharedEdges[ineighbor].size(); ++ii) {
+      //    cerr << " (" << sharedEdges[ineighbor][ii].first 
+      //         << ","  << sharedEdges[ineighbor][ii].second << ")";
+      // }
+      // cerr << endl;
+      // // Blago!
+
+
+      // Now make the corresponding mask for each sharedEdge list
+      sharedEdgeMask[ineighbor].resize(sharedEdges[ineighbor].size());
+      unsigned edgeCount = 0;
+      for (vector<EdgeType>::const_iterator sEdgeItr = sharedEdges[ineighbor].begin();
+           sEdgeItr != sharedEdges[ineighbor].end(); ++sEdgeItr, ++edgeCount) {
+        const unsigned ind0 = sEdgeItr->first;
+        const unsigned ind1 = sEdgeItr->second;
+        POLY_ASSERT(ind0 < mMesh.sharedNodes[ineighbor].size() and
+                    ind1 < mMesh.sharedNodes[ineighbor].size());
+        inode0 = mMesh.sharedNodes[ineighbor][ind0];
+        inode1 = mMesh.sharedNodes[ineighbor][ind1];
+        POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
+                    inode1 < mMesh.nodes.size()/Dimension);
+        const EdgeType edge = internal::hashEdge(inode0, inode1);
+        typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
+        POLY_ASSERT(itr != edgeToID.left.end());
+        const unsigned iedge = itr->second;
+        POLY_ASSERT(iedge < nedges0);
+        sharedEdgeMask[ineighbor][edgeCount] = edgeMask[iedge];
+      }
+      POLY_ASSERT(edgeCount == sharedEdges[ineighbor].size());
+    }
+    
+    // Send the sharedEdgeMask to each neighbor asynchronously
+    vector<char> localBuffer;
+    vector<MPI_Request> sendRequests;
+    sendRequests.reserve(2*mMesh.neighborDomains.size());
+    ineighbor = 0;
+    for (vector<unsigned>::const_iterator otherItr = mMesh.neighborDomains.begin();
+         otherItr != mMesh.neighborDomains.end(); ++otherItr, ++ineighbor) {
+      serialize(sharedEdgeMask[ineighbor], localBuffer);
+      unsigned localBufferSize = localBuffer.size();
+      const unsigned otherProc = *otherItr;
+      sendRequests.push_back(MPI_Request());
+      MPI_Isend(&localBufferSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &sendRequests.back());
+      if (localBufferSize > 0) {
+        sendRequests.push_back(MPI_Request());
+        MPI_Isend(&localBuffer.front(), localBufferSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &sendRequests.back());
+      }
+    }
+    POLY_ASSERT(sendRequests.size() <= 2*mMesh.neighborDomains.size());
+
+    // Get the masks from the neighbors
+    vector<vector<unsigned> > neighborEdgeMasks(mMesh.neighborDomains.size());
+    ineighbor = 0;
+    for (vector<unsigned>::const_iterator otherItr = mMesh.neighborDomains.begin();
+         otherItr != mMesh.neighborDomains.end(); ++otherItr, ++ineighbor) {
+      const unsigned otherProc = *otherItr;
+      unsigned bufSize;
+      MPI_Status recvStatus1, recvStatus2;
+      MPI_Recv(&bufSize, 1, MPI_UNSIGNED, otherProc, 1, MPI_COMM_WORLD, &recvStatus1);
+      if (bufSize > 0) {
+        vector<char> buffer(bufSize, '\0');
+        MPI_Recv(&buffer.front(), bufSize, MPI_CHAR, otherProc, 2, MPI_COMM_WORLD, &recvStatus2);
+        vector<char>::const_iterator itr = buffer.begin();
+        vector<unsigned> otherEdgeMask;
+        deserialize(otherEdgeMask, itr, buffer.end());
+        POLY_ASSERT(itr == buffer.end());
+        neighborEdgeMasks[ineighbor] = otherEdgeMask;
+      }
+    }
+    
+    // Make sure all the sends are complete
+    vector<MPI_Status> sendStatus(sendRequests.size());
+    MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
+    
+    // Make the edge masks consistent across domain boundaries. If one domain 
+    // says delete (mask=0) and one says keep (mask=1), we always keep.
+    for (unsigned i = 0; i != mMesh.neighborDomains.size(); ++i) {
+      unsigned edgeCount = 0;
+      for (vector<EdgeType>::const_iterator sEdgeItr = sharedEdges[i].begin();
+           sEdgeItr != sharedEdges[i].end(); ++sEdgeItr, ++edgeCount) {
+        const unsigned ind0 = sEdgeItr->first;
+        const unsigned ind1 = sEdgeItr->second;
+        POLY_ASSERT(ind0 < mMesh.sharedNodes[i].size() and
+                    ind1 < mMesh.sharedNodes[i].size());
+        inode0 = mMesh.sharedNodes[i][ind0];
+        inode1 = mMesh.sharedNodes[i][ind1];
+        POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
+                    inode1 < mMesh.nodes.size()/Dimension);
+        const EdgeType edge = internal::hashEdge(inode0, inode1);
+        typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
+        POLY_ASSERT(itr != edgeToID.left.end());
+        const unsigned iedge = itr->second;
+        POLY_ASSERT(iedge < nedges0);
+        //POLY_ASSERT(edgeCount < neighborEdgeMasks[i].size());
+        edgeMask[iedge] = max(edgeMask[iedge], neighborEdgeMasks[i][edgeCount]);
+      }
+      POLY_ASSERT(edgeCount == sharedEdges[i].size());
+    }
+
+    // Ammend the edgesClean flag if we're not cleaning after all.
+    if (std::accumulate(edgeMask.begin(), edgeMask.end(), 0) == nedges0)
+       edgesClean = true;
+
+    // We've invalidated the nodeCollapse and nodeMask lists. Make them consistent.
+    mNodeMask = vector<unsigned>(nnodes0, 1);
+    if (!edgesClean) {
+      for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
+      for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
+        typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
+        POLY_ASSERT(itr != edgeToID.right.end());
+        if (edgeMask[iedge] == 0) {
+          const EdgeType edge = itr->second;
+          const bool isShared = (sharedEdgeReverse[iedge].size() == 0) ? false : true;
+          inode0 = edge.first;
+          inode1 = edge.second;
+          const bool node0Shared = (sharedNodeReverse[inode0].size() == 0) ? false : true;
+          const bool node1Shared = (sharedNodeReverse[inode1].size() == 0) ? false : true;
+
+          if (isShared) {
+            POLY_ASSERT2(sharedEdgeReverse[iedge].size() == 1, "I think this logic only"
+                         << " holds for 2D meshes. An edge is a face and can be shared by"
+                         << " at most two domains. In 3D, 3 or more domains can share an"
+                         << " edge. It's not clear if the orderings of the shared node"
+                         << " lists are consistent among 3 or more domains");
+            const unsigned ineighbor = sharedEdgeReverse[iedge][0];
+            const unsigned ind0 = domainNodeMaps[ineighbor][inode0];
+            const unsigned ind1 = domainNodeMaps[ineighbor][inode1];
+            if (ind1 < ind0) {inode0 = edge.second; inode1 = edge.first;}
+          }
+
+          else if (node1Shared and !node0Shared) {
+             inode0 = edge.second; inode1 = edge.first;
+          }
+
+          mNodeMask[inode1] = 0;
+          nodeCollapse[inode1] = inode0;
+
+          // // Blago!
+          // cerr << "Delete edge " << iedge << " having nodes "
+          //      << "(" << edge.first << "," << edge.second << ")\n"
+          //      << "    Is it shared? " << (isShared ? "Yes" : "NO") << "\n"
+          //      << "    Delete " << inode1 << " and map its index to " << inode0 << endl;
+          // // Blago!
+        }
+      }
+    }
+
+  } // Done with the multi-processor stuff
+#endif
+
+      
+
+
+  // // // We coalesce mesh nodes by keeping the n1 index and mapping the n2 index to n1
+  // // vector<unsigned> edgeMask(nedges0, 1);
+  // // mNodeMask = std::vector<unsigned>(nnodes0, 1);
+  // // vector<unsigned> nodeCollapse(nnodes0);
+  // // unsigned n1, n2, iface;
+  // // for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
+  // // for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
+  // //   typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
+  // //   POLY_ASSERT(itr != edgeToID.right.end());
+  // //   edge = itr->second;
+  // //   iface = edge.first;
+  // //   // // Blago!
+  // //   // cerr << "Edge " << iedge << ": " 
+  // //   //      << "(" << edge.first << "," << edge.second << ")\t"  
+  // //   //      << "Length = " << edgeLength[iedge] << "\t"
+  // //   //      << "maxLength = " << maxCellEdgeLength[iedge] << endl;
+  // //   // // Blago!
+  // //   n1 = mMesh.faces[iface][edge.second];
+  // //   n2 = mMesh.faces[iface][(edge.second+1) % mMesh.faces[iface].size()];
+  // //   POLY_ASSERT(n1 != n2);
+  // //   POLY_ASSERT(n1 < nnodes0 and n2 < nnodes0);
+  // //   if (edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
+  // //       mNodeMask[n1] == 1 and mNodeMask[n2] == 1) {
+  // //     edgesClean = false;
+  // //     edgeMask[iedge] = 0;
+  // //     mNodeMask[n1] = 2;
+  // //     mNodeMask[n2] = 0;
+  // //     nodeCollapse[n2] = n1;
+  // //   }
+  // // }
+  // // replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
+  
   // // Blago!
   // cerr << "Are the edges clean? " << (edgesClean ? "yes" : "no") << endl;
   // if (!edgesClean) {
@@ -229,16 +458,15 @@ flagEdgesForCleaning(const RealType edgeTol,
   
   // Check if there are any faces that need to be removed (for 3D meshes).
   mFaceMask = std::vector<unsigned>(nfaces0, 1);
-  faceMap.resize(nfaces0);
-  unsigned faceCount = 0;
   if (!edgesClean) {
     unsigned numActiveEdges;
     for (unsigned iface = 0; iface != nfaces0; ++iface) {
-      faceMap[iface] = faceCount;
       numActiveEdges = 0;
       const unsigned maxNodeIndex = (mMesh.faces[iface].size() == 2) ? 1 : mMesh.faces[iface].size();
       for (unsigned inode = 0; inode != maxNodeIndex; ++inode) {
-	edge = make_pair(iface, inode);
+        inode0 = mMesh.faces[iface][inode];
+        inode1 = mMesh.faces[iface][(inode+1) % mMesh.faces[iface].size()];
+        const EdgeType edge = internal::hashEdge(inode0, inode1);
 	typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
 	POLY_ASSERT(itr != edgeToID.left.end());
 	numActiveEdges += edgeMask[itr->second];
@@ -251,8 +479,27 @@ flagEdgesForCleaning(const RealType edgeTol,
       // // Blago!
      
       if( numActiveEdges < minEdgesPerFace) mFaceMask[iface] = 0;
-      faceCount += mFaceMask[iface];
     }
+  }
+  
+  // Build up the node map from original indices to new indices
+  unsigned nodeCount = 0;
+  nodeMap.resize(nnodes0);
+  for (unsigned i = 0; i != nnodes0; ++i) {
+    nodeMap[i] = nodeCount;
+    nodeCount += mNodeMask[i];
+  }
+  for (unsigned i = 0; i != nnodes0; ++i) {
+    nodeMap[i] = nodeMap[nodeCollapse[i]];
+  }
+  POLY_ASSERT(nodeCount == std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0));
+
+  // Build up the face map from original indices to new indices
+  faceMap.resize(nfaces0);
+  unsigned faceCount = 0;
+  for (unsigned iface = 0; iface != nfaces0; ++iface) {
+    faceMap[iface] = faceCount;
+    faceCount += mFaceMask[iface];
   }
   POLY_ASSERT(faceCount <= nfaces0);
 

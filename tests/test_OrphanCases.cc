@@ -191,12 +191,30 @@ void test(Tessellator<2,double>& tessellator) {
     const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
     const double tol      = 1.0e-7;
     POLY_CHECK2(fracerr < tol, "Relative error in the tessellation "
-		<< "area exceeds tolerance:" << endl
-		<< "      Area = " << tessArea << endl
-		<< "     Error = " << trueArea - tessArea << endl
-		<< "Frac Error = " << fracerr);
+        	<< "area exceeds tolerance:" << endl
+        	<< "      Area = " << tessArea << endl
+        	<< "     Error = " << trueArea - tessArea << endl
+        	<< "Frac Error = " << fracerr);
     ++i;
   }
+
+  // Test 8: Lots of random points
+  {
+    cout << "\nTest 8: Lots of random points" << endl;
+    const unsigned N = 100;
+    for (unsigned iter = 0; iter != N; ++iter) {
+      srand(1049520+iter);
+      Generators<2,double> generators(boundary);
+      generators.randomPoints(50);
+      Tessellation<2,double> mesh;
+      tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+      outputMesh(mesh, testName, generators.mPoints, i+iter);
+      cout << iter << endl;
+      printArea(boundary,mesh);
+    }
+    ++i;
+  }
+
 }
 
 // -----------------------------------------------------------------------

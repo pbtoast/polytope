@@ -57,9 +57,9 @@ void outputMesh(Tessellation<2,RealType>& mesh,
     }
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"   ] = &index[0];
-  cellFields["cell_center_x"] = &genx[0];
-  cellFields["cell_center_y"] = &geny[0];
+  cellFields["cell_index"] = &index[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
   std::ostringstream os;
   os << prefix;
   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 

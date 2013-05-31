@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
     // Blago!
 #if HAVE_SILO
     {
-       //cout << scientific << setprecision(numeric_limits<double>::digits) << mesh << endl;
+      if (nx % 5 == 0) {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
       for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];
       for (unsigned i = 0; i != nfaces; ++i) rownFaces[i] = ownFaces[i];
@@ -239,6 +239,7 @@ int main(int argc, char** argv) {
       ostringstream os;
       os << "test_DistributedTriangle_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
       polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+      }
     }
 #endif
     // Blago!

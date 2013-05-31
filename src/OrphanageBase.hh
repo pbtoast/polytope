@@ -19,6 +19,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include "QuantizedCoordinates.hh"
 
 
 namespace polytope {
@@ -34,8 +35,8 @@ public:
 
 
   // Constructor
-  OrphanageBase(const Tessellator<Dimension, RealType>* tessellator):
-    mTessellator(tessellator) {
+  OrphanageBase(const Tessellator<Dimension, RealType>* tessellatorPtr):
+    mTessellatorPtr(tessellatorPtr) {
   };
 
   // Destructor
@@ -52,22 +53,21 @@ public:
 protected:
 
   // Call the underlying tessellator
+  typedef int64_t CoordHash;
   void callPrivateTessellate(const std::vector<RealType>& points,
-                             const std::vector<RealType>& PLCpoints,
+                             const std::vector<CoordHash>& IntPLCpoints,
                              const PLC<Dimension, RealType>& geometry,
-                             const RealType* low,
-                             const RealType* high,
-                             const RealType dx,
-                             Tessellation<Dimension, RealType>& mesh) const
+                             const QuantizedCoordinates<Dimension, RealType>& coords,
+                             std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const
   {
-    mTessellator->tessellate(points, PLCpoints, geometry, low, high, dx, mesh);
+    mTessellatorPtr->tessellate(points, IntPLCpoints, geometry, coords, IntCells);
   }
 
 private:
   //-------------------- Private interface ----------------------//
 
   // Hold a pointer to a tessellator
-  const Tessellator<Dimension, RealType>* mTessellator;
+  const Tessellator<Dimension, RealType>* mTessellatorPtr;
 };
 
 } // end polytope namespace

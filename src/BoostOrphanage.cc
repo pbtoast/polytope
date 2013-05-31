@@ -35,7 +35,52 @@ createBGUnion(boost::geometry::model::ring<Point2<int64_t>,false> ring,
   multiPolygon=temp;
 }
 
+//------------------------------------------------------------------------
+// Union may produce cell rings containing faces broken into multiple
+// pieces by redundant hanging nodes. This manifests as three (or more)
+// collinear nodes. We clip them as a final connection step
+//------------------------------------------------------------------------
+void
+cleanRingEdges(boost::geometry::model::ring<Point2<int64_t>,false>& ring) {
+  // Pre-conditions
+  POLY_ASSERT(ring.size() > 2);
+  POLY_ASSERT(ring.front() == ring.back());
+  //POLY_ASSERT(!boost::geometry::intersects(ring));
+
+  // Initialize the temporary ring
+  typedef boost::geometry::model::ring<Point2<int64_t>,false> BGring;
+  BGring tmpRing;
+  
+  // Check collinearity on the middle points
+  bool collinear;
+  for (BGring::const_iterator itr = ring.begin()+1;
+       itr != ring.end()-1; ++itr) {
+    collinear = geometry::collinear<2,CoordHash>(&(*(itr-1)).x,
+                                                 &(*(itr  )).x,
+                                                 &(*(itr+1)).x,
+                                                 1);
+    if(!collinear) boost::geometry::append(tmpRing,*itr);
+  }
+  
+  // Check the beginning/end point
+  collinear = geometry::collinear<2,CoordHash>(&(*(ring.end()-2  )).x,
+                                               &(*(ring.begin()  )).x,
+                                               &(*(ring.begin()+1)).x,
+                                               1);
+  if(!collinear) boost::geometry::append(tmpRing,*(ring.begin()));
+
+  // Close the ring
+  boost::geometry::correct(tmpRing);
+
+  // Post-conditions
+  POLY_ASSERT(tmpRing.size() > 2);
+  POLY_ASSERT(tmpRing.front() == tmpRing.back());
+  POLY_ASSERT(!boost::geometry::intersects(tmpRing));
+  ring = tmpRing;
+}
+
 } // end anonymous namespace
+
 
 
 
@@ -60,9 +105,7 @@ template<typename RealType>
 void
 BoostOrphanage<RealType>::
 adoptOrphans(const vector<RealType>& points,
-	     const RealType* low,
-	     const RealType* high,
-	     const RealType dx,
+	     const QuantizedCoordinates<2, RealType>& coords,
 	     vector<BGring>& cellRings,
 	     vector<BGring>& orphans) const {
   // Pre-conditions
@@ -95,6 +138,8 @@ adoptOrphans(const vector<RealType>& points,
     BGring orphan = orphanUnion[i].outer();
     POLY_ASSERT(!orphan.empty());
     POLY_ASSERT(orphan.front() == orphan.back());
+    POLY_ASSERT2(!boost::geometry::intersects(orphan),
+                 "Unioning orphans has produced self-intersections");
     
     // Determine neighbors
     std::set<int> orphanNeighbors;
@@ -133,32 +178,42 @@ adoptOrphans(const vector<RealType>& points,
         for (i = 0; i != neighborCells.size(); ++i){
           std::cerr << "Polygon " << i << " in the union contains" << std::endl;
           for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
-               itr != neighborCells[i].outer().end(); ++itr){
-            std::cerr << (*itr)
-                      << "(" << (*itr).realx(low[0], dx) 
-                      << "," << (*itr).realy(low[1], dx) << ")" << std::endl;
-          }
+               itr != neighborCells[i].outer().end(); 
+               ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
           POLY_ASSERT(false);
         }
       }
       BGring boundaryRing = neighborCells[0].outer();
-      POLY_ASSERT(boundaryRing.front() == boundaryRing.back());
-      POLY_ASSERT(boundaryRing.size() > 2);
+      BGpolygon boundaryPolygon = neighborCells[0];
+      {
+        BGring simplifiedRing;
+        boost::geometry::simplify(boundaryRing, simplifiedRing, 3);
+        boundaryRing = simplifiedRing;
+        cleanRingEdges(boundaryRing);
+      }
       
-      // TODO: Make sure union-ing rings that share a common face results in 
-      //       a closed boundary, has no repeated nodes, etc. etc.
-      
+      // // Blago!
+      // std::cerr << "\nBoundary ring" << std::endl;
+      // for (typename BGring::const_iterator itr = boundaryRing.begin();
+      //      itr != boundaryRing.end();
+      //      ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+      // std::cerr << std::endl;
+      // // Blago!
+
+
       // TODO: Check whether converting the PLC points back to doubles to compute
       //       the sub-tessellation gives a valid full tessellation after the
       //       cell adoption loop concludes
-      
+      // SPOILER ALERT! It doesn't!
+
+
       // Extract the vertices of the bounding polygon
-      std::vector<RealType> subPLCpoints;
+      std::vector<CoordHash> subIntPLCpoints;
       int nSides = 0;
       for (typename BGring::const_iterator itr = boundaryRing.begin();
            itr != boundaryRing.end() - 1; ++itr, ++nSides) {
-        subPLCpoints.push_back( (*itr).realx(low[0], dx) );
-        subPLCpoints.push_back( (*itr).realy(low[1], dx) );
+         subIntPLCpoints.push_back((*itr).x);
+         subIntPLCpoints.push_back((*itr).y);
       }
       
       // Form the bounding PLC
@@ -170,32 +225,66 @@ adoptOrphans(const vector<RealType>& points,
       }
       
       // Tessellate this sub-region
-      Tessellation<2,RealType> submesh;
-      this->callPrivateTessellate(subpoints, subPLCpoints, subPLC, 
-                                  low, high, dx, submesh);
+      // Tessellation<2,RealType> submesh;
+      // this->callPrivateTessellate(subpoints, subIntPLCpoints, subPLC, coords, submesh);
+      vector<vector<vector<CoordHash> > > IntCells;
+      this->callPrivateTessellate(subpoints, subIntPLCpoints, subPLC, coords, IntCells);
       
-      // Convert the tessellation cells to integer cell rings
-      convertTessellationToRings(submesh, &low[0], dx, subCellRings);
-      
+      subCellRings.resize(IntCells.size());
+      for (unsigned ii = 0; ii != IntCells.size(); ++ii) {
+        vector<IntPoint> cellNodes;
+        for (unsigned jj = 0; jj != IntCells[ii].size(); ++jj) {
+          POLY_ASSERT(IntCells[ii][jj].size() == 2);
+          cellNodes.push_back(IntPoint(IntCells[ii][jj][0], IntCells[ii][jj][1]));
+        }
+        boost::geometry::assign(subCellRings[ii], BGring(cellNodes.begin(),
+                                                         cellNodes.end()));
+        POLY_ASSERT(IntCells[ii].size()      == subCellRings[ii].size());
+        POLY_ASSERT(subCellRings[ii].front() == subCellRings[ii].back());
+      }
+
+
       // // Blago!
+      // {
+      //   vector<double> px(submesh.cells.size());
+      //   vector<double> py(submesh.cells.size());
+      //   for (unsigned i = 0; i != submesh.cells.size(); ++i) {
+      //     px[i] = subpoints[2*i];
+      //     py[i] = subpoints[2*i+1];
+      //   }
+      //   map<string, double*> fields, cellFields;
+      //   cellFields["gen_x"] = &px[0];
+      //   cellFields["gen_y"] = &py[0];
+      //   SiloWriter<2, RealType>::write(submesh, fields, fields, 
+      //                                  fields, cellFields, "test_BoostOrphanage");
+      // }
       // std::cerr << std::endl << "Subpoints:" << std::endl;
-      // for (int ii = 0; ii != subpoints.size(); ++ii){
+      // for (int ii = 0; ii != subpoints.size()/2; ++ii){
       //   std::cerr << "  (" << subpoints[2*ii] << "," 
       //             << subpoints[2*ii+1] << ")" << std::endl;
       // }
+      // std::cerr << std::endl << "SubPLC:" << std::endl;
+      // std::cerr << subPLC << std::endl;
       // std::cerr << std::endl << "SubPLCpoints:" << std::endl;
-      // for (int ii = 0; ii != subPLCpoints.size(); ++ii){
-      //   std::cerr << "  (" << subPLCpoints[2*ii] << "," 
-      //             << subPLCpoints[2*ii+1] << ")" << std::endl;
+      // for (int ii = 0; ii != subIntPLCpoints.size()/2; ++ii){
+      //    std::cerr << coords.dequantize(IntPoint(subIntPLCpoints[2*ii],subIntPLCpoints[2*ii+1])) << std::endl;
       // }
+      // // Blago!
+
+
+      // Convert the tessellation cells to integer cell rings
+      // convertTessellationToRings(submesh, &coords.low[0], coords.delta, subCellRings);
+
+
+
+      // // Blago!
       // std::cerr << std::endl << "SubCellRings:" << std::endl;
       // for (int ii = 0; ii != subCellRings.size(); ++ii) {
       //   std::cerr << "  Cell " << ii << std::endl;
-      //   for (typename BGring::const_iterator itr = subCellRings[i].begin();
-      //        itr != subCellRings[i].end(); ++itr){
-      //     std::cerr << (*itr).realx(low[0], dx) << " " 
-      //               << (*itr).realy(low[1], dx) << " ";
-      //   }
+      //   for (typename BGring::const_iterator itr = subCellRings[ii].begin();
+      //        itr != subCellRings[ii].end(); 
+      //        ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+      //   std::cerr << std::endl;
       // }
       // // Blago!
       
@@ -225,10 +314,12 @@ adoptOrphans(const vector<RealType>& points,
         // that are within one quantized mesh spacing. This essentially removes
         // repeated cell nodes having length-zero cell faces.
         BGring simplifiedRing;
-        boost::geometry::simplify(thisRing, simplifiedRing, 2);
+        boost::geometry::simplify(thisRing, simplifiedRing, 10);
         thisRing = simplifiedRing;
         POLY_ASSERT(thisRing.size() > 2);
         POLY_ASSERT(thisRing.front() == thisRing.back());
+        POLY_ASSERT2(!boost::geometry::intersects(thisRing),
+                     "Subcell " << subIndex << " has self-intersections");
       }	
       
       // If the orphan has only a single neighbor, just compute its union with
@@ -237,6 +328,13 @@ adoptOrphans(const vector<RealType>& points,
         thisRing = orphan;
       }
       
+      // // Blago!
+      // std::cerr << "\nCell " << thisIndex << " before union" << std::endl;
+      // for (typename BGring::const_iterator itr = thisRing.begin();
+      //      itr != thisRing.end(); 
+      //      ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+      // // Blago!
+
       // Union this new cell ring with the original cell ring from the full tessellation
       std::vector<BGring> unionRing;
       boost::geometry::union_(thisRing, cellRings[thisIndex], unionRing);
@@ -246,11 +344,8 @@ adoptOrphans(const vector<RealType>& points,
         for( i=0; i<unionRing.size(); ++i){
           std::cerr << std::endl << "Ring " << i << ":" << std::endl;
           for (typename BGring::const_iterator itr = unionRing[i].begin();
-               itr != unionRing[i].end(); ++itr){
-            std::cerr << (*itr).realx(low[0], dx) << " " 
-                      << (*itr).realy(low[1], dx) << " "
-                      << (*itr) << std::endl;
-          }
+               itr != unionRing[i].end(); 
+               ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
         }
       }
       POLY_ASSERT(unionRing.size() == 1);
@@ -266,49 +361,20 @@ adoptOrphans(const vector<RealType>& points,
       // // Blago!
       // std::cerr << "\nCell " << thisIndex << " before final cleaning" << std::endl;
       // for (typename BGring::const_iterator itr = thisRing.begin();
-      //      itr != thisRing.end(); ++itr){
-      //    std::cerr << (*itr).realx(low[0], dx) << " " 
-      //              << (*itr).realy(low[1], dx) << " "
-      //              << (*itr) << std::endl;
-      // }
+      //      itr != thisRing.end(); 
+      //      ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
       // // Blago!
 
       // Union may produce cell rings containing faces broken into multiple
       // pieces by redundant hanging nodes. This manifests as three (or more)
       // collinear nodes. We clip them as a final connection step
-      BGring finalRing;
-      bool collinear;
-      for (typename BGring::const_iterator itr = thisRing.begin()+1;
-           itr != thisRing.end()-1; ++itr) {
-        collinear = geometry::collinear<2,CoordHash>(&(*(itr-1)).x,
-                                                     &(*(itr  )).x,
-                                                     &(*(itr+1)).x,
-                                                     1);
-        if(!collinear) boost::geometry::append(finalRing,*itr);
-      }
-      
-      // Check the beginning/end point
-      collinear = geometry::collinear<2,CoordHash>(&(*(thisRing.end()-2  )).x,
-                                                   &(*(thisRing.begin()  )).x,
-                                                   &(*(thisRing.begin()+1)).x,
-                                                   1);
-      if(!collinear) boost::geometry::append(finalRing,*(thisRing.begin()));
-
-      // Close the ring
-      boost::geometry::correct(finalRing);
-      POLY_ASSERT(finalRing.size() > 2);
-      POLY_ASSERT(finalRing.front() == finalRing.back());
-      thisRing = finalRing;
-
+      cleanRingEdges(thisRing);
 
       // // Blago!
       // std::cerr << "\nCell " << thisIndex << " after final cleaning" << std::endl;
       // for (typename BGring::const_iterator itr = thisRing.begin();
-      //      itr != thisRing.end(); ++itr){
-      //    std::cerr << (*itr).realx(low[0], dx) << " " 
-      //              << (*itr).realy(low[1], dx) << " "
-      //              << (*itr) << std::endl;
-      // }
+      //      itr != thisRing.end();
+      //      ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
       // // Blago!
       
       // Replace the corresponding cell ring
@@ -317,6 +383,18 @@ adoptOrphans(const vector<RealType>& points,
   }
 }
 //------------------------------------------------------------------------------
+
+
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// void
+// BoostOrphanage<RealType>::
+// callPrivateTessellate(const std::vector<RealType>& points,
+//                       const BGpolygon boundary,
+//                       const QuantizedCoordinates<2, RealType>& coords,
+//                       std::vector<BGring>& cellRings) const {
+//   POLY_ASSERT2(false, "Doesn't work!");
+// }
 
 
 //------------------------------------------------------------------------------

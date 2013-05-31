@@ -171,7 +171,7 @@ void runTest(Tessellator<2,double>& tessellator,
   case 3:
     dt = sqrt(2)*dx;
     Tmax = 4.0;
-    scaleFactor = 2.0;
+    scaleFactor = 1.0;
     if (rank == 0) cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
     break;
   case 4:
@@ -261,7 +261,7 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    // meshEditor.cleanEdges(0.001);
+    //meshEditor.cleanEdges(0.01);
     outputMesh(mesh, testName, points, step, time);
 
     // Check the correctness of the parallel data structures
@@ -285,8 +285,6 @@ int main(int argc, char** argv)
 #if HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
-    // SerialDistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
-    //                                                     true, true);
     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
                                                   true, true);
     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
@@ -294,14 +292,14 @@ int main(int argc, char** argv)
 #endif   
 
 
-// #if HAVE_BOOST_VORONOI
-//   {
-//     cout << "\nBoost Tessellator:\n" << endl;
-//     DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
-//                                                   true, true);
-//     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
-//   }
-// #endif
+#if HAVE_BOOST_VORONOI
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
+                                                  true, true);
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+  }
+#endif
    
 
   cout << "PASS" << endl;

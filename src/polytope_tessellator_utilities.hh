@@ -12,6 +12,7 @@
 #include <boost/geometry/algorithms/unique.hpp>
 
 #include "Point.hh"
+#include "QuantizedCoordinates.hh"
 #if HAVE_BOOST
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int64_t>, int64_t, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
@@ -35,7 +36,7 @@ namespace polytope {
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
-constructUnboundedMeshTopology(std::map<int, std::vector<unsigned> >& cellNodes,
+constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
                                const std::vector<RealType> points,
                                Tessellation<2,RealType>& mesh) {  
   // Pre-conditions
@@ -121,9 +122,8 @@ constructUnboundedMeshTopology(std::map<int, std::vector<unsigned> >& cellNodes,
 // INPUT: 
 //    cellRings: Boost.Geometry ring of quantized node positions for each cell
 //    PLCpoints: Input boundary points
-//    geometry:  PLC boundary
-//    low     :  (x,y) coordinate defining the origin of the quantized grid
-//    dx      :  Quantized grid spacing
+//    geometry : PLC boundary
+//    coords   : Quantized coordinate system and bounding box
 // PRE-CONDITIONS: 
 //    The mesh is empty
 //------------------------------------------------------------------------------
@@ -132,14 +132,13 @@ void
 constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
                                <polytope::Point2<int64_t>, false> >& cellRings,
                              const std::vector<RealType>& points,
-                             const std::vector<RealType>& PLCpoints,
-                             const PLC<2,RealType>& geometry,
-                             const RealType* low,
-                             const RealType dx,
+                             //const std::vector<RealType>& PLCpoints,
+                             //const PLC<2,RealType>& geometry,
+                             const QuantizedCoordinates<2, RealType>& coords,
                              Tessellation<2,RealType>& mesh) {
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(low != 0 and dx != 0);
+  POLY_ASSERT(!coords.empty());
   
   // Typedefs
   typedef int64_t CoordHash;
@@ -149,7 +148,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   typedef boost::geometry::model::ring<IntPoint, false> BGring;
 
   const unsigned numGenerators = cellRings.size();
-  const unsigned numPLCpoints  = PLCpoints.size();
+  // const unsigned numPLCpoints  = PLCpoints.size();
 
   // Now build the unique mesh nodes and cell info.
   std::map<IntPoint, int> point2node;
@@ -159,7 +158,6 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   mesh.cells = std::vector<std::vector<int> >(numGenerators);
   for (i = 0; i != numGenerators; ++i) { 
     POLY_ASSERT(cellRings[i].size() > 2);
-    //boost::geometry::unique(cellRings[i]);
     for (typename BGring::const_iterator itr = cellRings[i].begin();
          itr != cellRings[i].end()-1; ++itr) {
       const IntPoint& pX1 = *itr;
@@ -177,34 +175,35 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
   
   // Fill in the mesh nodes.
-  RealType node[2];
+  RealPoint node;
+  // RealType node[2];
   mesh.nodes = std::vector<RealType>(2*point2node.size());
   for (typename std::map<IntPoint, int>::const_iterator itr = point2node.begin();
        itr != point2node.end(); ++itr) {
     const IntPoint& p = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
-    node[0] = p.realx(low[0],dx);
-    node[1] = p.realy(low[1],dx);
+    node = coords.dequantize(p);
     
-    // Check if nodes are inside boundary (either bounding box or PLC, if defined)
-    bool inside = within(node, numPLCpoints, &PLCpoints[0], geometry);
-    inside = true;
-    if(!inside){
-      RealType result[2];
-      RealType dist = nearestPoint( node, numPLCpoints, &PLCpoints[0], geometry, result );
-      // Check the node has not moved more than 2.5 quantized mesh spacings. NOTE: this is
-      // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*dx, 
-      // but nodes will fail this strict of a test.
-      // POLY_ASSERT2( dist < 5.0*dx,
-      //               dist << " " << 2.5*dx << " : "
-      //               << "(" << node[0]   << " " << node[1]   << ") "
-      //               << "(" << result[0] << " " << result[1] << ")\n" << geometry );
-      node[0] = result[0];
-      node[1] = result[1];
-    }
-    mesh.nodes[2*i]   = node[0];
-    mesh.nodes[2*i+1] = node[1];
+    // // Check if nodes are inside boundary (either bounding box or PLC, if defined)
+    // bool inside = within(&node.x, numPLCpoints, &PLCpoints[0], geometry);
+    // inside = true;
+    // if(!inside){
+    //   RealType result[2];
+    //   RealType dist = nearestPoint(&node.x, numPLCpoints, &PLCpoints[0], geometry, result);
+    //   // Check the node has not moved more than 2.5 quantized mesh spacings. NOTE: this is
+    //   // not a sharp estimate. Theoreticallly, the distance ought to be at most sqrt(2)*dx, 
+    //   // but nodes will fail this strict of a test.
+    //   // POLY_ASSERT2( dist < 5.0*dx,
+    //   //               dist << " " << 2.5*dx << " : "
+    //   //               << "(" << node[0]   << " " << node[1]   << ") "
+    //   //               << "(" << result[0] << " " << result[1] << ")\n" << geometry );
+    //   node.x = result[0];
+    //   node.y = result[1];
+    // }
+
+    mesh.nodes[2*i]   = node.x;
+    mesh.nodes[2*i+1] = node.y;
   }
   
   // Fill in the mesh faces.
@@ -334,6 +333,7 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
     boost::geometry::assign(cellRings[i], BGring(cellNodes.begin(), cellNodes.end()));
     boost::geometry::correct(cellRings[i]);
     POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
+    POLY_ASSERT(!boost::geometry::intersects(cellRings[i]));
   }
   POLY_ASSERT(cellRings.size() == mesh.cells.size());
 }
@@ -360,6 +360,7 @@ unsigned intersectBoundingBox(const RealType* point1,
 			      const unsigned numVertices,
 			      const RealType* vertices,
 			      const std::vector<std::vector<int> >& facets,
+                              const RealType tol,
 			      std::vector<int>& facetIntersections,
 			      std::vector<RealType>& result) {
   unsigned i, j, numIntersections=0;
@@ -375,25 +376,25 @@ unsigned intersectBoundingBox(const RealType* point1,
     intersects = geometry::segmentIntersection2D(point1, point2,
 						 &vertices[2*i], &vertices[2*j],
 						 intersectionPoint);
-    // Make sure we're not adding the same point twice (i.e. with a corner)
     addPoint = false;
     if (intersects) {
-      if (numIntersections == 0) addPoint = true;
-      else {
-        if (intersectionPoint[0] != result.back() - 1 and
-            intersectionPoint[1] != result.back() ) addPoint = true;
-        else addPoint = false;
-      }
-    }
-
-    if (addPoint) {
       RealType p[2];
       p[(ifacet+1)%2] = vertices[2*ifacet + (ifacet+1)%2];
       p[ ifacet   %2] = intersectionPoint[ifacet%2];
-      ++numIntersections;
-      result.push_back(p[0]);
-      result.push_back(p[1]);
-      facetIntersections.push_back(ifacet);
+
+      // Make sure we're not adding the same point twice (i.e. with a corner)
+      if (numIntersections == 0) addPoint = true;
+      else {
+         if (std::abs(p[0] - (result.back()-1)) > tol and 
+             std::abs(p[1] - (result.back()  )) > tol ) addPoint = true;
+      }
+      
+      if (addPoint) {
+        ++numIntersections;
+        result.push_back(p[0]);
+        result.push_back(p[1]);
+        facetIntersections.push_back(ifacet);
+      }
     }
   }
   POLY_ASSERT(numIntersections == result.size()/2);
@@ -401,8 +402,143 @@ unsigned intersectBoundingBox(const RealType* point1,
 }
 
 
+//------------------------------------------------------------------------------
+// computeCellNodesCollinear
+//
+// Compute the quantized node positions for each cell from a collection of
+// collinear generators
+// INPUT: 
+//    points     : Vector of collinear generators
+//    coords     : Quantized coordinate system object
+// OUTPUT:
+//    nodeMap    : Map from quantized node position to node index
+//    cellNodes  : Collection of sorted node indices around each cell
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+computeCellNodesCollinear(const std::vector<RealType>& points,
+                          const QuantizedCoordinates<2, RealType>& coords,
+			  std::vector<Point2<RealType> >& nodeList,
+			  std::vector<std::vector<unsigned> >& cellNodes) {  
+  const unsigned numGenerators = points.size()/2;
+  int i;
 
+  // typedefs
+  typedef Point2<RealType> RealPoint;
+
+  // Sort the generators but keep their original indices
+  std::vector<std::pair<RealPoint,int> > pointIndexPairs;
+  for (i = 0; i != numGenerators; ++i){
+    pointIndexPairs.push_back(make_pair(RealPoint(points[2*i], points[2*i+1]), i));
+  }
+  sort( pointIndexPairs.begin(), pointIndexPairs.end(),
+	internal::pairCompareFirst<RealPoint,int> );
+
+  // Number of nodes
+  const int nnodes = 2*numGenerators;
+
+  unsigned inode, icell1, icell2;
+  RealPoint p1, p2, r1, r2, node, midpt;
+  nodeList.resize(nnodes);
+  cellNodes.resize(numGenerators);
+  
+  // ---------------- Nodes and faces for cell 0 ----------------- //
+
+  inode  = 0;
+  icell1 = pointIndexPairs[0].second;
+  icell2 = pointIndexPairs[1].second;
+
+  // Node position
+  p1   = pointIndexPairs[0].first;
+  p2   = pointIndexPairs[1].first;
+  midpt = RealPoint( 0.5*(p1.x + p2.x),
+		     0.5*(p1.y + p2.y) );
+  r1.x = p2.x - p1.x;
+  r1.y = p2.y - p1.y;
+  geometry::unitVector<2,RealType>(&r1.x);
+  r2.x =  r1.y;
+  r2.y = -r1.x;
+  
+  // Extra inf node used to bound the first cell
+  r1 *= -1.0;
+  node = coords.projectPoint(&p1.x, &r1.x);
+  nodeList[inode] = node;
+
+  // Node 1: endpt of first interior face
+  node = coords.projectPoint(&midpt.x, &r2.x);
+  nodeList[inode+1] = node;
+  
+  // Node 2: other endpt of first interior face
+  r2 *= -1.0;
+  node = coords.projectPoint(&midpt.x, &r2.x);
+  nodeList[inode+2] = node;
+
+  // Nodes around cell 0
+  cellNodes[icell1].push_back(inode  );
+  cellNodes[icell1].push_back(inode+1);
+  cellNodes[icell1].push_back(inode+2);
+
+  // Half of the nodes around cell 1
+  cellNodes[icell2].push_back(inode+2);
+  cellNodes[icell2].push_back(inode+1);
+    
+  // ------------------ Interior cells ----------------- //
+
+  for (i = 1; i != numGenerators-1; ++i){
+    inode  = 2*i+1;
+    icell1 = pointIndexPairs[i  ].second;
+    icell2 = pointIndexPairs[i+1].second;
+    
+    p1    = pointIndexPairs[i  ].first;
+    p2    = pointIndexPairs[i+1].first;
+    midpt = RealPoint( 0.5*(p1.x + p2.x),
+                       0.5*(p1.y + p2.y) );
+    r1.x = p2.x - p1.x;
+    r1.y = p2.y - p1.y;
+    geometry::unitVector<2,RealType>(&r1.x);
+    r2.x =  r1.y;
+    r2.y = -r1.x;
+    
+    // Node 0: endpt of interior face
+    node = coords.projectPoint(&midpt.x, &r2.x);
+    nodeList[inode] = node;
+    
+    // Node 1: other endpt of interior face
+    r2 *= -1.0;
+    node = coords.projectPoint(&midpt.x, &r2.x);
+    nodeList[inode+1] = node;
+
+    // Other half of the nodes around cell i
+    cellNodes[icell1].push_back(inode  );
+    cellNodes[icell1].push_back(inode+1);
+
+    // Half of the nodes around cell i+1
+    cellNodes[icell2].push_back(inode+1);
+    cellNodes[icell2].push_back(inode  );
+  }
  
+  // ------------- Nodes and faces for final cell ----------------- //
+  
+  inode  = 2*numGenerators-1;
+  icell1 = pointIndexPairs[numGenerators-1].second;
+  
+  // Node position
+  p1   = pointIndexPairs[numGenerators-1].first;
+  p2   = pointIndexPairs[numGenerators-2].first;
+  r1.x = p1.x - p2.x;
+  r1.y = p1.y - p2.y;
+  geometry::unitVector<2,RealType>(&r1.x);
+  
+  node = coords.projectPoint(&p2.x, &r1.x);
+  nodeList[inode] = node;
+    
+  // Last node for final cell
+  cellNodes[icell1].push_back(inode);
+
+  // Post-conditions
+  POLY_ASSERT(nodeList.size()  == nnodes       );
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+}
 
 
 } //end namespace polytope

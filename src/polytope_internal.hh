@@ -47,6 +47,17 @@ pairCompareFirst( std::pair<T1,T2> x, std::pair<T1,T2> y ) {
 }
 
 //------------------------------------------------------------------------------
+// Edge comparator
+//------------------------------------------------------------------------------
+template <typename T1, typename T2>
+bool
+pairCompare(const std::pair<T1,T2> pair1, const std::pair<T1,T2> pair2) {
+   return (pair1.first  <  pair2.first      ? true :
+           pair1.first  == pair2.first and
+           pair1.second <  pair2.second     ? true : false);
+}
+
+//------------------------------------------------------------------------------
 // Update the map of thingies to unique indices.
 //------------------------------------------------------------------------------
 template<typename Key,

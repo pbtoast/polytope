@@ -31,7 +31,10 @@ public:
 
   // Constructor
   Clipper2d(PolygonType& boundary):
-     mBoundary(boundary) {}
+     mBoundary(boundary) {
+     // Pre-condition
+     POLY_ASSERT(!boost::geometry::intersects(boundary));
+  }
 
   // Destructor
   ~Clipper2d() {}
@@ -42,6 +45,7 @@ public:
   void clipCell(const PointType& cellGenerator,
                 RingType& cellRing,
                 std::vector<RingType>& orphans) {
+
     bool inside, onBoundary;
     unsigned j, k;
     std::vector<RingType> cellIntersections;
@@ -76,6 +80,11 @@ public:
       POLY_ASSERT(k < cellIntersections.size());
       cellRing = cellIntersections[k];
     }
+
+    // Post-conditions
+    POLY_ASSERT(cellRing.size() > 2);
+    POLY_ASSERT(cellRing.front() == cellRing.back());
+    //POLY_ASSERT(!boost::geometry::intersects(cellRing));
   }
   
   // Store a reference to the boundary polygon

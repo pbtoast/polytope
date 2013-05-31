@@ -202,7 +202,9 @@ configure_file(
 )
 
 # Turn on testing support.
-enable_testing()
+#if (${TESTING} EQUAL 1)
+#  enable_testing()
+#endif()
 
 # Include the binary directory in the header file search path.
 include_directories("${PROJECT_BINARY_DIR}")
@@ -221,7 +223,11 @@ include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
 # Tests directory
-add_subdirectory(tests)
+if (${TESTING} EQUAL 1)
+  enable_testing()
+  add_subdirectory(tests)
+  include (CTest)
+endif()
   
 # Python bindings.
 if(HAVE_PYTHON)
@@ -275,5 +281,3 @@ set (CPACK_PACKAGE_VERSION_MAJOR "${POLYTOPE_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${POLYTOPE_VERSION_MINOR}")
 include(CPack)
 
-# enable dashboard scripting
-include (CTest)

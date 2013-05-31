@@ -8,6 +8,7 @@
 #include "OrphanageBase.hh"
 #include "PLC.hh"
 #include "ReducedPLC.hh"
+#include "QuantizedCoordinates.hh"
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 
@@ -288,14 +289,13 @@ public:
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);
 
-  // Private tessellate to set bounding box and degeneracy spacing
+  // Private bounded tessellate to set bounding box and degeneracy spacing
+  typedef int64_t CoordHash;
   virtual void tessellate(const std::vector<RealType>& points,
-                          const std::vector<RealType>& PLCpoints,
+                          const std::vector<CoordHash>& PLCpoints,
                           const PLC<Dimension, RealType>& geometry,
-                          const RealType* low,
-                          const RealType* high,
-                          const RealType dx,
-                          Tessellation<Dimension, RealType>& mesh) const
+                          const QuantizedCoordinates<Dimension, RealType>& coords,
+                          std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const
   {
     error("This Tessellator does not support this tessellate routine");
   }

@@ -905,10 +905,16 @@ segmentIntersection2D(const RealType* a,
    RealType p1 = t1[2]/r1_cross_r2[2];
    RealType p2 = t2[2]/r1_cross_r2[2];
    // The finite segments intersect
-   if( 0 <= p1 and p1 <= 1 and 0 <= p2 and p2 <= 1 ){
+   if( 0 <= p1 and p1 <= 1 and 0 <= p2 and p2 <= 1 ) {
+     if     (p1 == 0) {result[0] = a[0];  result[1] = a[1];}
+     else if(p1 == 1) {result[0] = b[0];  result[1] = b[1];}
+     else if(p2 == 0) {result[0] = c[0];  result[1] = c[1];}
+     else if(p2 == 1) {result[0] = d[0];  result[1] = d[1];}
+     else {
       result[0] = a[0] + p1*r1[0];
       result[1] = a[1] + p1*r1[1];
-      return true;
+     }
+     return true;
    }
    return false;
 }

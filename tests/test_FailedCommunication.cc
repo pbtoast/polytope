@@ -84,6 +84,8 @@ int main(int argc, char** argv) {
     
    polytope::DistributedTessellator<2, double> distTest(new polytope::TriangleTessellator<double>(),
                                                         true, true);
+   // polytope::DistributedTessellator<2, double> distTest(new polytope::BoostTessellator<double>(),
+   //                                                      true, true);
    distTest.tessellate(generators, xmin, xmax, mesh);
 
    // Do some sanity checks on the stuff in the shared info.

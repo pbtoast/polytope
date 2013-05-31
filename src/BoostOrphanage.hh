@@ -42,7 +42,8 @@ public:
 
   // Polytope typedefs
   typedef int64_t CoordHash;
-  typedef Point2<CoordHash> IntPoint;  
+  typedef Point2<CoordHash> IntPoint;
+  typedef Point2<RealType> RealPoint;
 
   // Boost typedefs
   typedef boost::geometry::model::polygon<IntPoint, false> BGpolygon;
@@ -55,11 +56,16 @@ public:
 
   // Re-tessellate the area in orphaned cells by modifying the existing cell rings
   void adoptOrphans(const std::vector<RealType>& points,
-                    const RealType* low,
-                    const RealType* high,
-                    const RealType dx,
+                    const QuantizedCoordinates<2, RealType>& coords,
                     std::vector<BGring>& cellRings,
                     std::vector<BGring>& orphans) const;
+
+// protected:
+//   void callPrivateTessellate(const std::vector<RealType>& points,
+//                              const std::vector<CoordHash>& IntPLCpoints,
+//                              const PLC<2, RealType>& geometry,
+//                              const QuantizedCoordinates<2, RealType>& coords,
+//                              Tessellation<2, RealType>& mesh) const;
 };
 
 } //end polytope namespace
