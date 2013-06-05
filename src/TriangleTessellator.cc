@@ -711,7 +711,7 @@ computeCellRings(const vector<RealType>& points,
   const unsigned numNodes = nodeMap.size();
   map<int, IntPoint> id2nodes;
   vector<int> innerCirc(numNodes);
-  for (map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
+  for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
        itr != nodeMap.end(); ++itr) {
     i = itr->second.first;
     POLY_ASSERT(i < nodeMap.size());
@@ -740,8 +740,8 @@ computeCellRings(const vector<RealType>& points,
     POLY_ASSERT(i1 < numNodes and i2 < numNodes);
     ip1 = id2nodes[i1];
     ip2 = id2nodes[i2];
-    rp1 = (innerCirc[i1] == 1) ? mCoords.dequantize(ip1) : mOuterCoords.dequantize(ip1);
-    rp2 = (innerCirc[i2] == 1) ? mCoords.dequantize(ip2) : mOuterCoords.dequantize(ip2);
+    rp1 = (innerCirc[i1] == 1) ? mCoords.dequantize(&ip1.x) : mOuterCoords.dequantize(&ip1.x);
+    rp2 = (innerCirc[i2] == 1) ? mCoords.dequantize(&ip2.x) : mOuterCoords.dequantize(&ip2.x);
     if (orient2d(&rp1.x, &rp2.x, (double*)&points[2*i]) < 0) {
       reverse(cellNodes[i].begin(), cellNodes[i].end());
     }
@@ -774,7 +774,7 @@ computeCellRings(const vector<RealType>& points,
 	// Blago!
         if(Blago){
 	cerr << "Case 1: " 
-	     << mCoords.dequantize(ip1) << "  and  " << mCoords.dequantize(ip2) << endl;
+	     << mCoords.dequantize(&ip1.x) << "  and  " << mCoords.dequantize(&ip2.x) << endl;
         }
 	// Blago!
 
@@ -786,8 +786,8 @@ computeCellRings(const vector<RealType>& points,
       //       and where in the node list we did so.
       else if(innerCirc[i1] == 1 and innerCirc[i2] == 0) {
         ++numIntersections;
-        rp1 = mCoords.dequantize(ip1);
-        rp2 = mOuterCoords.dequantize(ip2);
+        rp1 = mCoords.dequantize(&ip1.x);
+        rp2 = mOuterCoords.dequantize(&ip2.x);
 	vector<RealType> result;
 	vector<int> resultFacets;
 	nints = intersectBoundingBox(&rp1.x, &rp2.x, 4, &mCoords.points[0],
@@ -819,8 +819,8 @@ computeCellRings(const vector<RealType>& points,
       // NOTE: Keep track of which facet we passed through to enter the box
       else if(innerCirc[i1] == 0 and innerCirc[i2] == 1) {
         ++numIntersections;
-        rp1 = mOuterCoords.dequantize(ip1);
-        rp2 = mCoords.dequantize(ip2);
+        rp1 = mOuterCoords.dequantize(&ip1.x);
+        rp2 = mCoords.dequantize(&ip2.x);
 	vector<RealType> result;
 	vector<int> resultFacets;
 	nints = intersectBoundingBox(&rp1.x, &rp2.x, 4, &mCoords.points[0],
@@ -853,8 +853,8 @@ computeCellRings(const vector<RealType>& points,
       // Case 4: Both outside. Check intersections of the bounding box and the
       // line segment. Quantize and add all intersections
       else {
-        rp1 = mOuterCoords.dequantize(ip1);
-        rp2 = mOuterCoords.dequantize(ip2);
+        rp1 = mOuterCoords.dequantize(&ip1.x);
+        rp2 = mOuterCoords.dequantize(&ip2.x);
 	vector<RealType> result;
 	vector<int> resultFacets;
 	nints = intersectBoundingBox(&rp1.x, &rp2.x, 4, &mCoords.points[0],
@@ -943,7 +943,7 @@ computeCellRings(const vector<RealType>& points,
     cerr << "Pre-clipped ring:" << endl;
     for (typename BGring::iterator itr = cellRings[i].begin();
          itr != cellRings[i].end(); ++itr) {
-      cerr << mCoords.dequantize(*itr) << endl;
+      cerr << mCoords.dequantize(&(*itr).x) << endl;
     }
     }
     // Blago!
@@ -959,7 +959,7 @@ computeCellRings(const vector<RealType>& points,
     cerr << endl << "Final clipped cell ring " << i << endl;
     for (typename BGring::iterator itr = cellRings[i].begin();
          itr != cellRings[i].end(); ++itr) {
-      cerr << mCoords.dequantize(*itr) << endl;
+      cerr << mCoords.dequantize(&(*itr).x) << endl;
     }
     }
     // Blago!
@@ -1037,14 +1037,14 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   RealPoint node;
   const unsigned numNodes = nodeMap.size();
   mesh.nodes.resize(2*numNodes);
-  for (map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
+  for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
        itr != nodeMap.end(); ++itr) {
     i = itr->second.first;
     inside = itr->second.second;
     POLY_ASSERT(i >= 0 and i < numNodes);
     POLY_ASSERT(inside == 0 or inside == 1);
-    if (inside == 1)   node = mCoords.dequantize(itr->first);
-    else               node = mOuterCoords.dequantize(itr->first);
+    if (inside == 1)   node = mCoords.dequantize(&(itr->first).x);
+    else               node = mOuterCoords.dequantize(&(itr->first).x);
     mesh.nodes[2*i  ] = node.x;
     mesh.nodes[2*i+1] = node.y;
   }

@@ -19,7 +19,8 @@ template<int Dimension, typename RealType> struct DimensionTraits {};
 template<typename RealType>
 struct DimensionTraits<2, RealType> {
   typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
+  // typedef polytope::KeyTraits::Key CoordHash;
+  typedef int64_t CoordHash;
   typedef polytope::Point2<CoordHash> Point;
   typedef polytope::Point2<RealType> RealPoint;
 
@@ -84,7 +85,8 @@ struct DimensionTraits<2, RealType> {
 template<typename RealType>
 struct DimensionTraits<3, RealType> {
   typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
+  // typedef polytope::KeyTraits::Key CoordHash;
+  typedef int64_t CoordHash;
   typedef polytope::Point3<CoordHash> Point;
   typedef polytope::Point3<RealType> RealPoint;
 

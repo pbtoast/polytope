@@ -81,10 +81,6 @@ computeInfiniteEdgeDirection(const VD::edge_type* edge,
   const IntPoint p1 = generatorToIndex[index1].first;
   const IntPoint p2 = generatorToIndex[index2].first;
   const RealPoint r = coords.dequantize(p2) - coords.dequantize(p1);
-  // RealType r[2] = {p2.realx(low[0],delta) - p1.realx(low[0],delta),
-  //                  p2.realy(low[1],delta) - p1.realy(low[1],delta)};
-  // if (edge->vertex0()) { direction[0] = -r[1];  direction[1] =  r[0]; }
-  // else                 { direction[0] =  r[1];  direction[1] = -r[0]; }
   if (edge->vertex0()) { direction[0] = -r.y;  direction[1] =  r.x; }
   else                 { direction[0] =  r.y;  direction[1] = -r.x; }
   geometry::unitVector<2, RealType>(direction);
@@ -122,6 +118,8 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Initialize quantized coordinate system
+  // mCoords.setDegeneracy(2.5e-7);
+  // mCoords.setCoordMax  (1LL << 22);
   mCoords.initialize(points);
   
   this->computeVoronoiUnbounded(points, mesh);
@@ -163,6 +161,8 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0 and PLCpoints.size() % 2 == 0);
 
   // Initialize quantized coordinate system
+  // mCoords.setDegeneracy(9.3e-10);
+  // mCoords.setCoordMax  (1LL << 30);
   mCoords.initialize(PLCpoints);
 
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
@@ -217,17 +217,11 @@ computeCellNodes(const vector<RealType>& points,
     vhigh[0] = max(mCoords.high[0], (mCoords.low[0] + mCoords.delta*itr->x()));
     vhigh[1] = max(mCoords.high[1], (mCoords.low[1] + mCoords.delta*itr->y()));
   }
-
-  //mCoords.expand(vlow, vhigh);
   
+  // Compute an infinite circle to project points to.
   RealType vcenter[2]  = {0.5*(vlow[0] + vhigh[0]), 0.5*(vlow[1] + vhigh[1])};
   RealType vbox[2]     = {vhigh[0] - vlow[0], vhigh[1] - vlow[1]};
   const RealType vrinf = 2.0*max(vbox[0], vbox[1]);
-
-  // mCenter[0] = center[0];
-  // mCenter[1] = center[1];
-  // mRinf = rinf;
-  // Blago!
 
   // Iterate over the edges. Boost has organized them CCW around each generator.
   int sortedIndex=0, cellIndex;
@@ -271,7 +265,6 @@ computeCellNodes(const vector<RealType>& points,
       const VD::vertex_type* v1 = edge->vertex1();
 
       // Finite edge: just add vertex 0 to the cell nodes
-      // if (isFinite(v0,mCoordMax) and isFinite(v1,mCoordMax)) {
       if (v0 and v1) {
         vert = PointType(v0->x(), v0->y());
         node  = PointType(vert.realx(mCoords.low[0], mCoords.delta), 
@@ -283,7 +276,6 @@ computeCellNodes(const vector<RealType>& points,
       
       // Infinite edge: Determine the direction of the ray pointing to infinity.
       // Add the origin vertex of the ray and the projected point
-      // else if (isFinite(v0,mCoordMax) or isFinite(v1,mCoordMax)) {
       else {
         POLY_ASSERT(v0 or v1);
         const VD::vertex_type* vfin = (v0) ? v0 : v1;
@@ -327,7 +319,6 @@ computeCellNodes(const vector<RealType>& points,
         
         
         // Vertex 0 is finite, vertex 1 is the projected infNode. Add them in order
-        // if (isFinite(v0, mCoordMax)) {
         if (v0) {
           // Vertex 0
           j = internal::addKeyToMap(node, node2id);
@@ -356,7 +347,7 @@ computeCellNodes(const vector<RealType>& points,
     // Remove repeated node indices in the chain
     vector<unsigned>::iterator it = std::unique(nodeChain.begin(), nodeChain.end());
     nodeChain.resize(std::distance(nodeChain.begin(), it));
-    if (nodeChain.front() == nodeChain.back())// and nodeChain.size() != 1) 
+    if (nodeChain.front() == nodeChain.back())
        nodeChain.resize(nodeChain.size()-1);
     POLY_ASSERT(!nodeChain.empty());
     
@@ -699,9 +690,11 @@ tessellate(const std::vector<RealType>& points,
   BGpolygon boundary;
   vector<PointType> boundaryPoints(numPLCpoints);
   vector<RealType> RealPLCpoints;
+  IntPoint ip;
   for (i = 0; i != numPLCpoints; ++i) {
-     //boundaryPoints[i] = PointType(IntPLCpoints[2*i], IntPLCpoints[2*i+1]);
-    RealPoint pt = mCoords.dequantize(IntPoint(IntPLCpoints[2*i], IntPLCpoints[2*i+1]));
+    //boundaryPoints[i] = PointType(IntPLCpoints[2*i], IntPLCpoints[2*i+1]);
+    // RealPoint pt = mCoords.dequantize(IntPoint(IntPLCpoints[2*i], IntPLCpoints[2*i+1]));
+    RealPoint pt = mCoords.dequantize(&IntPLCpoints[2*i]);
     boundaryPoints[i] = pt;
     RealPLCpoints.push_back(pt.x);
     RealPLCpoints.push_back(pt.y);

@@ -19,10 +19,6 @@ BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geomet
 #endif
 
 
-// Fast predicate for determining point orientation
-//extern double orient2d(double* pa, double* pb, double* pc);
-
-
 namespace polytope {
 
 //------------------------------------------------------------------------------
@@ -183,7 +179,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
     const IntPoint& p = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
-    node = coords.dequantize(p);
+    node = coords.dequantize(&p.x);
     
     // // Check if nodes are inside boundary (either bounding box or PLC, if defined)
     // bool inside = within(&node.x, numPLCpoints, &PLCpoints[0], geometry);

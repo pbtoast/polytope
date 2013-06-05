@@ -8,6 +8,7 @@
 
 #include "ReducedPLC.hh"
 #include "Point.hh"
+#include "DimensionTraits.hh"
 #include "polytope_geometric_utilities.hh"
 
 namespace polytope {
@@ -24,9 +25,11 @@ class QuantizedCoordinates: public ReducedPLC<Dimension, RealType> {
 public:
 
   typedef int64_t CoordHash;
-  typedef Point2<CoordHash> IntPoint;
-  typedef Point2<RealType> RealPoint;
-
+  typedef typename DimensionTraits<Dimension, RealType>::Point     IntPoint;
+  typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
+  // typedef Point2<CoordHash> IntPoint;
+  // typedef Point2<double> RealPoint;
+  
   //! The bounding box size
   std::vector<RealType> low, high;
 
@@ -57,9 +60,12 @@ public:
   //! Initialize the coordinate system
   //------------------------------------------------------------------------
   void initialize(const std::vector<RealType>& allPoints) {
+    
     // Initialize degeneracy and coordMax
-    mDegeneracy = 1.5e-8;
-    mCoordMax   = (1LL << 26);
+    if (!mCoordinatesModified) {
+      mDegeneracy = 1.5e-8;
+      mCoordMax   = (1LL << 26);
+    }
     low.clear();  high.clear();  center.clear();
     
     // compute bounds for the box
@@ -246,19 +252,29 @@ public:
   //------------------------------------------------------------------------
   inline
   IntPoint quantize(const RealType* pointIn) const {
-    POLY_ASSERT(!this->mCoordinatesModified);
-    return IntPoint(pointIn[0], pointIn[1], this->low[0], this->low[1], this->delta);
+    POLY_ASSERT(!mCoordinatesModified);
+    return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
   }
    
   //------------------------------------------------------------------------
   //! Dequantize an integer point to floating-point-precision 
   //------------------------------------------------------------------------
+  // inline
+  // RealPoint dequantize(const IntPoint pointIn) const {
+  //   POLY_ASSERT(!mCoordinatesModified);
+  //   RealType x = (pointIn.x == mCoordMax) ? high[0] : pointIn.realx(low[0], delta);
+  //   RealType y = (pointIn.y == mCoordMax) ? high[1] : pointIn.realy(low[1], delta);
+  //   return RealPoint(x,y);
+  // }
+
   inline
-  RealPoint dequantize(const IntPoint pointIn) const {
-    POLY_ASSERT(!this->mCoordinatesModified);
-    RealType x = (pointIn.x == mCoordMax) ? high[0] : pointIn.realx(low[0], delta);
-    RealType y = (pointIn.y == mCoordMax) ? high[1] : pointIn.realy(low[1], delta);
-    return RealPoint(x,y);
+  RealPoint dequantize(const CoordHash* pointIn) const {
+    POLY_ASSERT(!mCoordinatesModified);
+    RealType p[Dimension];
+    for (unsigned j = 0; j != Dimension; ++j) {
+       p[j] = (pointIn[j] == mCoordMax) ? high[j] : low[j] + pointIn[j]*delta;
+    }
+    return DimensionTraits<Dimension, RealType>::constructPoint(p);
   }
 
   //------------------------------------------------------------------------

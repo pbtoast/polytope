@@ -240,7 +240,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    for (unsigned flowTest = 4; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
   }
 #endif   
 
