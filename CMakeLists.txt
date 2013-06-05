@@ -65,6 +65,7 @@ if (USE_MPI EQUAL 1)
   endif()
 else ()
   set(HAVE_MPI false)
+  set(HAVE_MPIEXEC false)
 endif ()
 
 
