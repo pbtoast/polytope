@@ -22,6 +22,7 @@
 #endif
 
 using namespace std;
+using namespace polytope;
 
 //------------------------------------------------------------------------------
 // Compute the square of the distance.
@@ -32,15 +33,13 @@ double distance2(const double x1, const double y1,
 }
 
 //------------------------------------------------------------------------------
-// The test itself.
+// The test itself
 //------------------------------------------------------------------------------
-int main(int argc, char** argv) {
-
-  // Initialize MPI.
-  MPI_Init(&argc, &argv);
-
+void runTest(Tessellator<2,double>& tessellator) {
   const double x1 = 0.0, y1 = 0.0;
   const double x2 = 1.0, y2 = 1.0;
+  const unsigned Nmin = 50;
+  const unsigned Nmax = 100;
 
   // Figure out our parallel configuration.
   int rank, numProcs;
@@ -51,7 +50,7 @@ int main(int argc, char** argv) {
   srand(10489592);
 
   // Try tessellating increasing numbers of generators.
-  for (unsigned nx = 40; nx != 75; ++nx) {
+  for (unsigned nx = Nmin; nx <= Nmax; ++nx) {
     if (rank == 0) cout << "Testing nx=" << nx << endl;
 
     // Create the seed positions for each domain.  Note we rely on this sequence
@@ -89,24 +88,25 @@ int main(int argc, char** argv) {
         if (rank == owner) {
           generators.push_back(xi);
           generators.push_back(yi);
-          // cout << scientific << setprecision(numeric_limits<double>::digits)
-          //      << (nx*iy + ix) << ": (" << xi << "," << yi << ")" << endl;
         }
       }
     }
     
     
     unsigned numGen = generators.size()/2;
-    POLY_CHECK2( numGen > 2, "Processor " << rank << " only has " << numGen << " generators. This is not enough to tessellate!");
+    POLY_CHECK2( numGen > 1, "Processor " << rank << " only has " << numGen << " generators. This is not enough to tessellate!");
+    cerr << numGen << endl;
+    if (numGen <= 5) {
+      for (unsigned ii = 0; ii != numGen; ++ii) {
+        cerr << "(" << generators[2*ii] << "," << generators[2*ii+1] << ")" << endl;
+      }
+    }
 
     // Create the tessellation.
     double xmin[2] = { x1, y1 };
     double xmax[2] = { x2, y2 };
-    polytope::Tessellation<2, double> mesh;
-    
-    polytope::DistributedTessellator<2, double> distTest(new polytope::TriangleTessellator<double>(),
-                                                         true, true);
-    distTest.tessellate(generators, xmin, xmax, mesh);
+    Tessellation<2,double> mesh;
+    tessellator.tessellate(generators, xmin, xmax, mesh);
 
     // vector<double> PLCpoints;
     // PLCpoints.push_back(xmin[0]);  PLCpoints.push_back(xmin[1]);
@@ -237,8 +237,10 @@ int main(int argc, char** argv) {
       nodeFields["ownNodes"] = &rownNodes[0];
       faceFields["ownFaces"] = &rownFaces[0];
       ostringstream os;
-      os << "test_DistributedTriangle_" << nx << "x" << nx << "_lattice_" << numProcs << "domains";
-      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, os.str());
+      os << "DistributedUnitSquare_" << tessellator.name() << "_" << numProcs << "domains";
+      polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+                                             faceFields, cellFields, os.str(),
+                                             nx, 0.0);
       }
     }
 #endif
@@ -257,6 +259,32 @@ int main(int argc, char** argv) {
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
+}
+
+
+//------------------------------------------------------------------------------
+// main
+//------------------------------------------------------------------------------
+int main(int argc, char** argv) {
+
+  // Initialize MPI.
+  MPI_Init(&argc, &argv);
+
+#if HAVE_TRIANGLE
+  {
+    DistributedTessellator<2, double> tessellator
+       (new TriangleTessellator<double>(), true, true);
+    runTest(tessellator);
+  }
+#endif
+
+#if HAVE_BOOST_VORONOI
+  {
+    DistributedTessellator<2, double> tessellator
+       (new BoostTessellator<double>(), true, true);
+    runTest(tessellator);
+  }
+#endif
 
   cout << "PASS" << endl;
   MPI_Finalize();

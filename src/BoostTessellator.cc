@@ -208,35 +208,26 @@ computeCellNodes(const vector<RealType>& points,
                     &voronoi);
   POLY_ASSERT(voronoi.num_cells() == numGenerators);
 
+  // Compute a bounding box for the floating point vertex positions
+  RealType vlow[2], vhigh[2];
+  for (VD::const_vertex_iterator itr = voronoi.vertices().begin();
+       itr != voronoi.vertices().end(); ++itr) {
+    vlow [0] = min(mCoords.low [0], (mCoords.low[0] + mCoords.delta*itr->x()));
+    vlow [1] = min(mCoords.low [1], (mCoords.low[1] + mCoords.delta*itr->y()));
+    vhigh[0] = max(mCoords.high[0], (mCoords.low[0] + mCoords.delta*itr->x()));
+    vhigh[1] = max(mCoords.high[1], (mCoords.low[1] + mCoords.delta*itr->y()));
+  }
 
-  // // Blago!
-  // RealType low [2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
-  // RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
-  // for (i = 0; i != numGenerators; ++i) {
-  //   low [0] = min(low [0], points[2*i  ]);
-  //   low [1] = min(low [1], points[2*i+1]);
-  //   high[0] = max(high[0], points[2*i  ]);
-  //   high[1] = max(high[1], points[2*i+1]);
-  // }
-
-  // // cerr << "\nVertices:" << endl;
-  // for (VD::const_vertex_iterator itr = voronoi.vertices().begin();
-  //      itr != voronoi.vertices().end(); ++itr) {
-  //   low [0] = min(low [0], (mLow[0] + mDelta*itr->x()));
-  //   low [1] = min(low [1], (mLow[1] + mDelta*itr->y()));
-  //   high[0] = max(high[0], (mLow[0] + mDelta*itr->x()));
-  //   high[1] = max(high[1], (mLow[1] + mDelta*itr->y()));
-  //   // cerr << itr->x() << " " << itr->y() << endl;
-  // }
-
-  // RealType center[2]  = {0.5*(low[0] + high[0]), 0.5*(low[1] + high[1])};
-  // RealType box[2]     = {high[0] - low[0], high[1] - low[1]};
-  // const RealType rinf = 2.0*max(box[0], box[1]);
+  //mCoords.expand(vlow, vhigh);
+  
+  RealType vcenter[2]  = {0.5*(vlow[0] + vhigh[0]), 0.5*(vlow[1] + vhigh[1])};
+  RealType vbox[2]     = {vhigh[0] - vlow[0], vhigh[1] - vlow[1]};
+  const RealType vrinf = 2.0*max(vbox[0], vbox[1]);
 
   // mCenter[0] = center[0];
   // mCenter[1] = center[1];
   // mRinf = rinf;
-  // // Blago!
+  // Blago!
 
   // Iterate over the edges. Boost has organized them CCW around each generator.
   int sortedIndex=0, cellIndex;
@@ -318,7 +309,10 @@ computeCellNodes(const vector<RealType>& points,
 	geometry::unitVector<2, RealType>(&direction.x);
         
         // Project the finite vertex to the infinite shell
-        pinf = mCoords.projectPoint(&endpt.x, &direction.x);
+        //pinf = mCoords.projectPoint(&endpt.x, &direction.x);
+        bool test = geometry::rayCircleIntersection(&endpt.x, &direction.x,
+                                                    vcenter, vrinf, 1.0e-10, &pinf.x);
+        POLY_ASSERT(test);
 
         // // Blago!
         // cerr << "Projected Inf Node:" << endl
@@ -362,7 +356,7 @@ computeCellNodes(const vector<RealType>& points,
     // Remove repeated node indices in the chain
     vector<unsigned>::iterator it = std::unique(nodeChain.begin(), nodeChain.end());
     nodeChain.resize(std::distance(nodeChain.begin(), it));
-    if (nodeChain.front() == nodeChain.back() and nodeChain.size() != 1) 
+    if (nodeChain.front() == nodeChain.back())// and nodeChain.size() != 1) 
        nodeChain.resize(nodeChain.size()-1);
     POLY_ASSERT(!nodeChain.empty());
     
@@ -466,7 +460,7 @@ computeCellRings(const vector<RealType>& points,
           RealType r[2]     = {n2.x - n1.x, n2.y - n1.y};
           RealType rperp[2] = {r[1]       , -r[0]      };
           geometry::unitVector<2,RealType>(rperp);
-          mCoords.projectPoint(&points[2*i], rperp);
+          ninf = mCoords.projectPoint(&points[2*i], rperp);
           node = PointType(ninf.x, ninf.y);
           cellBoundary.push_back(node);
         }

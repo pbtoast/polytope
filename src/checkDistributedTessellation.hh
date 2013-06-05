@@ -13,10 +13,9 @@
 #include "Point.hh"
 #include "polytope_geometric_utilities.hh"
 #include "polytope_parallel_utilities.hh"
+#include "DimensionTraits.hh"
 
-// extern "C" {
 #include "mpi.h"
-// }
 
 namespace { // unnamed
 

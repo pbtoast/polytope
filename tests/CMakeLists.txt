@@ -25,11 +25,14 @@
 #               should read "TETGEN;MPI"
 #-----------------------------------------------------------------------------
 
+
 # The POLYTOPE_ADD_TEST macro
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
 
-# Tests not involving the tessellators. These build with the base
-# Polytope utilities
+
+#-----------------------------------------------------------------------------
+# Polytope Utility Tests
+#-----------------------------------------------------------------------------
 POLYTOPE_ADD_TEST( "serialize"       "" )
 POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
 POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
@@ -38,16 +41,20 @@ POLYTOPE_ADD_TEST( "within_2d"       "" )
 POLYTOPE_ADD_TEST( "intersect_2d"    "" )
 POLYTOPE_ADD_TEST( "convexIntersect" "" )
 
-# The Voro++ Tessellator tests. These have no additional library
-# dependencies
+#-----------------------------------------------------------------------------
+# Serial Tessellator Tests
+#-----------------------------------------------------------------------------
+
+# Voro++ Tessellator tests
+#
 # NOTE: Temporarily suspending their build until more work can be
 #       done making their output toplogically consistent
+#
 #POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""              )
 #POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""              )
 
-# Serial tessellator tests
 
-# The 2D serial tessellator tests
+# 2D Triangle and Boost Tessellator tests
 POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
 POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
 POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
@@ -67,23 +74,19 @@ POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
 #POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
 
-# The 3D serial tessellator tests
+
+# 3D Tetgen Tessellator tests
 POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
 
 
-# Distributed tessellator tests
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedTriangle"       "TRIANGLE" "4")
+
+#-----------------------------------------------------------------------------
+# Distributed Tessellator Tests
+#-----------------------------------------------------------------------------
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     "TRIANGLE" "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   "TRIANGLE" "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  "TRIANGLE" "4")
 #POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
 #POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")
-
-#POLYTOPE_ADD_TEST( "DistributedTriangle"       "MPI;TRIANGLE" )
-#POLYTOPE_ADD_TEST( "SerialDistributedTriangle" "MPI;TRIANGLE" )
-#POLYTOPE_ADD_TEST( "FailedCommunication"       "MPI;TRIANGLE" )
-#POLYTOPE_ADD_TEST( "DistributedRandomPoints"   "MPI;TRIANGLE" )
-#POLYTOPE_ADD_TEST( "DistributedRotationTests"  "MPI;TRIANGLE" )
-##POLYTOPE_ADD_TEST( "DistributedVoroPP_2d"      "MPI"          )
-##POLYTOPE_ADD_TEST( "DistributedVoroPP_3d"      "MPI"          )

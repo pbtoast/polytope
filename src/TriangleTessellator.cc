@@ -834,13 +834,16 @@ computeCellRings(const vector<RealType>& points,
 	cerr << "  " << result[0] << "  " << result[1] << endl;
 	}
         // Blago!
+
         
 	POLY_ASSERT2(rp2.x >= mCoords.low[0] and rp2.x <= mCoords.high[0] and
                      rp2.y >= mCoords.low[1] and rp2.y <= mCoords.high[1],
-                     "Index " << i2 << " is not inside the inner bounding box");
+                     "Point " << rp2 << ip2 << " is outside" << endl << mCoords);
 	POLY_ASSERT(nints == 1 and result.size() == 2 and resultFacets.size() == 1);
-	POLY_ASSERT(mCoords.low[0] <= result[0] and result[0] <= mCoords.high[0] and
-		    mCoords.low[1] <= result[1] and result[1] <= mCoords.high[1] );
+	POLY_ASSERT2(mCoords.low[0] <= result[0] and result[0] <= mCoords.high[0] and
+                     mCoords.low[1] <= result[1] and result[1] <= mCoords.high[1],
+                     "Intersection point (" << result[0] << "," << result[1] << ") is outside"
+                     << endl << mCoords);
 	intersectFacets.push_back(resultFacets[0]);
         indices.push_back(-1);
         cellBoundary.push_back(mCoords.quantize(&result[0]));
@@ -857,7 +860,7 @@ computeCellRings(const vector<RealType>& points,
 	nints = intersectBoundingBox(&rp1.x, &rp2.x, 4, &mCoords.points[0],
 				     mCoords.facets, mCoords.delta,
                                      resultFacets, result);
-	POLY_ASSERT(nints==0 or nints==2);
+	//POLY_ASSERT(nints==0 or nints==2);
 
 	// Blago!
         if(Blago){

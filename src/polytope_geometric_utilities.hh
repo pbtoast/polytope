@@ -4,6 +4,7 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
+#include <cstdlib>
 #include <limits>
 #include <algorithm>
 
@@ -73,7 +74,6 @@ template<int Dimension, typename RealType> struct UnitVectorFunctor;
 template<typename RealType> 
 struct UnitVectorFunctor<2, RealType> {
   static void impl(RealType* a) {
-    //const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1]));
     const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1]));
     a[0] /= mag;
     a[1] /= mag;
@@ -84,7 +84,6 @@ struct UnitVectorFunctor<2, RealType> {
 template<typename RealType> 
 struct UnitVectorFunctor<3, RealType> {
   static void impl(RealType* a) {
-    //const RealType mag = std::max(1.0e-100, std::sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
     const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
     a[0] /= mag;
     a[1] /= mag;
@@ -182,15 +181,14 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     acmag += ac[j]*ac[j];
   }
   if (abmag < tol or acmag < tol) return true;
-  //abmag = std::sqrt(abmag);
-  //acmag = std::sqrt(acmag);
   abmag = sqrt(abmag);
   acmag = sqrt(acmag);
   for (unsigned j = 0; j != Dimension; ++j) {
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  // return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
 }
 
 //------------------------------------------------------------------------------
@@ -203,7 +201,6 @@ closestPointOnSegment2D(const RealType* point,
                         const RealType* s2,
                         RealType* result) {
   RealType shat[2] = {s2[0] - s1[0], s2[1] - s1[1]};
-  //const RealType seglength = std::sqrt(shat[0]*shat[0] + shat[1]*shat[1]);
   const RealType seglength = sqrt(shat[0]*shat[0] + shat[1]*shat[1]);
   if (seglength < 1.0e-10) {
     result[0] = 0.5*(s1[0] + s2[0]);
@@ -892,6 +889,7 @@ segmentIntersection2D(const RealType* a,
 		      const RealType* c, 
 		      const RealType* d, 
 		      RealType* result) {
+   const RealType tol = 1.0e-8;
    RealType r1[2] = {b[0]-a[0] , b[1]-a[1]};  //direction vector of first segment
    RealType r2[2] = {d[0]-c[0] , d[1]-c[1]};  //direction vector of second segment
    RealType ca[2] = {c[0]-a[0] , c[1]-a[1]};
@@ -905,14 +903,14 @@ segmentIntersection2D(const RealType* a,
    RealType p1 = t1[2]/r1_cross_r2[2];
    RealType p2 = t2[2]/r1_cross_r2[2];
    // The finite segments intersect
-   if( 0 <= p1 and p1 <= 1 and 0 <= p2 and p2 <= 1 ) {
-     if     (p1 == 0) {result[0] = a[0];  result[1] = a[1];}
-     else if(p1 == 1) {result[0] = b[0];  result[1] = b[1];}
-     else if(p2 == 0) {result[0] = c[0];  result[1] = c[1];}
-     else if(p2 == 1) {result[0] = d[0];  result[1] = d[1];}
+   if( -tol <= p1 and p1 <= 1+tol and -tol <= p2 and p2 <= 1+tol ) {
+     if     (p1 < tol  ) {result[0] = a[0];  result[1] = a[1];}
+     else if(p1 > 1-tol) {result[0] = b[0];  result[1] = b[1];}
+     else if(p2 < tol  ) {result[0] = c[0];  result[1] = c[1];}
+     else if(p2 > 1-tol) {result[0] = d[0];  result[1] = d[1];}
      else {
-      result[0] = a[0] + p1*r1[0];
-      result[1] = a[1] + p1*r1[1];
+      result[0] = c[0] + p2*r2[0];
+      result[1] = c[1] + p2*r2[1];
      }
      return true;
    }

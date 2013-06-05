@@ -98,7 +98,8 @@ void test(Tessellator<2,double>& tessellator)
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(isCartesian)  cout << "Degeneracy resolved" << endl; 
     else
-      cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
+      cout << "Degeneracy threshold reached! Minimum face length = " 
+           << minLength(mesh) << endl;
   }
 }
 
