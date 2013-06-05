@@ -27,8 +27,8 @@ class PLC
   //! the "facets" member.  In other words, holes[k][i][j] is the jth
   //! generating point of the ith facet of the kth hole.
   std::vector<std::vector<std::vector<int> > > holes;
-   
-   //! Clearns facets and holes to empty the PLC
+  
+  //! Clearns facets and holes to empty the PLC
   void clear()
   {
     facets.clear(); holes.clear();

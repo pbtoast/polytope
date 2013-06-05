@@ -43,12 +43,30 @@ endif ()
 # Figure out MPI.
 if (USE_MPI EQUAL 1)
   # CC and CXX should already have been set in Makefile or wherever.
-  set(MPIEXEC mpirun)
-  set(MPIEXEC_NUMPROC_FLAG -np)
   set(HAVE_MPI true)
+  find_program(SLURM_SRUN_COMMAND srun 
+    DOC "Path to Slurm's srun executable")
+  if(SLURM_SRUN_COMMAND)
+    set(MPIEXEC ${SLURM_SRUN_COMMAND})
+    set(MPIEXEC_NUMPROC_FLAG -n)
+    set(HAVE_MPIEXEC true)
+    message("-- Slurm srun detected. Using ${MPIEXEC}")
+  else()
+    find_program(MPIRUN_COMMAND mpirun)
+    if(MPIRUN_COMMAND)
+      set(MPIEXEC mpirun)
+      set(MPIEXEC_NUMPROC_FLAG -np)
+      set(HAVE_MPIEXEC true)
+    else()
+      set(MPIEXEC "")
+      set(MPIEXEC_NUMPROC_FLAG "")
+      set(HAVE_MPIEXEC false)
+    endif()
+  endif()
 else ()
   set(HAVE_MPI false)
 endif ()
+
 
 # Find Boost.
 # set(Boost_DEBUG 1)

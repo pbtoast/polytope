@@ -256,8 +256,9 @@ public:
   inline
   RealPoint dequantize(const IntPoint pointIn) const {
     POLY_ASSERT(!this->mCoordinatesModified);
-    return RealPoint(pointIn.realx(this->low[0], this->delta), 
-                     pointIn.realy(this->low[1], this->delta));
+    RealType x = (pointIn.x == mCoordMax) ? high[0] : pointIn.realx(low[0], delta);
+    RealType y = (pointIn.y == mCoordMax) ? high[1] : pointIn.realy(low[1], delta);
+    return RealPoint(x,y);
   }
 
   //------------------------------------------------------------------------

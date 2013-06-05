@@ -13,6 +13,7 @@
 
 #include "PLC.hh"
 #include "polytope_internal.hh"
+#include "polytope_geometric_utilities.hh"
 #include "Point.hh"
 
 namespace polytope {
@@ -68,6 +69,14 @@ struct ComparePairByFirstElement {
 
 //------------------------------------------------------------------------------
 // The method itself.
+//
+// NOTE: The convex hull can be of dimension smaller than 2D. Lower
+//       dimensionality is stored in the structure of the PLC facets
+//             1D - Collinear points - A single length-2 facet with indices 
+//                                     pointing to the smallest and largest
+//                                     points in the sorted point hash
+//             0D - Single point     - A single length-2 facet with the same
+//                                     index (0) in both positions 
 //------------------------------------------------------------------------------
 template<typename RealType>
 PLC<2, RealType>
@@ -77,10 +86,29 @@ convexHull_2d(const std::vector<RealType>& points,
   typedef uint64_t CoordHash;
   typedef Point2<CoordHash> PointHash;
 
+  POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   const unsigned n = points.size() / 2;
+  PLC<2, RealType> plc;
   int i, j, k, t;
-
+  
+  // If there's only one or two points, we're done: that's the whole hull
+  if (n == 1 or n == 2) {
+    plc.facets.resize(1, std::vector<int>(2));
+    plc.facets[0][0] = 0;
+    plc.facets[0][1] = (n == 1) ? 0 : 1;
+  }
+  
+  // Check if the input points are collinear.
+  bool collinear = true;
+  POLY_ASSERT(n > 2);
+  i = 2;
+  while (collinear and i != n) {
+    collinear *= geometry::collinear<2,RealType>(&points[0], &points[2],
+                                                 &points[2*i], 1.0e-10);
+    ++i;
+  }
+  
   // Hash the input points and sort them by x coordinate, remembering their original indices
   // in the input set.  We also ensure that only unique (using a fuzzy comparison) points
   // are inserted here, since duplicates mess up the hull calculation.
@@ -95,57 +123,49 @@ convexHull_2d(const std::vector<RealType>& points,
   std::vector<std::pair<PointHash, unsigned> > sortedPoints(uniquePoints.begin(), uniquePoints.end());
   std::sort(sortedPoints.begin(), sortedPoints.end());
 
-//   std::vector<std::pair<PointHash, unsigned> > sortedPoints;
-//   sortedPoints.reserve(n);
-//   for (i = 0; i != n; ++i) {
-//     PointHash p(CoordHash((points[2*i]     - xmin)/dx + 0.5),
-//                 CoordHash((points[2*i + 1] - ymin)/dx + 0.5));
-//     bool uniquePoint = true;
-//     j = 0;
-//     while (uniquePoint and j != sortedPoints.size()) {
-//       uniquePoint = (abs(p.x - sortedPoints[j].first.x) > 1 or
-//                      abs(p.y - sortedPoints[j].first.y) > 1);
-//       ++j;
-//     }
-//     if (uniquePoint) sortedPoints.push_back(std::make_pair(p, i));
-//   }
-
-  // Prepare the result.
-  const unsigned nunique = sortedPoints.size();
-  std::vector<int> result(2*nunique);
-
-  // Build the lower hull.
-  for (i = 0, k = 0; i < nunique; i++) {
-    while (k >= 2 and
-           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
-    result[k++] = i;
+  // If the points are collinear, we can save a lot of work
+  if (collinear) {
+    plc.facets.resize(1, std::vector<int>(2));
+    plc.facets[0][0] = sortedPoints.front().second;
+    plc.facets[0][1] = sortedPoints.back().second;
   }
-
-  // Build the upper hull.
-  for (i = nunique - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and
-           zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
-    result[k++] = i;
+  else {
+    // Prepare the result.
+    const unsigned nunique = sortedPoints.size();
+    std::vector<int> result(2*nunique);
+    
+    // Build the lower hull.
+    for (i = 0, k = 0; i < nunique; i++) {
+      while (k >= 2 and
+             zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+      result[k++] = i;
+    }
+    
+    // Build the upper hull.
+    for (i = nunique - 2, t = k + 1; i >= 0; i--) {
+      while (k >= t and
+             zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+      result[k++] = i;
+    }
+    // if (!(k >= 4)) {
+    //   std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
+    //   std::cerr << "Unique:" << std::endl;
+    //   for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
+    //   std::cerr << "Input:" << std::endl;
+    //   for (unsigned i = 0; i != n; ++i) std::cerr << "  --> " << points[2*i] << " " << points[2*i+1] << std::endl;
+    // }
+    POLY_ASSERT(k >= 4);
+    POLY_ASSERT(result.front() == result.back());
+    
+    // Translate our sorted information to a PLC based on the input point ordering and we're done.
+    for (i = 0; i != k - 1; ++i) {
+      j = (i + 1) % k;
+      plc.facets.push_back(std::vector<int>());
+      plc.facets.back().push_back(sortedPoints[result[i]].second);
+      plc.facets.back().push_back(sortedPoints[result[j]].second);
+    }
+    POLY_ASSERT(plc.facets.size() == k - 1);
   }
-  // if (!(k >= 4)) {
-  //   std::cerr << "Blago!  " << n << " " << nunique << " " << k << std::endl;
-  //   std::cerr << "Unique:" << std::endl;
-  //   for (unsigned i = 0; i != nunique; ++i) std::cerr << "  --> " << sortedPoints[i].first << std::endl;
-  //   std::cerr << "Input:" << std::endl;
-  //   for (unsigned i = 0; i != n; ++i) std::cerr << "  --> " << points[2*i] << " " << points[2*i+1] << std::endl;
-  // }
-  POLY_ASSERT(k >= 4);
-  POLY_ASSERT(result.front() == result.back());
-
-  // Translate our sorted information to a PLC based on the input point ordering and we're done.
-  PLC<2, RealType> plc;
-  for (i = 0; i != k - 1; ++i) {
-    j = (i + 1) % k;
-    plc.facets.push_back(std::vector<int>());
-    plc.facets.back().push_back(sortedPoints[result[i]].second);
-    plc.facets.back().push_back(sortedPoints[result[j]].second);
-  }
-  POLY_ASSERT(plc.facets.size() == k - 1);
   return plc;
 }
 

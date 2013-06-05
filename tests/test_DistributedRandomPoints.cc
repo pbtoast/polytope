@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 #endif
 
 
-#if HAVE_TRIANGLE
+#if HAVE_BOOST_VORONOI
   {
     DistributedTessellator<2, double> tessellator
        (new BoostTessellator<double>(), true, true);

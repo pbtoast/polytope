@@ -19,6 +19,7 @@
 #include "bisectSearch.hh"
 #include "polytope_serialize.hh"
 #include "polytope_parallel_utilities.hh"
+#include "DimensionTraits.hh"
 #include "mortonOrderIndices.hh"
 #include "checkDistributedTessellation.hh"
 
@@ -204,134 +205,86 @@ computeDistributedTessellation(const vector<RealType>& points,
     vector<unsigned> domainCellOffset(1, 0);
     {
       ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
-   
-      // ------------------ Triple tessellation idea  ------------------
-      Tessellation<Dimension, RealType> localMesh;
-      PLC<Dimension, RealType> localPLC;
-      localPLC.facets = localHull.facets;
-      mSerialTessellator->tessellate(points, localHull.points, localPLC, localMesh);
 
-      // Blago!
-      if (siloBlago)
-      {
-        vector<double> r2(localMesh.cells.size(), rank);
-        vector<double> px(localMesh.cells.size());
-        vector<double> py(localMesh.cells.size());
-        vector<double> vis(localMesh.cells.size(), 0.0);
-        for (unsigned i = 0; i != localMesh.cells.size(); ++i) {
-          px[i] = points[2*i];
-          py[i] = points[2*i+1];
+      // We can skip some work here if the convex hull is of lower dimension than the 
+      // problem itself. We determine the set of visible points for a full-dimension
+      // hull by computing a local tessellation and collecting all generators that have
+      // an exterior face on the local mesh. For a lower dimension hull, every point
+      // is visible.
+      if (DimensionTraits<Dimension, RealType>::hullDimension(localHull) == Dimension) {
+
+        Tessellation<Dimension, RealType> localMesh;
+        mSerialTessellator->tessellate(points, localHull.points, localHull, localMesh);
+        
+        // Blago!
+        if (siloBlago)
+        {
+          vector<double> r2(localMesh.cells.size(), rank);
+          vector<double> px(localMesh.cells.size());
+          vector<double> py(localMesh.cells.size());
+          vector<double> vis(localMesh.cells.size(), 0.0);
+          for (unsigned i = 0; i != localMesh.cells.size(); ++i) {
+            px[i] = points[2*i];
+            py[i] = points[2*i+1];
+          }
+          for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
+            if (localMesh.faceCells[i].size() == 1 ) {
+              unsigned icell = ((localMesh.faceCells[i][0] < 0) ? 
+                                ~localMesh.faceCells[i][0]      : 
+                                localMesh.faceCells[i][0]);
+              vis[icell] = 1.0;
+            }
+          }
+          map<string, double*> fields, cellFields;
+          cellFields["domain"] = &r2[0];
+          cellFields["gen_x"] = &px[0];
+          cellFields["gen_y"] = &py[0];
+          cellFields["visible"] = &vis[0];
+          cerr << "Writing local mesh with " << localMesh.cells.size() << endl;
+          polytope::SiloWriter<Dimension, RealType>::write(localMesh, fields, fields, 
+                                                           fields, cellFields, 
+                                                           "test_DistributedTessellator_localMesh");
+          MPI_Barrier(MPI_COMM_WORLD);
         }
+        // Blago!
+
+        set<unsigned> exteriorCells;
         for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
           if (localMesh.faceCells[i].size() == 1 ) {
-            unsigned icell = (localMesh.faceCells[i][0] < 0) ? ~localMesh.faceCells[i][0] : localMesh.faceCells[i][0];
-            vis[icell] = 1.0;
-          }
+            unsigned icell = ((localMesh.faceCells[i][0] < 0) ? 
+                              ~localMesh.faceCells[i][0]      : 
+                              localMesh.faceCells[i][0]);
+            exteriorCells.insert(icell);
+          }        
         }
-        map<string, double*> fields, cellFields;
-        cellFields["domain"] = &r2[0];
-        cellFields["gen_x"] = &px[0];
-        cellFields["gen_y"] = &py[0];
-        cellFields["visible"] = &vis[0];
-        cerr << "Writing local mesh with " << localMesh.cells.size() << endl;
-        polytope::SiloWriter<Dimension, RealType>::write(localMesh, fields, fields, fields, cellFields, "test_DistributedTessellator_localMesh");
-        MPI_Barrier(MPI_COMM_WORLD);
-      }
-      // Blago!
-
-      set<unsigned> exteriorCells;
-      for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
-        if (localMesh.faceCells[i].size() == 1 ) {
-          unsigned icell = (localMesh.faceCells[i][0] < 0) ? ~localMesh.faceCells[i][0] : localMesh.faceCells[i][0];
-          exteriorCells.insert(icell);
-        }        
-      }
-      
-      vector<RealPoint> exteriorPoints;
-      for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
-        exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
+        
+        vector<RealPoint> exteriorPoints;
+        for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
+          exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
+        }
+        
+        for (set<unsigned>::const_iterator itr = exteriorCells.begin();
+             itr != exteriorCells.end(); ++itr) {
+          RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
+          typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
+          if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
+        }   
+        
+        localHull.points.clear();
+        for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
+             pointItr != exteriorPoints.end(); ++pointItr) {
+           copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
+        }
       }
       
-      for (set<unsigned>::const_iterator itr = exteriorCells.begin();
-           itr != exteriorCells.end(); ++itr) {
-        RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
-        typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
-        if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
-      }   
-      
-      // // Blago!
-      // cerr << "Before localHull points: " << localHull.points.size()/Dimension << endl;
-      // copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
-      // cerr << endl;
-      // // Blago!
-
-      localHull.points.clear();
-      for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
-           pointItr != exteriorPoints.end(); ++pointItr) {
-        copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
+      // We have a lower-dimension hull. Every point is visible
+      else {
+        cerr << "Lower-dimensional data" << endl;
+        Tessellation<Dimension, RealType> localMesh;
+        mSerialTessellator->tessellate(points, localMesh);
+        localHull.points = generators;
       }
 
-      // // Blago!
-      // cerr << "After localHull points: " << localHull.points.size()/Dimension << endl;
-      // copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
-      // cerr << endl;
-      // // Blago!
-      // ------------------ End triple tessellation idea ---------------
-      
-
-      // ------------------ Refining long edges of the local hull --------------- 
-      // const double tol = 2.0;
-      // ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
-      // // Walk the facets of the convex hull and find the average length
-      // const unsigned numFacets = localHull.facets.size();
-      // RealType avgFacetLength = 0.0;
-      // vector<RealType> facetLengths(numFacets, 0.0);
-      // vector<unsigned> divideFacets;
-      // unsigned i1, i2;
-      // for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
-      //   i1 = localHull.facets[ifacet][0];
-      //   i2 = localHull.facets[ifacet][1];
-      //   facetLengths[ifacet] = geometry::distance<Dimension, RealType>(&localHull.points[Dimension*i1],
-      //                                                                  &localHull.points[Dimension*i2]);
-      //   avgFacetLength += facetLengths[ifacet];
-      // }
-      // avgFacetLength /= numFacets;
-      // for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
-      //   if (facetLengths[ifacet] > tol*avgFacetLength)  divideFacets.push_back(ifacet);
-      // }
-
-      // if (rank == 6){
-      //    cerr << localHull << endl;
-      //    copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
-      // }
-
-      // // Walk the facets flagged for dividing and split them in half
-      // POLY_ASSERT(localHull.points.size() % Dimension == 0);
-      // unsigned numPoints = localHull.points.size()/Dimension;
-      // int iter = 0;
-      // while (iter < divideFacets.size()) {
-      //   const unsigned ifacet = divideFacets[iter] + iter;        
-      //   i1 = localHull.facets[ifacet][0];
-      //   i2 = localHull.facets[ifacet][1];
-      //   for (unsigned j = 0; j != Dimension; ++j) {
-      //     const RealType midpt = 0.5*(localHull.points[Dimension*i1+j] + 
-      //                                 localHull.points[Dimension*i2+j]);
-      //     localHull.points.push_back(midpt);
-      //   }
-      //   POLY_ASSERT(localHull.facets[ifacet].size() == 2);
-      //   localHull.facets[ifacet][1] = numPoints;
-      //   vector<int> newFacet(2);  newFacet[0] = numPoints;  newFacet[1] = i2;
-      //   localHull.facets.insert(localHull.facets.begin()+ifacet+1, 1, newFacet);
-      //   ++numPoints;
-      //   ++iter;
-      // }
-
-      // if (rank == 6){
-      //    cerr << localHull << endl;
-      //    copy(localHull.points.begin(), localHull.points.end(), ostream_iterator<double>(cerr, " "));
-      // }
-      // ------------------ End refining long edges of the local hull ---------------
-      
       // Serialize and send
       vector<char> localBuffer;
       serialize(localHull, localBuffer);
