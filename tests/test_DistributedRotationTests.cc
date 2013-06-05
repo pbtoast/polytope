@@ -1,5 +1,4 @@
-
-// RotationTests
+// DistributedRotationTests
 //
 // A collection of rotation fields on the unit square
 //
@@ -154,30 +153,28 @@ void runTest(Tessellator<2,double>& tessellator,
   string testName = os.str();
    
   // Time stepping and point-resizing stuff
-  double dt, Tmax, scaleFactor;
+  double dt, Tmax, scaleFactor=1.0;
   switch(flowType){
   case 1:
     dt = 2.0;
     Tmax = 628.0/2;
-    scaleFactor = sqrt(2);
+    scaleFactor = 1.0/sqrt(2);
     if (rank == 0) cout << "\nTest 1: Solid Rotation Flow\n" << endl;
     break;
   case 2:
     dt = sqrt(2)*dx;
     Tmax = 4.0;
-    scaleFactor = 1.0;
     if (rank == 0) cout << "\nTest 2: Single Vortex Flow\n" << endl;
     break;
   case 3:
     dt = sqrt(2)*dx;
     Tmax = 4.0;
-    scaleFactor = 1.0;
     if (rank == 0) cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
     break;
   case 4:
-    dt = sqrt(2)*dx;
+    dt = 0.5*dx;
     Tmax = 2.0;
-    scaleFactor = sqrt(2);
+    scaleFactor = 1.0/sqrt(2);
     if (rank == 0) cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
     break;
   }
@@ -226,7 +223,7 @@ void runTest(Tessellator<2,double>& tessellator,
 
   // Resize the generator so we don't fling them out of the boundary
   for (unsigned i = 0; i != points.size(); ++i) {
-    points[i] = 0.5 + (points[i]-0.5)/scaleFactor;  
+    points[i] = 0.5 + (points[i]-0.5)*scaleFactor;  
   }
 
   // The velocity field
@@ -244,7 +241,7 @@ void runTest(Tessellator<2,double>& tessellator,
   vector<double> halfTimePositions(points.size());
   while (time < Tmax) {
     if (step % 5 == 0 and rank == 0) cout << (time/Tmax)*100 << "%" << endl;
-    if (rank == 0) cout << step << endl;
+    //if (rank == 0) cout << step << endl;
     mesh.clear();
     mesh.neighborDomains.clear();
     mesh.sharedNodes.clear();
@@ -266,6 +263,11 @@ void runTest(Tessellator<2,double>& tessellator,
 
     // Check the correctness of the parallel data structures
     const string parCheck = checkDistributedTessellation(mesh);
+    if (parCheck != "ok") {
+      if (rank == 8 or rank == 9) {
+        copy(points.begin(), points.end(), ostream_iterator<double>(cerr, " "));
+      }
+    }
     POLY_CHECK2(parCheck == "ok", parCheck);
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -277,14 +279,15 @@ void runTest(Tessellator<2,double>& tessellator,
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if HAVE_MPI
   MPI_Init(&argc, &argv);
-#endif
+  int rank, numProcs;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
 
 #if HAVE_TRIANGLE
   {
-    cout << "\nTriangle Tessellator:\n" << endl;
+    if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
                                                   true, true);
     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
@@ -294,7 +297,7 @@ int main(int argc, char** argv)
 
 #if HAVE_BOOST_VORONOI
   {
-    cout << "\nBoost Tessellator:\n" << endl;
+    if (rank==0) cout << "\nBoost Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
                                                   true, true);
     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
@@ -304,8 +307,6 @@ int main(int argc, char** argv)
 
   cout << "PASS" << endl;
 
-#if HAVE_MPI
   MPI_Finalize();
-#endif
   return 0;
 }

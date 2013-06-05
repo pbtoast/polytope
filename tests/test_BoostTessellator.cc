@@ -93,7 +93,6 @@ void test2(Tessellator<2,double>& tessellator) {
   points.push_back(0.2);  points.push_back(0.25   );
   points.push_back(0.6);  points.push_back(0.25   );
   points.push_back(0.8);  points.push_back(0.25001);
-  //points.push_back(0.8);  points.push_back(0.24999);
 
   // Facets
   PLC<2,double> boundary;
@@ -109,6 +108,7 @@ void test2(Tessellator<2,double>& tessellator) {
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,points,1);
+  cout << mesh << endl;
   mesh.clear();
 
   // Tessellate bounded

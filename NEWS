@@ -1,3 +1,29 @@
+Release 0.5.13
+
+changeset:
+
+
+Bugfix:
+
+- Major testing of our distributed capabilities. Expansion of the distributed
+  unit tests to improve robustness.
+- Subtle bug in the convexIntersect function
+- Refactoring the 2D tessellators to better handle degenerate cases and
+  interface with the orphan cell algorithm
+
+Added capability:
+
+- Amended the algorithm for computing processor communication for the
+  distributed tessellator. (Included in this is a theoretical basis for why
+  the algorithm ought to work.)
+- You can now build Polytope without the tests. Configuring with
+  option build_tests=0 will turn off testing
+- Running "make test" will now test the distributed capabilities (and acutally
+  use multiple processors!) If cmake finds MPI and the srun executable, it will
+  default to using that. Otherwise, it will search for mpirun. If it fails on
+  both, the distributed tests won't run.
+
+--------------------------------------------------------------------------------
 Release 0.5.12
 
 changeset:

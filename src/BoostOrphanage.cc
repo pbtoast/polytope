@@ -179,7 +179,7 @@ adoptOrphans(const vector<RealType>& points,
           std::cerr << "Polygon " << i << " in the union contains" << std::endl;
           for (typename BGring::const_iterator itr = neighborCells[i].outer().begin();
                itr != neighborCells[i].outer().end(); 
-               ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+               ++itr)   std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
           POLY_ASSERT(false);
         }
       }
@@ -313,14 +313,18 @@ adoptOrphans(const vector<RealType>& points,
         // distance to their neighbors. Setting distance = 2 merges ring elements
         // that are within one quantized mesh spacing. This essentially removes
         // repeated cell nodes having length-zero cell faces.
-        BGring simplifiedRing;
-        boost::geometry::simplify(thisRing, simplifiedRing, 10);
-        thisRing = simplifiedRing;
+        int nsimp = 2;
+        while(boost::geometry::intersects(thisRing) and nsimp < 14) {
+          BGring simplifiedRing;
+          boost::geometry::simplify(thisRing, simplifiedRing, nsimp);
+          thisRing = simplifiedRing;
+          ++nsimp;
+        }
         POLY_ASSERT(thisRing.size() > 2);
         POLY_ASSERT(thisRing.front() == thisRing.back());
         POLY_ASSERT2(!boost::geometry::intersects(thisRing),
                      "Subcell " << subIndex << " has self-intersections");
-      }	
+      }
       
       // If the orphan has only a single neighbor, just compute its union with
       // that neighbor's cell ring from the full tessellation
@@ -345,7 +349,7 @@ adoptOrphans(const vector<RealType>& points,
           std::cerr << std::endl << "Ring " << i << ":" << std::endl;
           for (typename BGring::const_iterator itr = unionRing[i].begin();
                itr != unionRing[i].end(); 
-               ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+               ++itr)   std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
         }
       }
       POLY_ASSERT(unionRing.size() == 1);

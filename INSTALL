@@ -77,6 +77,11 @@ python_exe=<path>
 python_version=2.7
         Set the python version.
 
+build_tests=1
+	Set to 0 to skip building the test set. The Polytope tests take up a
+	significant portion of the build time. We advise turning build_tests
+	off if you only care to install the Polytope library
+
 ------------------------------------------------------------------------------
                       O T H E R   C O N S I D E R A T I O N S
 ------------------------------------------------------------------------------

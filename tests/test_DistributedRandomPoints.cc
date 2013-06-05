@@ -56,22 +56,24 @@ void runTest(const int bType,
   // Initialize the bounding PLC
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(bType);
+
+  if (rank == 0) cerr << "Meshing boundary " << bType << endl;
   
   // Generate random points on all processors
   unsigned N = 2000;
   Generators<2,double> generators( boundary );
   generators.randomPoints( N );
   
-  if( rank == 0 ) cerr << "Points generated" << endl;
+  if (rank == 0) cerr << "Points generated" << endl;
   
   vector<double> myGenerators;
   
   // Assign random points to each processor
-  if( assignRandomly ){
-    for (unsigned i = 0; i < N; ++i){
-      if( i%numProcs == rank ){
-        myGenerators.push_back( generators.mPoints[2*i]   );
-        myGenerators.push_back( generators.mPoints[2*i+1] );
+  if (assignRandomly){
+    for (unsigned i = 0; i < N; ++i) {
+      if (i%numProcs == rank) {
+        myGenerators.push_back(generators.mPoints[2*i]  );
+        myGenerators.push_back(generators.mPoints[2*i+1]);
       }
     }
   }
@@ -190,10 +192,13 @@ void testAllBoundaries(Tessellator<2,double>& tessellator) {
 int main(int argc, char** argv) {
   // Initialize MPI.
   MPI_Init(&argc, &argv);
-  
+  int rank, numProcs;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
 #if HAVE_TRIANGLE
   {
+    if (rank == 0) cout << "\nTriangle Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator
        (new TriangleTessellator<double>(), true, true);
     testAllBoundaries(tessellator);
@@ -203,6 +208,7 @@ int main(int argc, char** argv) {
 
 #if HAVE_BOOST_VORONOI
   {
+    if (rank == 0) cout << "\nBoost Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator
        (new BoostTessellator<double>(), true, true);
     testAllBoundaries(tessellator);
