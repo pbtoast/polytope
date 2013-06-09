@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <utility>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
@@ -425,7 +426,7 @@ computeCellNodesCollinear(const std::vector<RealType>& points,
   // Sort the generators but keep their original indices
   std::vector<std::pair<RealPoint,int> > pointIndexPairs;
   for (i = 0; i != numGenerators; ++i){
-    pointIndexPairs.push_back(make_pair(RealPoint(points[2*i], points[2*i+1]), i));
+    pointIndexPairs.push_back(std::make_pair(RealPoint(points[2*i], points[2*i+1]), i));
   }
   sort( pointIndexPairs.begin(), pointIndexPairs.end(),
 	internal::pairCompareFirst<RealPoint,int> );
