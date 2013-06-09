@@ -1,3 +1,13 @@
+Release 0.5.14
+
+changeset:
+  327:6ebae51127e5
+
+Bugfix:
+
+- Minor bugfix for compilation with clang++.  No algorithmic changes.
+
+--------------------------------------------------------------------------------
 Release 0.5.13
 
 changeset:
