@@ -2,7 +2,7 @@
 // Some explicit instantiations for convexHull_3d.
 //------------------------------------------------------------------------------
 #include <stdint.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <limits>
 #include <iostream>
 
