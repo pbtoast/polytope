@@ -97,15 +97,32 @@ convexHull_2d(const std::vector<RealType>& points,
     plc.facets.resize(1, std::vector<int>(2));
     plc.facets[0][0] = 0;
     plc.facets[0][1] = (n == 1) ? 0 : 1;
+    return plc;
   }
   
+  // Start by finding a point distinct from point 0.
+  j = 1;
+  while (j != n and geometry::distance<2, RealType>(&points[0], &points[2*j]) < dx) ++j;
+  if (j == n - 1) {
+    // There are only 2 distinct positions!
+    plc.facets.resize(1, std::vector<int>(2));
+    plc.facets[0][0] = 0;
+    plc.facets[0][1] = j;
+    return plc;
+  } else if (j == n) {
+    // Good god, there are no distinct points!
+    plc.facets.resize(1, std::vector<int>(2));
+    plc.facets[0][0] = 0;
+    plc.facets[0][1] = 0;
+    return plc;
+  }
+
   // Check if the input points are collinear.
   bool collinear = true;
   POLY_ASSERT(n > 2);
   i = 2;
   while (collinear and i != n) {
-    collinear *= geometry::collinear<2,RealType>(&points[0], &points[2],
-                                                 &points[2*i], 1.0e-10);
+    collinear = geometry::collinear<2,RealType>(&points[0], &points[2*j], &points[2*i], dx);
     ++i;
   }
   

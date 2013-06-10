@@ -2,7 +2,7 @@
 // VoroPP_3d
 //----------------------------------------------------------------------------//
 #include <stdint.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <algorithm>

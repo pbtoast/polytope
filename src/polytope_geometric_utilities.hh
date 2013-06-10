@@ -21,6 +21,16 @@ extern int scale_expansion(int elen, double* e, double b, double* h);
 // Sets h = e + b
 extern int grow_expansion(int elen, double* e, double b, double* h);
 
+//------------------------------------------------------------------------------
+// It seems there is a missing specialization for abs(long unsigned int), so 
+// fill it in.
+// This is necessary for the collinear method below to compile.  It seems evil
+// to insert something into namespace std:: like this, by the way.
+//------------------------------------------------------------------------------
+namespace std {
+  inline long unsigned int abs(long unsigned int x) { return x; }
+}
+
 namespace polytope {
 namespace geometry {
 
@@ -187,8 +197,8 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  // return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
-  return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
+  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  // return      abs(     abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
 }
 
 //------------------------------------------------------------------------------
