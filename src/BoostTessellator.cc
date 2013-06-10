@@ -209,7 +209,8 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(voronoi.num_cells() == numGenerators);
 
   // Compute a bounding box for the floating point vertex positions
-  RealType vlow[2], vhigh[2];
+  RealType vlow [2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
+  RealType vhigh[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
   for (VD::const_vertex_iterator itr = voronoi.vertices().begin();
        itr != voronoi.vertices().end(); ++itr) {
     vlow [0] = min(mCoords.low [0], (mCoords.low[0] + mCoords.delta*itr->x()));

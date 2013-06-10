@@ -93,7 +93,10 @@ void test(Tessellator<2,double>& tessellator)
     generators.cartesianPoints(nxny);         // reset locations
     generators.perturb(epsilon);              // perturb
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+    tessellator.tessellate(generators.mPoints, 
+                           boundary.mPLCpoints, 
+                           boundary.mPLC, 
+                           mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(isCartesian)  cout << "Degeneracy resolved" << endl; 
