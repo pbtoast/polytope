@@ -45,7 +45,10 @@ void outputResult(Tessellator<2,double>& tessellator,
   generators.randomPoints(nPoints);
   
   Tessellation<2,double> mesh;
-  tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+  tessellator.tessellate(generators.mPoints, 
+                         boundary.mPLCpoints,
+                         boundary.mPLC,
+                         mesh);
   POLY_ASSERT( mesh.cells.size() == nPoints );
   double area = computeTessellationArea(mesh);
   cout << "Tessellation Area = " << area << endl;
