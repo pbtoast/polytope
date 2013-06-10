@@ -763,9 +763,12 @@ computeSquaredNorm(double* A) {
 inline
 void
 computeCircumcenter(double* A, double* B, double* C, double* X) {
-  double Anorm = computeSquaredNorm(A);
-  double Bnorm = computeSquaredNorm(B);
-  double Cnorm = computeSquaredNorm(C);
+  // double Anorm = computeSquaredNorm(A);
+  // double Bnorm = computeSquaredNorm(B);
+  // double Cnorm = computeSquaredNorm(C);
+  double Anorm = A[0]*A[0] + A[1]*A[1];
+  double Bnorm = B[0]*B[0] + B[1]*B[1];
+  double Cnorm = C[0]*C[0] + C[1]*C[1];  
   double D = 2*orient2d(A,B,C);
   double a0[2] = {Anorm, A[1]},  a1[2] = {A[0], Anorm};
   double b0[2] = {Bnorm, B[1]},  b1[2] = {B[0], Bnorm};

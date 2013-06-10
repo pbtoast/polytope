@@ -381,11 +381,6 @@ computeCellNodes(const vector<RealType>& points,
   // Create the Voronoi nodes from the list of triangles. Each triangle 
   // has 3 nodes p, q, r, and corresponds to a Voronoi node at (X,Y), say.
 
-  // // Blago!
-  // vector<int> badTris;
-  // // Blago!
-
-
   // Find the circumcenters of each triangle, and build the set of triangles
   // associated with each generator.
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
@@ -403,8 +398,6 @@ computeCellNodes(const vector<RealType>& points,
                        mOuterCoords.center[1]-radius};
   RealType highc[2] = {mOuterCoords.center[0]+radius, 
                        mOuterCoords.center[1]+radius};
-  // RealType lowc [2] = {mLow [0], mLow [1]};
-  // RealType highc[2] = {mHigh[0], mHigh[1]};
   for (i = 0; i != delaunay.numberoftriangles; ++i) {
     pindex = delaunay.trianglelist[3*i  ];
     qindex = delaunay.trianglelist[3*i+1];
@@ -444,54 +437,10 @@ computeCellNodes(const vector<RealType>& points,
       highc[1] = max(highc[1], circumcenters[i].y);
       ++triCount;
     }
-    // else badTris.push_back(i);
   }
   POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
   POLY_ASSERT(triMask.size()       == delaunay.numberoftriangles);
   POLY_ASSERT(std::accumulate(triMask.begin(), triMask.end(), 0) > 0);
-
-
-  // // Blago!
-  // cerr << "Bad Triangles:" << endl;
-  // for (vector<int>::const_iterator itr = badTris.begin();
-  //      itr != badTris.end(); ++itr) {
-  //   pindex = delaunay.trianglelist[3*(*itr)  ];
-  // //   qindex = delaunay.trianglelist[3*(*itr)+1];
-  // //   rindex = delaunay.trianglelist[3*(*itr)+2];
-  // //   pq = internal::hashEdge(pindex, qindex);
-  // //   pr = internal::hashEdge(pindex, rindex);
-  // //   qr = internal::hashEdge(qindex, rindex);
-  //   cerr << "Triangle " << *itr << ":" << endl;
-  // //   cerr << "  Generator vertices" << endl
-  // //        << "    " << delaunay.pointlist[2*pindex  ]
-  // //        << " " << delaunay.pointlist[2*pindex+1]
-  // //        << " " << delaunay.pointlist[2*qindex  ]
-  // //        << " " << delaunay.pointlist[2*qindex+1]
-  // //        << " " << delaunay.pointlist[2*rindex  ]
-  // //        << " " << delaunay.pointlist[2*rindex+1] << endl;
-  // //   cerr << "  Circumcenter:" << endl
-  // //        << "    " << circumcenters[*itr] << endl;
-  // //   cerr << "  Triangles neighboring its vertices:";
-  // //   cerr << endl << "    " << pindex << ": ";
-  // //   for (set<unsigned>::const_iterator itr2 = gen2tri[pindex].begin();
-  // //        itr2 != gen2tri[pindex].end(); ++itr2) cerr << *itr2 << " ";
-  // //   cerr << endl << "    " << qindex << ": ";
-  // //   for (set<unsigned>::const_iterator itr2 = gen2tri[qindex].begin();
-  // //        itr2 != gen2tri[qindex].end(); ++itr2) cerr << *itr2 << " ";
-  // //   cerr << endl << "    " << rindex << ": ";
-  // //   for (set<unsigned>::const_iterator itr2 = gen2tri[rindex].begin();
-  // //        itr2 != gen2tri[rindex].end(); ++itr2) cerr << *itr2 << " ";
-  // //   cerr << endl;
-  // //   cerr << "  Triangles neighboring its edges:";
-  // //   cerr << endl << "    (" << pindex << "," << qindex << "): ";
-  // //   for (j = 0; j != edge2tri[pq].size(); ++j) cerr << edge2tri[pq][j] << " ";
-  // //   cerr << endl << "    (" << qindex << "," << rindex << "): ";
-  // //   for (j = 0; j != edge2tri[qr].size(); ++j) cerr << edge2tri[qr][j] << " ";
-  // //   cerr << endl << "    (" << pindex << "," << rindex << "): ";
-  // //   for (j = 0; j != edge2tri[pr].size(); ++j) cerr << edge2tri[pr][j] << " ";
-  // //   cerr << endl;
-  // }
-  // // Blago!
   
   POLY_ASSERT(lowc[0] <= highc[0] and lowc[1] <= highc[1]);
   mOuterCoords.expand(lowc, highc);
@@ -548,43 +497,14 @@ computeCellNodes(const vector<RealType>& points,
 			    &delaunay.pointlist[2*ivert],
 			    &ehat.x);
       
-      IntPoint ip;
-      int inside;
-      // if (circumcenters[i].x >= mCoords.low [0] and 
-      //     circumcenters[i].x <= mCoords.high[0] and
-      //     circumcenters[i].y >= mCoords.low [1] and 
-      //     circumcenters[i].y <= mCoords.high[1]) {
-      //   pinf = mCoords.projectPoint(circumcenters[i], ehat);
-      //   ip   = mCoords.quantize(&pinf.x);
-      //   inside = 1;
-      // }
-      // else {
-        pinf = mOuterCoords.projectPoint(&circumcenters[i].x, &ehat.x);
-        ip   = mOuterCoords.quantize(&pinf.x);
-        inside = 0;
-      // }
-
-      // // Get the intersection point along the "infinite" circumcircle
-      // test = geometry::rayCircleIntersection(&circumcenters[i].x,
-      //                                        &ehat.x,
-      //                                        &mOuterCoords.center[0],
-      //                                        mOuterCoords.rinf,
-      //                                        1.0e-8,
-      //                                        &pinf.x);
-      // test = geometry::rayCircleIntersection(&circumcenters[i].x,
-      //                                        &ehat.x,
-      //                                        &mCoords.center[0],
-      //                                        mCoords.rinf,
-      //                                        1.0e-8,
-      //                                        &pinf.x);
-      // POLY_ASSERT(test);
-      // IntPoint ip = mOuterCoords.quantize(&pinf.x);
+      pinf = mOuterCoords.projectPoint(&circumcenters[i].x, &ehat.x);
+      IntPoint ip = mOuterCoords.quantize(&pinf.x);
+      // pinf = mCoords.projectPoint(&circumcenters[i].x, &ehat.x);
       // IntPoint ip = mCoords.quantize(&pinf.x);
-      // IntPoint ip(pinf.x, pinf.y, mLowOuter[0], mLowOuter[1], mDeltaOuter);
+      int inside = 0;
+
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
-      // if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,0);
-      // if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,1);
       if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,inside);
       POLY_ASSERT(edge2id.find(edge) == edge2id.end());
       edge2id[edge] = j;
@@ -600,7 +520,6 @@ computeCellNodes(const vector<RealType>& points,
       // cerr << "j index                = " << j << endl;
       // cerr << "Circumcenter box       = " << cbox[0] << " " << cbox[1] << endl;
       // //Blago!
-
     }
   }
   POLY_ASSERT(circ2id.size() == nodeMap.size());
@@ -642,8 +561,7 @@ computeCellNodes(const vector<RealType>& points,
         POLY_ASSERT(edge2tri[pq][0] == i);
         POLY_ASSERT(edge2id.find(pq) != edge2id.end());
         jj = edge2id[pq];
-        POLY_ASSERT(jj != ii);
-        meshEdges.insert(internal::hashEdge(ii,jj));
+        if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }else{
          POLY_ASSERT((edge2tri[pq].size() == 2 and edge2tri[pq][0] == i)
                      or edge2tri[pq][1] == i);
@@ -657,8 +575,7 @@ computeCellNodes(const vector<RealType>& points,
         POLY_ASSERT(edge2tri[pr][0] == i);
         POLY_ASSERT(edge2id.find(pr) != edge2id.end());
         jj = edge2id[pr];
-        POLY_ASSERT(jj != ii);
-        meshEdges.insert(internal::hashEdge(ii,jj));
+        if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }else{
          POLY_ASSERT((edge2tri[pr].size() == 2 and edge2tri[pr][0] == i)
                      or edge2tri[pr][1] == i);
@@ -1108,7 +1025,7 @@ computeVoronoiBounded(const vector<RealType>& points,
   // Generate the quantized boundary to handle boost intersections
   BGpolygon boundary;
   constructBoostBoundary(IntPLCPoints, geometry, boundary);
-  
+
   // Initialize the object to handle cell intersections
   Clipper2d<CoordHash> clipper(boundary);
   
@@ -1138,27 +1055,10 @@ computeDelaunay(const vector<RealType>& points,
   POLY_ASSERT(!mCoords.empty());
   RealType low [2] = {mCoords.low [0], mCoords.low [1]};
   RealType high[2] = {mCoords.high[0], mCoords.high[1]};
-  // RealType low [2] = { numeric_limits<RealType>::max(),  numeric_limits<RealType>::max()};
-  // RealType high[2] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()};
-  // low [0] = mLow [0];
-  // low [1] = mLow [1];
-  // high[0] = mHigh[0];
-  // high[1] = mHigh[1];
-  // for (i = 0; i != numGenerators; ++i) {
-  //    low [0] = min(low [0], points[2*i  ]);
-  //    low [1] = min(low [1], points[2*i+1]);
-  //    high[0] = max(high[0], points[2*i  ]);
-  //    high[1] = max(high[1], points[2*i+1]);
-  // }
-  // POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);
 
-  RealType box[2] = {high[0] - low[0], high[1] - low[1]};
+  RealType box [2] = {high[0] - low[0], high[1] - low[1]};
   const RealType boxsize = 8.0*max(box[0], box[1]);
   
-  // const RealType xmin = mCoords.low [0];
-  // const RealType xmax = mCoords.high[0];
-  // const RealType ymin = mCoords.low [1];
-  // const RealType ymax = mCoords.high[1];
   const RealType xmin = 0.5*(low[0] + high[0]) - boxsize;
   const RealType xmax = 0.5*(low[0] + high[0]) + boxsize;
   const RealType ymin = 0.5*(low[1] + high[1]) - boxsize;

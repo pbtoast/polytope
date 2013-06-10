@@ -60,7 +60,8 @@ void generateMesh(Tessellator<2,double>& tessellator)
       std::vector<unsigned> nxny(2,nx);
       generators.cartesianPoints( nxny );
       Tessellation<2,double> mesh;
-      tessellate2D(generators.mPoints,boundary,tessellator,mesh);
+      tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+      outputMesh(mesh, "wtfMesh_bounded", generators.mPoints);
       
       // CHECKS:
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
