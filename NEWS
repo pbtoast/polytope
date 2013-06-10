@@ -1,3 +1,14 @@
+Release 0.5.15
+
+changeset:
+  329:22c3fa7cc85d
+
+Bugfix:
+
+- Some uninitialized variables were causing strange behavior when running 
+  optimized. No other changes.
+
+--------------------------------------------------------------------------------
 Release 0.5.14
 
 changeset:
