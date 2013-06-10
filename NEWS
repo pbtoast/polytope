@@ -7,6 +7,8 @@ Bugfix:
 
 - Some uninitialized variables were causing strange behavior when running 
   optimized. No other changes.
+- Fixed a bug in the new logic of convexHull_2d that checks for collinearity in
+  the input.  The 3D remains behind on this for now.
 
 --------------------------------------------------------------------------------
 Release 0.5.14
