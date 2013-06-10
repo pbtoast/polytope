@@ -53,7 +53,8 @@ public:
     ReducedPLC<Dimension, RealType>(),
     low(),
     high(),
-    center(){}
+    center(),
+    mCoordinatesModified(false){}
   QuantizedCoordinates(const QuantizedCoordinates& coords);
 
   //------------------------------------------------------------------------

@@ -62,7 +62,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20);
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
     ++i;
@@ -75,7 +75,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20);
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
     ++i;
@@ -88,7 +88,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20);
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
     ++i;
@@ -101,7 +101,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20);
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
     ++i;
@@ -114,7 +114,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20);
     Tessellation<2,double> mesh;
-    tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
     ++i;
@@ -207,7 +207,7 @@ void test(Tessellator<2,double>& tessellator) {
       Generators<2,double> generators(boundary);
       generators.randomPoints(50);
       Tessellation<2,double> mesh;
-      tessellate2D(generators.mPoints, boundary, tessellator, mesh);
+      tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
       outputMesh(mesh, testName, generators.mPoints, i+iter);
       cout << iter << endl;
       printArea(boundary,mesh);
