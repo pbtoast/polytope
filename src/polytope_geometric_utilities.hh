@@ -28,7 +28,8 @@ extern int grow_expansion(int elen, double* e, double b, double* h);
 // to insert something into namespace std:: like this, by the way.
 //------------------------------------------------------------------------------
 namespace std {
-  inline long unsigned int abs(long unsigned int x) { return x; }
+  // inline long unsigned int abs(long unsigned int x) { return x; }
+  inline uint64_t          abs(uint64_t x)          { return x; }
 }
 
 namespace polytope {
