@@ -2,6 +2,7 @@
 // TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
+// #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <set>
@@ -323,6 +324,17 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   
+  // // BLAGO!
+  // std::ofstream dumpfile;
+  // dumpfile.open("generators.txt");
+  // const unsigned n = points.size()/2;
+  // std::cerr << "HERE WE GO : " << n << std::endl;
+  // for (unsigned i = 0; i != n; ++i) {
+  //   dumpfile << points[2*i] << " " << points[2*i+1] << std::endl;
+  // }
+  // dumpfile.close();
+  // // BLAGO!
+
   // Build a PLC with the bounding box, and then use the PLC method.
   ReducedPLC<2, RealType> box = this->boundingBox(low, high);
   this->tessellate(points, box.points, box, mesh);
