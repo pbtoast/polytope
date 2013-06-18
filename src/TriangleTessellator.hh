@@ -92,10 +92,7 @@ private:
                         const std::map<IntPoint, std::pair<int,int> >& nodeMap,
 			std::vector<std::vector<unsigned> >& cellNodes,
                         Clipper2d<CoordHash>& clipper,
-			// const std::vector<RealType>& PLCpoints,
-			// const PLC<2, RealType>& geometry,
-			std::vector<BGring>& cellRings,
-			bool performCellAdoption) const;
+			std::vector<BGring>& cellRings) const;
 
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
@@ -130,7 +127,6 @@ private:
   mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
 
   friend class BoostOrphanage<RealType>;
-
 };
 
 } //end polytope namespace

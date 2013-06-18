@@ -48,10 +48,10 @@ void lloyd(Tessellation<2,double>& mesh,
 // lloydTestDistributed
 // -----------------------------------------------------------------------
 void lloydTestDistributed(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints     = 2000;     // Number of generators
-  const unsigned nIter       = 100;      // Number of iterations
-  const unsigned outputEvery = 5;        // Output frequency
-  const int btype = 9;
+  const unsigned nPoints     = 4000;     // Number of generators
+  const unsigned nIter       = 10000;     // Number of iterations
+  const unsigned outputEvery = 500;      // Output frequency
+  const int btype = 2;
 
   // Seed the random number generator the same on all processes.
   srand(10489592);
@@ -112,7 +112,8 @@ void lloydTestDistributed(Tessellator<2,double>& tessellator) {
     ++iter;
     mesh.clear();
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    if (iter % outputEvery == 0) 
+    if (iter % outputEvery == 0)
+       if (rank == 0) cerr << iter << endl;
        outputMesh(mesh, testName, points, iter);
   }
 }
@@ -128,13 +129,13 @@ int main(int argc, char** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
    
-#if HAVE_TRIANGLE
-  {
-    cout << "\nTriangle Tessellator:\n" << endl;
-    DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
-    lloydTestDistributed(tessellator);
-  }
-#endif   
+// #if HAVE_TRIANGLE
+//   {
+//     cout << "\nTriangle Tessellator:\n" << endl;
+//     DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
+//     lloydTestDistributed(tessellator);
+//   }
+// #endif   
 
 #if HAVE_BOOST_VORONOI
   {
