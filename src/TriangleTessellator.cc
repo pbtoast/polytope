@@ -283,7 +283,7 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
 template<typename RealType>
 TriangleTessellator<RealType>::
 TriangleTessellator():
-  Tessellator<2, RealType>() {
+  Tessellator<2, RealType>(){
 }
 //------------------------------------------------------------------------------
 
@@ -627,10 +627,7 @@ computeCellRings(const vector<RealType>& points,
                  const map<IntPoint, pair<int,int> >& nodeMap,
 		 vector<vector<unsigned> >& cellNodes,
 		 Clipper2d<CoordHash>& clipper,
-                 // const vector<RealType>& PLCpoints,
-		 // const PLC<2, RealType>& geometry,
-		 vector<BGring>& cellRings,
-		 bool performCellAdoption) const {
+                 vector<BGring>& cellRings) const {
   const unsigned numGenerators = points.size()/2;
   int i, j, k;
   
@@ -1043,11 +1040,9 @@ computeVoronoiBounded(const vector<RealType>& points,
   
   // Compute bounded cell rings
   vector<BGring> cellRings;
-  // this->computeCellRings(points, PLCpoints, geometry, cellRings, true);
-  this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings, true);
+  this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings);
   
   // Input nodes and construct the final mesh topology
-  //constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
   constructBoundedMeshTopology(cellRings, points, mCoords, mesh);
 }
 //------------------------------------------------------------------------------
@@ -1211,7 +1206,7 @@ tessellate(const std::vector<RealType>& points,
   
   // Compute bounded cell rings
   vector<BGring> cellRings;
-  this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings, true);
+  this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings);
   
   // Store the rings in a non-Boost way
   IntCells.resize(numGenerators);
