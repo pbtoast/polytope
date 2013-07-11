@@ -46,11 +46,19 @@ void unboundedTessellation(const unsigned nx,
 //   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
 // #endif
 
+  // cerr << "Inf node positions: " << endl;
+  // for (vector<unsigned>::const_iterator itr = mesh.infNodes.begin();
+  //      itr != mesh.infNodes.end();
+  //      ++itr) cerr << "   " << *itr << " : "
+  //                  << mesh.nodes[3*(*itr)  ] << " "
+  //                  << mesh.nodes[3*(*itr)+1] << " "
+  //                  << mesh.nodes[3*(*itr)+2] << endl;
+
   // Check for validity.
   const unsigned nx1 = nx - 1;
   POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1 + 6*nx1*nx1);
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
-  POLY_CHECK2(mesh.infNodes.size()/3 == 6*nx1*nx1, "Number of infNodes: " << mesh.infNodes.size()/3 << escapePod(nx, generators, mesh));
+  POLY_CHECK2(mesh.infNodes.size() == 6*nx1*nx1, "Number of infNodes: " << mesh.infNodes.size() << escapePod(nx, generators, mesh));
   for (unsigned i = 0; i != nx*nx*nx; ++i) {
     const unsigned 
       ix = i % nx,
