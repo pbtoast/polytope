@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
   const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
   unsigned ix, iy, iz;
   double xi, yi, zi;
-  for (int nx = 10; nx != 30; ++nx) {
+  for (int nx = 2; nx != 30; ++nx) {
     cout << "============================== nx = " << nx << " ==============================" << endl;
     vector<double> generators;
     const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx, dz = (z2 - z1)/nx;
