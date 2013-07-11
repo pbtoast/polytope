@@ -931,6 +931,105 @@ segmentIntersection2D(const RealType* a,
    return false;
 }
 
+//------------------------------------------------------------------------------
+// Compute the volume of a tet given the four node positions.
+// Note for efficiency this method does not do the necessary division by 6,
+// so for the true tet volume you need to do this!
+//------------------------------------------------------------------------------
+template<typename RealType>
+inline
+double
+tetrahedralVolume6(const RealType* n1,
+                   const RealType* n2,
+                   const RealType* n3,
+                   const RealType* n4) {
+  RealType n12[3] = {n2[0] - n1[0], n2[1] - n1[1], n2[2] - n1[2]};
+  RealType n13[3] = {n3[0] - n1[0], n3[1] - n1[1], n3[2] - n1[2]};
+  RealType n14[3] = {n4[0] - n1[0], n4[1] - n1[1], n4[2] - n1[2]};
+  RealType A[3];
+  cross<3, RealType> (n13, n12, A);
+  return dot<3>(A, n14);
+}
+
+//------------------------------------------------------------------------------
+// Same thing to simultaneously return the tet volume and centroid.
+//------------------------------------------------------------------------------
+template<typename RealType>
+inline
+void
+tetrahedralVolumeAndCentroid6(const RealType* n1,
+                              const RealType* n2,
+                              const RealType* n3,
+                              const RealType* n4,
+                              RealType& vol,
+                              RealType* centroid) {
+  RealType n12[3] = {n2[0] - n1[0], n2[1] - n1[1], n2[2] - n1[2]};
+  RealType n13[3] = {n3[0] - n1[0], n3[1] - n1[1], n3[2] - n1[2]};
+  RealType n14[3] = {n4[0] - n1[0], n4[1] - n1[1], n4[2] - n1[2]};
+  RealType A[3];
+  cross<3, RealType> (n13, n12, A);
+  vol = dot<3>(A, n14);
+  centroid[0] = 0.25*(n1[0] + n2[0] + n3[0] + n4[0]);
+  centroid[1] = 0.25*(n1[1] + n2[1] + n3[1] + n4[1]);
+  centroid[2] = 0.25*(n1[2] + n2[2] + n3[2] + n4[2]);
+}
+
+//------------------------------------------------------------------------------
+// Compute the volume of a cell in a tessellation.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+computeCellCentroidAndSignedVolume(const Tessellation<3, RealType>& mesh,
+                                   const unsigned ci,
+                                   RealType* ccent,
+                                   RealType& cvol) {
+  POLY_ASSERT(ci < mesh.cells.size());
+  ccent[0] = 0.0; ccent[1] = 0.0; ccent[2] = 0.0; 
+  cvol = 0.0;
+  const unsigned nf = mesh.cells[ci].size();
+  int i, j, k, fi, nn, end, delta;
+  RealType cmid[3], fcent[3], fhat[3], tetcent[3], tetvol;
+
+  // Make a first stab at the center of the cell based solely on the vertices.
+  computeCellCentroid(mesh, ci, cmid);
+
+  // Walk the faces.
+  for (k = 0; k != nf; ++k) {
+    fi = mesh.cells[ci][k];
+    const std::vector<unsigned>& faceNodes = mesh.faces[internal::positiveID(fi)];
+    nn = faceNodes.size();
+    computeFaceCentroidAndNormal(mesh, internal::positiveID(fi), fcent, fhat);
+    if (fi < 0) {
+      i = nn - 1;
+      end = -1;
+      delta = -1;
+    } else {
+      i = 0; 
+      end = nn;
+      delta = 1;
+    }
+    while (i != end) {
+      j = (i + delta) % nn;
+      tetrahedralVolumeAndCentroid6(cmid, 
+                                    &mesh.nodes[3*faceNodes[i]],
+                                    &mesh.nodes[3*faceNodes[j]],
+                                    fcent,
+                                    tetvol,
+                                    tetcent);
+      cvol += tetvol;
+      ccent[0] += tetvol*tetcent[0];
+      ccent[1] += tetvol*tetcent[1];
+      ccent[2] += tetvol*tetcent[2];
+      i += delta;
+    }
+  }
+
+  // Normalize and we're done.
+  POLY_ASSERT(cvol != 0.0);
+  ccent[0] /= cvol; ccent[1] /= cvol; ccent[2] /= cvol;
+  cvol /= 6.0;
+}
+
 }
 }
 
