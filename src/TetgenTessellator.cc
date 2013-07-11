@@ -724,7 +724,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   bool test;
   RealPoint fhat, tetcent, test_point, a_b, a_c, pinf;
   map<TetFacetHash, unsigned> facet2id;
-  mesh.infNodes = vector<unsigned>(circ2id.size());
+  mesh.infNodes = vector<unsigned>();
   for (map<TetFacetHash, vector<unsigned> >::const_iterator facetItr = facet2tets.begin();
        facetItr != facet2tets.end();
        ++facetItr) {
@@ -753,7 +753,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                                      &out.pointlist[3*facet.z],
                                                      &fhat.x);
       POLY_ASSERT(test);
-      cerr << "Surface facet @ " << circumcenters[i] << " " << fhat;
       fhat -= circumcenters[i];
 
       // Check for the special case of the tet circumcenter coplanar with the facet.
@@ -768,7 +767,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
         geometry::cross<3, RealType>(&a_b.x, &a_c.x, &fhat.x);
       }
       geometry::unitVector<3, RealType>(&fhat.x);
-      cerr << " unit normal " << fhat << " ";
 
       // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
       POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > degeneracy);
@@ -776,7 +774,6 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       test_point += fhat;
       if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
           orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &test_point.x) > 0.0) fhat *= -1.0;
-      cerr << fhat << endl;
 
       // Now we can compute the point where this ray intersects the surrounding "inf" sphere.
       test = geometry::raySphereIntersection(&circumcenters[i].x,
