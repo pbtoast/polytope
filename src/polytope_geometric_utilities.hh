@@ -1009,10 +1009,12 @@ computeCellCentroidAndSignedVolume(const Tessellation<3, RealType>& mesh,
       delta = 1;
     }
     while (i != end) {
-      j = (i + delta) % nn;
+      j = (i + delta + nn) % nn;
+      POLY_ASSERT(i >= 0 and i < nn);
+      POLY_ASSERT(j >= 0 and j < nn);
       tetrahedralVolumeAndCentroid6(cmid, 
-                                    &mesh.nodes[3*faceNodes[i]],
                                     &mesh.nodes[3*faceNodes[j]],
+                                    &mesh.nodes[3*faceNodes[i]],
                                     fcent,
                                     tetvol,
                                     tetcent);
