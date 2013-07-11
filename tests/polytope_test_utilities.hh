@@ -5,6 +5,7 @@
 #define __polytope_test_utilities__
 
 #include "polytope.hh"
+#include "polytope_geometric_utilities.hh"
 
 template<typename RealType> class Boundary2D;
 
@@ -39,12 +40,14 @@ double random01() {
 //------------------------------------------------------------------------------
 // A simple mesh output function for the SiloWriter
 //------------------------------------------------------------------------------
+// 2D
 template <typename RealType>
-void outputMesh(Tessellation<2,RealType>& mesh,
+void outputMesh(const Tessellation<2,RealType>& mesh,
 		std::string prefix,
 		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
+  POLY_ASSERT(points.size() == 2*mesh.cells.size());
 #if HAVE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
@@ -68,19 +71,58 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 #endif
 }
 
+//..............................................................................
+// 3D
+template <typename RealType>
+void outputMesh(const Tessellation<3,RealType>& mesh,
+		std::string prefix,
+		const std::vector<RealType>& points,
+		const unsigned testCycle = 1,
+		const RealType time = 0.0) {
+  POLY_ASSERT(points.size() == 3*mesh.cells.size());
+#if HAVE_SILO
+  std::vector<double> index(mesh.cells.size());
+  std::vector<double> genx (mesh.cells.size());
+  std::vector<double> geny (mesh.cells.size());
+  std::vector<double> genz (mesh.cells.size());
+  std::vector<double> vol  (mesh.cells.size());
+  double cent[3];
+  for (int i = 0; i < mesh.cells.size(); ++i){
+    index[i] = double(i);
+    if (!points.empty()) {
+      genx[i] = points[3*i  ];
+      geny[i] = points[3*i+1];
+      genz[i] = points[3*i+2];
+    }
+    geometry::computeCellCentroidAndSignedVolume(mesh, i, cent, vol[i]);
+  }
+  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
+  cellFields["gen_z"     ] = &genz[0];
+  cellFields["volume"    ] = &vol[0];
+  std::ostringstream os;
+  os << prefix;
+  polytope::SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, 
+					 faceFields, cellFields, os.str(),
+					 testCycle, time);
+#endif
+}
+
 //------------------------------------------------------------------------------
 // Some specialized subsets of outputMesh
 //------------------------------------------------------------------------------
-template <typename RealType>
-void outputMesh(Tessellation<2,RealType>& mesh,
+template <int nDim, typename RealType>
+void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix,
 		const unsigned testCycle) {
   std::vector<RealType> points;
   outputMesh(mesh, prefix, points, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
-template <typename RealType>
-void outputMesh(Tessellation<2,RealType>& mesh,
+template <int nDim, typename RealType>
+void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix) {
   std::vector<RealType> points;
   outputMesh(mesh, prefix, points, 1, 0.0);
