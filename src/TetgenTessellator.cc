@@ -374,13 +374,25 @@ computeVoronoiNatively(const vector<double>& points,
                                             true,
                                             vlow,
                                             vhigh);
-  vlow[0] = min(vlow[0], low[0]); vlow[1] = min(vlow[1], low[1]); vlow[2] = min(vlow[2], low[2]);
-  vhigh[0] = max(vhigh[0], high[0]); vhigh[1] = max(vhigh[1], high[1]); vhigh[2] = max(vhigh[2], high[2]);
-  const RealType vbox[3] = {vhigh[0] - vlow[0], vhigh[1] - vlow[1], vhigh[2] - vlow[2]};
+  vlow[0] = min(vlow[0], low[0]); 
+  vlow[1] = min(vlow[1], low[1]); 
+  vlow[2] = min(vlow[2], low[2]);
+  vhigh[0] = max(vhigh[0], high[0]); 
+  vhigh[1] = max(vhigh[1], high[1]); 
+  vhigh[2] = max(vhigh[2], high[2]);
+  const RealType vbox[3] = {vhigh[0] - vlow[0], 
+                            vhigh[1] - vlow[1], 
+                            vhigh[2] - vlow[2]};
   const RealType rinf = 2.0*max(vbox[0], max(vbox[1], vbox[2]));
-  const RealType vboxc[3] = {0.5*(vlow[0] + vhigh[0]), 0.5*(vlow[1] + vhigh[1]), 0.5*(vlow[2] + vhigh[2])};
-  vlow[0] = vboxc[0] - rinf; vlow[1] = vboxc[1] - rinf; vlow[2] = vboxc[2] - rinf;
-  vhigh[0] = vboxc[0] + rinf; vhigh[1] = vboxc[1] + rinf; vhigh[2] = vboxc[2] + rinf;
+  const RealType vboxc[3] = {0.5*(vlow[0] + vhigh[0]), 
+                             0.5*(vlow[1] + vhigh[1]), 
+                             0.5*(vlow[2] + vhigh[2])};
+  vlow[0] = vboxc[0] - rinf; 
+  vlow[1] = vboxc[1] - rinf; 
+  vlow[2] = vboxc[2] - rinf;
+  vhigh[0] = vboxc[0] + rinf; 
+  vhigh[1] = vboxc[1] + rinf; 
+  vhigh[2] = vboxc[2] + rinf;
 
   // Read out the vertices, converting to quantized (hashed) positions and
   // building the map of hash -> node ID.
@@ -611,9 +623,13 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
 
   // Compute the circumcenters of the tetrahedra, and the set of tets associated
   // with each generator.
-  RealType clow[3] = {numeric_limits<RealType>::max(), numeric_limits<RealType>::max(), numeric_limits<RealType>::max()},
-          chigh[3] = {-numeric_limits<RealType>::max(), -numeric_limits<RealType>::max(), -numeric_limits<RealType>::max()},
-           X[3];
+  RealType clow[3] = {numeric_limits<RealType>::max(), 
+                      numeric_limits<RealType>::max(), 
+                      numeric_limits<RealType>::max()},
+          chigh[3] = {-numeric_limits<RealType>::max(), 
+                      -numeric_limits<RealType>::max(), 
+                      -numeric_limits<RealType>::max()},
+            X[3];
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
   int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
@@ -674,9 +690,15 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   POLY_END_CONTRACT_SCOPE;
 
   // The bounding box for the circumcenters, useful for quantizing those pups.
-  clow[0] = min(clow[0], low[0]); clow[1] = min(clow[1], low[1]); clow[2] = min(clow[2], low[2]);
-  chigh[0] = max(chigh[0], high[0]); chigh[1] = max(chigh[1], high[1]); chigh[2] = max(chigh[2], high[2]);
-  const RealType cbox[3]  = {chigh[0] - clow[0], chigh[1] - clow[1], chigh[2] - clow[2]};
+  clow[0] = min(clow[0], low[0]); 
+  clow[1] = min(clow[1], low[1]); 
+  clow[2] = min(clow[2], low[2]);
+  chigh[0] = max(chigh[0], high[0]); 
+  chigh[1] = max(chigh[1], high[1]); 
+  chigh[2] = max(chigh[2], high[2]);
+  const RealType cbox[3]  = {chigh[0] - clow[0], 
+                             chigh[1] - clow[1], 
+                             chigh[2] - clow[2]};
   const RealType cboxsize = 2.0*max(cbox[0], max(cbox[1], cbox[2]));
   const RealType cdx = max(degeneracy, cboxsize/coordMax);
 
@@ -694,7 +716,9 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   // Any surface facets create new "infinite" or "unbounded" rays, which originate at
   // the tet circumcenter and pass through the circumcenter of the triangular facet.
   const RealType rinf = 2.0*cboxsize;
-  const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]), 0.5*(clow[1] + chigh[1]), 0.5*(clow[2] + chigh[2])};
+  const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]),
+                             0.5*(clow[1] + chigh[1]), 
+                             0.5*(clow[2] + chigh[2])};
 
   // Look for any surface facets we need to project unbounded rays through.
   bool test;
@@ -729,6 +753,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                                      &out.pointlist[3*facet.z],
                                                      &fhat.x);
       POLY_ASSERT(test);
+      cerr << "Surface facet @ " << circumcenters[i] << " " << fhat;
       fhat -= circumcenters[i];
 
       // Check for the special case of the tet circumcenter coplanar with the facet.
@@ -743,6 +768,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
         geometry::cross<3, RealType>(&a_b.x, &a_c.x, &fhat.x);
       }
       geometry::unitVector<3, RealType>(&fhat.x);
+      cerr << " unit normal " << fhat << " ";
 
       // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
       POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > degeneracy);
@@ -750,6 +776,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       test_point += fhat;
       if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
           orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &test_point.x) > 0.0) fhat *= -1.0;
+      cerr << fhat << endl;
 
       // Now we can compute the point where this ray intersects the surrounding "inf" sphere.
       test = geometry::raySphereIntersection(&circumcenters[i].x,
@@ -764,7 +791,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       j = internal::addKeyToMap(ip, circ2id);
       POLY_ASSERT(facet2id.find(facet) == facet2id.end());
       facet2id[facet] = j;
-      if (k != circ2id.size()) mesh.infNodes.push_back(1); //mesh.infNodes.push_back(j);
+      if (k != circ2id.size()) mesh.infNodes.push_back(j);
     }
   }
 
