@@ -1,7 +1,7 @@
 #
 # Change this list to add/remove modules wrapped by PyBindGen:
 #
-set(LIST_OF_WRAPPED_CLASSES "CXXContainers" "MeshEditor" "PLC" "Tessellation" "Tessellator")
+set(LIST_OF_WRAPPED_CLASSES "CXXContainers" "MeshEditor" "PLC" "Tessellation" "Tessellator" "Functions")
 
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePyBindGen.cmake)
@@ -36,6 +36,8 @@ add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
+  ${SILO_LIBRARIES}
+#  ${HDF5_LIBRARIES}
 #  ${PYTHON_STATIC_LIB}
 )
 
