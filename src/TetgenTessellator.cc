@@ -670,12 +670,12 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
     edge2tets[bc].insert(i);
     edge2tets[bd].insert(i);
     edge2tets[cd].insert(i);
-    clow[0] = min(clow[0], circumcenters.back().x);
-    clow[1] = min(clow[1], circumcenters.back().y);
-    clow[2] = min(clow[2], circumcenters.back().z);
-    chigh[0] = max(chigh[0], circumcenters.back().x);
-    chigh[1] = max(chigh[1], circumcenters.back().y);
-    chigh[2] = max(chigh[2], circumcenters.back().z);
+    clow[0] = min(clow[0], circumcenters[i].x);
+    clow[1] = min(clow[1], circumcenters[i].y);
+    clow[2] = min(clow[2], circumcenters[i].z);
+    chigh[0] = max(chigh[0], circumcenters[i].x);
+    chigh[1] = max(chigh[1], circumcenters[i].y);
+    chigh[2] = max(chigh[2], circumcenters[i].z);
   }
   POLY_BEGIN_CONTRACT_SCOPE;
   {
@@ -719,6 +719,10 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]),
                              0.5*(clow[1] + chigh[1]), 
                              0.5*(clow[2] + chigh[2])};
+  cerr << "Centroid bounding box: (" 
+       << clow[0] << " " << clow[1] << " " << clow[2] << ") ("
+       << chigh[0] << " " << chigh[1] << " " << chigh[2] << ")" << endl
+       <<    " rinf = " << rinf << endl;
 
   // Look for any surface facets we need to project unbounded rays through.
   bool test;
@@ -875,10 +879,10 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
 
       // Check the orientation of the face -- we want counter-clockwise
       // ordering viewed from outside the cell.
-      POLY_ASSERT((not geometry::collinear<3, RealType>(&mesh.nodes[3*faceNodes[0]],
-                                                        &mesh.nodes[3*faceNodes[1]],
-                                                        &mesh.nodes[3*faceNodes[2]],
-                                                        degeneracy)));
+      // POLY_ASSERT((not geometry::collinear<3, RealType>(&mesh.nodes[3*faceNodes[0]],
+      //                                                   &mesh.nodes[3*faceNodes[1]],
+      //                                                   &mesh.nodes[3*faceNodes[2]],
+      //                                                   degeneracy)));
       ehat.x = generators[3*b]   - generators[3*a];
       ehat.y = generators[3*b+1] - generators[3*a+1];
       ehat.z = generators[3*b+2] - generators[3*a+2];
