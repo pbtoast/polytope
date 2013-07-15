@@ -45,12 +45,74 @@ void lloyd(Tessellation<2,double>& mesh,
 }
 
 // -----------------------------------------------------------------------
+// conditionNumberNodes
+// -----------------------------------------------------------------------
+vector<double> conditionNumberNodes(Tessellation<2,double>& mesh) {
+   vector<double> cond(mesh.nodes.size()/2, 0.0);
+   for (unsigned icell = 0; icell != mesh.cells.size(); ++icell) {
+      for (unsigned f = 0; f != mesh.cells[icell].size(); ++f) {
+         int f1 = mesh.cells[icell][f];
+         int f2 = mesh.cells[icell][(f+1) % mesh.cells[icell].size()];
+         const unsigned iface1 = (f1 < 0) ? ~f1 : f1;
+         const unsigned iface2 = (f2 < 0) ? ~f2 : f2;
+         POLY_ASSERT(iface1 < mesh.faces.size() and iface2 < mesh.faces.size());
+         POLY_ASSERT(mesh.faces[iface1].size() == 2 and mesh.faces[iface2].size() == 2);
+         POLY_ASSERT(iface1 != iface2);
+         const unsigned inode1 = (f1 >= 0) ? mesh.faces[iface1][0] : mesh.faces[iface1][1];
+         const unsigned inode2 = (f1 >= 0) ? mesh.faces[iface1][1] : mesh.faces[iface1][0];
+         const unsigned itmp1  = (f2 >= 0) ? mesh.faces[iface2][0] : mesh.faces[iface2][1];
+         const unsigned itmp2  = (f2 >= 0) ? mesh.faces[iface2][1] : mesh.faces[iface2][0];
+         const unsigned inode3 = (itmp1 == inode1 or itmp1 == inode2) ? itmp2 : itmp1;
+         POLY_ASSERT(inode2 < mesh.nodes.size()/2);
+         POLY_ASSERT(inode1 != inode2);
+         POLY_ASSERT(inode2 != inode3);
+         POLY_ASSERT(inode1 != inode3);
+         const double lp = geometry::distance<2,double>(&mesh.nodes[2*inode1], &mesh.nodes[2*inode2]);
+         const double lq = geometry::distance<2,double>(&mesh.nodes[2*inode2], &mesh.nodes[2*inode3]);
+         const double lr = geometry::distance<2,double>(&mesh.nodes[2*inode3], &mesh.nodes[2*inode1]);
+         const double P = 0.5*(lp + lq + lr);
+         const double A = sqrt(P*(P-lp)*(P-lq)*(P-lr));
+         cond[inode2] += (lp*lp + lq*lq) / A;
+      }
+   }
+   return cond;
+}
+
+// -----------------------------------------------------------------------
+// conditionNumber
+// -----------------------------------------------------------------------
+vector<double> conditionNumber(Tessellation<2,double>& mesh) {
+  vector<double> cond(mesh.cells.size(), 0.0);
+  for (unsigned icell = 0; icell != mesh.cells.size(); ++icell) {
+    double cent[2], area;
+    geometry::computeCellCentroidAndSignedArea(mesh, icell, 1.0e-12, cent, area);
+    for (vector<int>::const_iterator itr = mesh.cells[icell].begin();
+         itr != mesh.cells[icell].end(); ++itr) {
+      const unsigned iface = (*itr < 0) ? ~(*itr) : *itr;
+      POLY_ASSERT(iface < mesh.faces.size());
+      POLY_ASSERT(mesh.faces[iface].size() == 2);
+      const unsigned inode1 = (*itr < 0) ? mesh.faces[iface][1] : mesh.faces[iface][0];
+      const unsigned inode2 = (*itr < 0) ? mesh.faces[iface][0] : mesh.faces[iface][1];
+      POLY_ASSERT(inode1 != inode2);
+      POLY_ASSERT(inode1 < mesh.nodes.size()/2 and inode2 < mesh.nodes.size()/2);
+      const double lp = geometry::distance<2,double>(cent, &mesh.nodes[2*inode1]);
+      const double lq = geometry::distance<2,double>(cent, &mesh.nodes[2*inode2]);
+      const double lr = geometry::distance<2,double>(&mesh.nodes[2*inode1], &mesh.nodes[2*inode2]);
+      const double P = 0.5*(lp + lq + lr);
+      const double A = sqrt(P*(P-lp)*(P-lq)*(P-lr));
+      cond[icell] += (lp*lp + lq*lq) / A;
+    }
+  }
+  return cond;
+}
+
+// -----------------------------------------------------------------------
 // lloydTestDistributed
 // -----------------------------------------------------------------------
 void lloydTestDistributed(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints     = 4000;     // Number of generators
-  const unsigned nIter       = 10000;     // Number of iterations
-  const unsigned outputEvery = 500;      // Output frequency
+  const unsigned nPoints     = 1000;     // Number of generators
+  const unsigned nIter       = 2000;     // Number of iterations
+  unsigned outputEvery = 10;      // Output frequency
   const int btype = 2;
 
   // Seed the random number generator the same on all processes.
@@ -106,15 +168,19 @@ void lloydTestDistributed(Tessellator<2,double>& tessellator) {
 
   // Do the Lloyd iteration thang
   unsigned iter = 0;
-  outputMesh(mesh, testName, points, iter);
+  vector<double> cond = conditionNumber(mesh);
+  outputMesh(mesh, testName, points, cond, iter);
   while (iter != nIter) {
-    lloyd(mesh,points);
+    lloyd(mesh, points);
     ++iter;
     mesh.clear();
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    if (iter % outputEvery == 0)
+    if (iter % outputEvery == 0 or iter <= 20) {
        if (rank == 0) cerr << iter << endl;
-       outputMesh(mesh, testName, points, iter);
+       cond = conditionNumber(mesh);
+       outputMesh(mesh, testName, points, cond, iter);
+    }
+    if (iter > 200) outputEvery = 100;
   }
 }
 
