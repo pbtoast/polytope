@@ -730,7 +730,7 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   fcent[0] /= n; fcent[1] /= n; fcent[2] /= n;
   
   // Now we can compute the unit normal.
-  POLY_ASSERT(verts.size() == 3);
+  POLY_ASSERT2(verts.size() == 3, verts.size());
   RealType ab[3], ac[3];
   ab[0] = mesh.nodes[3*verts[1]  ] - mesh.nodes[3*verts[0]  ];
   ab[1] = mesh.nodes[3*verts[1]+1] - mesh.nodes[3*verts[0]+1];

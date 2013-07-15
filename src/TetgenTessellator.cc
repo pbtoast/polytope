@@ -29,6 +29,111 @@ using std::abs;
 namespace {
 
 //------------------------------------------------------------------------------
+// A handy method for computing a hash of a position to a 64 bit quantized
+// integer value.
+//------------------------------------------------------------------------------
+template<typename RealType>
+uint64_t
+hashPosition(RealType* pos,
+             RealType* xlow_inner,
+             RealType* xhigh_inner,
+             RealType* xlow_outer,
+             RealType* xhigh_outer) {
+  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+              xlow_outer[1] <= xlow_inner[1] and
+              xlow_outer[2] <= xlow_inner[2]);
+  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+              xhigh_outer[1] >= xhigh_inner[1] and
+              xhigh_outer[2] >= xhigh_inner[2]);
+  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+              xlow_inner[1] < xhigh_inner[1] and
+              xlow_inner[2] < xhigh_inner[2]);
+  POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+               pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
+               pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2],
+               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
+               << xlow_outer[0] << " " << xlow_outer[1] << " " << xlow_outer[2] << ") ("
+               << xhigh_outer[0] << " " << xhigh_outer[1] << " " << xhigh_outer[2] << ")");
+
+  // Decide the bounding box we're using.
+  uint64_t result = 0ULL;
+  RealType *xlow, *xhigh;
+  if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
+      pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
+      pos[2] < xlow_inner[2] or pos[1] > xhigh_inner[2]) {
+    xlow = xlow_outer;
+    xhigh = xhigh_outer;
+    result += (1ULL << 63);
+  } else {
+    xlow = xlow_inner;
+    xhigh = xhigh_inner;
+  }
+
+  // Quantize away.
+  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+  result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
+             (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
+             (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Inverse of above.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+unhashPosition(RealType* pos,
+               RealType* xlow_inner,
+               RealType* xhigh_inner,
+               RealType* xlow_outer,
+               RealType* xhigh_outer,
+               uint64_t hashedPosition) {
+  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+              xlow_outer[1] <= xlow_inner[1] and
+              xlow_outer[2] <= xlow_inner[2]);
+  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+              xhigh_outer[1] >= xhigh_inner[1] and
+              xhigh_outer[2] >= xhigh_inner[2]);
+  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+              xlow_inner[1] < xhigh_inner[1] and
+              xlow_inner[2] < xhigh_inner[2]);
+  POLY_ASSERT(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+              pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
+              pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2]);
+
+  // Decide the bounding box we're using.
+  RealType *xlow, *xhigh;
+  if (hashedPosition >= (1ULL << 63)) {
+    xlow = xlow_outer;
+    xhigh = xhigh_outer;
+  } else {
+    xlow = xlow_inner;
+    xhigh = xhigh_inner;
+  }
+
+  // Extract the position (for the center of the cell).
+  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+  const uint64_t xmask = (1ULL << 21) - 1ULL,
+                 ymask = xmask << 21,
+                 zmask = ymask << 21;
+  pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
+  pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
+  pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];
+
+  // Post-conditions.
+  POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
+               pos[1] >= xlow[1] and pos[1] <= xhigh[1] and
+               pos[2] >= xlow[2] and pos[2] <= xhigh[2],
+               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
+               << xlow[0] << " " << xlow[1] << " " << xlow[2] << ") ("
+               << xhigh[0] << " " << xhigh[1] << " " << xhigh[2] << ")");
+}
+
+//------------------------------------------------------------------------------
 // Borrow the Point3 type as a tuple to create 3 node facets hashes.
 //------------------------------------------------------------------------------
 Point3<unsigned>
@@ -576,12 +681,13 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
 
-  typedef int64_t CoordHash;
+  typedef uint64_t PointHash;
+  // typedef int64_t CoordHash;
   typedef pair<int, int> EdgeHash;
-  typedef Point3<CoordHash> IntPoint;
+  // typedef Point3<CoordHash> IntPoint;
   typedef Point3<RealType> RealPoint;
   typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
-  const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
+  // const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
   const double degeneracy = 1.0e-12;
 
   // Compute the normalized generators.
@@ -690,35 +796,39 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   POLY_END_CONTRACT_SCOPE;
 
   // The bounding box for the circumcenters, useful for quantizing those pups.
-  clow[0] = min(clow[0], low[0]); 
-  clow[1] = min(clow[1], low[1]); 
+  clow[0] = min(clow[0], low[0]);
+  clow[1] = min(clow[1], low[1]);
   clow[2] = min(clow[2], low[2]);
   chigh[0] = max(chigh[0], high[0]); 
   chigh[1] = max(chigh[1], high[1]); 
   chigh[2] = max(chigh[2], high[2]);
-  const RealType cbox[3]  = {chigh[0] - clow[0], 
-                             chigh[1] - clow[1], 
-                             chigh[2] - clow[2]};
-  const RealType cboxsize = 2.0*max(cbox[0], max(cbox[1], cbox[2]));
-  const RealType cdx = max(degeneracy, cboxsize/coordMax);
+  RealType cboxsize = max(    chigh[0] - clow[0], 
+                          max(chigh[1] - clow[1], 
+                              chigh[2] - clow[2]));
+  const RealType cboxc[3] = {clow[0],
+                             clow[1], 
+                             clow[2]};
+  clow[0] = cboxc[0] - cboxsize;
+  clow[1] = cboxc[1] - cboxsize;
+  clow[2] = cboxc[2] - cboxsize;
+  chigh[0] = cboxc[0] + 2*cboxsize;
+  chigh[1] = cboxc[1] + 2*cboxsize;
+  chigh[2] = cboxc[2] + 2*cboxsize;
+  const RealType rinf = cboxsize;
+  cboxsize *= 3.0;
 
   // Create the quantized circumcenters, and the map from the (possibly) degenerate
   // circumcenters to their unique IDs.
-  map<IntPoint, int> circ2id;
+  map<PointHash, int> circ2id;
   map<int, unsigned> tet2id;
   for (i = 0; i != out.numberoftetrahedra; ++i) {
-    IntPoint ip(circumcenters[i].x, circumcenters[i].y, circumcenters[i].z,
-                clow[0], clow[1], clow[2], cdx);
+    PointHash ip = hashPosition(&(circumcenters[i].x), low, high, clow, chigh);
     j = internal::addKeyToMap(ip, circ2id);
     tet2id[i] = j;
   }
 
   // Any surface facets create new "infinite" or "unbounded" rays, which originate at
   // the tet circumcenter and pass through the circumcenter of the triangular facet.
-  const RealType rinf = 2.0*cboxsize;
-  const RealType cboxc[3] = {0.5*(clow[0] + chigh[0]),
-                             0.5*(clow[1] + chigh[1]), 
-                             0.5*(clow[2] + chigh[2])};
   cerr << "Centroid bounding box: (" 
        << clow[0] << " " << clow[1] << " " << clow[2] << ") ("
        << chigh[0] << " " << chigh[1] << " " << chigh[2] << ")" << endl
@@ -787,7 +897,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                              1.0e-10,
                                              &pinf.x);
       POLY_ASSERT(test);
-      IntPoint ip(pinf.x, pinf.y, pinf.z, clow[0], clow[1], clow[2], cdx);
+      PointHash ip = hashPosition(&(pinf.x), low, high, clow, chigh);
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       POLY_ASSERT(facet2id.find(facet) == facet2id.end());
@@ -799,14 +909,13 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   // Copy the quantized nodes to the final tessellation.
   const unsigned numNodes = circ2id.size();
   mesh.nodes.resize(3*numNodes);
-  for (map<IntPoint, int>::const_iterator itr = circ2id.begin();
+  for (map<PointHash, int>::const_iterator itr = circ2id.begin();
        itr != circ2id.end();
        ++itr) {
     POLY_ASSERT(itr->second >= 0 and itr->second < numNodes);
     i = itr->second;
-    mesh.nodes[3*i  ] = itr->first.realx(clow[0], cdx);
-    mesh.nodes[3*i+1] = itr->first.realy(clow[1], cdx);
-    mesh.nodes[3*i+2] = itr->first.realz(clow[2], cdx);
+    unhashPosition(&(mesh.nodes[3*i]), low, high, clow, chigh, itr->first);
+    // cerr << "   --> " << mesh.nodes[3*i] << " " << mesh.nodes[3*i+1] << " " << mesh.nodes[3*i+2] << endl;
   }
 
   // Build the faces corresponding to each tet edge.

@@ -38,14 +38,6 @@ void unboundedTessellation(const unsigned nx,
   TetgenTessellator tetgen;
   tetgen.tessellate(generators, mesh);
 
-  // Write out the file if we can.
-// #if HAVE_SILO
-//   vector<double> r2(nx*nx*nx, 1.0);
-//   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-//   cellFields["data"] = &r2[0];
-//   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
-// #endif
-
   // cerr << "Inf node positions: " << endl;
   // for (vector<unsigned>::const_iterator itr = mesh.infNodes.begin();
   //      itr != mesh.infNodes.end();
@@ -53,6 +45,7 @@ void unboundedTessellation(const unsigned nx,
   //                  << mesh.nodes[3*(*itr)  ] << " "
   //                  << mesh.nodes[3*(*itr)+1] << " "
   //                  << mesh.nodes[3*(*itr)+2] << endl;
+  escapePod(nx, generators, mesh);
 
   // Check for validity.
   const unsigned nx1 = nx - 1;
@@ -74,7 +67,7 @@ void unboundedTessellation(const unsigned nx,
       // Along one of the edges of the volume.
       POLY_CHECK2(mesh.cells[i].size() == 4, escapePod(nx, generators, mesh));
     } else if (ntouch == 1) {
-      // Along one of teh faces of the volume.
+      // Along one of the faces of the volume.
       POLY_CHECK2(mesh.cells[i].size() == 5, escapePod(nx, generators, mesh));
     } else {
       // Interior, fully bounded cell.
