@@ -71,6 +71,7 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 //------------------------------------------------------------------------------
 // Some specialized subsets of outputMesh
 //------------------------------------------------------------------------------
+// Only cycle and test name given, no points
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
 		std::string prefix,
@@ -79,6 +80,7 @@ void outputMesh(Tessellation<2,RealType>& mesh,
   outputMesh(mesh, prefix, points, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
+// Only test name given
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
 		std::string prefix) {
@@ -86,7 +88,38 @@ void outputMesh(Tessellation<2,RealType>& mesh,
   outputMesh(mesh, prefix, points, 1, 0.0);
 }
 //------------------------------------------------------------------------------
-
+// a cell-centered field given
+template <typename RealType>
+void outputMesh(Tessellation<2,RealType>& mesh,
+		std::string prefix,
+		const std::vector<RealType>& points,
+                std::vector<RealType>& cellField,
+		const unsigned testCycle = 1,
+		const RealType time = 0.0) {
+#if HAVE_SILO
+  POLY_ASSERT(cellField.size() == mesh.cells.size());
+  std::vector<double> index(mesh.cells.size());
+  std::vector<double> genx (mesh.cells.size());
+  std::vector<double> geny (mesh.cells.size());
+  for (int i = 0; i < mesh.cells.size(); ++i){
+    index[i] = double(i);
+    if (!points.empty()) {
+      genx[i] = points[2*i  ];
+      geny[i] = points[2*i+1];
+    }
+  }
+  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
+  cellFields["cell_index"] = &index[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
+  cellFields["cond"      ] = &cellField[0];
+  std::ostringstream os;
+  os << prefix;
+  polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+					 faceFields, cellFields, os.str(),
+					 testCycle, time);
+#endif
+}
 
 
 //------------------------------------------------------------------------------
