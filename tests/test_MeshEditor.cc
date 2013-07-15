@@ -13,10 +13,10 @@
 #include "Boundary2D.hh"
 #include "Generators.hh"
 #include "polytope_test_utilities.hh"
-#include "checkDistributedTessellation.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
+#include "checkDistributedTessellation.hh"
 #endif
 
 using namespace std;
@@ -134,8 +134,10 @@ int main(int argc, char** argv)
        cout << mesh << endl;
        outputMesh(mesh, testName, itest);
        ++itest;
+#if HAVE_MPI
        const string parCheck = checkDistributedTessellation(mesh);
        POLY_CHECK2(parCheck == "ok", parCheck);
+#endif
      }
    }
 #endif

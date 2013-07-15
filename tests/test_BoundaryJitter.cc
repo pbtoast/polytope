@@ -62,33 +62,6 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny) {
    return true;
 }
 
-// -----------------------------------------------------------------------
-// outputMesh
-// -----------------------------------------------------------------------
-void outputMesh(Tessellation<2,double>& mesh, 
-                const vector<double>& points,
-                int nstep) {
-#if HAVE_SILO
-   vector<double> index(mesh.cells.size());
-   vector<double> genx (mesh.cells.size());
-   vector<double> geny (mesh.cells.size());
-   for (int i = 0; i < mesh.cells.size(); ++i){
-      index[i] = double(i);
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-   }
-   map<string,double*> nodeFields, edgeFields, faceFields, cellFields;
-   cellFields["cell_index"   ] = &index[0];
-   cellFields["cell_center_x"] = &genx[0];
-   cellFields["cell_center_y"] = &geny[0];
-   ostringstream os;
-   os << "test_BoundaryJitter";
-   polytope::SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                                          faceFields, cellFields, os.str(),
-                                          nstep, 0.0);
-#endif
-}
-
 
 // -----------------------------------------------------------------------
 // computeJitterMask
@@ -169,7 +142,7 @@ void test(Tessellator<2,double>& tessellator) {
     mesh.clear();
     jitterPoints(points, jitterMask, epsilon);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, points, i);
+    outputMesh(mesh, "BoundaryJitter_output", points, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(!isCartesian) 
        cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;

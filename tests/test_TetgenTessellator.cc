@@ -7,8 +7,25 @@
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
 
+#if HAVE_MPI
+#include "mpi.h"
+#endif
+
 using namespace std;
 using namespace polytope;
+
+//------------------------------------------------------------------------------
+// Emergency dump of the mesh.
+//------------------------------------------------------------------------------
+std::string
+escapePod(const unsigned nx,
+          const vector<double>& generators,
+          const Tessellation<3, double>& mesh) {
+    std::stringstream os;
+    os << "test_TetgenTessellator_" << nx << "x" << nx << "x" << nx;
+    outputMesh(mesh, os.str(), generators);
+    return " : attempted to write to file " + os.str();
+}
 
 //------------------------------------------------------------------------------
 // unbounded.
@@ -21,19 +38,20 @@ void unboundedTessellation(const unsigned nx,
   TetgenTessellator tetgen;
   tetgen.tessellate(generators, mesh);
 
-  // Write out the file if we can.
-// #if HAVE_SILO
-//   vector<double> r2(nx*nx*nx, 1.0);
-//   map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-//   cellFields["data"] = &r2[0];
-//   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_TetgenTessellator");
-// #endif
+  // cerr << "Inf node positions: " << endl;
+  // for (vector<unsigned>::const_iterator itr = mesh.infNodes.begin();
+  //      itr != mesh.infNodes.end();
+  //      ++itr) cerr << "   " << *itr << " : "
+  //                  << mesh.nodes[3*(*itr)  ] << " "
+  //                  << mesh.nodes[3*(*itr)+1] << " "
+  //                  << mesh.nodes[3*(*itr)+2] << endl;
+  escapePod(nx, generators, mesh);
 
   // Check for validity.
   const unsigned nx1 = nx - 1;
   POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1 + 6*nx1*nx1);
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
-  POLY_CHECK2(mesh.infNodes.size() == 6*nx1*nx1, mesh.infNodes.size());
+  POLY_CHECK2(mesh.infNodes.size() == 6*nx1*nx1, "Number of infNodes: " << mesh.infNodes.size() << escapePod(nx, generators, mesh));
   for (unsigned i = 0; i != nx*nx*nx; ++i) {
     const unsigned 
       ix = i % nx,
@@ -44,18 +62,19 @@ void unboundedTessellation(const unsigned nx,
                              unsigned(iz == 0 or iz == nx1));
     if (ntouch == 3) {
       // Corner cell.
-      POLY_CHECK(mesh.cells[i].size() == 3);
+      POLY_CHECK2(mesh.cells[i].size() == 3, escapePod(nx, generators, mesh));
     } else if (ntouch == 2) {
       // Along one of the edges of the volume.
-      POLY_CHECK(mesh.cells[i].size() == 4);
+      POLY_CHECK2(mesh.cells[i].size() == 4, escapePod(nx, generators, mesh));
     } else if (ntouch == 1) {
-      // Along one of teh faces of the volume.
-      POLY_CHECK(mesh.cells[i].size() == 5);
+      // Along one of the faces of the volume.
+      POLY_CHECK2(mesh.cells[i].size() == 5, escapePod(nx, generators, mesh));
     } else {
       // Interior, fully bounded cell.
-      POLY_CHECK(mesh.cells[i].size() == 6);
+      POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
     }
   }
+
 }
 
 // //------------------------------------------------------------------------------
@@ -165,7 +184,14 @@ void plcBoundedTessellation(const vector<double>& generators) {
 
 }
 
-int main() {
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv) {
+
+#if HAVE_MPI
+   MPI_Init(&argc, &argv);
+#endif
 
   // Create the generators.
   const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
@@ -194,5 +220,9 @@ int main() {
   }
 
   cout << "PASS" << endl;
+
+#if HAVE_MPI
+   MPI_Finalize();
+#endif
   return 0;
 }
