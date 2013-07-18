@@ -1,3 +1,15 @@
+Release 0.5.16
+
+changeset:
+  347:380ba754304a
+
+Bugfix:
+
+- Resurrected the TetgenTessellator -- at this point only the unbounded case.  
+  Its passing its unit tests and we've produced some large serial tessellations
+  with it, but not extensively tested yet.
+
+--------------------------------------------------------------------------------
 Release 0.5.15
 
 changeset:
