@@ -117,14 +117,14 @@ template <int nDim, typename RealType>
 void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix,
 		const unsigned testCycle) {
-  std::vector<RealType> points;
+  std::vector<RealType> points(nDim * mesh.cells.size());
   outputMesh(mesh, prefix, points, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
 template <int nDim, typename RealType>
 void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix) {
-  std::vector<RealType> points;
+  std::vector<RealType> points(nDim * mesh.cells.size());
   outputMesh(mesh, prefix, points, 1, 0.0);
 }
 //------------------------------------------------------------------------------

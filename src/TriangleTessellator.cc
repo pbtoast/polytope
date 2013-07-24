@@ -399,7 +399,7 @@ computeCellNodes(const vector<RealType>& points,
   vector<unsigned> triMask(delaunay.numberoftriangles, 0);
   map<EdgeHash, vector<unsigned> > edge2tri;
   map<int, set<unsigned> > gen2tri;
-  int pindex, qindex, rindex, i, j, triCount = 0;
+  int pindex, qindex, rindex, i, j, k, triCount = 0;
   EdgeHash pq, pr, qr;
   RealType radius = ((mOuterCoords.high[0] - mOuterCoords.center[0])*
                      (mOuterCoords.high[0] - mOuterCoords.center[0]) +
@@ -480,9 +480,10 @@ computeCellNodes(const vector<RealType>& points,
         inside = 0;
         ip = mOuterCoords.quantize(&circumcenters[i].x);
       }
+      k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
-      if (j == circ2id.size()-1) nodeMap[ip] = make_pair(j,inside);
+      if (k != circ2id.size()) nodeMap[ip] = make_pair(j,inside);
     }
   }
   POLY_ASSERT(circ2id.size() == nodeMap.size());
@@ -492,7 +493,7 @@ computeCellNodes(const vector<RealType>& points,
   // the edge
   RealPoint ehat, pinf;
   map<EdgeHash, unsigned> edge2id;
-  int i1, i2, ivert, k;
+  int i1, i2, ivert;
   infNodes = vector<unsigned>(circ2id.size());
   for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tri.begin();
        edgeItr != edge2tri.end(); ++edgeItr){
@@ -517,7 +518,7 @@ computeCellNodes(const vector<RealType>& points,
 
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
-      if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,inside);
+      if (k != circ2id.size())  nodeMap[ip] = make_pair(j,inside);
       POLY_ASSERT(edge2id.find(edge) == edge2id.end());
       edge2id[edge] = j;
       if (k != circ2id.size()) infNodes.push_back(1);
@@ -1043,7 +1044,7 @@ computeVoronoiBounded(const vector<RealType>& points,
   this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings);
   
   // Input nodes and construct the final mesh topology
-  constructBoundedMeshTopology(cellRings, points, mCoords, mesh);
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
 }
 //------------------------------------------------------------------------------
 

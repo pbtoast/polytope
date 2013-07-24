@@ -118,8 +118,8 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Initialize quantized coordinate system
-  // mCoords.setDegeneracy(2.5e-7);
-  // mCoords.setCoordMax  (1LL << 22);
+  // mCoords.setDegeneracy(1.5e-5);
+  // mCoords.setCoordMax  (1LL << 16);
   mCoords.initialize(points);
   
   this->computeVoronoiUnbounded(points, mesh);
@@ -183,7 +183,7 @@ computeCellNodes(const vector<RealType>& points,
                  map<PointType, pair<int,int> >& nodeMap,
                  vector<vector<unsigned> >& cellNodes) const{
   const int numGenerators = points.size()/2;
-  int i, j;
+  int i, j, k;
 
   // Convert point generators to Polytope integer points
   vector<pair<IntPoint, int> > generatorToIndex(numGenerators);
@@ -270,9 +270,10 @@ computeCellNodes(const vector<RealType>& points,
         vert = PointType(v0->x(), v0->y());
         node  = PointType(vert.realx(mCoords.low[0], mCoords.delta), 
                           vert.realy(mCoords.low[1], mCoords.delta));
+        k = node2id.size();
         j = internal::addKeyToMap(node, node2id);
         nodeChain.push_back(j);
-        if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,1);
+        if (k != node2id.size()) nodeMap[node] = make_pair(j,1);
       }
       
       // Infinite edge: Determine the direction of the ray pointing to infinity.
@@ -321,23 +322,28 @@ computeCellNodes(const vector<RealType>& points,
         
         // Vertex 0 is finite, vertex 1 is the projected infNode. Add them in order
         if (v0) {
+
           // Vertex 0
+          k = node2id.size();
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
-          if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,1);
+          if (k != node2id.size()) nodeMap[node] = make_pair(j,1);
+
           // Vertex 1
           node = PointType(pinf.x, pinf.y);
+          k = node2id.size();
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
-          if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
+          if (k != node2id.size()) nodeMap[node] = make_pair(j,0);
         }
         
         // Vertex 0 is the projected infNode. Only add vertex 0.
         else {
           node = PointType(pinf.x, pinf.y);
+          k = node2id.size();
           j = internal::addKeyToMap(node, node2id);
           nodeChain.push_back(j);
-          if (j == node2id.size() - 1) nodeMap[node] = make_pair(j,0);
+          if (k != node2id.size()) nodeMap[node] = make_pair(j,0);
         }
       }
 
@@ -628,7 +634,7 @@ computeVoronoiBounded(const vector<RealType>& points,
                          cellNodes, clipper, cellRings, collinear, true);
 
   // Input nodes and construct the final mesh topology
-  constructBoundedMeshTopology(cellRings, points, mCoords, mesh);
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
 }
 //------------------------------------------------------------------------------
 

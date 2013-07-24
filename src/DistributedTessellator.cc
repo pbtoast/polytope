@@ -283,7 +283,6 @@ computeDistributedTessellation(const vector<RealType>& points,
       
       // We have a lower-dimension hull. Every point is visible
       else {
-        cerr << "Lower-dimensional data" << endl;
         Tessellation<Dimension, RealType> localMesh;
         mSerialTessellator->tessellate(points, localMesh);
         localHull.points = generators;
