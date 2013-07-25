@@ -100,6 +100,13 @@ int main(int argc, char** argv) {
     }
   }
 
+  {
+    double p[2] = {0.5, 0.5}, s1[2] = {1.1, 1.0}, s2[2] = {2.0, 2.0}, result[2];
+    polytope::geometry::closestPointOnSegment2D(p, s1, s2, result);
+    POLY_CHECK(result[0] == s1[0]);
+    POLY_CHECK(result[1] == s1[1]);
+  }
+
 
   cout << "PASS" << endl;
   return 0;
