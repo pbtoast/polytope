@@ -233,26 +233,42 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
 
   // Snap all boundary nodes to be on the bounds of the (floating point)
-  // input boundary points and corresponding PLC
+  // input boundary points and corresponding PLC points
   for (std::set<unsigned>::const_iterator nodeItr = boundaryNodes.begin();
        nodeItr != boundaryNodes.end(); ++nodeItr) {
-    RealType result[2];
-    RealType dist = nearestPoint(&mesh.nodes[2*(*nodeItr)], 
-                                 numPLCpoints, 
-                                 &PLCpoints[0], 
-                                 geometry, 
-                                  result);
-    if (dist >= 10.0*coords.delta) {
-       std::cerr << "Blago!" << std::endl << "   Node " << *nodeItr << " at "
-                 << "(" << mesh.nodes[2*(*nodeItr)  ] << "," << mesh.nodes[2*(*nodeItr)+1] << ")"
-                 << " Moved distance " << dist << " to "
-                 << "(" << result[0] << "," << result[1] << ")" << std::endl;
+    i = 0;
+    RealType dist = std::numeric_limits<RealType>::max();
+    while (i < numPLCpoints) {
+      dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
+                                                           &mesh.nodes[2*(*nodeItr)]));
+      if (dist < 1.5*coords.delta) break;
+      else ++i;  
     }
-    POLY_ASSERT(dist < 10.0*coords.delta);
-    mesh.nodes[2*(*nodeItr)  ] = result[0];
-    mesh.nodes[2*(*nodeItr)+1] = result[1];
+    
+    if (i < numPLCpoints) {
+      mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
+      mesh.nodes[2*(*nodeItr)+1] = PLCpoints[2*i+1];
+    }
+    
+    else {
+      RealType result[2];
+      RealType dist = nearestPoint(&mesh.nodes[2*(*nodeItr)], 
+                                   numPLCpoints, 
+                                   &PLCpoints[0], 
+                                   geometry, 
+                                   result);
+      if (dist >= 10.0*coords.delta) {
+        std::cerr << "Blago!" << std::endl << "   Node " << *nodeItr << " at "
+                  << "(" << mesh.nodes[2*(*nodeItr)  ] << "," << mesh.nodes[2*(*nodeItr)+1] << ")"
+                  << " Moved distance " << dist << " to "
+                  << "(" << result[0] << "," << result[1] << ")" << std::endl;
+      }
+      POLY_ASSERT(dist < 10.0*coords.delta);
+      mesh.nodes[2*(*nodeItr)  ] = result[0];
+      mesh.nodes[2*(*nodeItr)+1] = result[1];
+    }
   }
-  
+
   // Post-conditions
   POLY_ASSERT(mesh.faceCells.size() == mesh.faces.size());
   POLY_ASSERT(mesh.cells.size()     == numGenerators    );
