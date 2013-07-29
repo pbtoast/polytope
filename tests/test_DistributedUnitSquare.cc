@@ -95,13 +95,7 @@ void runTest(Tessellator<2,double>& tessellator) {
     
     unsigned numGen = generators.size()/2;
     POLY_CHECK2( numGen > 1, "Processor " << rank << " only has " << numGen << " generators. This is not enough to tessellate!");
-    cerr << numGen << endl;
-    if (numGen <= 5) {
-      for (unsigned ii = 0; ii != numGen; ++ii) {
-        cerr << "(" << generators[2*ii] << "," << generators[2*ii+1] << ")" << endl;
-      }
-    }
-
+    
     // Create the tessellation.
     double xmin[2] = { x1, y1 };
     double xmax[2] = { x2, y2 };

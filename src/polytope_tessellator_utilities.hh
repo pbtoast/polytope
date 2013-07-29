@@ -145,7 +145,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   typedef boost::geometry::model::ring<IntPoint, false> BGring;
 
   const unsigned numGenerators = cellRings.size();
-  const unsigned numPLCpoints  = PLCpoints.size();
+  const unsigned numPLCpoints  = PLCpoints.size()/2;
 
   // Now build the unique mesh nodes and cell info.
   std::map<IntPoint, int> point2node;
