@@ -16,6 +16,8 @@
 #include "Generators.hh"
 #include "polytope_test_utilities.hh"
 
+#include "timingUtilities.hh"
+
 #if HAVE_MPI
 #include "mpi.h"
 #endif
@@ -53,16 +55,27 @@ void generateMesh(Tessellator<2,double>& tessellator)
    boundary.setUnitSquare();
    Generators<2,double> generators( boundary );
    
-   for (unsigned nx = 2; nx != 100; ++nx){
+   const unsigned imin   = 2;
+   const unsigned imax   = 101;
+   const unsigned iscale = 1;
+
+   //cout << "Zones\tTime" << endl;
+   for (unsigned i = imin; i != imax; ++i){
+      unsigned nx = iscale * i;
       cout << "Testing nx=" << nx << endl;
 
       // Create generators
       std::vector<unsigned> nxny(2,nx);
-      generators.cartesianPoints( nxny );
+      generators.cartesianPoints(nxny);
       Tessellation<2,double> mesh;
-      tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-      outputMesh(mesh, "wtfMesh_bounded", generators.mPoints);
       
+      Timing::Time t0 = Timing::currentTime();
+      tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+      double time = Timing::difference(t0, Timing::currentTime());
+      cout << "Required " << time << " seconds to construct tessellation." << endl;
+      
+      //cout << nx*nx << "\t" << time << endl;
+
       // CHECKS:
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
       cout << "   num mesh cells : " << mesh.cells.size()   << endl;

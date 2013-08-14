@@ -236,14 +236,15 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   // input boundary points and corresponding PLC points
   for (std::set<unsigned>::const_iterator nodeItr = boundaryNodes.begin();
        nodeItr != boundaryNodes.end(); ++nodeItr) {
-    i = 0;
-    RealType dist = std::numeric_limits<RealType>::max();
-    while (i < numPLCpoints) {
-      dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
-                                                           &mesh.nodes[2*(*nodeItr)]));
-      if (dist < 1.5*coords.delta) break;
-      else ++i;  
-    }
+    // i = 0;
+    // RealType dist = std::numeric_limits<RealType>::max();
+    // while (i < numPLCpoints) {
+    //   dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
+    //                                                        &mesh.nodes[2*(*nodeItr)]));
+    //   if (dist < 1.5*coords.delta) break;
+    //   else ++i;  
+    // }
+    i = numPLCpoints;
     
     if (i < numPLCpoints) {
       mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
