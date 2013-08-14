@@ -124,7 +124,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     cout << "\nTest 6: Nonconvex boundary with three internal generators" << endl;
     std::vector<double> points;
-    points.push_back(0.05); points.push_back(0.60);
+    points.push_back(0.00); points.push_back(0.60);
     points.push_back(0.40); points.push_back(0.10);
     points.push_back(0.60); points.push_back(0.50);
     std::vector<double> PLCpoints;
@@ -135,6 +135,11 @@ void test(Tessellator<2,double>& tessellator) {
     PLCpoints.push_back(1.0); PLCpoints.push_back(0.0);
     PLCpoints.push_back(1.0); PLCpoints.push_back(1.0);
     PLCpoints.push_back(0.0); PLCpoints.push_back(1.0);
+
+    for (unsigned k = 0; k != PLCpoints.size(); ++k) {
+      points.push_back(PLCpoints[k]);
+    }
+
     PLC<2,double> boundary;
     boundary.facets.resize(7, std::vector<int>(2));
     for (int j = 0; j < 7; ++j){
@@ -145,8 +150,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
     outputMesh(mesh, testName, points, i);
     ++i;
-  }  
-
+  }
+  
   // Test 7: Original 3x3 Test Case
   {
     cout << "\nTest 7: 3x3 Unit Test with 2 Orphans" << endl;
