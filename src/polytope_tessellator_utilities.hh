@@ -217,17 +217,16 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   
   // Figure out which nodes are on the boundary
   std::set<unsigned> boundaryNodes;
+  std::map<unsigned, std::vector<unsigned> > boundaryNodesToBoundaryFaces;
   for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
     POLY_ASSERT(mesh.faceCells[iface].size() == 1 or
                 mesh.faceCells[iface].size() == 2 );
     if (mesh.faceCells[iface].size() == 1) {
-       // std::cerr << "Face " << iface << " with nodes "
-       //           << "(" << mesh.nodes[2*mesh.faces[iface][0]  ]
-       //           << "," << mesh.nodes[2*mesh.faces[iface][0]+1] << ") "
-       //           << "(" << mesh.nodes[2*mesh.faces[iface][1]  ]
-       //           << "," << mesh.nodes[2*mesh.faces[iface][1]+1] << ")" << std::endl;
-      boundaryNodes.insert(mesh.faces[iface].begin(),
-                           mesh.faces[iface].end());
+      for (std::vector<unsigned>::iterator nodeItr = mesh.faces[iface].begin();
+           nodeItr != mesh.faces[iface].end(); ++nodeItr) {
+         boundaryNodes.insert(*nodeItr);
+         boundaryNodesToBoundaryFaces[*nodeItr].push_back(iface);
+      }
     }
   }
   POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
@@ -236,19 +235,30 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   // input boundary points and corresponding PLC points
   for (std::set<unsigned>::const_iterator nodeItr = boundaryNodes.begin();
        nodeItr != boundaryNodes.end(); ++nodeItr) {
-    // i = 0;
-    // RealType dist = std::numeric_limits<RealType>::max();
-    // while (i < numPLCpoints) {
-    //   dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
-    //                                                        &mesh.nodes[2*(*nodeItr)]));
-    //   if (dist < 1.5*coords.delta) break;
-    //   else ++i;  
-    // }
-    i = numPLCpoints;
+    std::vector<unsigned> boundaryFaces = boundaryNodesToBoundaryFaces[*nodeItr];
+    POLY_ASSERT(boundaryFaces.size() == 2);
+    POLY_ASSERT(mesh.faceCells[boundaryFaces[0]].size() == 1);
+    POLY_ASSERT(mesh.faceCells[boundaryFaces[1]].size() == 1);
+    const unsigned ic0 = (mesh.faceCells[boundaryFaces[0]][0] < 0) ?
+       ~(mesh.faceCells[boundaryFaces[0]][0]) : mesh.faceCells[boundaryFaces[0]][0];
+    const unsigned ic1 = (mesh.faceCells[boundaryFaces[1]][0] < 0) ?
+       ~(mesh.faceCells[boundaryFaces[1]][0]) : mesh.faceCells[boundaryFaces[1]][0];
+    const bool cornerNode = (ic0 == ic1) ? true : false;
     
-    if (i < numPLCpoints) {
-      mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
-      mesh.nodes[2*(*nodeItr)+1] = PLCpoints[2*i+1];
+    if (cornerNode) {
+      i = 0;
+      RealType dist = std::numeric_limits<RealType>::max();
+      while (i < numPLCpoints) {
+         dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
+                                                              &mesh.nodes[2*(*nodeItr)]));
+         if (dist < 2.0*coords.delta) break;
+         else ++i;
+      }
+    
+      if (i < numPLCpoints) {
+        mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
+        mesh.nodes[2*(*nodeItr)+1] = PLCpoints[2*i+1];
+      }
     }
     
     else {
