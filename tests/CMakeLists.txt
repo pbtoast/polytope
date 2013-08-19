@@ -72,6 +72,7 @@ POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
 POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
 #POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )
 
 # 3D Tetgen Tessellator tests
