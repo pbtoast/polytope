@@ -399,7 +399,7 @@ computeCellNodes(const vector<RealType>& points,
   vector<unsigned> triMask(delaunay.numberoftriangles, 0);
   map<EdgeHash, vector<unsigned> > edge2tri;
   map<int, set<unsigned> > gen2tri;
-  int pindex, qindex, rindex, i, j, triCount = 0;
+  int pindex, qindex, rindex, i, j, k, triCount = 0;
   EdgeHash pq, pr, qr;
   RealType radius = ((mOuterCoords.high[0] - mOuterCoords.center[0])*
                      (mOuterCoords.high[0] - mOuterCoords.center[0]) +
@@ -424,17 +424,6 @@ computeCellNodes(const vector<RealType>& points,
     POLY_ASSERT(orient2d(&delaunay.pointlist[2*pindex],
                          &delaunay.pointlist[2*qindex],
                          &delaunay.pointlist[2*rindex]) != 0);
-    // cerr << scientific << setprecision(numeric_limits<double>::digits)
-    // cerr << delaunay.pointlist[2*pindex  ] << " "
-    //      << delaunay.pointlist[2*pindex+1] << " "
-    //      << delaunay.pointlist[2*qindex  ] << " "
-    //      << delaunay.pointlist[2*qindex+1] << " "
-    //      << delaunay.pointlist[2*rindex  ] << " "
-    //      << delaunay.pointlist[2*rindex+1] << " "
-    //      << circumcenters[i].x << " " << circumcenters[i].y << endl;
-    // if (std::abs(orient2d(&delaunay.pointlist[2*pindex],
-    //     		  &delaunay.pointlist[2*qindex],
-    //     		  &delaunay.pointlist[2*rindex])) > mDegeneracy) {
     if (pindex < numGenerators and qindex < numGenerators and rindex < numGenerators) {
       triMask[i] = 1;
       gen2tri[pindex].insert(i);
@@ -457,11 +446,6 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(lowc[0] <= highc[0] and lowc[1] <= highc[1]);
   mOuterCoords.expand(lowc, highc);
 
-  // // Blago!
-  // cerr << mCoords      << endl;
-  // cerr << mOuterCoords << endl;
-  // // Blago!
-  
   // Determine which circumcenters lie inside the inner bounding box
   // Map circumcenters and triangle indices to global id's
   int inside;
@@ -480,9 +464,10 @@ computeCellNodes(const vector<RealType>& points,
         inside = 0;
         ip = mOuterCoords.quantize(&circumcenters[i].x);
       }
+      k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
-      if (j == circ2id.size()-1) nodeMap[ip] = make_pair(j,inside);
+      if (k != circ2id.size()) nodeMap[ip] = make_pair(j,inside);
     }
   }
   POLY_ASSERT(circ2id.size() == nodeMap.size());
@@ -492,7 +477,7 @@ computeCellNodes(const vector<RealType>& points,
   // the edge
   RealPoint ehat, pinf;
   map<EdgeHash, unsigned> edge2id;
-  int i1, i2, ivert, k;
+  int i1, i2, ivert;
   infNodes = vector<unsigned>(circ2id.size());
   for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tri.begin();
        edgeItr != edge2tri.end(); ++edgeItr){
@@ -517,7 +502,7 @@ computeCellNodes(const vector<RealType>& points,
 
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
-      if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,inside);
+      if (k != circ2id.size())  nodeMap[ip] = make_pair(j,inside);
       POLY_ASSERT(edge2id.find(edge) == edge2id.end());
       edge2id[edge] = j;
       if (k != circ2id.size()) infNodes.push_back(1);
@@ -879,6 +864,7 @@ computeCellRings(const vector<RealType>& points,
     
     // Remove any repeated points
     boost::geometry::unique(cellRings[i]);
+    
 
     // Blago!
     if(Blago){
@@ -909,6 +895,34 @@ computeCellRings(const vector<RealType>& points,
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, mCoords, cellRings, orphans);
   }
+
+
+  // Mark any cell ring points coinciding with the bounding PLC
+  for (i = 0; i != numGenerators; ++i) {
+    if (boost::geometry::intersects(cellRings[i], clipper.mBoundary)) {
+      for (typename BGring::iterator itr = cellRings[i].begin();
+	   itr != cellRings[i].end()-1; ++itr) {
+	for (typename BGring::const_iterator oItr = clipper.mBoundary.outer().begin();
+	     oItr != clipper.mBoundary.outer().end();
+	     ++oItr) {
+	  if (*itr == *oItr)  itr->index = 1;
+	}
+	typename std::vector<BGring>& holes = clipper.mBoundary.inners();
+	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
+	  for (typename BGring::const_iterator iItr = holes[ihole].begin();
+	       iItr != holes[ihole].end()-1;
+	       ++iItr) {
+	    if (*itr == *iItr)  itr->index = 1;
+	  }
+	}
+	// //Blago!
+	// if (itr->index == 1) std::cerr << (*itr) << std::endl;
+	// //Blago!
+      }
+    }
+  }
+
+
   
   // Post-conditions
   POLY_ASSERT(cellRings.size() == numGenerators);
@@ -1043,7 +1057,7 @@ computeVoronoiBounded(const vector<RealType>& points,
   this->computeCellRings(points, nodeMap, cellNodes, clipper, cellRings);
   
   // Input nodes and construct the final mesh topology
-  constructBoundedMeshTopology(cellRings, points, mCoords, mesh);
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
 }
 //------------------------------------------------------------------------------
 
