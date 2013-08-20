@@ -48,37 +48,64 @@ public:
 
     bool inside, onBoundary;
     unsigned j, k;
-    std::vector<RingType> cellIntersections;
-    boost::geometry::intersection(mBoundary, cellRing, cellIntersections);
-    if (cellIntersections.size() == 0) {
-      std::cerr << cellGenerator.x << " " << cellGenerator.y << std::endl 
-                << boost::geometry::dsv(cellRing) << std::endl
-                << boost::geometry::dsv(mBoundary) << std::endl;
-    }
-    POLY_ASSERT(cellIntersections.size() > 0);
-    
-    // Only one ring - this is the new celll
-    if (cellIntersections.size() == 1) {
-      cellRing = cellIntersections[0];
-    } 
-    // The ring containing the generator is the new cell
-    else {
-      k = cellIntersections.size();
-      for (j = 0; j != cellIntersections.size(); ++j) {
-        // inside = boost::geometry::within(cellGenerator, cellIntersections[j]);
-        inside = boost::geometry::covered_by(cellGenerator, cellIntersections[j]);
-        if (inside) k = j;
-        else {
-          onBoundary = false;
-          for (typename RingType::const_iterator itr = cellIntersections[j].begin();
-             itr != cellIntersections[j].end(); 
-             ++itr)  onBoundary += (cellGenerator == *itr);
-          if (onBoundary) k = j;
-          else            orphans.push_back(cellIntersections[j]);
-        }
+    if (boost::geometry::intersects(cellRing, mBoundary)) {
+      std::vector<RingType> cellIntersections;
+      boost::geometry::intersection(mBoundary, cellRing, cellIntersections);
+      if (cellIntersections.size() == 0) {
+	std::cerr << cellGenerator.x << " " << cellGenerator.y << std::endl 
+		  << boost::geometry::dsv(cellRing) << std::endl
+		  << boost::geometry::dsv(mBoundary) << std::endl;
       }
-      POLY_ASSERT(k < cellIntersections.size());
-      cellRing = cellIntersections[k];
+      POLY_ASSERT(cellIntersections.size() > 0);
+      
+      // Only one ring - this is the new celll
+      if (cellIntersections.size() == 1) {
+	cellRing = cellIntersections[0];
+      } 
+      // The ring containing the generator is the new cell
+      else {
+	k = cellIntersections.size();
+	for (j = 0; j != cellIntersections.size(); ++j) {
+	  // inside = boost::geometry::within(cellGenerator, cellIntersections[j]);
+	  inside = boost::geometry::covered_by(cellGenerator, cellIntersections[j]);
+	  if (inside) k = j;
+	  else {
+	    onBoundary = false;
+	    for (typename RingType::const_iterator itr = cellIntersections[j].begin();
+		 itr != cellIntersections[j].end(); 
+		 ++itr)  onBoundary += (cellGenerator == *itr);
+	    if (onBoundary) k = j;
+	    else            orphans.push_back(cellIntersections[j]);
+	  }
+	}
+	POLY_ASSERT(k < cellIntersections.size());
+	cellRing = cellIntersections[k];
+      }
+     
+
+//       // Flag any post-clipped points that coincide with the boundary
+//       for (typename RingType::iterator itr = cellRing.begin();
+// 	   itr != cellRing.end()-1; ++itr) {
+// 	for (typename RingType::const_iterator oItr = mBoundary.outer().begin();
+// 	     oItr != mBoundary.outer().end();
+// 	     ++oItr) {
+// 	  if (*itr == *oItr)  itr->index = 1;
+// 	}
+// 	typename std::vector<RingType>& holes = mBoundary.inners();
+// 	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
+// 	  for (typename RingType::const_iterator iItr = holes[ihole].begin();
+// 	       iItr != holes[ihole].end()-1;
+// 	       ++iItr) {
+// 	    if (*itr == *iItr)  itr->index = 1;
+// 	  }
+// 	}
+	
+// // 	//Blago!
+// // 	if (itr->index == 1) std::cerr << (*itr) << std::endl;
+// // 	//Blago!
+//       }
+
+ 
     }
 
     // Post-conditions

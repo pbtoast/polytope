@@ -354,7 +354,9 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty() and !PLCpoints.empty());
   POLY_ASSERT(points.size() % 2 == 0 and PLCpoints.size() % 2 == 0);
   POLY_ASSERT(!geometry.facets.empty());
-  
+
+  //mCoords.setDegeneracy(1.0e-6);
+  //mCoords.setCoordMax  (1LL << 20);
   mCoords.initialize(points);
   mOuterCoords = mCoords;
   
@@ -424,17 +426,6 @@ computeCellNodes(const vector<RealType>& points,
     POLY_ASSERT(orient2d(&delaunay.pointlist[2*pindex],
                          &delaunay.pointlist[2*qindex],
                          &delaunay.pointlist[2*rindex]) != 0);
-    // cerr << scientific << setprecision(numeric_limits<double>::digits)
-    // cerr << delaunay.pointlist[2*pindex  ] << " "
-    //      << delaunay.pointlist[2*pindex+1] << " "
-    //      << delaunay.pointlist[2*qindex  ] << " "
-    //      << delaunay.pointlist[2*qindex+1] << " "
-    //      << delaunay.pointlist[2*rindex  ] << " "
-    //      << delaunay.pointlist[2*rindex+1] << " "
-    //      << circumcenters[i].x << " " << circumcenters[i].y << endl;
-    // if (std::abs(orient2d(&delaunay.pointlist[2*pindex],
-    //     		  &delaunay.pointlist[2*qindex],
-    //     		  &delaunay.pointlist[2*rindex])) > mDegeneracy) {
     if (pindex < numGenerators and qindex < numGenerators and rindex < numGenerators) {
       triMask[i] = 1;
       gen2tri[pindex].insert(i);
@@ -457,11 +448,6 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(lowc[0] <= highc[0] and lowc[1] <= highc[1]);
   mOuterCoords.expand(lowc, highc);
 
-  // // Blago!
-  // cerr << mCoords      << endl;
-  // cerr << mOuterCoords << endl;
-  // // Blago!
-  
   // Determine which circumcenters lie inside the inner bounding box
   // Map circumcenters and triangle indices to global id's
   int inside;
@@ -880,6 +866,7 @@ computeCellRings(const vector<RealType>& points,
     
     // Remove any repeated points
     boost::geometry::unique(cellRings[i]);
+    
 
     // Blago!
     if(Blago){
@@ -893,23 +880,40 @@ computeCellRings(const vector<RealType>& points,
 
   }
 
-  // // Blago!
-  // for (i = 0; i != orphans.size(); ++i) {
-  //   cerr << endl << "Orphan " << i << endl;
-  //   for (typename BGring::iterator itr = orphans[i].begin();
-  //        itr != orphans[i].end(); ++itr) {
-  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
-  //          << (*itr).realy(mLow[1], mDelta) << endl;
-  //   }
-  // }
-  // // Blago!
-
   // If any orphaned cells exist, run the adoption algorithm
   // and modify the neighboring cell rings
   if (!orphans.empty()) {
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, mCoords, cellRings, orphans);
   }
+
+
+  // Mark any cell ring points coinciding with the bounding PLC
+  for (i = 0; i != numGenerators; ++i) {
+    if (boost::geometry::intersects(cellRings[i], clipper.mBoundary)) {
+      for (typename BGring::iterator itr = cellRings[i].begin();
+	   itr != cellRings[i].end()-1; ++itr) {
+	for (typename BGring::const_iterator oItr = clipper.mBoundary.outer().begin();
+	     oItr != clipper.mBoundary.outer().end();
+	     ++oItr) {
+	  if (*itr == *oItr)  itr->index = 1;
+	}
+	typename std::vector<BGring>& holes = clipper.mBoundary.inners();
+	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
+	  for (typename BGring::const_iterator iItr = holes[ihole].begin();
+	       iItr != holes[ihole].end()-1;
+	       ++iItr) {
+	    if (*itr == *iItr)  itr->index = 1;
+	  }
+	}
+	// //Blago!
+	// if (itr->index == 1) std::cerr << (*itr) << std::endl;
+	// //Blago!
+      }
+    }
+  }
+
+
   
   // Post-conditions
   POLY_ASSERT(cellRings.size() == numGenerators);
