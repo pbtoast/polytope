@@ -165,6 +165,8 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
       POLY_ASSERT(j != k);
       iedge = internal::addKeyToMap(internal::hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
+      POLY_ASSERT2(edgeCells[iedge].size() == 1 or edgeCells[iedge][0]*edgeCells[iedge][1] <= 0,
+                   "BLAGO: " << iedge << " " << j << " " << k << " " << edgeCells[iedge][0] << " " << edgeCells[iedge][1]);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
     }
     POLY_ASSERT(mesh.cells[i].size() >= 3);
