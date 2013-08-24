@@ -9,7 +9,7 @@ namespace polytope
 template<int Dimension, typename RealType>
 inline
 PLC<Dimension, RealType>
-Tessellator<Dimension, RealType>
+Tessellator<Dimension, RealType>::
 boundingBox(std::vector<RealType>& points) const
 {
   // Find the minimum and maximum coordinates within the point set and 
@@ -177,7 +177,7 @@ boundingBox(RealType* low, RealType* high) const
 template<int Dimension, typename RealType>
 inline
 std::vector<RealType>
-Tessellator<Dimension, RealType>
+Tessellator<Dimension, RealType>::
 computeNormalizedPoints(const std::vector<RealType>& points,
                         const std::vector<RealType>& PLCpoints,
                         const bool computeBounds,
@@ -205,6 +205,73 @@ computeNormalizedPoints(const std::vector<RealType>& points,
     POLY_ASSERT(result[i] >= 0.0 and result[i] <= 1.0);
   }
   POLY_ASSERT(result.size() == points.size());
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Do a tessellation with potential degenerate generators.
+// Unbounded case.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<unsigned>
+Tessellator<Dimension, RealType>::
+tessellateDegenerate(const std::vector<RealType>& points,
+                     Tessellation<Dimension, RealType>& mesh) const {
+
+  // Hash the input generators to a unique set.
+  std::vector<RealType> uniquePoints;
+  std::vector<unsigned> result;
+  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+
+  // Tessellate the unique set, and return the mapping.
+  this->tessellate(uniquePoints, mesh);
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Do a tessellation with potential degenerate generators.
+// Bounded by a box.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<unsigned>
+Tessellator<Dimension, RealType>::
+tessellateDegenerate(const std::vector<RealType>& points,
+                     RealType* low,
+                     RealType* high,
+                     Tessellation<Dimension, RealType>& mesh) const {
+
+  // Hash the input generators to a unique set.
+  std::vector<RealType> uniquePoints;
+  std::vector<unsigned> result;
+  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+
+  // Tessellate the unique set, and return the mapping.
+  this->tessellate(uniquePoints, low, high, mesh);
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Do a tessellation with potential degenerate generators.
+// PLC case.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<unsigned>
+Tessellator<Dimension, RealType>::
+tessellateDegenerate(const std::vector<RealType>& points,
+                     const std::vector<RealType>& PLCpoints,
+                     const PLC<Dimension, RealType>& geometry,
+                     Tessellation<Dimension, RealType>& mesh) const {
+
+  // Hash the input generators to a unique set.
+  std::vector<RealType> uniquePoints;
+  std::vector<unsigned> result;
+  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+
+  // Tessellate the unique set, and return the mapping.
+  this->tessellate(uniquePoints, PLCpoints, geometry, mesh);
   return result;
 }
 
