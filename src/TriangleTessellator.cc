@@ -464,7 +464,7 @@ computeCellNodes(const vector<RealType>& points,
   
   // Determine which circumcenters lie inside the inner bounding box
   // Map circumcenters and triangle indices to global id's
-  int inside;
+  int inside, old_size;
   IntPoint ip;
   map<IntPoint, int> circ2id;
   map<int, unsigned> tri2id;
@@ -480,9 +480,10 @@ computeCellNodes(const vector<RealType>& points,
         inside = 0;
         ip = mOuterCoords.quantize(&circumcenters[i].x);
       }
+      old_size = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
-      if (j == circ2id.size()-1) nodeMap[ip] = make_pair(j,inside);
+      if (j == old_size) nodeMap[ip] = make_pair(j,inside);
     }
   }
   POLY_ASSERT(circ2id.size() == nodeMap.size());
@@ -515,9 +516,9 @@ computeCellNodes(const vector<RealType>& points,
       // IntPoint ip = mCoords.quantize(&pinf.x);
       int inside = 0;
 
-      k = circ2id.size();
+      old_size = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
-      if (j == circ2id.size()-1)  nodeMap[ip] = make_pair(j,inside);
+      if (j == old_size)  nodeMap[ip] = make_pair(j,inside);
       POLY_ASSERT(edge2id.find(edge) == edge2id.end());
       edge2id[edge] = j;
       if (k != circ2id.size()) infNodes.push_back(1);
