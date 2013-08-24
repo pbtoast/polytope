@@ -50,6 +50,12 @@ public:
   // Return the name of this tessellator
   std::string name() const { return "TetgenTessellator"; }
 
+  //! Returns the accuracy to which this tessellator can distinguish coordinates.
+  //! Should be returned appropriately for normalized coordinates, i.e., if all
+  //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
+  //! delta in x.
+  virtual RealType degeneracy() const { return mDegeneracy; }
+
 private:
   //-------------------- Private interface --------------------
   typedef int64_t CoordHash;
@@ -57,7 +63,7 @@ private:
   typedef Point3<CoordHash> IntPoint;
   typedef Point3<RealType> RealPoint;
   static CoordHash coordMax;
-  static RealType degeneracy;
+  static RealType mDegeneracy;
 
   // Internal method to compute the tessellation directly.
   void computeVoronoiNatively(const std::vector<RealType>& points,

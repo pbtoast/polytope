@@ -29,111 +29,6 @@ using std::abs;
 namespace {
 
 //------------------------------------------------------------------------------
-// A handy method for computing a hash of a position to a 64 bit quantized
-// integer value.
-//------------------------------------------------------------------------------
-template<typename RealType>
-uint64_t
-hashPosition(RealType* pos,
-             RealType* xlow_inner,
-             RealType* xhigh_inner,
-             RealType* xlow_outer,
-             RealType* xhigh_outer) {
-  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
-              xlow_outer[1] <= xlow_inner[1] and
-              xlow_outer[2] <= xlow_inner[2]);
-  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
-              xhigh_outer[1] >= xhigh_inner[1] and
-              xhigh_outer[2] >= xhigh_inner[2]);
-  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-              xlow_inner[1] < xhigh_inner[1] and
-              xlow_inner[2] < xhigh_inner[2]);
-  POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
-               pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
-               pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2],
-               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
-               << xlow_outer[0] << " " << xlow_outer[1] << " " << xlow_outer[2] << ") ("
-               << xhigh_outer[0] << " " << xhigh_outer[1] << " " << xhigh_outer[2] << ")");
-
-  // Decide the bounding box we're using.
-  uint64_t result = 0ULL;
-  RealType *xlow, *xhigh;
-  if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
-      pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
-      pos[2] < xlow_inner[2] or pos[1] > xhigh_inner[2]) {
-    xlow = xlow_outer;
-    xhigh = xhigh_outer;
-    result += (1ULL << 63);
-  } else {
-    xlow = xlow_inner;
-    xhigh = xhigh_inner;
-  }
-
-  // Quantize away.
-  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
-  result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
-             (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
-             (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
-  return result;
-}
-
-//------------------------------------------------------------------------------
-// Inverse of above.
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-unhashPosition(RealType* pos,
-               RealType* xlow_inner,
-               RealType* xhigh_inner,
-               RealType* xlow_outer,
-               RealType* xhigh_outer,
-               uint64_t hashedPosition) {
-  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
-              xlow_outer[1] <= xlow_inner[1] and
-              xlow_outer[2] <= xlow_inner[2]);
-  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
-              xhigh_outer[1] >= xhigh_inner[1] and
-              xhigh_outer[2] >= xhigh_inner[2]);
-  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-              xlow_inner[1] < xhigh_inner[1] and
-              xlow_inner[2] < xhigh_inner[2]);
-  POLY_ASSERT(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
-              pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
-              pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2]);
-
-  // Decide the bounding box we're using.
-  RealType *xlow, *xhigh;
-  if (hashedPosition >= (1ULL << 63)) {
-    xlow = xlow_outer;
-    xhigh = xhigh_outer;
-  } else {
-    xlow = xlow_inner;
-    xhigh = xhigh_inner;
-  }
-
-  // Extract the position (for the center of the cell).
-  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
-  const uint64_t xmask = (1ULL << 21) - 1ULL,
-                 ymask = xmask << 21,
-                 zmask = ymask << 21;
-  pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
-  pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
-  pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];
-
-  // Post-conditions.
-  POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
-               pos[1] >= xlow[1] and pos[1] <= xhigh[1] and
-               pos[2] >= xlow[2] and pos[2] <= xhigh[2],
-               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
-               << xlow[0] << " " << xlow[1] << " " << xlow[2] << ") ("
-               << xhigh[0] << " " << xhigh[1] << " " << xhigh[2] << ")");
-}
-
-//------------------------------------------------------------------------------
 // Borrow the Point3 type as a tuple to create 3 node facets hashes.
 //------------------------------------------------------------------------------
 Point3<unsigned>
@@ -399,7 +294,7 @@ tessellate(const vector<double>& points,
                                             &ray_hat.x,
                                             low,
                                             high,
-                                            degeneracy,
+                                            mDegeneracy,
                                             &mesh.nodes[3*j]);
       ray_hat.x = mesh.nodes[3*k]   - mesh.nodes[3*k0];
       ray_hat.y = mesh.nodes[3*k+1] - mesh.nodes[3*k0+1];
@@ -409,7 +304,7 @@ tessellate(const vector<double>& points,
                                             &ray_hat.x,
                                             low,
                                             high,
-                                            degeneracy,
+                                            mDegeneracy,
                                             &mesh.nodes[3*k]);
 
       // // Do we need to introduce a new node for this face?
@@ -508,7 +403,7 @@ computeVoronoiNatively(const vector<double>& points,
     POLY_ASSERT(out.vpointlist[3*i  ] >= vlow[0] and out.vpointlist[3*i  ] <= vhigh[0]);
     POLY_ASSERT(out.vpointlist[3*i+1] >= vlow[1] and out.vpointlist[3*i+1] <= vhigh[1]);
     POLY_ASSERT(out.vpointlist[3*i+2] >= vlow[2] and out.vpointlist[3*i+2] <= vhigh[2]);
-    IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i+1], out.vpointlist[3*i+2], vlow[0], vlow[1], vlow[2], degeneracy);
+    IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i+1], out.vpointlist[3*i+2], vlow[0], vlow[1], vlow[2], mDegeneracy);
     internal::addKeyToMap(p, point2node);
     // cerr << "   ----> (" << out.vpointlist[3*i] << " " << out.vpointlist[3*i + 1] << " " << out.vpointlist[3*i + 2] << ") " << p << " " << point2node[p] << endl;
   }
@@ -519,9 +414,9 @@ computeVoronoiNatively(const vector<double>& points,
        itr != point2node.end();
        ++itr) {
     i = itr->second;
-    mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
-    mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
-    mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
+    mesh.nodes[3*i  ] = itr->first.realx(vlow[0], mDegeneracy);
+    mesh.nodes[3*i+1] = itr->first.realy(vlow[1], mDegeneracy);
+    mesh.nodes[3*i+2] = itr->first.realz(vlow[2], mDegeneracy);
   }
 
   // Read the Tetgen voro edges, creating our "infinte" surface nodes for
@@ -540,7 +435,7 @@ computeVoronoiNatively(const vector<double>& points,
     v2 = vedge.v2;
     POLY_ASSERT2(v1 >= 0 and v1 < out.numberofvpoints, i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
     POLY_ASSERT2(v2 == -1 or (v2 >= 0 and v2 < out.numberofvpoints), i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
-    IntPoint p1(out.vpointlist[3*v1], out.vpointlist[3*v1+1], out.vpointlist[3*v1+2], vlow[0], vlow[1], vlow[2], degeneracy);
+    IntPoint p1(out.vpointlist[3*v1], out.vpointlist[3*v1+1], out.vpointlist[3*v1+2], vlow[0], vlow[1], vlow[2], mDegeneracy);
     POLY_ASSERT(point2node.find(p1) != point2node.end());
     n1 = point2node[p1];
     if (v2 == -1) {
@@ -550,24 +445,24 @@ computeVoronoiNatively(const vector<double>& points,
                                       out.vedgelist[i].vnormal,
                                       vboxc,
                                       rinf,
-                                      degeneracy,
+                                      mDegeneracy,
                                       ray_sph_int);
       POLY_ASSERT(ray_sph_int[0] >= vlow[0] and ray_sph_int[0] <= vhigh[0]);
       POLY_ASSERT(ray_sph_int[1] >= vlow[1] and ray_sph_int[1] <= vhigh[1]);
       POLY_ASSERT(ray_sph_int[2] >= vlow[2] and ray_sph_int[2] <= vhigh[2]);
-      IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], vlow[0], vlow[1], vlow[2], degeneracy);
+      IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], vlow[0], vlow[1], vlow[2], mDegeneracy);
       k = point2node.size();
       n2 = internal::addKeyToMap(p1, point2node);
       if (k != point2node.size()) {
         //mesh.infNodes.push_back(n2);
         mesh.infNodes[n2] = 1;
-        mesh.nodes.push_back(p1.realx(vlow[0], degeneracy));
-        mesh.nodes.push_back(p1.realy(vlow[1], degeneracy));
-        mesh.nodes.push_back(p1.realz(vlow[2], degeneracy));
+        mesh.nodes.push_back(p1.realx(vlow[0], mDegeneracy));
+        mesh.nodes.push_back(p1.realy(vlow[1], mDegeneracy));
+        mesh.nodes.push_back(p1.realz(vlow[2], mDegeneracy));
         // cerr << " ---> new inf point (" << ray_sph_int[0] << " " << ray_sph_int[1] << " " << ray_sph_int[2] << ") " << p1 << " " << n2 << endl;
       }
     } else {
-      IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], vlow[0], vlow[1], vlow[2], degeneracy);
+      IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], vlow[0], vlow[1], vlow[2], mDegeneracy);
       POLY_ASSERT(point2node.find(p2) != point2node.end());
       n2 = point2node[p2];
     }
@@ -587,9 +482,9 @@ computeVoronoiNatively(const vector<double>& points,
        ++itr) {
     i = itr->second;
     if (i >= nold) {
-      mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
-      mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
-      mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
+      mesh.nodes[3*i  ] = itr->first.realx(vlow[0], mDegeneracy);
+      mesh.nodes[3*i+1] = itr->first.realy(vlow[1], mDegeneracy);
+      mesh.nodes[3*i+2] = itr->first.realz(vlow[2], mDegeneracy);
     }
   }
 
@@ -688,7 +583,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   typedef Point3<RealType> RealPoint;
   typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
   // const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
-  const double degeneracy = 1.0e-12;
+  const double mDegeneracy = 1.0e-12;
 
   // Compute the normalized generators.
   RealType low[3], high[3], box[3];
@@ -822,7 +717,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   map<PointHash, int> circ2id;
   map<int, unsigned> tet2id;
   for (i = 0; i != out.numberoftetrahedra; ++i) {
-    PointHash ip = hashPosition(&(circumcenters[i].x), low, high, clow, chigh);
+    PointHash ip = geometry::Hasher<3, RealType>::hashPosition(&(circumcenters[i].x), low, high, clow, chigh);
     j = internal::addKeyToMap(ip, circ2id);
     tet2id[i] = j;
   }
@@ -870,7 +765,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       fhat -= circumcenters[i];
 
       // Check for the special case of the tet circumcenter coplanar with the facet.
-      if (abs(geometry::dot<3, RealType>(&fhat.x, &fhat.x)) < degeneracy) {
+      if (abs(geometry::dot<3, RealType>(&fhat.x, &fhat.x)) < mDegeneracy) {
         // Yep, it's in the plane.  Just project the ray out orthogonally to the facet.
         a_b.x = out.pointlist[3*facet.y]   - out.pointlist[3*facet.x];
         a_b.y = out.pointlist[3*facet.y+1] - out.pointlist[3*facet.x+1];
@@ -883,7 +778,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       geometry::unitVector<3, RealType>(&fhat.x);
 
       // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
-      POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > degeneracy);
+      POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > mDegeneracy);
       copy(&out.pointlist[3*facet.x], &out.pointlist[3*facet.x] + 3, &test_point.x);
       test_point += fhat;
       if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
@@ -897,7 +792,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                              1.0e-10,
                                              &pinf.x);
       POLY_ASSERT(test);
-      PointHash ip = hashPosition(&(pinf.x), low, high, clow, chigh);
+      PointHash ip = geometry::Hasher<3, RealType>::hashPosition(&(pinf.x), low, high, clow, chigh);
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       POLY_ASSERT(facet2id.find(facet) == facet2id.end());
@@ -914,7 +809,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
        ++itr) {
     POLY_ASSERT(itr->second >= 0 and itr->second < numNodes);
     i = itr->second;
-    unhashPosition(&(mesh.nodes[3*i]), low, high, clow, chigh, itr->first);
+    geometry::Hasher<3, RealType>::unhashPosition(&(mesh.nodes[3*i]), low, high, clow, chigh, itr->first);
     // cerr << "   --> " << mesh.nodes[3*i] << " " << mesh.nodes[3*i+1] << " " << mesh.nodes[3*i+2] << endl;
   }
 
@@ -991,7 +886,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       // POLY_ASSERT((not geometry::collinear<3, RealType>(&mesh.nodes[3*faceNodes[0]],
       //                                                   &mesh.nodes[3*faceNodes[1]],
       //                                                   &mesh.nodes[3*faceNodes[2]],
-      //                                                   degeneracy)));
+      //                                                   mDegeneracy)));
       ehat.x = generators[3*b]   - generators[3*a];
       ehat.y = generators[3*b+1] - generators[3*a+1];
       ehat.z = generators[3*b+2] - generators[3*a+2];
@@ -1028,7 +923,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
 // Static initializations.
 //------------------------------------------------------------------------------
 int64_t TetgenTessellator::coordMax = (1LL << 34);
-double TetgenTessellator::degeneracy = 1.0/TetgenTessellator::coordMax;
+double TetgenTessellator::mDegeneracy = 1.0/TetgenTessellator::coordMax;
 
   // // Copy the PLC boundary info to the tetgen input.
   // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
