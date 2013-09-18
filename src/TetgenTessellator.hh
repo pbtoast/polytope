@@ -65,10 +65,6 @@ private:
   static CoordHash coordMax;
   static RealType mDegeneracy;
 
-  // Internal method to compute the tessellation directly.
-  void computeVoronoiNatively(const std::vector<RealType>& points,
-                              Tessellation<3, RealType>& mesh) const;
-
   // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
   void computeVoronoiThroughTetrahedralization(const std::vector<RealType>& points,
                                                Tessellation<3, RealType>& mesh) const;

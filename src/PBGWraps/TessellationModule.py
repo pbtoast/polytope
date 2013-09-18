@@ -58,20 +58,15 @@ class Tessellation:
         x.add_method("computeCellToNodes", retval("vector_of_set_of_unsigned"), [])
         
         # Attributes
-        attributes = ["nodes", "cells", "faces", "infNodes", "faceCells",
-                      "convexHull", "neighborDomains", "sharedNodes", "sharedFaces"]
-
-        returnvals = ["vector_of_double*",
-                      "vector_of_vector_of_int*", 
-                      "vector_of_vector_of_unsigned*", 
-                      "vector_of_unsigned*",
-                      "vector_of_vector_of_int*", 
-                      PLCptr,
-                      "vector_of_unsigned*", 
-                      "vector_of_vector_of_unsigned*", 
-                      "vector_of_vector_of_unsigned*"]
-        
-        for i,(att,ret) in enumerate(zip(attributes,returnvals)):
+        for (att,ret) in [("nodes",           "vector_of_double*"),              
+                          ("cells",           "vector_of_vector_of_int*"),       
+                          ("faces",           "vector_of_vector_of_unsigned*"),  
+                          ("infNodes",        "vector_of_unsigned*"),            
+                          ("faceCells",       "vector_of_vector_of_int*"),       
+                          ("convexHull",      PLCptr),                           
+                          ("neighborDomains", "vector_of_unsigned*"),            
+                          ("sharedNodes",     "vector_of_vector_of_unsigned*"),  
+                          ("sharedFaces",     "vector_of_vector_of_unsigned*")]:
             x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
                                             getter="polytope::get"+att,
                                             setter="polytope::set"+att,
