@@ -201,6 +201,7 @@ void runTest(Tessellator<2,double>& tessellator,
   Tessellation<2,double> mesh;
   MeshEditor<2,double> meshEditor(mesh);
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  //tessellator.tessellate(points, mesh);
   outputMesh(mesh, testName, points, step, time);
    
   // Update the point positions and generate the mesh
@@ -220,6 +221,7 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
+    //tessellator.tessellate(points, mesh);
     meshEditor.cleanEdges(0.001);
     outputMesh(mesh, testName, points, step, time);
   }
