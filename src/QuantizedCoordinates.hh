@@ -302,15 +302,17 @@ public:
 
   //------------------------------------------------------------------------
   //! Quantize a floating-point-precision point
+  //! NOTE: If the point is inside the inner box, set the new integer
+  //!       point's index bit equal to 1
   //------------------------------------------------------------------------
   inline
   IntPoint quantize(const RealType* pointIn) const {
     POLY_ASSERT(!mCoordinatesModified);
     if (not mOuterBox) {
-      return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
+      return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 1);
     } else {
       if (isInside(pointIn))
-	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
+	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 1);
       else
 	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &olow[0], odelta, 0);
     }
@@ -320,17 +322,19 @@ public:
   //! Dequantize an point
   //------------------------------------------------------------------------
   inline
-  RealPoint dequantize(const CoordHash* pointIn) const {
+  RealPoint dequantize(const CoordHash* pointIn, bool inner=true) const {
     POLY_ASSERT(!mCoordinatesModified);
     RealType p[Dimension];
     RealType *lo, *hi;
     RealType dx;
-    if (not mOuterBox) {
-      lo = &low[0]; hi = &high[0]; dx = delta;
+    if (inner) {
+      lo = &low[0];  hi = &high[0];  dx = delta;
     } else {
-      if (isInside(pointIn
+      lo = &olow[0]; hi = &ohigh[0]; dx = odelta;
+    }
+      
     for (unsigned j = 0; j != Dimension; ++j) {
-       p[j] = (pointIn[j] == mCoordMax) ? high[j] : low[j] + pointIn[j]*delta;
+       p[j] = (pointIn[j] == mCoordMax) ? hi[j] : lo[j] + pointIn[j]*dx;
     }
     return DimensionTraits<Dimension, RealType>::constructPoint(p);
   }
@@ -342,12 +346,23 @@ public:
   RealPoint projectPoint(const RealType* rayPoint,
                          const RealType* rayDirection) const {
     RealPoint result;
+    RealType radius = (mOuterBox) ? orinf : rinf;
     bool test = geometry::rayCircleIntersection(rayPoint, rayDirection, 
-                                                &this->center[0], this->rinf, 
-                                                this->mDegeneracy, &result.x);
+                                                &center[0], radius, 
+                                                mDegeneracy, &result.x);
     POLY_ASSERT(test);
     return result;
   }
+
+
+  //------------------------------------------------------------------------
+  //! 
+  //------------------------------------------------------------------------
+  inline
+  std::vector<RealPoint> clipToInnerBox(const std::vector<RealPoint> ring) const {
+    
+  }
+
 };
 
 

@@ -55,57 +55,6 @@ using std::abs;
 
 namespace {
 
-// //------------------------------------------------------------------------------
-// // Compute the intersection of a line segment and a PLC. Returns number of
-// // intersections, intersected facet(s) along PLC, and intersection point(s)
-// //------------------------------------------------------------------------------
-// template<typename RealType>
-// inline
-// unsigned intersectBoundingBox(const RealType* point1,
-// 			      const RealType* point2,
-// 			      const unsigned numVertices,
-// 			      const RealType* vertices,
-// 			      const std::vector<std::vector<int> >& facets,
-// 			      std::vector<int>& facetIntersections,
-// 			      std::vector<RealType>& result) {
-//   unsigned i, j, numIntersections=0;
-//   RealType intersectionPoint[2];
-//   bool intersects, addPoint;
-//   const unsigned numFacets = facets.size();
-//   for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
-//     POLY_ASSERT(facets[ifacet].size() == 2);
-//     i = facets[ifacet][0];
-//     j = facets[ifacet][1];
-//     POLY_ASSERT(i >= 0 and i < numVertices);
-//     POLY_ASSERT(j >= 0 and j < numVertices);
-//     intersects = geometry::segmentIntersection2D(point1, point2,
-// 						 &vertices[2*i], &vertices[2*j],
-// 						 intersectionPoint);
-//     addPoint = false;
-//     if (intersects) {
-//       if (numIntersections == 0) addPoint = true;
-//       else {
-//         if (intersectionPoint[0] != result.back() - 1 and
-//             intersectionPoint[1] != result.back() ) addPoint = true;
-//         else addPoint = false;
-//       }
-//     }
-//      
-//     if (addPoint) {
-//       RealType p[2];
-//       p[(ifacet+1)%2] = vertices[2*ifacet + (ifacet+1)%2];
-//       p[ ifacet   %2] = intersectionPoint[ifacet%2];
-//       ++numIntersections;
-//       result.push_back(p[0]);
-//       result.push_back(p[1]);
-//       facetIntersections.push_back(ifacet);
-//     }
-//   }
-//   POLY_ASSERT(numIntersections == result.size()/2);
-//   return numIntersections;
-// }
-  
-
 //------------------------------------------------------------------------------
 // Given an array of 3 integers and 2 unique values, find the other one.
 //------------------------------------------------------------------------------
@@ -305,7 +254,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() > 2 );
   
   mCoords.initialize(points);
-  mOuterCoords = mCoords;
+//   mOuterCoords = mCoords;
 
   this->computeVoronoiUnbounded(points, mesh);
 }
@@ -323,17 +272,6 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   
-  // // BLAGO!
-  // std::ofstream dumpfile;
-  // dumpfile.open("generators.txt");
-  // const unsigned n = points.size()/2;
-  // std::cerr << "HERE WE GO : " << n << std::endl;
-  // for (unsigned i = 0; i != n; ++i) {
-  //   dumpfile << points[2*i] << " " << points[2*i+1] << std::endl;
-  // }
-  // dumpfile.close();
-  // // BLAGO!
-
   // Build a PLC with the bounding box, and then use the PLC method.
   ReducedPLC<2, RealType> box = this->boundingBox(low, high);
   this->tessellate(points, box.points, box, mesh);
@@ -355,7 +293,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!geometry.facets.empty());
   
   mCoords.initialize(points);
-  mOuterCoords = mCoords;
+//   mOuterCoords = mCoords;
   
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
 }
@@ -373,7 +311,6 @@ void
 TriangleTessellator<RealType>::
 computeCellNodes(const vector<RealType>& points,
 		 vector<RealPoint>& nodeList,
-// 		 map<IntPoint, pair<int,int> >& nodeMap,
 		 vector<vector<unsigned> >& cellNodes,
 		 vector<unsigned>& infNodes) const {
   POLY_ASSERT(!points.empty());
@@ -401,18 +338,11 @@ computeCellNodes(const vector<RealType>& points,
   map<int, set<unsigned> > gen2tri;
   int pindex, qindex, rindex, i, j, k, triCount = 0;
   EdgeHash pq, pr, qr;
-  RealType radius = ((mOuterCoords.high[0] - mOuterCoords.center[0])*
-                     (mOuterCoords.high[0] - mOuterCoords.center[0]) +
-                     (mOuterCoords.high[1] - mOuterCoords.center[1])*
-                     (mOuterCoords.high[1] - mOuterCoords.center[1]));
-  radius = sqrt(radius);
-//   RealType lowc [2] = {mOuterCoords.center[0]-radius, 
-//                        mOuterCoords.center[1]-radius};
-//   RealType highc[2] = {mOuterCoords.center[0]+radius, 
-//                        mOuterCoords.center[1]+radius};
-
-  RealType lowc [2] = {mOuterCoords.low [0], mOuterCoords.low [1]};
-  RealType highc[2] = {mOuterCoords.high[0], mOuterCoords.high[1]};
+ 
+//   RealType lowc [2] = {mOuterCoords.low [0], mOuterCoords.low [1]};
+//   RealType highc[2] = {mOuterCoords.high[0], mOuterCoords.high[1]};
+  RealType lowc [2] = {mCoords.low [0], mCoords.low [1]};
+  RealType highc[2] = {mCoords.high[0], mCoords.high[1]};
   for (i = 0; i != delaunay.numberoftriangles; ++i) {
     pindex = delaunay.trianglelist[3*i  ];
     qindex = delaunay.trianglelist[3*i+1];
@@ -427,7 +357,8 @@ computeCellNodes(const vector<RealType>& points,
     if (orient2d(&delaunay.pointlist[2*pindex],
 		 &delaunay.pointlist[2*qindex],
 		 &delaunay.pointlist[2*rindex]) == 0) {
-      cerr << delaunay.pointlist[2*pindex  ] << "," 
+      cerr << "BLAGO!" << endl
+	   << delaunay.pointlist[2*pindex  ] << "," 
 	   << delaunay.pointlist[2*pindex+1] << endl
 	   << delaunay.pointlist[2*qindex  ] << "," 
 	   << delaunay.pointlist[2*qindex+1] << endl
@@ -457,7 +388,8 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(std::accumulate(triMask.begin(), triMask.end(), 0) > 0);
   
   POLY_ASSERT(lowc[0] <= highc[0] and lowc[1] <= highc[1]);
-  mOuterCoords.expand(lowc, highc);
+//   mOuterCoords.expand(lowc, highc);
+  mCoords.expand(lowc, highc);
 
   // Determine which circumcenters lie inside the inner bounding box
   // Map circumcenters and triangle indices to global id's
@@ -468,16 +400,20 @@ computeCellNodes(const vector<RealType>& points,
   map<IntPoint, pair<int,int> > nodeData;
   for (i = 0; i != delaunay.numberoftriangles; ++i){
     if (triMask[i] == 1) {
-      if (circumcenters[i].x >= mCoords.low [0] and 
-          circumcenters[i].x <= mCoords.high[0] and
-          circumcenters[i].y >= mCoords.low [1] and 
-          circumcenters[i].y <= mCoords.high[1]) {
-        inside = 1;
-        ip = mCoords.quantize(&circumcenters[i].x);
-      } else {
-        inside = 0;
-        ip = mOuterCoords.quantize(&circumcenters[i].x);
-      }
+      ip = mCoords.quantize(&circumcenters[i].x);
+      inside = ip.index
+
+//       if (circumcenters[i].x >= mCoords.low [0] and 
+//           circumcenters[i].x <= mCoords.high[0] and
+//           circumcenters[i].y >= mCoords.low [1] and 
+//           circumcenters[i].y <= mCoords.high[1]) {
+//         inside = 1;
+//         ip = mCoords.quantize(&circumcenters[i].x);
+//       } else {
+//         inside = 0;
+//         ip = mOuterCoords.quantize(&circumcenters[i].x);
+//       }
+
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
@@ -508,12 +444,11 @@ computeCellNodes(const vector<RealType>& points,
 			    &delaunay.pointlist[2*ivert],
 			    &ehat.x);
       
-      pinf = mOuterCoords.projectPoint(&circumcenters[i].x, &ehat.x);
-      IntPoint ip = mOuterCoords.quantize(&pinf.x);
+      pinf = mCoords.projectPoint(&circumcenters[i].x, &ehat.x);
+      IntPoint ip = mCoords.quantize(&pinf.x);
+//       pinf = mOuterCoords.projectPoint(&circumcenters[i].x, &ehat.x);
+//       IntPoint ip = mOuterCoords.quantize(&pinf.x);
       int inside = 0;
-      //pinf = mCoords.projectPoint(&circumcenters[i].x, &ehat.x);
-      //IntPoint ip = mCoords.quantize(&pinf.x);
-      //int inside = 1;
       
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
@@ -538,17 +473,16 @@ computeCellNodes(const vector<RealType>& points,
 
   // Store the final collection of nodes in an ordered vector
   nodeList.resize(nodeData.size());
-//   vector<unsigned> nodeMap(nodeData.size());
   for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeData.begin();
        itr != nodeData.end();
        ++itr) {
     i = itr->second.first;
-//     nodeMap[i] = i;
     POLY_ASSERT(i < nodeData.size());
     IntPoint ip  = itr->first;
-    RealPoint rp = (itr->second.second == 1) ?
-      mCoords.dequantize(&ip.x) :
-      mOuterCoords.dequantize(&ip.x);
+    RealPoint rp = mCoords.dequantize(&ip.x, (itr->second.second==1));
+//     RealPoint rp = (itr->second.second == 1) ?
+//       mCoords.dequantize(&ip.x) :
+//       mOuterCoords.dequantize(&ip.x);
     nodeList[i] = rp;
   }
   
@@ -665,39 +599,12 @@ computeCellNodes(const vector<RealType>& points,
 				  0.95*result.y + 0.05*rp12.y);
 	nodeList[n22] = RealPoint(0.95*result.x + 0.05*rp21.x,
 				  0.95*result.y + 0.05*rp21.y);
-	//////nodeList[n22] = result;
-// 	nodeMap [n22] = n11;
-// 	cellNodes[pindex][last] = n11;
-//  	++intersectionCount;
-
-// 	// Fix up the neighboring cells
-// 	for (set<unsigned>::const_iterator triItr = tris.begin();
-// 	     triItr != tris.end(); ++triItr){
-// 	  i = *triItr;
-// 	  findOtherTriIndices(&delaunay.trianglelist[3*i], pindex, qindex, rindex);
-// 	  pq = internal::hashEdge(pindex,qindex);
-// 	  pr = internal::hashEdge(pindex,rindex);
-// 	  if (edge2tri[pq].size() == 1) fixUpCells.insert(qindex);
-// 	  if (edge2tri[pq].size() == 1) fixUpCells.insert(rindex);
-// 	}
       }
     }
   }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-
-//   // Fix up the neighboring cell nodes if any self-intersections took place
-//   for (set<unsigned>::const_iterator fixItr = fixUpCells.begin();
-//        fixItr != fixUpCells.end();
-//        ++fixItr) {
-//     cerr << "Fixing node indices for cell " << *fixItr << endl;
-//     for (vector<unsigned>::iterator nodeItr = cellNodes[*fixItr].begin();
-// 	 nodeItr != cellNodes[*fixItr].end();
-// 	 ++nodeItr) {
-//       *nodeItr = nodeMap[*nodeItr];
-//     }
-//   }
 
   // Post conditions
+  POLY_ASSERT(cellNodes.size() == numGenerators); 
   POLY_ASSERT(!nodeList.empty());
 
   // Clean up.
@@ -717,29 +624,13 @@ void
 TriangleTessellator<RealType>::
 computeCellRings(const vector<RealType>& points,
 		 const vector<RealPoint>& nodeList,
-//               const map<IntPoint, pair<int,int> >& nodeMap,
 		 vector<vector<unsigned> >& cellNodes,
 		 Clipper2d<CoordHash>& clipper,
                  vector<BGring>& cellRings) const {
   const unsigned numGenerators = points.size()/2;
+  const unsigned numNodes = nodeList.size();
   int i, j, k;
   
-//   // Create a reverse look-up map of IDs to nodes
-//   POLY_ASSERT(nodeMap.size() > 0);
-//   POLY_ASSERT(cellNodes.size() == numGenerators);
-  const unsigned numNodes = nodeList.size();
-//   map<int, IntPoint> id2nodes;
-//   vector<int> innerCirc(numNodes);
-//   for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
-//        itr != nodeMap.end(); 
-//        ++itr) {
-//     i = itr->second.first;
-//     POLY_ASSERT(i < nodeMap.size());
-//     id2nodes[i] = itr->first;
-//     innerCirc[i] = itr->second.second;
-//   }
-//   POLY_ASSERT(id2nodes.size() == numNodes);  
-
   // Circumcenters that lie outside the bounding box of the PLC boundary 
   // are quantized based on different criteria to avoid contaminating the 
   // degeneracy spacing of the mesh nodes. We will project these outer 
@@ -748,20 +639,20 @@ computeCellRings(const vector<RealType>& points,
 
 
   // Quantize the PLCpoints
-  vector<RealPoint> innerBoundingBoxPoints(4);
-  innerBoundingBoxPoints[0] = RealPoint(mCoords.low [0], mCoords.low [1]);
-  innerBoundingBoxPoints[1] = RealPoint(mCoords.high[0], mCoords.low [1]);
-  innerBoundingBoxPoints[2] = RealPoint(mCoords.high[0], mCoords.high[1]);
-  innerBoundingBoxPoints[3] = RealPoint(mCoords.low [0], mCoords.high[1]);
+  vector<RealPoint> boundingBoxPoints(4);
+  boundingBoxPoints[0] = RealPoint(mCoords.low [0], mCoords.low [1]);
+  boundingBoxPoints[1] = RealPoint(mCoords.high[0], mCoords.low [1]);
+  boundingBoxPoints[2] = RealPoint(mCoords.high[0], mCoords.high[1]);
+  boundingBoxPoints[3] = RealPoint(mCoords.low [0], mCoords.high[1]);
   
-  RealPolygon innerBoundingBox;
-  RealRing innerBoundingBoxRing = RealRing(innerBoundingBoxPoints.begin(),
-					   innerBoundingBoxPoints.end());
-  boost::geometry::correct(innerBoundingBoxRing);
-  boost::geometry::assign(innerBoundingBox, innerBoundingBoxRing);
+  RealPolygon boundingBox;
+  RealRing boundingBoxRing = RealRing(boundingBoxPoints.begin(),
+				      boundingBoxPoints.end());
+  boost::geometry::correct(boundingBoxRing);
+  boost::geometry::assign(boundingBox, boundingBoxRing);
 
   // Initialize the object to handle cell intersections
-  Clipper2d<RealType> boundingBoxClipper(innerBoundingBox);
+  Clipper2d<RealType> boundingBoxClipper(boundingBox);
 
   // Walk the nodes around each generator and build up the cell ring
   IntPoint X, ip1, ip2;
@@ -771,20 +662,20 @@ computeCellRings(const vector<RealType>& points,
   vector<BGring> orphans;
   cellRings.resize(numGenerators);
   for (i = 0; i != numGenerators; ++i) {
-    // Check the orientation of the node list and reverse it if it's CW
-    POLY_ASSERT(cellNodes[i].size() > 1);
-    i1 = cellNodes[i][0];
-    i2 = cellNodes[i][1];
-    POLY_ASSERT(i1 < numNodes and i2 < numNodes);
-//     ip1 = id2nodes[i1];
-//     ip2 = id2nodes[i2];
-//     rp1 = (innerCirc[i1] == 1) ? mCoords.dequantize(&ip1.x) : mOuterCoords.dequantize(&ip1.x);
-//     rp2 = (innerCirc[i2] == 1) ? mCoords.dequantize(&ip2.x) : mOuterCoords.dequantize(&ip2.x);
-    rp1 = nodeList[i1];
-    rp2 = nodeList[i2];
-    if (orient2d(&rp1.x, &rp2.x, (double*)&points[2*i]) < 0) {
-      //reverse(cellNodes[i].begin(), cellNodes[i].end());
-    }
+    // Removed this because inner/outer bounding box intersections
+    // are now done with boost.geometry. The ring concept enforces
+    // CCW orientation without having to reverse it manually. 09/19/2013
+
+//     // Check the orientation of the node list and reverse it if it's CW
+//     POLY_ASSERT(cellNodes[i].size() > 1);
+//     i1 = cellNodes[i][0];
+//     i2 = cellNodes[i][1];
+//     POLY_ASSERT(i1 < numNodes and i2 < numNodes);
+//     rp1 = nodeList[i1];
+//     rp2 = nodeList[i2];
+//     if (orient2d(&rp1.x, &rp2.x, (double*)&points[2*i]) < 0) {
+//       reverse(cellNodes[i].begin(), cellNodes[i].end());
+//     }
 
     // Blago!
     bool Blago = false;
@@ -796,10 +687,6 @@ computeCellRings(const vector<RealType>& points,
     for (vector<unsigned>::const_iterator itr = cellNodes[i].begin();
 	 itr != cellNodes[i].end(); 
 	 ++itr) {
-//       ip1 = id2nodes[*itr];
-//       rp1 = (innerCirc[*itr] == 1) ? 
-// 	mCoords.dequantize(&ip1.x) : 
-// 	mOuterCoords.dequantize(&ip1.x);
       rp1 = nodeList[*itr];
       realCellNodes.push_back(rp1);
     }
@@ -858,6 +745,411 @@ computeCellRings(const vector<RealType>& points,
     POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
 
     
+
+    // Compute the boundary intersections
+    clipper.clipCell(mCoords.quantize(&points[2*i]), cellRings[i], orphans);
+    
+    // Remove any repeated points
+    boost::geometry::unique(cellRings[i]);
+    
+
+    // Blago!
+    if(Blago){
+    cerr << endl << "Final clipped cell ring " << i << endl;
+    for (typename BGring::iterator itr = cellRings[i].begin();
+         itr != cellRings[i].end(); ++itr) {
+      cerr << mCoords.dequantize(&(*itr).x) << endl;
+    }
+    }
+    // Blago!
+
+  }
+
+  // // Blago!
+  // for (i = 0; i != orphans.size(); ++i) {
+  //   cerr << endl << "Orphan " << i << endl;
+  //   for (typename BGring::iterator itr = orphans[i].begin();
+  //        itr != orphans[i].end(); ++itr) {
+  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
+  //          << (*itr).realy(mLow[1], mDelta) << endl;
+  //   }
+  // }
+  // // Blago!
+
+  // If any orphaned cells exist, run the adoption algorithm
+  // and modify the neighboring cell rings
+  if (!orphans.empty()) {
+    BoostOrphanage<RealType> orphanage(this);
+    orphanage.adoptOrphans(points, mCoords, cellRings, orphans);
+  }
+
+  
+  // Mark any cell ring points coinciding with the bounding PLC
+  for (i = 0; i != numGenerators; ++i) {
+    if (boost::geometry::intersects(cellRings[i], clipper.mBoundary)) {
+      for (typename BGring::iterator itr = cellRings[i].begin();
+	   itr != cellRings[i].end()-1; ++itr) {
+	for (typename BGring::const_iterator oItr = clipper.mBoundary.outer().begin();
+	     oItr != clipper.mBoundary.outer().end();
+	     ++oItr) {
+	  if (*itr == *oItr)  itr->index = 1;
+	}
+	vector<BGring>& holes = clipper.mBoundary.inners();
+	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
+	  for (typename BGring::const_iterator iItr = holes[ihole].begin();
+	       iItr != holes[ihole].end()-1;
+	       ++iItr) {
+	    if (*itr == *iItr)  itr->index = 1;
+	  }
+	}
+	// //Blago!
+	// if (itr->index == 1) std::cerr << (*itr) << std::endl;
+	// //Blago!
+      }
+    }
+  }
+
+
+  
+  // Post-conditions
+  POLY_ASSERT(cellRings.size() == numGenerators);
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeVoronoiUnbounded(const vector<RealType>& points,
+			Tessellation<2, RealType>& mesh) const {
+  POLY_ASSERT(!points.empty());
+  POLY_ASSERT(points.size() != 2);
+  
+  const unsigned numGenerators = points.size()/2;
+  vector<RealPoint> nodeList;
+  vector<vector<unsigned> > cellNodes;
+  int i;
+
+  // Check for collinearity and use the appropriate routine
+  bool collinear = true;
+  if (numGenerators > 2 ) {
+    i = 2;
+    while (collinear and i != numGenerators) {
+      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
+                                                   &points[2*i], 1.0e-10);
+      ++i;
+    }
+  }
+
+  // Use the appropriate cell node routine
+  if (collinear) {
+    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
+    mesh.infNodes = vector<unsigned>(nodeList.size(), 1);
+  } else {
+    vector<unsigned> infNodes;
+    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
+    mesh.infNodes = infNodes;
+  }
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+  POLY_ASSERT(!nodeList.empty());
+
+  // Copy the quantized nodes to the final tessellation.
+  int inside;
+  RealPoint node;
+  const unsigned numNodes = nodeList.size();
+  mesh.nodes.resize(2*numNodes);
+  for (i = 0; i != nodeList.size(); ++i) {
+    mesh.nodes[2*i  ] = nodeList[i].x;
+    mesh.nodes[2*i+1] = nodeList[i].y;
+  }
+  POLY_ASSERT(mesh.infNodes.size() == mesh.nodes.size()/2);
+  
+  // Finish constructing the cell-face-node-topology
+  constructUnboundedMeshTopology(cellNodes, points, mesh);
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeVoronoiBounded(const vector<RealType>& points,
+		      const vector<RealType>& PLCpoints,
+		      const PLC<2, RealType>& geometry,
+		      Tessellation<2, RealType>& mesh) const {
+  POLY_ASSERT(!points.empty());
+  POLY_ASSERT(mesh.empty());
+  
+  const unsigned numGenerators = points.size()/2;
+  const unsigned numPLCpoints = PLCpoints.size()/2;
+  vector<RealPoint> nodeList;
+  vector<vector<unsigned> > cellNodes;
+  int i;
+  
+  // Check for collinear generators
+  bool collinear = true;
+  if (numGenerators > 2 ) {
+    i = 2;
+    while (collinear and i != numGenerators) {
+      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
+                                                   &points[2*i], 1.0e-10);
+      ++i;
+    }
+  }
+
+  // Use the appropriate cell node routine
+  if (collinear) {
+    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
+  } else {
+    vector<unsigned> infNodes;
+    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
+  }
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+  POLY_ASSERT(!nodeList.empty());
+  
+  // Quantize the PLCpoints
+  vector<IntPoint> IntPLCPoints(numPLCpoints);
+  for (i = 0; i < numPLCpoints; ++i){
+    IntPLCPoints[i] = mCoords.quantize(&PLCpoints[2*i]);
+  }
+
+  // Generate the quantized boundary to handle boost intersections
+  BGpolygon boundary;
+  constructBoostBoundary(IntPLCPoints, geometry, boundary);
+
+  // Initialize the object to handle cell intersections
+  Clipper2d<CoordHash> clipper(boundary);
+  
+  // Compute bounded cell rings
+  vector<BGring> cellRings;
+  this->computeCellRings(points, nodeList, cellNodes, clipper, cellRings);
+  
+  // Input nodes and construct the final mesh topology
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+computeDelaunay(const vector<RealType>& points,
+                triangulateio& delaunay) const {
+  triangulateio in;
+   
+  // Find the range of the generator points.
+  const unsigned numGenerators = points.size()/2;
+
+  // Determine bounding box for points
+  POLY_ASSERT(!mCoords.empty());
+  RealType low [2] = {mCoords.low [0], mCoords.low [1]};
+  RealType high[2] = {mCoords.high[0], mCoords.high[1]};
+
+  RealType box [2] = {high[0] - low[0], high[1] - low[1]};
+  const RealType boxsize = 8.0*max(box[0], box[1]);
+  
+  const RealType xmin = 0.5*(low[0] + high[0]) - boxsize;
+  const RealType xmax = 0.5*(low[0] + high[0]) + boxsize;
+  const RealType ymin = 0.5*(low[1] + high[1]) - boxsize;
+  const RealType ymax = 0.5*(low[1] + high[1]) + boxsize;
+
+  // Add the generators
+  in.numberofpoints = numGenerators + 4;
+  in.pointlist = new RealType[2*in.numberofpoints];
+  copy(points.begin(), points.end(), in.pointlist);
+  in.pointlist[2*numGenerators  ] = xmin;  in.pointlist[2*numGenerators+1] = ymin;
+  in.pointlist[2*numGenerators+2] = xmax;  in.pointlist[2*numGenerators+3] = ymin;
+  in.pointlist[2*numGenerators+4] = xmax;  in.pointlist[2*numGenerators+5] = ymax;
+  in.pointlist[2*numGenerators+6] = xmin;  in.pointlist[2*numGenerators+7] = ymax;
+  in.numberofsegments = 0;
+
+  // // Add the generators
+  // in.numberofpoints = numGenerators;
+  // in.pointlist = new RealType[2*in.numberofpoints];
+  // copy(points.begin(), points.end(), in.pointlist);
+  // in.numberofsegments = 0;
+    
+  // No point attributes or markers.
+  in.numberofpointattributes = 0;
+  in.pointattributelist = 0; 
+  in.pointmarkerlist = 0;   // No point markers.
+  in.segmentmarkerlist = 0;
+  in.numberofholes = 0;
+  in.holelist = 0;
+
+  // No regions.
+  in.numberofregions = 0;
+  in.regionlist = 0;
+  
+  // Set up the structure for the triangulation.
+  delaunay.pointlist = 0;
+  delaunay.pointattributelist = 0;
+  delaunay.pointmarkerlist = 0;
+  delaunay.trianglelist = 0;
+  delaunay.triangleattributelist = 0;
+  delaunay.neighborlist = 0;
+  delaunay.segmentlist = 0;
+  delaunay.segmentmarkerlist = 0;
+  delaunay.edgelist = 0;
+  delaunay.edgemarkerlist = 0;
+  delaunay.holelist = 0;
+
+  // Do the triangulation. Switches pass to triangle are:
+  // -Q : Quiet (shaddap!), no output on the terminal except errors.
+  // -z : Indices are all numbered from zero.
+  // -e : Generates edges and places them in out.edgelist.
+  // -c : Generates convex hull and places it in out.segmentlist.
+  // -p : Uses the given PLC information.
+  // triangulate((char*)"Qzec", &in, &delaunay, 0);
+  triangulate((char*)"Qz", &in, &delaunay, 0);
+  
+  // Make sure we got something.
+  if (delaunay.numberoftriangles == 0)
+    error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
+  if (delaunay.numberofpoints != in.numberofpoints) {
+    char err[1024];
+    snprintf(err, 1024, "TriangleTessellator: Delauney triangulation produced %d triangles\n(%d generating points given)", 
+             delaunay.numberofpoints, (int)numGenerators);
+    error(err);
+  }
+  
+  // Clean up
+  delete [] in.pointlist;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Private tessellate routines
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+tessellate(const vector<RealType>& points,
+           const vector<CoordHash>& IntPLCpoints,
+           const PLC<2, RealType>& geometry,
+           const QuantizedCoordinates<2, RealType>& coords,
+           vector<vector<vector<CoordHash> > >& IntCells) const {
+  // Pre-conditions
+  POLY_ASSERT(!geometry.empty());
+  POLY_ASSERT(points.size() > 0 and IntPLCpoints.size() > 0);
+  POLY_ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(!coords.empty());
+
+  // The Quantized coordinates
+  mCoords = coords;
+//   mOuterCoords = coords;
+
+  const unsigned numGenerators = points.size()/2;
+  const unsigned numPLCpoints = IntPLCpoints.size()/2;
+  vector<RealPoint> nodeList;
+//   map<IntPoint, pair<int, int> > nodeMap;
+  vector<vector<unsigned> > cellNodes;
+  int i;
+  
+  // Check for collinear generators
+  bool collinear = true;
+  if (numGenerators > 2 ) {
+    i = 2;
+    while (collinear and i != numGenerators) {
+      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
+                                                   &points[2*i], 1.0e-10);
+      ++i;
+    }
+  }
+
+  // Use the appropriate cell node routine
+  if (collinear) {
+//     vector<RealPoint> nodeList;
+    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
+//     for (i = 0; i != nodeList.size(); ++i) {
+//       IntPoint ip = mCoords.quantize(&nodeList[i].x);
+//       nodeMap[ip] = make_pair(i,1);
+//     }
+  }
+  else {
+    vector<unsigned> infNodes;
+    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
+  }
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+  POLY_ASSERT(!nodeList.empty());
+  
+  // Store the input boundary as a Boost.Geometry polygon
+  BGpolygon boundary;
+  vector<IntPoint> boundaryPoints;
+  for (i = 0; i != numPLCpoints; ++i)
+     boundaryPoints.push_back(IntPoint(IntPLCpoints[2*i], IntPLCpoints[2*i+1]));
+  constructBoostBoundary(boundaryPoints, geometry, boundary);
+  
+  // Initialize the object to handle cell intersections
+  Clipper2d<CoordHash> clipper(boundary);
+  
+  // Compute bounded cell rings
+  vector<BGring> cellRings;
+  this->computeCellRings(points, nodeList, cellNodes, clipper, cellRings);
+  
+  // Store the rings in a non-Boost way
+  IntCells.resize(numGenerators);
+  for (i = 0; i != numGenerators; ++i) {
+    vector<CoordHash> node(2);
+    int index = 0;
+    IntCells[i].resize(cellRings[i].size());
+    for (typename BGring::const_iterator itr = cellRings[i].begin();
+        itr != cellRings[i].end(); ++itr, ++index) {
+      node[0] = (*itr).x;
+      node[1] = (*itr).y;
+      POLY_ASSERT(node.size() == 2);
+      IntCells[i][index] = node;
+    }
+    POLY_ASSERT(IntCells[i].size()     == cellRings[i].size()  );
+    POLY_ASSERT(IntCells[i].front()[0] == IntCells[i].back()[0]);
+    POLY_ASSERT(IntCells[i].front()[1] == IntCells[i].back()[1]);
+  }
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Explicit instantiation.
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template class TriangleTessellator<double>;
+}
+
+
+
+
+// //------------------------------------------------------------------------------
+// // Predicate to check if either element of a std::pair matches the given value.
+// //------------------------------------------------------------------------------
+// template<typename T>
+// struct MatchEitherPairValue {
+//   T mval;
+//   MatchEitherPairValue(const T& x): mval(x) {}
+//   bool operator()(const std::pair<T, T>& x) const { return (x.first == mval or x.second == mval); }
+// };
+
+// //------------------------------------------------------------------------------
+// // Get the set of map keys
+// //------------------------------------------------------------------------------
+// template<typename Key, typename T>
+// std::set<Key>
+// getMapKeys(std::map<Key, T>& mapIn) {
+//   typename std::set<Key> result;
+//   for (typename std::map<Key, T>::const_iterator itr = mapIn.begin();
+//        itr != mapIn.end(); ++itr){
+//     result.insert( itr->first );
+//   }
+//   return result;
+// }
+
+
+
     /*
   // Walk the nodes around each generator and build up the cell ring
   IntPoint X, ip1, ip2;
@@ -1082,427 +1374,3 @@ computeCellRings(const vector<RealType>& points,
     // Blago!
     */
 
-
-    // Compute the boundary intersections
-    clipper.clipCell(mCoords.quantize(&points[2*i]), cellRings[i], orphans);
-    
-    // Remove any repeated points
-    boost::geometry::unique(cellRings[i]);
-    
-
-    // Blago!
-    if(Blago){
-    cerr << endl << "Final clipped cell ring " << i << endl;
-    for (typename BGring::iterator itr = cellRings[i].begin();
-         itr != cellRings[i].end(); ++itr) {
-      cerr << mCoords.dequantize(&(*itr).x) << endl;
-    }
-    }
-    // Blago!
-
-  }
-
-  // // Blago!
-  // for (i = 0; i != orphans.size(); ++i) {
-  //   cerr << endl << "Orphan " << i << endl;
-  //   for (typename BGring::iterator itr = orphans[i].begin();
-  //        itr != orphans[i].end(); ++itr) {
-  //     cerr << (*itr).realx(mLow[0], mDelta) << " "
-  //          << (*itr).realy(mLow[1], mDelta) << endl;
-  //   }
-  // }
-  // // Blago!
-
-  // If any orphaned cells exist, run the adoption algorithm
-  // and modify the neighboring cell rings
-  if (!orphans.empty()) {
-    BoostOrphanage<RealType> orphanage(this);
-    orphanage.adoptOrphans(points, mCoords, cellRings, orphans);
-  }
-
-  
-  // Mark any cell ring points coinciding with the bounding PLC
-  for (i = 0; i != numGenerators; ++i) {
-    if (boost::geometry::intersects(cellRings[i], clipper.mBoundary)) {
-      for (typename BGring::iterator itr = cellRings[i].begin();
-	   itr != cellRings[i].end()-1; ++itr) {
-	for (typename BGring::const_iterator oItr = clipper.mBoundary.outer().begin();
-	     oItr != clipper.mBoundary.outer().end();
-	     ++oItr) {
-	  if (*itr == *oItr)  itr->index = 1;
-	}
-	vector<BGring>& holes = clipper.mBoundary.inners();
-	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
-	  for (typename BGring::const_iterator iItr = holes[ihole].begin();
-	       iItr != holes[ihole].end()-1;
-	       ++iItr) {
-	    if (*itr == *iItr)  itr->index = 1;
-	  }
-	}
-	// //Blago!
-	// if (itr->index == 1) std::cerr << (*itr) << std::endl;
-	// //Blago!
-      }
-    }
-  }
-
-
-  
-  // Post-conditions
-  POLY_ASSERT(cellRings.size() == numGenerators);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-computeVoronoiUnbounded(const vector<RealType>& points,
-			Tessellation<2, RealType>& mesh) const {
-  POLY_ASSERT(!points.empty());
-  POLY_ASSERT(points.size() != 2);
-  
-  const unsigned numGenerators = points.size()/2;
-//   map<IntPoint, pair<int,int> > nodeMap;
-  vector<RealPoint> nodeList;
-  vector<vector<unsigned> > cellNodes;
-  int i;
-
-  // Check for collinearity and use the appropriate routine
-  bool collinear = true;
-  if (numGenerators > 2 ) {
-    i = 2;
-    while (collinear and i != numGenerators) {
-      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
-                                                   &points[2*i], 1.0e-10);
-      ++i;
-    }
-  }
-
-  // Use the appropriate cell node routine
-  if (collinear) {
-//     vector<RealPoint> nodeList;
-    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
-//     for (i = 0; i != nodeList.size(); ++i) {
-//       IntPoint ip = mCoords.quantize(&nodeList[i].x);
-//       nodeMap[ip] = make_pair(i,1);
-//     }
-    mesh.infNodes = vector<unsigned>(nodeList.size(), 1);
-  }
-  else {
-    vector<unsigned> infNodes;
-    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
-    mesh.infNodes = infNodes;
-  }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-  POLY_ASSERT(!nodeList.empty());
-
-  // Copy the quantized nodes to the final tessellation.
-  int inside;
-  RealPoint node;
-  const unsigned numNodes = nodeList.size();
-  mesh.nodes.resize(2*numNodes);
-//   for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
-//        itr != nodeMap.end(); ++itr) {
-  for (i = 0; i != nodeList.size(); ++i) {
-//     i = itr->second.first;
-//     inside = itr->second.second;
-//     POLY_ASSERT(i >= 0 and i < numNodes);
-//     POLY_ASSERT(inside == 0 or inside == 1);
-//     if (inside == 1)   node = mCoords.dequantize(&(itr->first).x);
-//     else               node = mOuterCoords.dequantize(&(itr->first).x);
-    mesh.nodes[2*i  ] = nodeList[i].x;
-    mesh.nodes[2*i+1] = nodeList[i].y;
-  }
-  POLY_ASSERT(mesh.infNodes.size() == mesh.nodes.size()/2);
-  
-  // Finish constructing the cell-face-node-topology
-  constructUnboundedMeshTopology(cellNodes, points, mesh);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-computeVoronoiBounded(const vector<RealType>& points,
-		      const vector<RealType>& PLCpoints,
-		      const PLC<2, RealType>& geometry,
-		      Tessellation<2, RealType>& mesh) const {
-  POLY_ASSERT(!points.empty());
-  POLY_ASSERT(mesh.empty());
-  
-  const unsigned numGenerators = points.size()/2;
-  const unsigned numPLCpoints = PLCpoints.size()/2;
-  vector<RealPoint> nodeList;
-//   map<IntPoint, pair<int, int> > nodeMap;
-  vector<vector<unsigned> > cellNodes;
-  int i;
-  
-  // Check for collinear generators
-  bool collinear = true;
-  if (numGenerators > 2 ) {
-    i = 2;
-    while (collinear and i != numGenerators) {
-      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
-                                                   &points[2*i], 1.0e-10);
-      ++i;
-    }
-  }
-
-  // Use the appropriate cell node routine
-  if (collinear) {
-//     vector<RealPoint> nodeList;
-    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
-//     for (i = 0; i != nodeList.size(); ++i) {
-//       IntPoint ip = mCoords.quantize(&nodeList[i].x);
-//       nodeMap[ip] = make_pair(i,1);
-//     }
-  }
-  else {
-    vector<unsigned> infNodes;
-    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
-  }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-  POLY_ASSERT(!nodeList.empty());
-  
-  // Quantize the PLCpoints
-  vector<IntPoint> IntPLCPoints(numPLCpoints);
-  for (i = 0; i < numPLCpoints; ++i){
-    IntPLCPoints[i] = mCoords.quantize(&PLCpoints[2*i]);
-  }
-
-  // Generate the quantized boundary to handle boost intersections
-  BGpolygon boundary;
-  constructBoostBoundary(IntPLCPoints, geometry, boundary);
-
-  // Initialize the object to handle cell intersections
-  Clipper2d<CoordHash> clipper(boundary);
-  
-  // Compute bounded cell rings
-  vector<BGring> cellRings;
-  this->computeCellRings(points, nodeList, cellNodes, clipper, cellRings);
-  
-  // Input nodes and construct the final mesh topology
-  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-computeDelaunay(const vector<RealType>& points,
-                triangulateio& delaunay) const {
-  triangulateio in;
-   
-  // Find the range of the generator points.
-  const unsigned numGenerators = points.size()/2;
-
-  // Determine bounding box for points
-  POLY_ASSERT(!mCoords.empty());
-  RealType low [2] = {mCoords.low [0], mCoords.low [1]};
-  RealType high[2] = {mCoords.high[0], mCoords.high[1]};
-
-  RealType box [2] = {high[0] - low[0], high[1] - low[1]};
-  const RealType boxsize = 8.0*max(box[0], box[1]);
-  
-  const RealType xmin = 0.5*(low[0] + high[0]) - boxsize;
-  const RealType xmax = 0.5*(low[0] + high[0]) + boxsize;
-  const RealType ymin = 0.5*(low[1] + high[1]) - boxsize;
-  const RealType ymax = 0.5*(low[1] + high[1]) + boxsize;
-
-  // Add the generators
-  in.numberofpoints = numGenerators + 4;
-  in.pointlist = new RealType[2*in.numberofpoints];
-  copy(points.begin(), points.end(), in.pointlist);
-  in.pointlist[2*numGenerators  ] = xmin;  in.pointlist[2*numGenerators+1] = ymin;
-  in.pointlist[2*numGenerators+2] = xmax;  in.pointlist[2*numGenerators+3] = ymin;
-  in.pointlist[2*numGenerators+4] = xmax;  in.pointlist[2*numGenerators+5] = ymax;
-  in.pointlist[2*numGenerators+6] = xmin;  in.pointlist[2*numGenerators+7] = ymax;
-  in.numberofsegments = 0;
-
-  // // Add the generators
-  // in.numberofpoints = numGenerators;
-  // in.pointlist = new RealType[2*in.numberofpoints];
-  // copy(points.begin(), points.end(), in.pointlist);
-  // in.numberofsegments = 0;
-    
-  // No point attributes or markers.
-  in.numberofpointattributes = 0;
-  in.pointattributelist = 0; 
-  in.pointmarkerlist = 0;   // No point markers.
-  in.segmentmarkerlist = 0;
-  in.numberofholes = 0;
-  in.holelist = 0;
-
-  // No regions.
-  in.numberofregions = 0;
-  in.regionlist = 0;
-  
-  // Set up the structure for the triangulation.
-  delaunay.pointlist = 0;
-  delaunay.pointattributelist = 0;
-  delaunay.pointmarkerlist = 0;
-  delaunay.trianglelist = 0;
-  delaunay.triangleattributelist = 0;
-  delaunay.neighborlist = 0;
-  delaunay.segmentlist = 0;
-  delaunay.segmentmarkerlist = 0;
-  delaunay.edgelist = 0;
-  delaunay.edgemarkerlist = 0;
-  delaunay.holelist = 0;
-
-  // Do the triangulation. Switches pass to triangle are:
-  // -Q : Quiet (shaddap!), no output on the terminal except errors.
-  // -z : Indices are all numbered from zero.
-  // -e : Generates edges and places them in out.edgelist.
-  // -c : Generates convex hull and places it in out.segmentlist.
-  // -p : Uses the given PLC information.
-  // triangulate((char*)"Qzec", &in, &delaunay, 0);
-  triangulate((char*)"Qz", &in, &delaunay, 0);
-  
-  // Make sure we got something.
-  if (delaunay.numberoftriangles == 0)
-    error("TriangleTessellator: Delauney triangulation produced 0 triangles!");
-  if (delaunay.numberofpoints != in.numberofpoints) {
-    char err[1024];
-    snprintf(err, 1024, "TriangleTessellator: Delauney triangulation produced %d triangles\n(%d generating points given)", 
-             delaunay.numberofpoints, (int)numGenerators);
-    error(err);
-  }
-  
-  // Clean up
-  delete [] in.pointlist;
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Private tessellate routines
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-TriangleTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           const vector<CoordHash>& IntPLCpoints,
-           const PLC<2, RealType>& geometry,
-           const QuantizedCoordinates<2, RealType>& coords,
-           vector<vector<vector<CoordHash> > >& IntCells) const {
-  // Pre-conditions
-  POLY_ASSERT(!geometry.empty());
-  POLY_ASSERT(points.size() > 0 and IntPLCpoints.size() > 0);
-  POLY_ASSERT(points.size() % 2 == 0);
-  POLY_ASSERT(!coords.empty());
-
-  // The Quantized coordinates
-  mCoords = coords;
-  mOuterCoords = coords;
-
-  const unsigned numGenerators = points.size()/2;
-  const unsigned numPLCpoints = IntPLCpoints.size()/2;
-  vector<RealPoint> nodeList;
-//   map<IntPoint, pair<int, int> > nodeMap;
-  vector<vector<unsigned> > cellNodes;
-  int i;
-  
-  // Check for collinear generators
-  bool collinear = true;
-  if (numGenerators > 2 ) {
-    i = 2;
-    while (collinear and i != numGenerators) {
-      collinear *= geometry::collinear<2,RealType>(&points[0], &points[2], 
-                                                   &points[2*i], 1.0e-10);
-      ++i;
-    }
-  }
-
-  // Use the appropriate cell node routine
-  if (collinear) {
-//     vector<RealPoint> nodeList;
-    computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
-//     for (i = 0; i != nodeList.size(); ++i) {
-//       IntPoint ip = mCoords.quantize(&nodeList[i].x);
-//       nodeMap[ip] = make_pair(i,1);
-//     }
-  }
-  else {
-    vector<unsigned> infNodes;
-    this->computeCellNodes(points, nodeList, cellNodes, infNodes);
-  }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-  POLY_ASSERT(!nodeList.empty());
-  
-  // Store the input boundary as a Boost.Geometry polygon
-  BGpolygon boundary;
-  vector<IntPoint> boundaryPoints;
-  for (i = 0; i != numPLCpoints; ++i)
-     boundaryPoints.push_back(IntPoint(IntPLCpoints[2*i], IntPLCpoints[2*i+1]));
-  constructBoostBoundary(boundaryPoints, geometry, boundary);
-  
-  // Initialize the object to handle cell intersections
-  Clipper2d<CoordHash> clipper(boundary);
-  
-  // Compute bounded cell rings
-  vector<BGring> cellRings;
-  this->computeCellRings(points, nodeList, cellNodes, clipper, cellRings);
-  
-  // Store the rings in a non-Boost way
-  IntCells.resize(numGenerators);
-  for (i = 0; i != numGenerators; ++i) {
-    vector<CoordHash> node(2);
-    int index = 0;
-    IntCells[i].resize(cellRings[i].size());
-    for (typename BGring::const_iterator itr = cellRings[i].begin();
-        itr != cellRings[i].end(); ++itr, ++index) {
-      node[0] = (*itr).x;
-      node[1] = (*itr).y;
-      POLY_ASSERT(node.size() == 2);
-      IntCells[i][index] = node;
-    }
-    POLY_ASSERT(IntCells[i].size()     == cellRings[i].size()  );
-    POLY_ASSERT(IntCells[i].front()[0] == IntCells[i].back()[0]);
-    POLY_ASSERT(IntCells[i].front()[1] == IntCells[i].back()[1]);
-  }
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Explicit instantiation.
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template class TriangleTessellator<double>;
-}
-
-
-
-
-// //------------------------------------------------------------------------------
-// // Predicate to check if either element of a std::pair matches the given value.
-// //------------------------------------------------------------------------------
-// template<typename T>
-// struct MatchEitherPairValue {
-//   T mval;
-//   MatchEitherPairValue(const T& x): mval(x) {}
-//   bool operator()(const std::pair<T, T>& x) const { return (x.first == mval or x.second == mval); }
-// };
-
-// //------------------------------------------------------------------------------
-// // Get the set of map keys
-// //------------------------------------------------------------------------------
-// template<typename Key, typename T>
-// std::set<Key>
-// getMapKeys(std::map<Key, T>& mapIn) {
-//   typename std::set<Key> result;
-//   for (typename std::map<Key, T>::const_iterator itr = mapIn.begin();
-//        itr != mapIn.end(); ++itr){
-//     result.insert( itr->first );
-//   }
-//   return result;
-// }

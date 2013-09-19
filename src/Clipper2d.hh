@@ -1,6 +1,15 @@
 #ifndef POLYTOPE_CLIPPER2D_HH
 #define POLYTOPE_CLIPPER2D_HH
 
+//************************************************************************
+// NOTE: Only Boost.Geometry exists for performing cell intersections
+//       at the time being. We'd like to put new intersection algorithms
+//       into Polytope in the future, much like how the tessellators
+//       are implemented: a clipper base class with a uniform interface
+//       and a collection of descended specializations based on the
+//       new algorithms. 9/19/2013
+//************************************************************************
+
 #if HAVE_BOOST
 
 #include <vector>
@@ -19,12 +28,11 @@ class Clipper2d {
 public:
 
   // Typedefs for point, ring, and polygon type.
-  // NOTE: Only Boost.Geometry exists for performing cell intersections.
-  //       In the future, it may be necessary to template this class onto
-  //       each of these types. After all, rings are just vectors of 
-  //       points and polygons are just vectors of rings, specialized to
-  //       outer points (facets) and inner points (holes). The ReducedPLC
-  //       class -almost- handles everything we need.
+  //
+  // NOTE: We may want to template onto point, ring, and polygon types.
+  //       A ring is just a vector of points, and polygons are just
+  //       vectors of rings (a single ring for the outer boundary and
+  //       an arbitrary number of reverse-orientation rings for holes).
   typedef Point2<RealType> PointType;
   typedef boost::geometry::model::ring   <PointType, false> RingType;
   typedef boost::geometry::model::polygon<PointType, false> PolygonType;
