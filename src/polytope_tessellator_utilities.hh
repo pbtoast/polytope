@@ -22,7 +22,7 @@ BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geomet
 
 namespace polytope {
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // constructUnboundedMeshTopology
 //
 // Constructs the mesh structures for cells, faces, faceCells, and infFaces.
@@ -30,7 +30,7 @@ namespace polytope {
 //   cellNodes: map from cell Index to collection of node indices
 // PRE-CONDITIONS:
 //   The node and infNode vectors have already been set
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 template<typename RealType>
 void
 constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
@@ -109,10 +109,10 @@ constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
   POLY_ASSERT(mesh.infFaces.size()  == mesh.faces.size()  );
   POLY_ASSERT(mesh.infNodes.size()  == mesh.nodes.size()/2);
 }
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // constructBoundedMeshTopology
 //
 // Constructs the mesh structures for cells, faces, faceCells, and infFaces.
@@ -123,7 +123,7 @@ constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
 //    coords   : Quantized coordinate system and bounding box
 // PRE-CONDITIONS: 
 //    The mesh is empty
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 template<typename RealType>
 void
 constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
@@ -306,7 +306,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
 }
 
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // constructBoostBoundary
 //
 // Store PointType PLC boundary data as a Boost.Geometry polygon
@@ -316,7 +316,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
 //    boundary : Ref to the output Boost.Geometry polygon
 // PRE-CONDITIONS: 
 //    The PointType must first be registered with Boost
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 template<typename RealType, typename PointType>
 void
 constructBoostBoundary(const std::vector<PointType>& PLCPoints,
@@ -352,7 +352,7 @@ constructBoostBoundary(const std::vector<PointType>& PLCPoints,
   }
 }
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // convertTessellationToRings
 //
 // Convert mesh cells to Boost.Geometry rings
@@ -362,7 +362,7 @@ constructBoostBoundary(const std::vector<PointType>& PLCPoints,
 //    dx  :  Quantized grid spacing
 // PRE-CONDITIONS: 
 //    The mesh cells, faces, and nodes are full
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 template <typename RealType>
 void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
                                 const RealType* low,
@@ -403,7 +403,7 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
 }
 
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // intersectBoundingBox
 //
 // Compute the intersection of a line segment and a PLC. Returns number of
@@ -466,7 +466,7 @@ unsigned intersectBoundingBox(const RealType* point1,
 }
 
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // computeCellNodesCollinear
 //
 // Compute the quantized node positions for each cell from a collection of
@@ -477,7 +477,7 @@ unsigned intersectBoundingBox(const RealType* point1,
 // OUTPUT:
 //    nodeMap    : Map from quantized node position to node index
 //    cellNodes  : Collection of sorted node indices around each cell
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 template<typename RealType>
 void
 computeCellNodesCollinear(const std::vector<RealType>& points,
