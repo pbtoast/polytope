@@ -56,8 +56,8 @@ void generateMesh(Tessellator<2,double>& tessellator)
    boundary.setUnitSquare();
    Generators<2,double> generators( boundary );
 
-   const unsigned Imax  = 1; //99;
-   const unsigned Nmin  = 1000; //2;
+   const unsigned Imax  = 99;
+   const unsigned Nmin  = 2;
    const unsigned scale = 1;
    
    for (unsigned i = 0; i != Imax; ++i) {
