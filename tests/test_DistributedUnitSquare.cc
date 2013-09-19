@@ -47,7 +47,7 @@ void runTest(Tessellator<2,double>& tessellator) {
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
   // Seed the random number generator the same on all processes.
-  srand(10489592);
+  srand(10489591);
 
   // Try tessellating increasing numbers of generators.
   for (unsigned nx = Nmin; nx <= Nmax; ++nx) {
@@ -95,7 +95,7 @@ void runTest(Tessellator<2,double>& tessellator) {
     
     unsigned numGen = generators.size()/2;
     POLY_CHECK2( numGen > 1, "Processor " << rank << " only has " << numGen << " generators. This is not enough to tessellate!");
-    
+
     // Create the tessellation.
     double xmin[2] = { x1, y1 };
     double xmax[2] = { x2, y2 };
