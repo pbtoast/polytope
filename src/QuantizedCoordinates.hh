@@ -260,14 +260,6 @@ public:
   //------------------------------------------------------------------------
   //! Dequantize an integer point to floating-point-precision 
   //------------------------------------------------------------------------
-  // inline
-  // RealPoint dequantize(const IntPoint pointIn) const {
-  //   POLY_ASSERT(!mCoordinatesModified);
-  //   RealType x = (pointIn.x == mCoordMax) ? high[0] : pointIn.realx(low[0], delta);
-  //   RealType y = (pointIn.y == mCoordMax) ? high[1] : pointIn.realy(low[1], delta);
-  //   return RealPoint(x,y);
-  // }
-
   inline
   RealPoint dequantize(const CoordHash* pointIn) const {
     POLY_ASSERT(!mCoordinatesModified);
@@ -292,109 +284,6 @@ public:
     return result;
   }
 };
-
-
-// //! Partial specialization for 2D
-// template <typename RealType>
-// class QuantizedCoordinates<2, RealType>
-// {
-// public:
-
-//   typedef int64_t CoordHash;
-//   typedef Point2<CoordHash> IntPoint;
-//   typedef Point2<RealType> RealPoint;
-
-//   QuantizedCoordinates():
-//     ReducedPLC<2, RealType>() {}
-
-//   QuantizedCoordinates(const QuantizedCoordinates& coords);
-
-//   void initialize(const std::vector<RealType> allPoints) {
-//     this->initialize(allPoints);
-//   }
-
-//   //------------------------------------------------------------------------
-//   //! Quantize a floating-point-precision point
-//   //------------------------------------------------------------------------
-//   inline
-//   IntPoint quantize(const RealType* pointIn) {
-//     POLY_ASSERT(!this->mCoordinatesModified);
-//     return IntPoint(pointIn[0], pointIn[1], this->low[0], this->low[1], this->delta);
-//   }
-   
-//   //------------------------------------------------------------------------
-//   //! Dequantize an integer point to floating-point-precision 
-//   //------------------------------------------------------------------------
-//   inline
-//   RealPoint dequantize(const IntPoint pointIn) {
-//     POLY_ASSERT(!this->mCoordinatesModified);
-//     return RealPoint(pointIn.realx(this->low[0], this->delta), 
-//                      pointIn.realy(this->low[1], this->delta));
-//   }
-
-//   //------------------------------------------------------------------------
-//   //! Project a point to the bounding circle
-//   //------------------------------------------------------------------------
-//   inline
-//   RealPoint projectPoint(const RealPoint& rayPoint,
-//                          const RealPoint& rayDirection) {
-//     RealPoint result;
-//     bool test = geometry::rayCircleIntersection(&rayPoint.x, &rayDirection.x, 
-//                                                 &this->center[0], this->rinf, 
-//                                                 this->mDegeneracy, &result.x);
-//     POLY_ASSERT(test);
-//     return result;
-//   }
-// };
-
-
-// //! Partial specialization for 3D
-// template <typename RealType>
-// class QuantizedCoordinates<3, RealType>
-// {
-// public:
-
-//   typedef int64_t CoordHash;
-//   typedef Point3<CoordHash> IntPoint;
-//   typedef Point3<RealType> RealPoint;
-
-//   //------------------------------------------------------------------------
-//   //! Quantize a floating-point-precision point
-//   //------------------------------------------------------------------------
-//   inline
-//   IntPoint quantize(const RealType* pointIn) {
-//     POLY_ASSERT(!this->mCoordinatesModified);
-//     return IntPoint(pointIn[0], pointIn[1], pointIn[2],
-//                     this->low[0], this->low[1], this->low[2], this->delta);
-//   }
-   
-//   //------------------------------------------------------------------------
-//   //! Dequantize an integer point to floating-point-precision 
-//   //------------------------------------------------------------------------
-//   inline
-//   RealPoint dequantize(const IntPoint& pointIn) {
-//     POLY_ASSERT(!this->mCoordinatesModified);
-//     return RealPoint(pointIn.realx(this->low[0], this->delta),
-//                      pointIn.realy(this->low[1], this->delta),
-//                      pointIn.realz(this->low[2], this->delta));
-//   }
-
-//   //------------------------------------------------------------------------
-//   //! Project a point to the bounding circle
-//   //------------------------------------------------------------------------
-//   inline
-//   RealPoint projectPoint(const RealPoint& rayPoint,
-//                          const RealPoint& rayDirection) {
-//     RealPoint result;
-//     bool test = geometry::raySphereIntersection(&rayPoint.x, &rayDirection.x, 
-//                                                 &this->center[0], this->rinf, 
-//                                                 this->mDegeneracy, &result.x);
-//     POLY_ASSERT(test);
-//     return result;
-//   }
-// };
-
-
 
 } //end polytope namespace
 
