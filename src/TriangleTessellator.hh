@@ -69,12 +69,15 @@ private:
   typedef boost::geometry::model::polygon<IntPoint,    // point type
                                           false>       // clockwise
     BGpolygon;
+  typedef boost::geometry::model::polygon<RealPoint,   // point type
+                                          false>       // clockwise
+    RealPolygon;
   typedef boost::geometry::model::ring<IntPoint,       // point type
                                        false>          // clockwise
     BGring;
-  typedef boost::geometry::model::polygon<RealPoint,   // point type
-                                          false>       // clockwise
-    realBGpolygon;
+  typedef boost::geometry::model::ring<RealPoint,
+                                       false>
+    RealRing;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
   // ------------------------------------------------- //
