@@ -27,8 +27,11 @@ class Tessellation
     faceCells(),
     convexHull() {}
 
+  // Destructor.
+  virtual ~Tessellation() {};
+
   //! Clears the tessellation, emptying it of all data.
-  void clear()
+  virtual void clear()
   {
     nodes.clear();
     cells.clear();
@@ -44,7 +47,7 @@ class Tessellation
 
   //! Returns true if the tessellation is empty (not defined), 
   //! false otherwise.
-  bool empty() const
+  virtual bool empty() const
   {
     return nodes.empty() and cells.empty() and faces.empty() and 
        infNodes.empty() and infFaces.empty() and faceCells.empty() and 
