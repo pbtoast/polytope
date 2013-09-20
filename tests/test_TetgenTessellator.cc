@@ -62,13 +62,13 @@ void unboundedTessellation(const unsigned nx,
                              unsigned(iz == 0 or iz == nx1));
     if (ntouch == 3) {
       // Corner cell.
-      POLY_CHECK2(mesh.cells[i].size() == 3, escapePod(nx, generators, mesh));
+      POLY_CHECK2(mesh.cells[i].size() == 4, escapePod(nx, generators, mesh));
     } else if (ntouch == 2) {
       // Along one of the edges of the volume.
-      POLY_CHECK2(mesh.cells[i].size() == 4, escapePod(nx, generators, mesh));
+      POLY_CHECK2(mesh.cells[i].size() == 5, escapePod(nx, generators, mesh));
     } else if (ntouch == 1) {
       // Along one of the faces of the volume.
-      POLY_CHECK2(mesh.cells[i].size() == 5, escapePod(nx, generators, mesh));
+      POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
     } else {
       // Interior, fully bounded cell.
       POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));

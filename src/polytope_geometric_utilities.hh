@@ -157,7 +157,7 @@ template<typename RealType> struct Hasher<3, RealType> {
     RealType *xlow, *xhigh;
     if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
         pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
-        pos[2] < xlow_inner[2] or pos[1] > xhigh_inner[2]) {
+        pos[2] < xlow_inner[2] or pos[2] > xhigh_inner[2]) {
       xlow = xlow_outer;
       xhigh = xhigh_outer;
       result += (1ULL << 63);

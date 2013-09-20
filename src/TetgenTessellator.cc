@@ -201,7 +201,7 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
   // Invert the mapping, from nodes to edges.
   std::map<int, std::set<unsigned> > nodes2edges;
   internal::CounterMap<int> nodeUseCount;
-  unsigned i, j;
+  unsigned i;
   for (i = 0; i != nedges; ++i) {
     nodes2edges[edges[i].first].insert(i);
     nodes2edges[edges[i].second].insert(i);
@@ -371,8 +371,13 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            Tessellation<3, double>& mesh) const {
+
+  // First generate our internal quantized tessellation representation.
   internal::QuantTessellation<3, double> qmesh;
   this->computeUnboundedQuantizedTessellation(points, qmesh);
+
+  // Convert to the output tessellation and we're done.
+  qmesh.tessellation(mesh);
 }
 
 //------------------------------------------------------------------------------
@@ -864,26 +869,26 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the normalized generators.
   const unsigned numGenerators = points.size() / 3;
-  const vector<double> generators = this->computeNormalizedPoints(points, points, true, qmesh.low_inner, qmesh.high_inner);
+  qmesh.generators = this->computeNormalizedPoints(points, points, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
   unsigned i, j, k;
 
   // Build the input to tetgen.
   tetgenio in;
   in.firstnumber = 0;
   in.mesh_dim = 3;
-  in.pointlist = new double[generators.size()];
-  copy(&generators.front(), &generators.front() + generators.size(), in.pointlist);
+  in.pointlist = new double[qmesh.generators.size()];
+  copy(&qmesh.generators.front(), &qmesh.generators.front() + qmesh.generators.size(), in.pointlist);
   in.pointattributelist = 0;
   in.pointmtrlist = 0;
   in.pointmarkerlist = 0;
-  in.numberofpoints = generators.size() / 3;
+  in.numberofpoints = qmesh.generators.size() / 3;
   in.numberofpointattributes = 0;
   in.numberofpointmtrs = 0;
 
   // Do the tetrahedralization.
   tetgenio out;
-  tetrahedralize((char*)"Q", &in, &out);
-  // tetrahedralize((char*)"V", &in, &out);
+  // tetrahedralize((char*)"Q", &in, &out);
+  tetrahedralize((char*)"V", &in, &out);
 
   // Make sure we got something.
   if (out.numberoftetrahedra == 0)
@@ -897,10 +902,14 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the circumcenters of the tetrahedra, and the set of tets associated
   // with each generator.
-  for (j = 0; j != 3; ++j) {
-    qmesh.low_outer[j] =   numeric_limits<RealType>::max();
-    qmesh.high_outer[j] = -numeric_limits<RealType>::max();
-  }
+  qmesh.low_inner = RealPoint(0, 0, 0);
+  qmesh.high_inner = RealPoint(1, 1, 1);
+  qmesh.low_outer = RealPoint(numeric_limits<RealType>::max(),
+                              numeric_limits<RealType>::max(),
+                              numeric_limits<RealType>::max());
+  qmesh.high_outer = RealPoint(-numeric_limits<RealType>::max(),
+                               -numeric_limits<RealType>::max(),
+                               -numeric_limits<RealType>::max());
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
   int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
@@ -941,12 +950,12 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
     edge2tets[bc].insert(i);
     edge2tets[bd].insert(i);
     edge2tets[cd].insert(i);
-    qmesh.low_outer[0] = min(qmesh.low_outer[0], circumcenters[i].x);
-    qmesh.low_outer[1] = min(qmesh.low_outer[1], circumcenters[i].y);
-    qmesh.low_outer[2] = min(qmesh.low_outer[2], circumcenters[i].z);
-    qmesh.high_outer[0] = max(qmesh.high_outer[0], circumcenters[i].x);
-    qmesh.high_outer[1] = max(qmesh.high_outer[1], circumcenters[i].y);
-    qmesh.high_outer[2] = max(qmesh.high_outer[2], circumcenters[i].z);
+    qmesh.low_outer.x = min(qmesh.low_outer.x, circumcenters[i].x);
+    qmesh.low_outer.y = min(qmesh.low_outer.y, circumcenters[i].y);
+    qmesh.low_outer.z = min(qmesh.low_outer.z, circumcenters[i].z);
+    qmesh.high_outer.x = max(qmesh.high_outer.x, circumcenters[i].x);
+    qmesh.high_outer.y = max(qmesh.high_outer.y, circumcenters[i].y);
+    qmesh.high_outer.z = max(qmesh.high_outer.z, circumcenters[i].z);
   }
   POLY_BEGIN_CONTRACT_SCOPE;
   {
@@ -956,33 +965,29 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
     for (map<EdgeHash, set<unsigned> >::const_iterator itr = edge2tets.begin();
          itr != edge2tets.end();
          ++itr) POLY_ASSERT(itr->second.size() >= 1);
-    POLY_ASSERT(qmesh.low_outer[0] < qmesh.high_outer[0] and
-                qmesh.low_outer[1] < qmesh.high_outer[1] and
-                qmesh.low_outer[2] < qmesh.high_outer[2]);
+    POLY_ASSERT(qmesh.low_outer.x < qmesh.high_outer.x and
+                qmesh.low_outer.y < qmesh.high_outer.y and
+                qmesh.low_outer.z < qmesh.high_outer.z);
   }
   POLY_END_CONTRACT_SCOPE;
 
   // Expand the outer bounding box, and choose our infSphere radius.
-  qmesh.low_outer[0] = min(qmesh.low_outer[0], qmesh.low_inner[0]);
-  qmesh.low_outer[1] = min(qmesh.low_outer[1], qmesh.low_inner[1]);
-  qmesh.low_outer[2] = min(qmesh.low_outer[2], qmesh.low_inner[2]);
-  qmesh.high_outer[0] = max(qmesh.high_outer[0], qmesh.high_inner[0]);
-  qmesh.high_outer[1] = max(qmesh.high_outer[1], qmesh.high_inner[1]);
-  qmesh.high_outer[2] = max(qmesh.high_outer[2], qmesh.high_inner[2]);
-  RealType box_outer = max(    qmesh.high_outer[0] - qmesh.high_inner[0],
-                           max(qmesh.high_outer[1] - qmesh.high_inner[1],
-                               qmesh.high_outer[2] - qmesh.high_inner[2]));
-  const RealType centroid_outer[3] = {qmesh.low_outer[0],
-                                      qmesh.low_outer[1],
-                                      qmesh.low_outer[2]};
-  qmesh.low_outer[0] = centroid_outer[0] - box_outer;
-  qmesh.low_outer[1] = centroid_outer[1] - box_outer;
-  qmesh.low_outer[2] = centroid_outer[2] - box_outer;
-  qmesh.high_outer[0] = centroid_outer[0] + 2.0*box_outer;
-  qmesh.high_outer[1] = centroid_outer[1] + 2.0*box_outer;
-  qmesh.high_outer[2] = centroid_outer[2] + 2.0*box_outer;
-  const RealType rinf = box_outer;
-  box_outer *= 3.0;
+  qmesh.low_outer.x = min(qmesh.low_outer.x, qmesh.low_inner.x);
+  qmesh.low_outer.y = min(qmesh.low_outer.y, qmesh.low_inner.y);
+  qmesh.low_outer.z = min(qmesh.low_outer.z, qmesh.low_inner.z);
+  qmesh.high_outer.x = max(qmesh.high_outer.x, qmesh.high_inner.x);
+  qmesh.high_outer.y = max(qmesh.high_outer.y, qmesh.high_inner.y);
+  qmesh.high_outer.z = max(qmesh.high_outer.z, qmesh.high_inner.z);
+  RealType rinf = 1.5*max(    qmesh.high_outer.x - qmesh.low_outer.x,
+                          max(qmesh.high_outer.y - qmesh.low_outer.y,
+                              qmesh.high_outer.z - qmesh.low_outer.z));
+  const RealPoint centroid_outer = (qmesh.low_outer + qmesh.high_outer)/2;
+  qmesh.low_outer.x = centroid_outer.x - 1.05*rinf;
+  qmesh.low_outer.y = centroid_outer.y - 1.05*rinf;
+  qmesh.low_outer.z = centroid_outer.z - 1.05*rinf;
+  qmesh.high_outer.x = centroid_outer.x + 1.05*rinf;
+  qmesh.high_outer.y = centroid_outer.y + 1.05*rinf;
+  qmesh.high_outer.z = centroid_outer.z + 1.05*rinf;
 
   // Create the quantized circumcenters, and the map from the (possibly) degenerate
   // circumcenters to their unique IDs.
@@ -1044,14 +1049,14 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
       // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
       POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > mDegeneracy);
       copy(&out.pointlist[3*facet.x], &out.pointlist[3*facet.x] + 3, &test_point.x);
-      test_point += fhat;
+      test_point += fhat*rinf;
       if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
           orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &test_point.x) > 0.0) fhat *= -1.0;
 
       // Now we can compute the point where this ray intersects the surrounding "inf" sphere.
       test = geometry::raySphereIntersection(&circumcenters[i].x,
                                              &fhat.x,
-                                             centroid_outer,
+                                             &centroid_outer.x,
                                              rinf,
                                              1.0e-10,
                                              &pinf.x);
@@ -1067,7 +1072,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   }
 
   // Build the edges and faces corresponding to each tet edge.  Recall here that a tet edge is 
-  // actuall the line connecting two generators, so not the edge of the mesh we want.
+  // actualy the line connecting two generators, so not the edge of the mesh we want.
   int iedge, iface;
   RealPoint ghat, e0, e1, e2, f1, f2;
   map<EdgeHash, int> faceMap;
@@ -1122,7 +1127,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         POLY_ASSERT(jj != ii);
         meshEdges.push_back(internal::hashEdge(ii, jj));
       } else {
-        POLY_ASSERT(facet2tets[abd].size() == 2 and facet2tets[abd][0] == i or facet2tets[abd][1] == i);
+        POLY_ASSERT((facet2tets[abd].size() == 2) and (facet2tets[abd][0] == i or facet2tets[abd][1] == i));
         k = (facet2tets[abd][0] == i ? facet2tets[abd][1] : facet2tets[abd][0]);
         jj = tet2id[k];
         if (jj != ii) meshEdges.push_back(internal::hashEdge(ii, jj));
@@ -1133,51 +1138,56 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
     // to construct our face.
     sort(meshEdges.begin(), meshEdges.end());
     meshEdges.erase(unique(meshEdges.begin(), meshEdges.end()), meshEdges.end());
-    vector<int> edgeOrder;
-    const bool infEdge = computeSortedFaceEdges(meshEdges, edgeOrder);
+    if (meshEdges.size() > 1) {
+      vector<int> edgeOrder;
+      const bool infEdge = computeSortedFaceEdges(meshEdges, edgeOrder);
+      if (meshEdges.size() > 2) {
 
-    // Add the edges and face to the quantized mesh.
-    iface = qmesh.faces.size();
-    qmesh.faces.push_back(vector<int>());
-    for (vector<int>::const_iterator itr = edgeOrder.begin();
-         itr != edgeOrder.end();
-         ++itr) {
-      const bool flip = (*itr < 0);
-      k = (flip ? ~(*itr) : *itr);
-      iedge = qmesh.addNewEdge(meshEdges[k]);
-      qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
-    }
+        // Add the edges and face to the quantized mesh.
+        iface = qmesh.faces.size();
+        qmesh.faces.push_back(vector<int>());
+        for (vector<int>::const_iterator itr = edgeOrder.begin();
+             itr != edgeOrder.end();
+             ++itr) {
+          const bool flip = (*itr < 0);
+          k = (flip ? ~(*itr) : *itr);
+          iedge = qmesh.addNewEdge(meshEdges[k]);
+          qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
+        }
 
-    // Add the face to its cells.
-    qmesh.faceCells.push_back(vector<int>());
-    POLY_ASSERT(qmesh.faceCells.size() == iface);
-    ghat.x = generators[3*b]   - generators[3*a];
-    ghat.y = generators[3*b+1] - generators[3*a+1];
-    ghat.z = generators[3*b+2] - generators[3*a+2];
-    e0 = qmesh.edgePosition(meshEdges[0]);
-    e1 = qmesh.edgePosition(meshEdges[1]);
-    e2 = qmesh.edgePosition(meshEdges[2]);
-    f1 = e1 - e0;
-    f2 = e2 - e0;
-    geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
-    if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) > 0.0) {
-      qmesh.cells[a].push_back(iface);
-      qmesh.cells[b].push_back(~iface);
-      qmesh.faceCells[iface].push_back(a);
-      qmesh.faceCells[iface].push_back(~int(b));
-    } else {
-      qmesh.cells[a].push_back(~iface);
-      qmesh.cells[b].push_back(iface);
-      qmesh.faceCells[iface].push_back(~int(a));
-      qmesh.faceCells[iface].push_back(b);
-    }
+        // Add the face to its cells.
+        POLY_ASSERT(qmesh.faceCells.size() == iface);
+        qmesh.faceCells.push_back(vector<int>());
+        ghat.x = qmesh.generators[3*b]   - qmesh.generators[3*a];
+        ghat.y = qmesh.generators[3*b+1] - qmesh.generators[3*a+1];
+        ghat.z = qmesh.generators[3*b+2] - qmesh.generators[3*a+2];
+        e0 = qmesh.edgePosition(meshEdges[0]);
+        e1 = qmesh.edgePosition(meshEdges[1]);
+        e2 = qmesh.edgePosition(meshEdges[2]);
+        f1 = e1 - e0;
+        f2 = e2 - e0;
+        geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
+        if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) > 0.0) {
+          qmesh.cells[a].push_back(iface);
+          qmesh.cells[b].push_back(~iface);
+          qmesh.faceCells[iface].push_back(a);
+          qmesh.faceCells[iface].push_back(~int(b));
+        } else {
+          qmesh.cells[a].push_back(~iface);
+          qmesh.cells[b].push_back(iface);
+          qmesh.faceCells[iface].push_back(~int(a));
+          qmesh.faceCells[iface].push_back(b);
+        }
 
-    // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
-    if (infEdge) {
-      k = qmesh.edge2id[meshEdges[edgeOrder[1]]];
-      qmesh.infEdges.push_back(k);
-      cellInfEdges[a].push_back(meshEdges[edgeOrder[1]]);
-      cellInfEdges[b].push_back(meshEdges[edgeOrder[1]]);
+        // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
+        if (infEdge) {
+          j = internal::positiveID(edgeOrder[1]);
+          k = qmesh.edge2id[meshEdges[j]];
+          qmesh.infEdges.push_back(k);
+          cellInfEdges[a].push_back(meshEdges[j]);
+          cellInfEdges[b].push_back(meshEdges[j]);
+        }
+      }
     }
   }
 
@@ -1195,9 +1205,9 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
       e2 = qmesh.edgePosition(cellInfEdges[i][2]);
       f1 = e1 - e0;
       f2 = e2 - e0;
-      ghat.x = e0.x - generators[3*a];
-      ghat.y = e0.y - generators[3*a+1];
-      ghat.z = e0.z - generators[3*a+2];
+      ghat.x = e0.x - qmesh.generators[3*a];
+      ghat.y = e0.y - qmesh.generators[3*a+1];
+      ghat.z = e0.z - qmesh.generators[3*a+2];
       geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
       if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) < 0.0) {
         reverse(cellInfEdges[i].begin(), cellInfEdges[i].end());
