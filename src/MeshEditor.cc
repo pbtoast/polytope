@@ -205,7 +205,8 @@ flagEdgesForCleaning(const RealType edgeTol,
   // Map edges to a mesh ID, compute maximum edge lengths per cell, and map cells
   // to edges
   EdgeMap edgeToID;
-  map<unsigned, vector<unsigned> > cellToEdges;
+  map<unsigned, vector<unsigned> > cellToEdges, borderNodesToBorderFaces;
+  set<unsigned> borderNodes;
   vector<RealType> edgeLength;
   RealType length;
   unsigned inode0, inode1;
@@ -218,6 +219,15 @@ flagEdgesForCleaning(const RealType edgeTol,
       POLY_ASSERT(iface < mMesh.faces.size());
       const unsigned nfaceNodes = mMesh.faces[iface].size();
       POLY_ASSERT(nfaceNodes >= 2);
+      const unsigned nfaceCells = mMesh.faceCells[iface].size();
+      POLY_ASSERT(nfaceCells == 1 or nfaceCells == 2);
+      if (nfaceCells == 1) {
+        for (std::vector<unsigned>::iterator nodeItr = mMesh.faces[iface].begin();
+             nodeItr != mMesh.faces[iface].end(); ++nodeItr) {
+          borderNodes.insert(*nodeItr);
+          borderNodesToBorderFaces[*nodeItr].push_back(iface);
+        }
+      }
       const unsigned maxNodeIndex = (nfaceNodes == 2) ? 1 : nfaceNodes;
       for (unsigned inode = 0; inode != maxNodeIndex; ++inode) {
         inode0 = mMesh.faces[iface][inode];
@@ -247,6 +257,37 @@ flagEdgesForCleaning(const RealType edgeTol,
   POLY_ASSERT(cellToEdges.size() == ncells0);
   const unsigned nedges0 = edgeCount;
 
+  // Create a simple lookup for the border nodes. Also create a lookup
+  // for corner nodes: nodes corresponding to 
+  vector<unsigned> isBorderNode(nnodes0, 0), isCornerNode(nnodes0, 0);
+  for (set<unsigned>::const_iterator nodeItr = borderNodes.begin();
+       nodeItr != borderNodes.end(); ++nodeItr) {
+    POLY_ASSERT(*nodeItr < nnodes0);
+    isBorderNode[*nodeItr] = 1;
+    vector<unsigned> borderFaces = borderNodesToBorderFaces[*nodeItr];
+    POLY_ASSERT(borderFaces.size() == 2);
+    vector<unsigned> otherNodes;
+    for (vector<unsigned>::const_iterator faceItr = borderFaces.begin();
+         faceItr != borderFaces.end();
+         ++faceItr) {
+      const unsigned iface = (*faceItr < 0) ? ~(*faceItr) : *faceItr;
+      POLY_ASSERT(iface < mMesh.faces.size());
+      POLY_ASSERT(mMesh.faceCells[iface].size() == 1);
+      POLY_ASSERT(mMesh.faces[iface].size() == 2);
+      const unsigned otherNode = (mMesh.faces[iface][0] == *nodeItr) ?
+         mMesh.faces[iface][1] : mMesh.faces[iface][0];
+      otherNodes.push_back(otherNode);
+    }
+    POLY_ASSERT(otherNodes.size() == 2);
+    
+    const bool collinear = 
+       geometry::collinear<Dimension, RealType>(&mMesh.nodes[2*(*nodeItr)],
+                                                &mMesh.nodes[2*otherNodes[0]],
+                                                &mMesh.nodes[2*otherNodes[1]],
+                                                1.0e-8);
+    if (not collinear)  isCornerNode[*nodeItr] = 1;
+  }
+  
   // Compute the maximum edge length for the cells around an edge
   vector<RealType> maxCellEdgeLength(nedges0, 0.0);
   for (unsigned icell = 0; icell != ncells0; ++icell) {
@@ -272,13 +313,24 @@ flagEdgesForCleaning(const RealType edgeTol,
     edge = itr->second;
     inode0 = edge.first;
     inode1 = edge.second;
-    if (edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
-	mNodeMask[inode0] == 1 and mNodeMask[inode1] == 1) {
+    const bool cleanTest = edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
+       mNodeMask[inode0] == 1 and mNodeMask[inode1] == 1 and
+       (isCornerNode[inode0] == 0 or isCornerNode[inode1] == 0);
+    if (cleanTest) {
       edgesClean = false;
       edgeMask[iedge] = 0;
-      mNodeMask[inode0] = 2;
-      mNodeMask[inode1] = 0;
-      nodeCollapse[inode1] = inode0;
+      const bool node1KeepTest = isCornerNode[inode1] == 1 or 
+         (isBorderNode[inode1] == 1 and isBorderNode[inode0] == 0);
+      unsigned keepNode   = (node1KeepTest) ? inode1 : inode0;
+      unsigned deleteNode = (node1KeepTest) ? inode0 : inode1;
+      //unsigned keepNode   = (isBorderNode[inode1] == 1) ? inode1 : inode0;
+      //unsigned deleteNode = (isBorderNode[inode1] == 1) ? inode0 : inode1;
+      mNodeMask[keepNode  ] = 2;
+      mNodeMask[deleteNode] = 0;
+      nodeCollapse[deleteNode] = keepNode;
+      //mNodeMask[inode0] = 2;
+      //mNodeMask[inode1] = 0;
+      //nodeCollapse[inode1] = inode0;
     }
   }
   replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);

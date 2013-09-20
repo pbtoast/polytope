@@ -1,3 +1,24 @@
+Release 0.5.17
+
+changeset:
+  353:ad25ff9e774b
+
+Bugfix:
+
+- Dave pointed out potential memory error in how we built up new unique keys 
+  when collapsing topology.  Implemented the corrections across tessellators.
+
+Changes:
+
+- Created new methods on the Tessellator base class to allow tessellations with
+  degenerate input point sets.  These are not tested yet.
+
+- Moved the hash to uint64_t methods from TetgenTessellator's private space
+  to generic utility methods.  At some point we need to reconcile this approach
+  with Dave's quantizing coordinates class.
+
+--------------------------------------------------------------------------------
+
 Release 0.5.16
 
 changeset:

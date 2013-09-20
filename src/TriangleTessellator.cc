@@ -2,6 +2,7 @@
 // TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
+// #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <set>
@@ -54,6 +55,57 @@ using std::abs;
 //------------------------------------------------------------------------
 
 namespace {
+
+// //------------------------------------------------------------------------------
+// // Compute the intersection of a line segment and a PLC. Returns number of
+// // intersections, intersected facet(s) along PLC, and intersection point(s)
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// inline
+// unsigned intersectBoundingBox(const RealType* point1,
+// 			      const RealType* point2,
+// 			      const unsigned numVertices,
+// 			      const RealType* vertices,
+// 			      const std::vector<std::vector<int> >& facets,
+// 			      std::vector<int>& facetIntersections,
+// 			      std::vector<RealType>& result) {
+//   unsigned i, j, numIntersections=0;
+//   RealType intersectionPoint[2];
+//   bool intersects, addPoint;
+//   const unsigned numFacets = facets.size();
+//   for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
+//     POLY_ASSERT(facets[ifacet].size() == 2);
+//     i = facets[ifacet][0];
+//     j = facets[ifacet][1];
+//     POLY_ASSERT(i >= 0 and i < numVertices);
+//     POLY_ASSERT(j >= 0 and j < numVertices);
+//     intersects = geometry::segmentIntersection2D(point1, point2,
+// 						 &vertices[2*i], &vertices[2*j],
+// 						 intersectionPoint);
+//     addPoint = false;
+//     if (intersects) {
+//       if (numIntersections == 0) addPoint = true;
+//       else {
+//         if (intersectionPoint[0] != result.back() - 1 and
+//             intersectionPoint[1] != result.back() ) addPoint = true;
+//         else addPoint = false;
+//       }
+//     }
+//      
+//     if (addPoint) {
+//       RealType p[2];
+//       p[(ifacet+1)%2] = vertices[2*ifacet + (ifacet+1)%2];
+//       p[ ifacet   %2] = intersectionPoint[ifacet%2];
+//       ++numIntersections;
+//       result.push_back(p[0]);
+//       result.push_back(p[1]);
+//       facetIntersections.push_back(ifacet);
+//     }
+//   }
+//   POLY_ASSERT(numIntersections == result.size()/2);
+//   return numIntersections;
+// }
+  
 
 //------------------------------------------------------------------------------
 // Given an array of 3 integers and 2 unique values, find the other one.
@@ -254,7 +306,6 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() > 2 );
   
   mCoords.initialize(points);
-//   mOuterCoords = mCoords;
 
   this->computeVoronoiUnbounded(points, mesh);
 }
@@ -272,6 +323,17 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   
+  // // BLAGO!
+  // std::ofstream dumpfile;
+  // dumpfile.open("generators.txt");
+  // const unsigned n = points.size()/2;
+  // std::cerr << "HERE WE GO : " << n << std::endl;
+  // for (unsigned i = 0; i != n; ++i) {
+  //   dumpfile << points[2*i] << " " << points[2*i+1] << std::endl;
+  // }
+  // dumpfile.close();
+  // // BLAGO!
+
   // Build a PLC with the bounding box, and then use the PLC method.
   ReducedPLC<2, RealType> box = this->boundingBox(low, high);
   this->tessellate(points, box.points, box, mesh);
@@ -293,7 +355,6 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!geometry.facets.empty());
   
   mCoords.initialize(points);
-//   mOuterCoords = mCoords;
   
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
 }
@@ -339,8 +400,6 @@ computeCellNodes(const vector<RealType>& points,
   int pindex, qindex, rindex, i, j, k, triCount = 0;
   EdgeHash pq, pr, qr;
  
-//   RealType lowc [2] = {mOuterCoords.low [0], mOuterCoords.low [1]};
-//   RealType highc[2] = {mOuterCoords.high[0], mOuterCoords.high[1]};
   RealType lowc [2] = {mCoords.low [0], mCoords.low [1]};
   RealType highc[2] = {mCoords.high[0], mCoords.high[1]};
   for (i = 0; i != delaunay.numberoftriangles; ++i) {
@@ -388,7 +447,6 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(std::accumulate(triMask.begin(), triMask.end(), 0) > 0);
   
   POLY_ASSERT(lowc[0] <= highc[0] and lowc[1] <= highc[1]);
-//   mOuterCoords.expand(lowc, highc);
   mCoords.expand(lowc, highc);
 
   // Determine which circumcenters lie inside the inner bounding box
@@ -401,19 +459,7 @@ computeCellNodes(const vector<RealType>& points,
   for (i = 0; i != delaunay.numberoftriangles; ++i){
     if (triMask[i] == 1) {
       ip = mCoords.quantize(&circumcenters[i].x);
-      inside = ip.index
-
-//       if (circumcenters[i].x >= mCoords.low [0] and 
-//           circumcenters[i].x <= mCoords.high[0] and
-//           circumcenters[i].y >= mCoords.low [1] and 
-//           circumcenters[i].y <= mCoords.high[1]) {
-//         inside = 1;
-//         ip = mCoords.quantize(&circumcenters[i].x);
-//       } else {
-//         inside = 0;
-//         ip = mOuterCoords.quantize(&circumcenters[i].x);
-//       }
-
+      inside = (mCoords.isInside(&circumcenters[i].x)) ? 1 : 0;
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
@@ -446,9 +492,10 @@ computeCellNodes(const vector<RealType>& points,
       
       pinf = mCoords.projectPoint(&circumcenters[i].x, &ehat.x);
       IntPoint ip = mCoords.quantize(&pinf.x);
-//       pinf = mOuterCoords.projectPoint(&circumcenters[i].x, &ehat.x);
-//       IntPoint ip = mOuterCoords.quantize(&pinf.x);
       int inside = 0;
+      //pinf = mCoords.projectPoint(&circumcenters[i].x, &ehat.x);
+      //IntPoint ip = mCoords.quantize(&pinf.x);
+      //int inside = 1;
       
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
@@ -465,8 +512,8 @@ computeCellNodes(const vector<RealType>& points,
       // cerr << "Real projected infNode = " << pinf << endl;
       // cerr << "Int projected infNode  = " << ip << endl;
       // cerr << "j index                = " << j << endl;
+      // cerr << "Circumcenter box       = " << cbox[0] << " " << cbox[1] << endl;
       // //Blago!
-
     }
   }
   POLY_ASSERT(circ2id.size() == nodeData.size());
@@ -480,15 +527,12 @@ computeCellNodes(const vector<RealType>& points,
     POLY_ASSERT(i < nodeData.size());
     IntPoint ip  = itr->first;
     RealPoint rp = mCoords.dequantize(&ip.x, (itr->second.second==1));
-//     RealPoint rp = (itr->second.second == 1) ?
-//       mCoords.dequantize(&ip.x) :
-//       mOuterCoords.dequantize(&ip.x);
     nodeList[i] = rp;
   }
   
   // The faces corresponding to each triangle edge
   unsigned ii, jj;
-  bool unboundedCell = false;
+  bool unboundedCell;
   for (map<int, set<unsigned> >::const_iterator genItr = gen2tri.begin();
        genItr != gen2tri.end(); 
        ++genItr) {
@@ -497,6 +541,7 @@ computeCellNodes(const vector<RealType>& points,
     POLY_ASSERT(pindex < numGenerators);
     
     set<EdgeHash> meshEdges;
+    unboundedCell = false;
     for (set<unsigned>::const_iterator triItr = tris.begin();
          triItr != tris.end(); ++triItr){
       i = *triItr;
@@ -539,8 +584,7 @@ computeCellNodes(const vector<RealType>& points,
 
       // If either of pq or pr has one triangle neighbor,
       // this is an unbounded cell
-      unboundedCell += (edge2tri[pq].size() == 1 or
-			edge2tri[pr].size() == 1);
+      unboundedCell += (edge2tri[pq].size() == 1 or edge2tri[pr].size() == 1);
     }
 
     // // Blago!
@@ -558,37 +602,38 @@ computeCellNodes(const vector<RealType>& points,
     // begins and ends at projected inf nodes. This is only
     // meant to correct self intersections due to projection
     if (unboundedCell) {
+      unsigned last = cellNodes[pindex].size()-1;
+
       // Edge 1
-      const unsigned n11 = cellNodes[pindex][0];
-      const unsigned n12 = cellNodes[pindex][1];
+      const unsigned n11 = cellNodes[pindex][0];     // Projected
+      const unsigned n12 = cellNodes[pindex][last];
       POLY_ASSERT(n11 != n12);
       POLY_ASSERT(n11 < nodeList.size());
       POLY_ASSERT(n12 < nodeList.size());
       RealPoint rp11 = nodeList[n11], rp12 = nodeList[n12];
       
       // Edge 2
-      unsigned last = cellNodes[pindex].size()-1;
-      const unsigned n21 = cellNodes[pindex][last-1];
-      const unsigned n22 = cellNodes[pindex][last];
+      const unsigned n21 = cellNodes[pindex][2];
+      const unsigned n22 = cellNodes[pindex][1];     // Projected
       POLY_ASSERT(n21 != n22);
       POLY_ASSERT(n21 < nodeList.size());
       POLY_ASSERT(n22 < nodeList.size());
       RealPoint rp21 = nodeList[n21], rp22 = nodeList[n22];
 
-      // Compute edge intersection
+      // Compute cell self-intersections
       RealPoint result;
       bool intersects;
       if (n12 == n21) intersects = false;
       else            intersects = geometry::segmentIntersection2D(&rp11.x, &rp12.x,
-								   &rp21.x, &rp22.x,
-								   &result.x);
-      
+                                                                   &rp21.x, &rp22.x,
+                                                                   &result.x);
+
       // Self-intersecting cell ring: replace the offending projected
       // points with the intersection point
       if (intersects) {
 	
 	// Blago!
-	cerr << "Intersection detected:" << endl
+	cerr << "Self-intersection detected:" << endl
 	     << "  Cell " << pindex << endl
 	     << "  " << rp11 << "  " << rp12 << endl
 	     << "  " << rp21 << "  " << rp22 << endl
@@ -600,8 +645,47 @@ computeCellNodes(const vector<RealType>& points,
 	nodeList[n22] = RealPoint(0.95*result.x + 0.05*rp21.x,
 				  0.95*result.y + 0.05*rp21.y);
       }
+
+      
+      // Compute intersection with bounding box
+      vector<RealType> results;
+      unsigned nintersect = intersect(&rp11.x, &rp22.x, 
+                                      mCoords.points.size()/2,
+                                      &mCoords.points[0],
+                                      mCoords, results);
+      
+      // Node chain endpoints connect through the inner bounding box:
+      // Project an additional point outward
+      if (nintersect > 0) {
+        RealPoint p = RealPoint(points[2*pindex], points[2*pindex+1]);
+        RealPoint r = RealPoint(rp22.x-rp11.x, rp22.y-rp11.y);
+        RealPoint rperp = (orient2d(&rp11.x, &rp12.x, &rp22.x) > 0.0) ? 
+           RealPoint(-r.y, r.x) : RealPoint(r.y, -r.x);
+        geometry::unitVector<2, RealType>(&rperp.x);
+        RealPoint newNode = mCoords.projectPoint(&p.x, &rperp.x);
+        unsigned newNodeIndex = nodeList.size();
+
+         // Blago!
+	cerr << "Bounding box intersection detected:" << endl
+	     << "  Cell " << pindex << " at " << p << endl
+	     << "  " << rp11 << "  " << rp12 << endl
+             << "  " << rp21 << "  " << rp22 << endl
+             << "  New node = " << newNode << endl;
+        for (unsigned ii = 0; ii != nintersect; ++ii) {
+           cerr << "  Intersect Pt " << ii << ": "
+                << results[2*ii] << " " << results[2*ii+1] << endl;
+        }
+        cerr << endl;
+	// Blago!
+
+        nodeList.push_back(newNode);
+        vector<unsigned>::iterator it = cellNodes[pindex].begin() + 1;
+        cellNodes[pindex].insert(it, newNodeIndex);
+        // cellNodes[pindex].push_back(newNodeIndex);
+      }
     }
   }
+  POLY_ASSERT(cellNodes.size() == numGenerators);
 
   // Post conditions
   POLY_ASSERT(cellNodes.size() == numGenerators); 
@@ -628,15 +712,13 @@ computeCellRings(const vector<RealType>& points,
 		 Clipper2d<CoordHash>& clipper,
                  vector<BGring>& cellRings) const {
   const unsigned numGenerators = points.size()/2;
-  const unsigned numNodes = nodeList.size();
-  int i, j, k;
+  int i;
   
   // Circumcenters that lie outside the bounding box of the PLC boundary 
   // are quantized based on different criteria to avoid contaminating the 
   // degeneracy spacing of the mesh nodes. We will project these outer 
   // circumcenters to the edges of the bounding box so all nodes follow 
   // the input degeneracy spacing.
-
 
   // Quantize the PLCpoints
   vector<RealPoint> boundingBoxPoints(4);
@@ -657,7 +739,6 @@ computeCellRings(const vector<RealType>& points,
   // Walk the nodes around each generator and build up the cell ring
   IntPoint X, ip1, ip2;
   RealPoint rp1, rp2;
-  unsigned i1, i2;
   vector<RealRing> boundingBoxOrphans;
   vector<BGring> orphans;
   cellRings.resize(numGenerators);
@@ -666,16 +747,18 @@ computeCellRings(const vector<RealType>& points,
     // are now done with boost.geometry. The ring concept enforces
     // CCW orientation without having to reverse it manually. 09/19/2013
 
-//     // Check the orientation of the node list and reverse it if it's CW
-//     POLY_ASSERT(cellNodes[i].size() > 1);
-//     i1 = cellNodes[i][0];
-//     i2 = cellNodes[i][1];
-//     POLY_ASSERT(i1 < numNodes and i2 < numNodes);
-//     rp1 = nodeList[i1];
-//     rp2 = nodeList[i2];
-//     if (orient2d(&rp1.x, &rp2.x, (double*)&points[2*i]) < 0) {
-//       reverse(cellNodes[i].begin(), cellNodes[i].end());
-//     }
+    // // // Check the orientation of the node list and reverse it if it's CW
+    // //  {
+    // //    POLY_ASSERT(cellNodes[i].size() > 1);
+    // //    unsigned i1 = cellNodes[i][0];
+    // //    unsigned i2 = cellNodes[i][1];
+    // //    POLY_ASSERT(i1 < numNodes and i2 < numNodes);
+    // //    rp1 = nodeList[i1];
+    // //    rp2 = nodeList[i2];
+    // //    if (orient2d(&rp1.x, &rp2.x, (double*)&points[2*i]) < 0) {
+    // //      reverse(cellNodes[i].begin(), cellNodes[i].end());
+    // //    }
+    // //  }
 
     // Blago!
     bool Blago = false;
@@ -744,8 +827,6 @@ computeCellRings(const vector<RealType>& points,
     POLY_ASSERT(!cellRings[i].empty());
     POLY_ASSERT(cellRings[i].front() == cellRings[i].back());
 
-    
-
     // Compute the boundary intersections
     clipper.clipCell(mCoords.quantize(&points[2*i]), cellRings[i], orphans);
     
@@ -782,7 +863,6 @@ computeCellRings(const vector<RealType>& points,
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, mCoords, cellRings, orphans);
   }
-
   
   // Mark any cell ring points coinciding with the bounding PLC
   for (i = 0; i != numGenerators; ++i) {
@@ -854,7 +934,6 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   POLY_ASSERT(!nodeList.empty());
 
   // Copy the quantized nodes to the final tessellation.
-  int inside;
   RealPoint node;
   const unsigned numNodes = nodeList.size();
   mesh.nodes.resize(2*numNodes);
@@ -1041,12 +1120,10 @@ tessellate(const vector<RealType>& points,
 
   // The Quantized coordinates
   mCoords = coords;
-//   mOuterCoords = coords;
 
   const unsigned numGenerators = points.size()/2;
   const unsigned numPLCpoints = IntPLCpoints.size()/2;
   vector<RealPoint> nodeList;
-//   map<IntPoint, pair<int, int> > nodeMap;
   vector<vector<unsigned> > cellNodes;
   int i;
   
@@ -1063,12 +1140,7 @@ tessellate(const vector<RealType>& points,
 
   // Use the appropriate cell node routine
   if (collinear) {
-//     vector<RealPoint> nodeList;
     computeCellNodesCollinear(points, mCoords, nodeList, cellNodes);
-//     for (i = 0; i != nodeList.size(); ++i) {
-//       IntPoint ip = mCoords.quantize(&nodeList[i].x);
-//       nodeMap[ip] = make_pair(i,1);
-//     }
   }
   else {
     vector<unsigned> infNodes;
@@ -1177,6 +1249,32 @@ template class TriangleTessellator<double>;
     // Blago!
     bool Blago = false;
     if(Blago) cerr << "---------- Cell " << i << " -----------" << endl;
+    // Blago!
+    
+    // Create a BG ring and fill in any ring concept stuff that's missing
+    vector<RealPoint> realCellNodes;
+    for (vector<unsigned>::const_iterator itr = cellNodes[i].begin();
+	 itr != cellNodes[i].end(); 
+	 ++itr) {
+      ip1 = id2nodes[*itr];
+      rp1 = (innerCirc[*itr] == 1) ? 
+	mCoords.dequantize(&ip1.x) : 
+	mOuterCoords.dequantize(&ip1.x);
+      realCellNodes.push_back(rp1);
+    }
+    POLY_ASSERT(realCellNodes.size() == cellNodes[i].size());
+    RealRing realCellRing(realCellNodes.begin(), realCellNodes.end());
+    boost::geometry::correct(realCellRing);
+    POLY_ASSERT(realCellRing.front() == realCellRing.back());
+    //POLY_ASSERT(!boost::geometry::intersects(realCellRing));
+    
+    // Blago!
+    if(Blago) {
+    cerr << "\n\nPre-Clip" << endl;
+    for (typename RealRing::const_iterator itr = realCellRing.begin();
+	 itr != realCellRing.end();
+	 ++itr ) cerr << *itr << endl;
+    }
     // Blago!
 
     // Walk node-node pairs and add them according to 4 possible cases
@@ -1373,4 +1471,3 @@ template class TriangleTessellator<double>;
     }
     // Blago!
     */
-

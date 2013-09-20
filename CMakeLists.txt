@@ -259,6 +259,7 @@ endif()
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
                "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
+               "${PROJECT_SOURCE_DIR}/src/TessellatorInline.hh" 
                "${PROJECT_SOURCE_DIR}/src/Tessellation.hh" 
 	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
                "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 

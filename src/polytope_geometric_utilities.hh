@@ -4,7 +4,7 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
-#include <cstdlib>
+#include <cmath>
 #include <limits>
 #include <algorithm>
 
@@ -21,20 +21,213 @@ extern int scale_expansion(int elen, double* e, double b, double* h);
 // Sets h = e + b
 extern int grow_expansion(int elen, double* e, double b, double* h);
 
-//------------------------------------------------------------------------------
-// It seems there is a missing specialization for abs(long unsigned int), so 
-// fill it in.
-// This is necessary for the collinear method below to compile.  It seems evil
-// to insert something into namespace std:: like this, by the way.
-//------------------------------------------------------------------------------
-namespace std {
-  // inline long unsigned int abs(long unsigned int x) { return x; }
-  inline uint64_t          abs(uint64_t x)          { return x; }
-}
+
+// //------------------------------------------------------------------------------
+// // It seems there is a missing specialization for abs(long unsigned int), so 
+// // fill it in.
+// // This is necessary for the collinear method below to compile.  It seems evil
+// // to insert something into namespace std:: like this, by the way.
+// //------------------------------------------------------------------------------
+// namespace std {
+//   // inline long unsigned int abs(long unsigned int x) { return x; }
+//   inline uint64_t          abs(uint64_t x)          { return x; }
+// }
+
 
 namespace polytope {
 namespace geometry {
 
+
+//------------------------------------------------------------------------------
+// A handy method for computing a hash of a position to a 64 bit quantized
+// integer value.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType> struct Hasher;
+
+// 2D
+template<typename RealType> struct Hasher<2, RealType> {
+
+  // Hash a 2 position
+  static uint64_t hashPosition(RealType* pos,
+                               RealType* xlow_inner,
+                               RealType* xhigh_inner,
+                               RealType* xlow_outer,
+                               RealType* xhigh_outer) {
+    POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+                xlow_outer[1] <= xlow_inner[1]);
+    POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+                xhigh_outer[1] >= xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+                 pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1],
+                 "(" << pos[0] << " " << pos[1] << ") ("
+                 << xlow_outer[0] << " " << xlow_outer[1] << ") ("
+                 << xhigh_outer[0] << " " << xhigh_outer[1] << ")");
+
+    // Decide the bounding box we're using.
+    uint64_t result = 0ULL;
+    const RealType *xlow, *xhigh;
+    if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
+        pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1]) {
+      xlow = xlow_outer;
+      xhigh = xhigh_outer;
+      result += (1ULL << 63);
+    } else {
+      xlow = xlow_inner;
+      xhigh = xhigh_inner;
+    }
+
+    // Quantize away.
+    const RealType dx[2] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
+                (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 31));
+    return result;
+  }
+
+  // Unhash a 2 position.
+  static void unhashPosition(RealType* pos,
+                             RealType* xlow_inner,
+                             RealType* xhigh_inner,
+                             RealType* xlow_outer,
+                             RealType* xhigh_outer,
+                             uint64_t hashedPosition) {
+    POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+                xlow_outer[1] <= xlow_inner[1]);
+    POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+                xhigh_outer[1] >= xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+                pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1]);
+
+    // Decide the bounding box we're using.
+    RealType *xlow, *xhigh;
+    if (hashedPosition >= (1ULL << 63)) {
+      xlow = xlow_outer;
+      xhigh = xhigh_outer;
+    } else {
+      xlow = xlow_inner;
+      xhigh = xhigh_inner;
+    }
+
+    // Extract the position (for the center of the cell).
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const uint64_t xmask = (1ULL << 31) - 1ULL,
+      ymask = xmask << 31;
+    pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
+    pos[1] = xlow[1] + (((hashedPosition & ymask) >> 31) + 0.5)*dx[1];
+
+    // Post-conditions.
+    POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
+                 pos[1] >= xlow[1] and pos[1] <= xhigh[1],
+                 "(" << pos[0] << " " << pos[1] << ") ("
+                 << xlow[0] << " " << xlow[1] << ") ("
+                 << xhigh[0] << " " << xhigh[1] << ")");
+  }
+};
+
+// 3D
+template<typename RealType> struct Hasher<3, RealType> {
+
+  // Hash a 3 position
+  static uint64_t hashPosition(RealType* pos,
+                               RealType* xlow_inner,
+                               RealType* xhigh_inner,
+                               RealType* xlow_outer,
+                               RealType* xhigh_outer) {
+    POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+                xlow_outer[1] <= xlow_inner[1] and
+                xlow_outer[2] <= xlow_inner[2]);
+    POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+                xhigh_outer[1] >= xhigh_inner[1] and
+                xhigh_outer[2] >= xhigh_inner[2]);
+    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+                xlow_inner[1] < xhigh_inner[1] and
+                xlow_inner[2] < xhigh_inner[2]);
+    POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+                 pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
+                 pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2],
+                 "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
+                 << xlow_outer[0] << " " << xlow_outer[1] << " " << xlow_outer[2] << ") ("
+                 << xhigh_outer[0] << " " << xhigh_outer[1] << " " << xhigh_outer[2] << ")");
+
+    // Decide the bounding box we're using.
+    uint64_t result = 0ULL;
+    RealType *xlow, *xhigh;
+    if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
+        pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
+        pos[2] < xlow_inner[2] or pos[1] > xhigh_inner[2]) {
+      xlow = xlow_outer;
+      xhigh = xhigh_outer;
+      result += (1ULL << 63);
+    } else {
+      xlow = xlow_inner;
+      xhigh = xhigh_inner;
+    }
+
+    // Quantize away.
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
+                (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
+                (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
+    return result;
+  }
+
+  // Unhash a 3 position.
+  static void unhashPosition(RealType* pos,
+                             RealType* xlow_inner,
+                             RealType* xhigh_inner,
+                             RealType* xlow_outer,
+                             RealType* xhigh_outer,
+                             uint64_t hashedPosition) {
+    POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
+                xlow_outer[1] <= xlow_inner[1] and
+                xlow_outer[2] <= xlow_inner[2]);
+    POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
+                xhigh_outer[1] >= xhigh_inner[1] and
+                xhigh_outer[2] >= xhigh_inner[2]);
+    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
+                xlow_inner[1] < xhigh_inner[1] and
+                xlow_inner[2] < xhigh_inner[2]);
+    POLY_ASSERT(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
+                pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
+                pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2]);
+
+    // Decide the bounding box we're using.
+    RealType *xlow, *xhigh;
+    if (hashedPosition >= (1ULL << 63)) {
+      xlow = xlow_outer;
+      xhigh = xhigh_outer;
+    } else {
+      xlow = xlow_inner;
+      xhigh = xhigh_inner;
+    }
+
+    // Extract the position (for the center of the cell).
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
+                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const uint64_t xmask = (1ULL << 21) - 1ULL,
+      ymask = xmask << 21,
+      zmask = ymask << 21;
+    pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
+    pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
+    pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];
+
+    // Post-conditions.
+    POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
+                 pos[1] >= xlow[1] and pos[1] <= xhigh[1] and
+                 pos[2] >= xlow[2] and pos[2] <= xhigh[2],
+                 "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
+                 << xlow[0] << " " << xlow[1] << " " << xlow[2] << ") ("
+                 << xhigh[0] << " " << xhigh[1] << " " << xhigh[2] << ")");
+  }
+};
 
 //------------------------------------------------------------------------------
 // Distance between points.
@@ -48,8 +241,8 @@ struct DistanceFunctor<2, RealType> {
   static RealType impl(const RealType* a, const RealType* b) {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
-    //return std::sqrt(dx*dx + dy*dy);
-    return sqrt(dx*dx + dy*dy);
+    return std::sqrt(dx*dx + dy*dy);
+    //return sqrt(dx*dx + dy*dy);
   }
 };
 
@@ -60,8 +253,8 @@ struct DistanceFunctor<3, RealType> {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
     const RealType dz = a[2] - b[2];
-    //return std::sqrt(dx*dx + dy*dy + dz*dz);
-    return sqrt(dx*dx + dy*dy + dz*dz);
+    return std::sqrt(dx*dx + dy*dy + dz*dz);
+    //return sqrt(dx*dx + dy*dy + dz*dz);
   }
 };
 
@@ -198,8 +391,10 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
-  // return      abs(     abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
+  RealType tmpVal= dot<Dimension, RealType>(ab, ac);
+  return std::abs(   ( (tmpVal > -1) ? ( tmpVal ) : (-tmpVal) ) - 1.0 )    < tol;
+  //return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  //return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
 }
 
 //------------------------------------------------------------------------------
@@ -471,8 +666,8 @@ raySphereIntersection(const RealType* p_ray,
     result[0] = p_ray[0]; result[1] = p_ray[1]; result[2] = p_ray[2];
     return true;
   } else {
-    //d = std::sqrt(d);
-    d = sqrt(d);
+    d = std::sqrt(d);
+    //d = sqrt(d);
     const RealType t = 0.5*std::max(-b - d, -b + d);
     POLY_ASSERT(t >= 0.0);
     result[0] = p_ray[0] + t*n_ray[0];
@@ -730,7 +925,7 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   fcent[0] /= n; fcent[1] /= n; fcent[2] /= n;
   
   // Now we can compute the unit normal.
-  POLY_ASSERT2(verts.size() == 3, verts.size());
+  POLY_ASSERT(verts.size() == 3);
   RealType ab[3], ac[3];
   ab[0] = mesh.nodes[3*verts[1]  ] - mesh.nodes[3*verts[0]  ];
   ab[1] = mesh.nodes[3*verts[1]+1] - mesh.nodes[3*verts[0]+1];
@@ -1030,6 +1225,43 @@ computeCellCentroidAndSignedVolume(const Tessellation<3, RealType>& mesh,
   POLY_ASSERT(cvol != 0.0);
   ccent[0] /= cvol; ccent[1] /= cvol; ccent[2] /= cvol;
   cvol /= 6.0;
+}
+
+//------------------------------------------------------------------------------
+// Return a unique set of points.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+void
+uniquePoints(const std::vector<RealType>& points,
+             std::vector<RealType>& uniquePointSet,
+             std::vector<unsigned>& indexMap) {
+  POLY_ASSERT(points.size() % Dimension == 0);
+
+  // Compute the bounding box.
+  RealType xmin[Dimension], xmax[Dimension];
+  computeBoundingBox<Dimension, RealType>(points, true, xmin, xmax);
+
+  const unsigned n = points.size()/Dimension;
+  std::map<uint64_t, unsigned> uniqueHashes;
+  uniquePointSet = std::vector<RealType>();
+  indexMap = std::vector<unsigned>();
+  unsigned j = 0;
+  for (unsigned i = 0; i != n; ++i) {
+    const uint64_t hashi = geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&points[Dimension*i]),
+                                                                               xmin, xmax, xmin, xmax);
+    std::map<uint64_t, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
+    if (itr == uniqueHashes.end()) {
+      uniqueHashes[hashi] = j;
+      std::copy(&points[Dimension*i], &points[Dimension*(i+1)], std::back_inserter(uniquePointSet));
+      indexMap.push_back(j);
+    } else {
+      indexMap.push_back(itr->second);
+    }
+  }
+  POLY_ASSERT(uniquePointSet.size() % Dimension == 0);
+  POLY_ASSERT(uniquePointSet.size() <= points.size());
+  POLY_ASSERT(indexMap.size() == n);
 }
 
 }

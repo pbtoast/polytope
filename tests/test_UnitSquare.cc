@@ -55,6 +55,10 @@ void generateMesh(Tessellator<2,double>& tessellator)
    Boundary2D<double> boundary;
    boundary.setUnitSquare();
    Generators<2,double> generators( boundary );
+   
+   const unsigned imin   = 2;
+   const unsigned imax   = 101;
+   const unsigned iscale = 1;
 
    const unsigned Imax  = 99;
    const unsigned Nmin  = 2;
@@ -64,13 +68,11 @@ void generateMesh(Tessellator<2,double>& tessellator)
      unsigned nx = Nmin + scale*i;
      cout << "Testing nx=" << nx << endl;
 
-
-     // Create generators
-     std::vector<unsigned> nxny(2,nx);
-     generators.cartesianPoints( nxny );
-     //generators.randomPoints(1e6);
-     Tessellation<2,double> mesh;
-
+      // Create generators
+      std::vector<unsigned> nxny(2,nx);
+      generators.cartesianPoints(nxny);
+      Tessellation<2,double> mesh;
+      
 //      ifstream os;
 //      double x, y, z;
 //      vector<double> points;

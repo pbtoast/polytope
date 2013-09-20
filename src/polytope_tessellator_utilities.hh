@@ -164,9 +164,12 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
       j = internal::addKeyToMap(pX1, point2node);
       k = internal::addKeyToMap(pX2, point2node);
       POLY_ASSERT(j != k);
-      if (pX1.index == 1) plcNodes.insert(j);
+      if (pX1.index == 1) {plcNodes.insert(j);}
+      if (pX2.index == 1) {plcNodes.insert(k);}
       iedge = internal::addKeyToMap(internal::hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
+      POLY_ASSERT2(edgeCells[iedge].size() == 1 or edgeCells[iedge][0]*edgeCells[iedge][1] <= 0,
+                   "BLAGO: " << iedge << " " << j << " " << k << " " << edgeCells[iedge][0] << " " << edgeCells[iedge][1]);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
     }
     POLY_ASSERT(mesh.cells[i].size() >= 3);
@@ -235,44 +238,48 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   }
   POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
 
-  // Snap all boundary nodes to be on the bounds of the (floating point)
-  // input boundary points and corresponding PLC points
+  // Snap all nodes corresponding to PLC points to the exact input locations
+  for (std::set<unsigned>::const_iterator nodeItr = plcNodes.begin();
+       nodeItr != plcNodes.end();
+       ++nodeItr) {
+    
+    // // Blago!
+    // std::cerr << "Node " << *nodeItr << " at "
+    //           << "(" << mesh.nodes[2*(*nodeItr)  ]
+    //           << "," << mesh.nodes[2*(*nodeItr)+1] << ") "
+    //           << "is on the boundary." << std::endl;
+    // // Blago!
+    i = 0;
+    RealType dist = std::numeric_limits<RealType>::max();
+    while (i < numPLCpoints) {
+      dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
+                                                           &mesh.nodes[2*(*nodeItr)]));
+      if (dist < 2.5*coords.delta) break;
+      else ++i;  
+    }
+    
+    if (i == numPLCpoints) {
+      std::cerr << "Node " << *nodeItr << " at "
+                << "(" << mesh.nodes[2*(*nodeItr)  ]
+                << "," << mesh.nodes[2*(*nodeItr)+1] << ") "
+                << "is marked as a PLC node but no PLC point is nearby." << std::endl;
+    }
+    POLY_ASSERT(i < numPLCpoints);
+    if (i < numPLCpoints) {
+      mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
+      mesh.nodes[2*(*nodeItr)+1] = PLCpoints[2*i+1];
+    }
+  }
+    
+  // Snap all boundary nodes to the nearest floating point location along
+  // the input PLC boundary
   for (std::set<unsigned>::const_iterator nodeItr = boundaryNodes.begin();
        nodeItr != boundaryNodes.end(); 
        ++nodeItr) {
 
-//     // Blago!
-//     std::cerr << "Node " << *nodeItr << " at "
-// 	      << "(" << mesh.nodes[2*(*nodeItr)  ]
-// 	      << "," << mesh.nodes[2*(*nodeItr)+1] << ") "
-// 	      << "is on the boundary." << std::endl;
-//     // Blago!
-
+    // Make sure we're not moving a PLC node
     std::set<unsigned>::iterator it = plcNodes.find(*nodeItr);
-    if (it != plcNodes.end()) {
-      i = 0;
-      RealType dist = std::numeric_limits<RealType>::max();
-      while (i < numPLCpoints) {
-	dist = std::min(dist, geometry::distance<2,RealType>(&PLCpoints[2*i],
-							     &mesh.nodes[2*(*nodeItr)]));
-	if (dist < 2.5*coords.delta) break;
-	else ++i;  
-      }
-    
-      if (i == numPLCpoints) {
-	std::cerr << "Node " << *nodeItr << " at "
-		  << "(" << mesh.nodes[2*(*nodeItr)  ]
-		  << "," << mesh.nodes[2*(*nodeItr)+1] << ") "
-		  << "is marked as a PLC node but no PLC point is nearby." << std::endl;
-      }
-      POLY_ASSERT(i < numPLCpoints);
-      if (i < numPLCpoints) {
-	mesh.nodes[2*(*nodeItr)  ] = PLCpoints[2*i  ];
-	mesh.nodes[2*(*nodeItr)+1] = PLCpoints[2*i+1];
-      }
-    }
-    
-    else {
+    if (it == plcNodes.end()) {
       RealType result[2];
       RealType dist = nearestPoint(&mesh.nodes[2*(*nodeItr)], 
                                    numPLCpoints, 
@@ -280,14 +287,18 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
                                    geometry, 
                                    result);
       if (dist >= 10.0*coords.delta) {
-        std::cerr << "Blago!" << std::endl << "   Node " << *nodeItr << " at "
-                  << "(" << mesh.nodes[2*(*nodeItr)  ] << "," << mesh.nodes[2*(*nodeItr)+1] << ")"
-                  << " Moved distance " << dist << " to "
+        std::cerr << "Blago!" << std::endl << "   Boundary node " 
+                  << *nodeItr << " at "
+                  << "(" << mesh.nodes[2*(*nodeItr)  ] 
+                  << "," << mesh.nodes[2*(*nodeItr)+1] << ")"
+                  << " wants to move distance " << dist << " to "
                   << "(" << result[0] << "," << result[1] << ")" << std::endl;
       }
       POLY_ASSERT(dist < 10.0*coords.delta);
-      mesh.nodes[2*(*nodeItr)  ] = result[0];
-      mesh.nodes[2*(*nodeItr)+1] = result[1];
+      if (dist < 10.0*coords.delta) {
+        mesh.nodes[2*(*nodeItr)  ] = result[0];
+        mesh.nodes[2*(*nodeItr)+1] = result[1];
+      }
     }
   }
 
@@ -407,7 +418,7 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
 // OUTPUT:
 //    facetIntersections : Vector of facet indices where intersection(s) occur
 //    result             : Vector of coordinates for intersection(s)
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 template<typename RealType>
 inline
 unsigned intersectBoundingBox(const RealType* point1,

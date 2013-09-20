@@ -28,7 +28,7 @@ public:
   typedef typename DimensionTraits<Dimension, RealType>::Point     IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   
-  //! The bounding box sizes
+  //! The bounding box size
   std::vector<RealType> low, high;
   
   //! The outer bounding box sizes
@@ -59,22 +59,29 @@ public:
   //! Default constructor
   QuantizedCoordinates():
     ReducedPLC<Dimension, RealType>(),
-    low(), high(), center(),
-    olow(), ohigh(),
+    low(), 
+    high(), 
+    olow(), 
+    ohigh(),
+    center(),
     mCoordinatesModified(false),
-    mOuterBox(false){}
-  QuantizedCoordinates(const QuantizedCoordinates& coords);
-
+    mOuterBox(false) {}
+   
   //! Constuctor + initialize
   QuantizedCoordinates(const std::vector<RealType>& points):
     ReducedPLC<Dimension, RealType>(),
-    low(), high(), center(),
-    olow(), ohigh(),
+    low(), 
+    high(),
+    olow(), 
+    ohigh(),
+    center(),
     mCoordinatesModified(false),
     mOuterBox(false)
   {
     initialize(points);
     POLY_ASSERT(!low.empty() and !high.empty() and !center.empty());
+    POLY_ASSERT(delta != 0.0);
+    POLY_ASSERT(!mCoordinatesModified);
   }
 
 
@@ -150,6 +157,9 @@ public:
     this->points = pts;
     this->facets = fcts;
 
+    // Initialize the outer bounding box to be equal to the inner
+    olow = low; ohigh = high; odelta = delta;
+
     mCoordinatesModified = false;
   }
 
@@ -198,6 +208,7 @@ public:
 
     // Resize the box
     RealType boxSize = 0.0;
+    olow.resize(Dimension);  ohigh.resize(Dimension);
     for (unsigned j = 0; j != Dimension; ++j) {
       olow [j] = std::min(low [j], plow [j]);
       ohigh[j] = std::max(high[j], phigh[j]);
@@ -207,7 +218,6 @@ public:
       boxSize  = std::max(boxSize, ohigh [j]-center[j]);
       boxSize  = std::max(boxSize, center[j]-  olow[j]);
     }
-    POLY_ASSERT(boxSize > 0);
     
     // Circumscribe the new box dimensions with the infinite sphere
     orinf = 1.5*boxSize;
@@ -217,7 +227,7 @@ public:
       olow [j] = std::min(olow [j], center[j]-orinf);
       ohigh[j] = std::max(ohigh[j], center[j]+orinf);
       POLY_ASSERT(olow[j] <= ohigh[j]);
-      POLY_ASSERT(0.5*(ohigh[j]+olow[j]) == center[j]);
+      //POLY_ASSERT(0.5*(ohigh[j]+olow[j]) == center[j]);
       POLY_ASSERT(ohigh[j]-olow[j] == 2.0*orinf);
     }
 
@@ -274,9 +284,14 @@ public:
   //! Print out the bounding box info
   //------------------------------------------------------------------------
   friend std::ostream& operator<<(std::ostream& os, const QuantizedCoordinates& coords) {
-    os << "Bounding Box  = ";
+    os << "Bounding Box       = ";
     for (unsigned j = 0; j != Dimension; ++j) {
       os << "(" << coords.low[j] << "," << coords.high[j] << ") ";
+    }
+    os << std::endl;
+    os << "Outer Bounding Box = ";
+    for (unsigned j = 0; j != Dimension; ++j) {
+       os << "(" << coords.olow[j] << "," << coords.high[j] << ") ";
     }
     os << std::endl;
     os << "Sphere Center = (";
@@ -303,36 +318,36 @@ public:
   //------------------------------------------------------------------------
   //! Quantize a floating-point-precision point
   //! NOTE: If the point is inside the inner box, set the new integer
-  //!       point's index bit equal to 1
+  //!       point's index equal to 1
   //------------------------------------------------------------------------
   inline
   IntPoint quantize(const RealType* pointIn) const {
     POLY_ASSERT(!mCoordinatesModified);
     if (not mOuterBox) {
-      return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 1);
+      return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
     } else {
       if (isInside(pointIn))
-	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 1);
+	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
       else
 	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &olow[0], odelta, 0);
     }
   }
-  
+   
   //------------------------------------------------------------------------
-  //! Dequantize an point
+  //! Dequantize an integer point to floating-point-precision 
   //------------------------------------------------------------------------
   inline
   RealPoint dequantize(const CoordHash* pointIn, bool inner=true) const {
     POLY_ASSERT(!mCoordinatesModified);
     RealType p[Dimension];
-    RealType *lo, *hi;
+    std::vector<RealType> lo, hi;
     RealType dx;
     if (inner) {
-      lo = &low[0];  hi = &high[0];  dx = delta;
+      lo = low;  hi = high;  dx = delta;
     } else {
-      lo = &olow[0]; hi = &ohigh[0]; dx = odelta;
+      lo = olow; hi = ohigh; dx = odelta;
     }
-      
+    
     for (unsigned j = 0; j != Dimension; ++j) {
        p[j] = (pointIn[j] == mCoordMax) ? hi[j] : lo[j] + pointIn[j]*dx;
     }

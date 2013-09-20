@@ -29,111 +29,6 @@ using std::abs;
 namespace {
 
 //------------------------------------------------------------------------------
-// A handy method for computing a hash of a position to a 64 bit quantized
-// integer value.
-//------------------------------------------------------------------------------
-template<typename RealType>
-uint64_t
-hashPosition(RealType* pos,
-             RealType* xlow_inner,
-             RealType* xhigh_inner,
-             RealType* xlow_outer,
-             RealType* xhigh_outer) {
-  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
-              xlow_outer[1] <= xlow_inner[1] and
-              xlow_outer[2] <= xlow_inner[2]);
-  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
-              xhigh_outer[1] >= xhigh_inner[1] and
-              xhigh_outer[2] >= xhigh_inner[2]);
-  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-              xlow_inner[1] < xhigh_inner[1] and
-              xlow_inner[2] < xhigh_inner[2]);
-  POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
-               pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
-               pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2],
-               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
-               << xlow_outer[0] << " " << xlow_outer[1] << " " << xlow_outer[2] << ") ("
-               << xhigh_outer[0] << " " << xhigh_outer[1] << " " << xhigh_outer[2] << ")");
-
-  // Decide the bounding box we're using.
-  uint64_t result = 0ULL;
-  RealType *xlow, *xhigh;
-  if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
-      pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
-      pos[2] < xlow_inner[2] or pos[1] > xhigh_inner[2]) {
-    xlow = xlow_outer;
-    xhigh = xhigh_outer;
-    result += (1ULL << 63);
-  } else {
-    xlow = xlow_inner;
-    xhigh = xhigh_inner;
-  }
-
-  // Quantize away.
-  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
-  result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
-             (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
-             (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
-  return result;
-}
-
-//------------------------------------------------------------------------------
-// Inverse of above.
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-unhashPosition(RealType* pos,
-               RealType* xlow_inner,
-               RealType* xhigh_inner,
-               RealType* xlow_outer,
-               RealType* xhigh_outer,
-               uint64_t hashedPosition) {
-  POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
-              xlow_outer[1] <= xlow_inner[1] and
-              xlow_outer[2] <= xlow_inner[2]);
-  POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
-              xhigh_outer[1] >= xhigh_inner[1] and
-              xhigh_outer[2] >= xhigh_inner[2]);
-  POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-              xlow_inner[1] < xhigh_inner[1] and
-              xlow_inner[2] < xhigh_inner[2]);
-  POLY_ASSERT(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
-              pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1] and
-              pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2]);
-
-  // Decide the bounding box we're using.
-  RealType *xlow, *xhigh;
-  if (hashedPosition >= (1ULL << 63)) {
-    xlow = xlow_outer;
-    xhigh = xhigh_outer;
-  } else {
-    xlow = xlow_inner;
-    xhigh = xhigh_inner;
-  }
-
-  // Extract the position (for the center of the cell).
-  const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                          std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
-  const uint64_t xmask = (1ULL << 21) - 1ULL,
-                 ymask = xmask << 21,
-                 zmask = ymask << 21;
-  pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
-  pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
-  pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];
-
-  // Post-conditions.
-  POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
-               pos[1] >= xlow[1] and pos[1] <= xhigh[1] and
-               pos[2] >= xlow[2] and pos[2] <= xhigh[2],
-               "(" << pos[0] << " " << pos[1] << " " << pos[2] << ") ("
-               << xlow[0] << " " << xlow[1] << " " << xlow[2] << ") ("
-               << xhigh[0] << " " << xhigh[1] << " " << xhigh[2] << ")");
-}
-
-//------------------------------------------------------------------------------
 // Borrow the Point3 type as a tuple to create 3 node facets hashes.
 //------------------------------------------------------------------------------
 Point3<unsigned>
@@ -165,10 +60,11 @@ hashFacet(const unsigned i, const unsigned j, const unsigned k) {
 // Sort a set of edges around a face so that sequential edges share nodes.
 // We account for one break in the chain, representing an unbounded surface.
 //------------------------------------------------------------------------------
-std::vector<unsigned>
-computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
+void
+computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges,
+                       std::vector<unsigned>& result,
+                       std::vector<unsigned>& hangingNodes) {
   typedef std::pair<int, int> EdgeHash;
-  std::vector<unsigned> result;
 
   const unsigned nedges = edges.size();
   if (nedges > 1) {
@@ -205,14 +101,13 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
     // }
     // // BLAGO!
 
-    // Look for any edges with one one node in the set.  There can be at most
+    // Look for any edges with one node in the set.  There can be at most
     // two such edges, representing the two ends of the chain.  We will put 
     // the edges with those nodes first in the ordering, so that all remaining
     // edges should naturally hook together.
     std::vector<EdgeHash> orderedEdges;
     orderedEdges.reserve(nedges);
     int lastNode;
-    bool hangingNodes = false;
     for (i = 0; i != nedges; ++i) {
       if (nodeUseCount[edges[i].first] == 1 or
           nodeUseCount[edges[i].second] == 1) {
@@ -222,13 +117,14 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
         nodes2edges[edges[i].first].erase(edges[i]);
         nodes2edges[edges[i].second].erase(edges[i]);
         lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
-        hangingNodes = true;
+        hangingNodes.push_back(lastNode);
       }
     }
     POLY_ASSERT(orderedEdges.size() == 0 or orderedEdges.size() == 2);
+    POLY_ASSERT(hangingNodes.size() == 0 or hangingNodes.size() == 2);
 
     // Pick a node to start the chain.
-    if (hangingNodes) {
+    if (hangingNodes.size() == 2) {
       POLY_ASSERT(nodeUseCount[orderedEdges.back().first] == 2 or
                   nodeUseCount[orderedEdges.back().second] == 2);
       lastNode = (nodeUseCount[orderedEdges.back().first] == 2 ? 
@@ -236,8 +132,6 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
                   orderedEdges.back().second);
     } else {
       lastNode = edges[0].first;
-      // orderedEdges.push_back(edges[0]);
-      // nodes2edges[lastNode].erase(edges[0]);
     }
 
     // Walk the remaining edges
@@ -256,7 +150,7 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
     // // BLAGO!
 
     // Read the nodes in order.
-    if (hangingNodes) {
+    if (hangingNodes.size() == 2) {
       result.push_back(nodeUseCount[orderedEdges[0].first] == 1 ? orderedEdges[0].first : orderedEdges[0].second);
       result.push_back(nodeUseCount[orderedEdges[1].first] == 1 ? orderedEdges[1].first : orderedEdges[1].second);
       i = 1;
@@ -273,8 +167,8 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
                        orderedEdges[i].first : 
                        orderedEdges[i].second);
     }
-    POLY_ASSERT2((hangingNodes and result.size() == nedges + 1) or
-                 ((not hangingNodes) and result.size() == nedges), result.size());
+    POLY_ASSERT2((hangingNodes.size() > 0 and result.size() == nedges + 1) or
+                 result.size() == nedges, result.size());
       
 
   } else {
@@ -288,7 +182,6 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
   }
 
   // That's it.
-  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -399,7 +292,7 @@ tessellate(const vector<double>& points,
                                             &ray_hat.x,
                                             low,
                                             high,
-                                            degeneracy,
+                                            mDegeneracy,
                                             &mesh.nodes[3*j]);
       ray_hat.x = mesh.nodes[3*k]   - mesh.nodes[3*k0];
       ray_hat.y = mesh.nodes[3*k+1] - mesh.nodes[3*k0+1];
@@ -409,7 +302,7 @@ tessellate(const vector<double>& points,
                                             &ray_hat.x,
                                             low,
                                             high,
-                                            degeneracy,
+                                            mDegeneracy,
                                             &mesh.nodes[3*k]);
 
       // // Do we need to introduce a new node for this face?
@@ -418,254 +311,6 @@ tessellate(const vector<double>& points,
     }
   }
 
-}
-
-//------------------------------------------------------------------------------
-// Compute the unbouded tessellation using Tetgen's directo Voronoi computation.
-//------------------------------------------------------------------------------
-void
-TetgenTessellator::
-computeVoronoiNatively(const vector<double>& points,
-                       Tessellation<3, double>& mesh) const {
-
-  // Pre-conditions.
-  POLY_ASSERT(not points.empty());
-  POLY_ASSERT(points.size() % 3 == 0);
-
-  // Compute the normalized generators.
-  RealType low[3], high[3], box[3];
-  const unsigned numGenerators = points.size() / 3;
-  vector<double> generators = this->computeNormalizedPoints(points, points, true, low, high);
-  unsigned i, j, k;
-  for (j = 0; j != 3; ++j) {
-    box[j] = high[j] - low[j];
-    POLY_ASSERT(box[j] > 0.0);
-  }
-
-  // Build the input to tetgen.
-  tetgenio in;
-  in.firstnumber = 0;
-  in.mesh_dim = 3;
-  in.pointlist = new double[generators.size()];
-  copy(&generators.front(), &generators.front() + generators.size(), in.pointlist);
-  in.pointattributelist = 0;
-  in.pointmtrlist = 0;
-  in.pointmarkerlist = 0;
-  in.numberofpoints = generators.size() / 3;
-  in.numberofpointattributes = 0;
-  in.numberofpointmtrs = 0;
-
-  // Do the tetgen tessellation.
-  tetgenio out;
-  tetrahedralize((char*)"vV", &in, &out);
-
-  // Make sure we got something.
-  if (out.numberoftetrahedra == 0)
-    error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
-  if (out.numberofpoints != generators.size()/3) {
-    char err[1024];
-    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
-             out.numberofpoints, (int)numGenerators);
-    error(err);
-  }
-
-  cerr << "Finished tetgen." << endl;
-
-  // Find the maximum extent of the Voronoi points.  We will use this to create the
-  // unbounded (or "infinite") points.
-  RealType vlow[3], vhigh[3];
-  geometry::computeBoundingBox<3, RealType>(out.vpointlist,
-                                            3*out.numberofvpoints,
-                                            true,
-                                            vlow,
-                                            vhigh);
-  vlow[0] = min(vlow[0], low[0]); 
-  vlow[1] = min(vlow[1], low[1]); 
-  vlow[2] = min(vlow[2], low[2]);
-  vhigh[0] = max(vhigh[0], high[0]); 
-  vhigh[1] = max(vhigh[1], high[1]); 
-  vhigh[2] = max(vhigh[2], high[2]);
-  const RealType vbox[3] = {vhigh[0] - vlow[0], 
-                            vhigh[1] - vlow[1], 
-                            vhigh[2] - vlow[2]};
-  const RealType rinf = 2.0*max(vbox[0], max(vbox[1], vbox[2]));
-  const RealType vboxc[3] = {0.5*(vlow[0] + vhigh[0]), 
-                             0.5*(vlow[1] + vhigh[1]), 
-                             0.5*(vlow[2] + vhigh[2])};
-  vlow[0] = vboxc[0] - rinf; 
-  vlow[1] = vboxc[1] - rinf; 
-  vlow[2] = vboxc[2] - rinf;
-  vhigh[0] = vboxc[0] + rinf; 
-  vhigh[1] = vboxc[1] + rinf; 
-  vhigh[2] = vboxc[2] + rinf;
-
-  // Read out the vertices, converting to quantized (hashed) positions and
-  // building the map of hash -> node ID.
-  // Note the Tetgen will produce degenerate node positions, so this collapse of those
-  // degeneracies is necessary!
-  map<IntPoint, int> point2node;
-  for (i = 0; i != out.numberofvpoints; ++i) {
-    POLY_ASSERT(out.vpointlist[3*i  ] >= vlow[0] and out.vpointlist[3*i  ] <= vhigh[0]);
-    POLY_ASSERT(out.vpointlist[3*i+1] >= vlow[1] and out.vpointlist[3*i+1] <= vhigh[1]);
-    POLY_ASSERT(out.vpointlist[3*i+2] >= vlow[2] and out.vpointlist[3*i+2] <= vhigh[2]);
-    IntPoint p(out.vpointlist[3*i], out.vpointlist[3*i+1], out.vpointlist[3*i+2], vlow[0], vlow[1], vlow[2], degeneracy);
-    internal::addKeyToMap(p, point2node);
-    // cerr << "   ----> (" << out.vpointlist[3*i] << " " << out.vpointlist[3*i + 1] << " " << out.vpointlist[3*i + 2] << ") " << p << " " << point2node[p] << endl;
-  }
-
-  // Read the normalized mesh node positions.
-  mesh.nodes.resize(3*point2node.size());
-  for (map<IntPoint, int>::const_iterator itr = point2node.begin();
-       itr != point2node.end();
-       ++itr) {
-    i = itr->second;
-    mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
-    mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
-    mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
-  }
-
-  // Read the Tetgen voro edges, creating our "infinte" surface nodes for
-  // unbounded rays.
-  // Note that Tetgen will also produce degenerate edges between the degenerate
-  // nodes!
-  int v1, v2;
-  unsigned n1, n2;
-  RealType ray_sph_int[3];
-  vector<EdgeHash> edges;
-  edges.reserve(out.numberofvedges);
-  mesh.infNodes = vector<unsigned>(point2node.size());
-  for (i = 0; i != out.numberofvedges; ++i) {
-    tetgenio::voroedge& vedge = out.vedgelist[i];
-    v1 = vedge.v1;
-    v2 = vedge.v2;
-    POLY_ASSERT2(v1 >= 0 and v1 < out.numberofvpoints, i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
-    POLY_ASSERT2(v2 == -1 or (v2 >= 0 and v2 < out.numberofvpoints), i << " " << v1 << " " << v2 << " " << out.numberofvpoints);
-    IntPoint p1(out.vpointlist[3*v1], out.vpointlist[3*v1+1], out.vpointlist[3*v1+2], vlow[0], vlow[1], vlow[2], degeneracy);
-    POLY_ASSERT(point2node.find(p1) != point2node.end());
-    n1 = point2node[p1];
-    if (v2 == -1) {
-      // This edge is a ray, so we construct a node on the rinf spherical surface
-      // to hook to.
-      geometry::raySphereIntersection(&mesh.nodes[3*n1],
-                                      out.vedgelist[i].vnormal,
-                                      vboxc,
-                                      rinf,
-                                      degeneracy,
-                                      ray_sph_int);
-      POLY_ASSERT(ray_sph_int[0] >= vlow[0] and ray_sph_int[0] <= vhigh[0]);
-      POLY_ASSERT(ray_sph_int[1] >= vlow[1] and ray_sph_int[1] <= vhigh[1]);
-      POLY_ASSERT(ray_sph_int[2] >= vlow[2] and ray_sph_int[2] <= vhigh[2]);
-      IntPoint p1(ray_sph_int[0], ray_sph_int[1], ray_sph_int[2], vlow[0], vlow[1], vlow[2], degeneracy);
-      k = point2node.size();
-      n2 = internal::addKeyToMap(p1, point2node);
-      if (k != point2node.size()) {
-        //mesh.infNodes.push_back(n2);
-        mesh.infNodes[n2] = 1;
-        mesh.nodes.push_back(p1.realx(vlow[0], degeneracy));
-        mesh.nodes.push_back(p1.realy(vlow[1], degeneracy));
-        mesh.nodes.push_back(p1.realz(vlow[2], degeneracy));
-        // cerr << " ---> new inf point (" << ray_sph_int[0] << " " << ray_sph_int[1] << " " << ray_sph_int[2] << ") " << p1 << " " << n2 << endl;
-      }
-    } else {
-      IntPoint p2(out.vpointlist[3*v2], out.vpointlist[3*v2+1], out.vpointlist[3*v2+2], vlow[0], vlow[1], vlow[2], degeneracy);
-      POLY_ASSERT(point2node.find(p2) != point2node.end());
-      n2 = point2node[p2];
-    }
-    if (n1 == n2) {   // Flag degenerate edges with negative values.
-      n1 = -n1;
-      n2 = -n1 - 1;
-    }
-    edges.push_back(internal::hashEdge(n1, n2));
-  }
-  POLY_ASSERT(edges.size() == out.numberofvedges);
-
-  // Add any of our new "inf" nodes to the mesh node list.
-  const unsigned nold = mesh.nodes.size()/3;
-  mesh.nodes.resize(3*point2node.size());
-  for (map<IntPoint, int>::const_iterator itr = point2node.begin();
-       itr != point2node.end();
-       ++itr) {
-    i = itr->second;
-    if (i >= nold) {
-      mesh.nodes[3*i  ] = itr->first.realx(vlow[0], degeneracy);
-      mesh.nodes[3*i+1] = itr->first.realy(vlow[1], degeneracy);
-      mesh.nodes[3*i+2] = itr->first.realz(vlow[2], degeneracy);
-    }
-  }
-
-  // Create the faces, checking for degeneracies here too.
-  map<unsigned, int> faceMap;
-  mesh.faces.reserve(out.numberofvfacets);
-  mesh.faceCells.resize(out.numberofvfacets);
-  int ne, ie;
-  for (i = 0; i != out.numberofvfacets; ++i) {
-    const tetgenio::vorofacet& vfacet = out.vfacetlist[i];
-    ne = vfacet.elist[0];
-    POLY_ASSERT(ne >= 2);
-    vector<EdgeHash> faceEdges;
-    faceEdges.reserve(ne);
-    for (k = 0; k != ne; ++k) {
-      ie = vfacet.elist[k + 1];
-      POLY_ASSERT(ie < edges.size());
-      if (edges[ie].first >= 0) faceEdges.push_back(edges[ie]); // Exclude degenerate edges.
-    }
-
-    // Reduce to the unique edges, and extrac the nodes ringing the face.
-    sort(faceEdges.begin(), faceEdges.end());
-    faceEdges.erase(unique(faceEdges.begin(), faceEdges.end()), faceEdges.end());
-    const vector<unsigned> faceNodes = computeSortedFaceNodes(faceEdges);
-
-    // Are there enough nodes to constitute a non-degenerate face?
-    if (faceNodes.size() > 2) {
-      faceMap[i] = mesh.faces.size();
-      mesh.faces.push_back(faceNodes);
-
-      // Now the cells that touch this face.
-      POLY_ASSERT(vfacet.c1 >= 0 and vfacet.c1 < numGenerators);
-      POLY_ASSERT(vfacet.c2 >= 0 and vfacet.c2 < numGenerators);
-      mesh.faceCells[i].push_back(vfacet.c1);
-      mesh.faceCells[i].push_back(vfacet.c2);
-    } else {
-      faceMap[i] = -1;
-    }
-  }
-  POLY_ASSERT(faceMap.size() == out.numberofvfacets);
-
-  // Read out the cell structure as collections of faces.
-  POLY_ASSERT(out.numberofvcells == numGenerators);
-  mesh.cells = vector<vector<int> >(numGenerators);
-  unsigned nf;
-  int fi;
-  RealType ccent[3], fcent[3], fhat[3];
-  for (i = 0; i != numGenerators; ++i) {
-    nf = out.vcelllist[i][0];
-    POLY_ASSERT(nf >= 4);
-    for (k = 0; k != nf; ++k) {
-      POLY_ASSERT(faceMap.find(out.vcelllist[i][k+1]) != faceMap.end());
-      fi = faceMap[out.vcelllist[i][k+1]];
-      if (fi >= 0) mesh.cells[i].push_back(fi);
-    }
-    POLY_ASSERT(mesh.cells[i].size() <= nf);
-    nf = mesh.cells[i].size();
-
-    // Now we have to walk the face indices again and orient them with respect to this cell.
-    geometry::computeCellCentroid(mesh, i, ccent);
-    for (k = 0; k != nf; ++k) {
-      fi = mesh.cells[i][k];
-      POLY_ASSERT(fi >= 0 and fi < mesh.faces.size());
-
-      // We have to determine the orientation of this face with respect to this cell.
-      geometry::computeFaceCentroidAndNormal(mesh, fi, fcent, fhat);
-      for (j = 0; j != 3; ++j) fcent[j] -= ccent[j];
-      if (geometry::dot<3, RealType>(fcent, fhat) < 0.0) mesh.cells[i][k] = ~fi;
-    }
-  }
-
-  // Rescale the mesh node positions for the input geometry.
-  for (i = 0; i != mesh.nodes.size(); ++i) {
-    j = i % 3;
-    mesh.nodes[i] = low[j] + mesh.nodes[i]*box[j];
-  }
 }
 
 //------------------------------------------------------------------------------
@@ -688,7 +333,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   typedef Point3<RealType> RealPoint;
   typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
   // const CoordHash coordMax = (1LL << 34); // numeric_limits<CoordHash>::max() >> 32U;
-  const double degeneracy = 1.0e-12;
+  const double mDegeneracy = 1.0e-12;
 
   // Compute the normalized generators.
   RealType low[3], high[3], box[3];
@@ -715,7 +360,8 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
 
   // Do the tetrahedralization.
   tetgenio out;
-  tetrahedralize((char*)"V", &in, &out);
+  tetrahedralize((char*)"Q", &in, &out);
+  // tetrahedralize((char*)"V", &in, &out);
 
   // Make sure we got something.
   if (out.numberoftetrahedra == 0)
@@ -734,8 +380,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                       numeric_limits<RealType>::max()},
           chigh[3] = {-numeric_limits<RealType>::max(), 
                       -numeric_limits<RealType>::max(), 
-                      -numeric_limits<RealType>::max()},
-            X[3];
+                      -numeric_limits<RealType>::max()};
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
   int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
@@ -822,17 +467,17 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   map<PointHash, int> circ2id;
   map<int, unsigned> tet2id;
   for (i = 0; i != out.numberoftetrahedra; ++i) {
-    PointHash ip = hashPosition(&(circumcenters[i].x), low, high, clow, chigh);
+    PointHash ip = geometry::Hasher<3, RealType>::hashPosition(&(circumcenters[i].x), low, high, clow, chigh);
     j = internal::addKeyToMap(ip, circ2id);
     tet2id[i] = j;
   }
 
   // Any surface facets create new "infinite" or "unbounded" rays, which originate at
   // the tet circumcenter and pass through the circumcenter of the triangular facet.
-  cerr << "Centroid bounding box: (" 
-       << clow[0] << " " << clow[1] << " " << clow[2] << ") ("
-       << chigh[0] << " " << chigh[1] << " " << chigh[2] << ")" << endl
-       <<    " rinf = " << rinf << endl;
+  // cerr << "Centroid bounding box: (" 
+  //      << clow[0] << " " << clow[1] << " " << clow[2] << ") ("
+  //      << chigh[0] << " " << chigh[1] << " " << chigh[2] << ")" << endl
+  //      <<    " rinf = " << rinf << endl;
 
   // Look for any surface facets we need to project unbounded rays through.
   bool test;
@@ -870,7 +515,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       fhat -= circumcenters[i];
 
       // Check for the special case of the tet circumcenter coplanar with the facet.
-      if (abs(geometry::dot<3, RealType>(&fhat.x, &fhat.x)) < degeneracy) {
+      if (abs(geometry::dot<3, RealType>(&fhat.x, &fhat.x)) < mDegeneracy) {
         // Yep, it's in the plane.  Just project the ray out orthogonally to the facet.
         a_b.x = out.pointlist[3*facet.y]   - out.pointlist[3*facet.x];
         a_b.y = out.pointlist[3*facet.y+1] - out.pointlist[3*facet.x+1];
@@ -883,7 +528,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       geometry::unitVector<3, RealType>(&fhat.x);
 
       // The ray unit vector should point in the opposite direction from the facet as the tet centroid.
-      POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > degeneracy);
+      POLY_ASSERT(abs(orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)) > mDegeneracy);
       copy(&out.pointlist[3*facet.x], &out.pointlist[3*facet.x] + 3, &test_point.x);
       test_point += fhat;
       if (orient3d(&out.pointlist[3*facet.x], &out.pointlist[3*facet.y], &out.pointlist[3*facet.z], &tetcent.x)*
@@ -897,7 +542,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
                                              1.0e-10,
                                              &pinf.x);
       POLY_ASSERT(test);
-      PointHash ip = hashPosition(&(pinf.x), low, high, clow, chigh);
+      PointHash ip = geometry::Hasher<3, RealType>::hashPosition(&(pinf.x), low, high, clow, chigh);
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       POLY_ASSERT(facet2id.find(facet) == facet2id.end());
@@ -914,7 +559,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
        ++itr) {
     POLY_ASSERT(itr->second >= 0 and itr->second < numNodes);
     i = itr->second;
-    unhashPosition(&(mesh.nodes[3*i]), low, high, clow, chigh, itr->first);
+    geometry::Hasher<3, RealType>::unhashPosition(&(mesh.nodes[3*i]), low, high, clow, chigh, itr->first);
     // cerr << "   --> " << mesh.nodes[3*i] << " " << mesh.nodes[3*i+1] << " " << mesh.nodes[3*i+2] << endl;
   }
 
@@ -925,7 +570,8 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
   mesh.faces.reserve(edge2tets.size());
   mesh.cells = vector<vector<int> >(numGenerators);
   TetFacetHash lastFacet;
-  unsigned ii, jj, kk;
+  unsigned ii, jj;
+  vector<vector<EdgeHash> > cellInfEdges(numGenerators);
   for (map<EdgeHash, set<unsigned> >::const_iterator edgeItr = edge2tets.begin();
        edgeItr != edge2tets.end();
        ++edgeItr) {
@@ -958,7 +604,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
         POLY_ASSERT(jj != ii);
         meshEdges.insert(internal::hashEdge(ii, jj));
       } else {
-        POLY_ASSERT(facet2tets[abc].size() == 2 and facet2tets[abc][0] == i or facet2tets[abc][1] == i);
+        POLY_ASSERT((facet2tets[abc].size() == 2 and facet2tets[abc][0] == i) or facet2tets[abc][1] == i);
         k = (facet2tets[abc][0] == i ? facet2tets[abc][1] : facet2tets[abc][0]);
         jj = tet2id[k];
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii, jj));
@@ -979,8 +625,9 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       }
     }
 
-    // Get the face sorted nodes.
-    const vector<unsigned> faceNodes = computeSortedFaceNodes(vector<EdgeHash>(meshEdges.begin(), meshEdges.end()));
+    // Get the face sorted nodes.  We also keep track of which cells have "inf" nodes.
+    vector<unsigned> faceNodes, hangingNodes;
+    computeSortedFaceNodes(vector<EdgeHash>(meshEdges.begin(), meshEdges.end()), faceNodes, hangingNodes);
     if (faceNodes.size() > 2) {
       iface = mesh.faces.size();
       mesh.faces.push_back(faceNodes);
@@ -991,7 +638,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
       // POLY_ASSERT((not geometry::collinear<3, RealType>(&mesh.nodes[3*faceNodes[0]],
       //                                                   &mesh.nodes[3*faceNodes[1]],
       //                                                   &mesh.nodes[3*faceNodes[2]],
-      //                                                   degeneracy)));
+      //                                                   mDegeneracy)));
       ehat.x = generators[3*b]   - generators[3*a];
       ehat.y = generators[3*b+1] - generators[3*a+1];
       ehat.z = generators[3*b+2] - generators[3*a+2];
@@ -1013,6 +660,45 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
         mesh.faceCells[iface].push_back(~int(a));
         mesh.faceCells[iface].push_back(b);
       }
+      if (!hangingNodes.empty()) {
+        // These cells need to create a new edge on the infinite sphere.
+        POLY_ASSERT(hangingNodes.size() == 2);
+        cellInfEdges[a].push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
+        cellInfEdges[b].push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
+      }
+    }
+  }
+
+  // Build any infFaces we need.
+  // For now we assume there is at most one infFace per cell, which is not true for all
+  // degenerate cases!  Fix at some point...
+  for (i = 0; i != numGenerators; ++i) {
+    if (!cellInfEdges[i].empty()) {
+      POLY_ASSERT(cellInfEdges[i].size() >= 3);
+      vector<unsigned> faceNodes, hangingNodes;
+      computeSortedFaceNodes(vector<EdgeHash>(cellInfEdges[i].begin(), cellInfEdges[i].end()), faceNodes, hangingNodes);
+      POLY_ASSERT(hangingNodes.size() == 0);
+      POLY_ASSERT(faceNodes.size() >= 2);
+      if (faceNodes.size() > 2) {
+        // Check if we need to reverse the face node order.
+        ehat.x = mesh.nodes[3*faceNodes[0]]   - generators[3*i];
+        ehat.y = mesh.nodes[3*faceNodes[0]+1] - generators[3*i+1];
+        ehat.z = mesh.nodes[3*faceNodes[0]+2] - generators[3*i+2];
+        f1.x = mesh.nodes[3*faceNodes[1]]   - mesh.nodes[3*faceNodes[0]];  
+        f1.y = mesh.nodes[3*faceNodes[1]+1] - mesh.nodes[3*faceNodes[0]+1];
+        f1.z = mesh.nodes[3*faceNodes[1]+2] - mesh.nodes[3*faceNodes[0]+2];
+        f2.x = mesh.nodes[3*faceNodes[2]]   - mesh.nodes[3*faceNodes[0]];
+        f2.y = mesh.nodes[3*faceNodes[2]+1] - mesh.nodes[3*faceNodes[0]+1];
+        f2.z = mesh.nodes[3*faceNodes[2]+2] - mesh.nodes[3*faceNodes[0]+2];
+        geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
+        if (geometry::dot<3, RealType>(&ehat.x, &fhat.x) < 0.0) {
+          reverse(faceNodes.begin(), faceNodes.end());
+        }
+        iface = mesh.faces.size();
+        mesh.faces.push_back(faceNodes);
+        mesh.faceCells.push_back(vector<int>(1, i));
+        mesh.infFaces.push_back(iface);
+      }
     }
   }
 
@@ -1028,7 +714,7 @@ computeVoronoiThroughTetrahedralization(const vector<double>& points,
 // Static initializations.
 //------------------------------------------------------------------------------
 int64_t TetgenTessellator::coordMax = (1LL << 34);
-double TetgenTessellator::degeneracy = 1.0/TetgenTessellator::coordMax;
+double TetgenTessellator::mDegeneracy = 1.0/TetgenTessellator::coordMax;
 
   // // Copy the PLC boundary info to the tetgen input.
   // vector<tetgenio::polygon> plcFacetPolygons(geometry.facets.size());
