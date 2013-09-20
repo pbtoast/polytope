@@ -254,9 +254,9 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
     result.insert(result.begin() + 1, edges.size());
     edges.push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
     ++nedges;
-    CHECK(result.size() == 3);
+    POLY_ASSERT(result.size() == 3);
   }
-  CHECK(edges.size() == nedges);
+  POLY_ASSERT(edges.size() == nedges);
 
   // Pick a node to start the chain.
   if (hangingNodes.size() == 2) {
@@ -275,11 +275,11 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
     POLY_ASSERT(nodes2edges[lastNode].size() > 0);
     result.push_back(*nodes2edges[lastNode].begin());
     ehash = edges[result.back()];
-    nodes2edges[ehash.first].erase(ehash);
-    nodes2edges[ehash.second].erase(ehash);
+    nodes2edges[ehash.first].erase(result.back());
+    nodes2edges[ehash.second].erase(result.back());
     lastNode = (ehash.first == lastNode ? ehash.second : ehash.first);
   }
-    
+  
   // // BLAGO!
   // cerr << "Sorted edges : ";
   // for (i = 0; i != nedges; ++i) cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
@@ -289,7 +289,7 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
   // Set the orientation for the ordered edges.
   lastNode = (edges[result[0]].first == edges[result[1]].first ? edges[result[0]].first : edges[result[0]].second);
   for (i = 1; i != nedges; ++i) {
-    CHECK(edges[result[i]].first == lastNode or edges[result[i]].second == lastNode);
+    POLY_ASSERT(edges[result[i]].first == lastNode or edges[result[i]].second == lastNode);
     if (edges[result[i]].first == lastNode) {
       lastNode = edges[result[i]].second;
     } else {
@@ -314,7 +314,8 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
                   ((ii <  0 and jj <  0) and edges[~ii].first == edges[~jj].second));
     }
   }
-  return !hangingNodes.empty();
+  POLY_END_CONTRACT_SCOPE;
+  return !(hangingNodes.empty());
 }
 
 //------------------------------------------------------------------------------
@@ -346,66 +347,6 @@ findOtherTetIndices(const int* indices,
   }
 }
 
-//------------------------------------------------------------------------------
-// An internal handy intermediate representation of a tessellation.
-//------------------------------------------------------------------------------
-template<typename Dimension, typename RealType>
-class QuantTessellation {
-public:
-  typedef uint64_t PointHash;
-  typedef std::pair<int, int> EdgeHash;
-  typedef DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
-
-  // The bounds for hashing positions.
-  RealType low_inner[Dimension], high_inner[Dimension], 
-           low_outer[Dimension], high_outer[Dimension];
-
-  // The degeneracy we're using for quantizing.
-  RealType degeneracy;
-
-  // The mesh elements.
-  std::vector<PointHash> points;             // Hashed node positions.
-  std::map<PointHash, int> point2id;         // PointHash -> unique point ID
-  std::map<EdgeHash, int> edge2id;           // EdgeHash  -> unique edge ID
-  std::vector<std::vector<int> > faces;      // Faces made of edges (with orientation)
-  std::vector<std::vector<int> > cells;      // Cells made of faces (with orientation)
-  std::vector<std::vector<int> > faceCells;  // Cells of each face.
-  std::vector<unsigned> infNodes;            // Indices of nodes projected to the infSphere
-  std::vector<unsigned> infEdges;            // Indices of edges projected to the infSphere
-  std::vector<unsigned> infFaces;            // Indices of faces projected to the infSphere
-
-  // Hash the given position.
-  PointHash hashPosition(const RealPoint& p) const {
-    return geometry::Hasher<Dimension, RealType>::hashPosition(&(p.x), low_inner, high_inner, low_outer, high_outer);
-  }
-
-  // Add new elements, and return the unique index.
-  int addNewNode(const RealPoint& x) {
-    const PointHash ix = hashPosition(x);
-    const int k = points.size();
-    const int result = internal::addKeyToMap(ix, point2id);
-    if (result == k) points.push_back(ix);
-    POLY_ASSERT(points.size() == point2id.size());
-    return result;
-  }
-  int addNewEdge(const EdgeHash& x) {
-    return internal::addKeyToMap(x, edge2id);
-  }
-
-  // Floating position for a point.
-  RealPoint nodePosition(const unsigned i) const {
-    RealPoint result;
-    return geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, low_inner, high_inner, low_outer, high_outer);
-  }
-
-  // Floating position for an edge.
-  RealPoint edgePosition(const EdgeHash& ehash) const {
-    RealPoint result;
-    return 0.5*(nodePosition(ehash.first) + nodePosition(ehash.second));
-  }
-
-};
-
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -430,7 +371,8 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            Tessellation<3, double>& mesh) const {
-  this->computeVoronoiThroughTetrahedralization(points, mesh);
+  internal::QuantTessellation<3, double> qmesh;
+  this->computeUnboundedQuantizedTessellation(points, qmesh);
 }
 
 //------------------------------------------------------------------------------
@@ -907,14 +849,14 @@ tessellate(const vector<double>& points,
 void
 TetgenTessellator::
 computeUnboundedQuantizedTessellation(const vector<double>& points,
-                                      QuantTessellation<3, double>& qmesh) const {
+                                      internal::QuantTessellation<3, double>& qmesh) const {
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
 
-  typedef typename QuantTessellation<3, double>::PointHash PointHash;
-  typedef typename QuantTessellation<3, double>::EdgeHash EdgeHash;
+  typedef internal::QuantTessellation<3, double>::PointHash PointHash;
+  typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
   typedef Point3<RealType> RealPoint;
   typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
 
@@ -924,11 +866,6 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   const unsigned numGenerators = points.size() / 3;
   const vector<double> generators = this->computeNormalizedPoints(points, points, true, qmesh.low_inner, qmesh.high_inner);
   unsigned i, j, k;
-  RealType box[3];
-  for (j = 0; j != 3; ++j) {
-    box[j] = high[j] - low[j];
-    POLY_ASSERT(box[j] > 0.0);
-  }
 
   // Build the input to tetgen.
   tetgenio in;
@@ -960,12 +897,10 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the circumcenters of the tetrahedra, and the set of tets associated
   // with each generator.
-  qmesh.low_outer = {numeric_limits<RealType>::max(), 
-                     numeric_limits<RealType>::max(), 
-                     numeric_limits<RealType>::max()};
-  qmesh.high_outer = {-numeric_limits<RealType>::max(), 
-                      -numeric_limits<RealType>::max(), 
-                      -numeric_limits<RealType>::max()};
+  for (j = 0; j != 3; ++j) {
+    qmesh.low_outer[j] =   numeric_limits<RealType>::max();
+    qmesh.high_outer[j] = -numeric_limits<RealType>::max();
+  }
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
   int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
@@ -1136,8 +1071,8 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   int iedge, iface;
   RealPoint ghat, e0, e1, e2, f1, f2;
   map<EdgeHash, int> faceMap;
-  mesh.faces.reserve(edge2tets.size());
-  mesh.cells = vector<vector<int> >(numGenerators);
+  qmesh.faces.reserve(edge2tets.size());
+  qmesh.cells = vector<vector<int> >(numGenerators);
   TetFacetHash lastFacet;
   unsigned ii, jj;
   vector<vector<EdgeHash> > cellInfEdges(numGenerators);
@@ -1196,7 +1131,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
     // Arrange the edges in the correctly sorted and sign oriented order
     // to construct our face.
-    meshEdges.sort();
+    sort(meshEdges.begin(), meshEdges.end());
     meshEdges.erase(unique(meshEdges.begin(), meshEdges.end()), meshEdges.end());
     vector<int> edgeOrder;
     const bool infEdge = computeSortedFaceEdges(meshEdges, edgeOrder);
@@ -1209,16 +1144,13 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
          ++itr) {
       const bool flip = (*itr < 0);
       k = (flip ? ~(*itr) : *itr);
-      iedge = qmesh.addNewEdge(edges[k]);
+      iedge = qmesh.addNewEdge(meshEdges[k]);
       qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
     }
 
-    // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
-    if (infEdge) qmesh.infEdges.push_back(qmesh.edge2id[meshEdges[edgeOrder[1]]]);
-      
     // Add the face to its cells.
     qmesh.faceCells.push_back(vector<int>());
-    CHECK(qmesh.faceCells.size() == iface);
+    POLY_ASSERT(qmesh.faceCells.size() == iface);
     ghat.x = generators[3*b]   - generators[3*a];
     ghat.y = generators[3*b+1] - generators[3*a+1];
     ghat.z = generators[3*b+2] - generators[3*a+2];
@@ -1239,47 +1171,54 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
       qmesh.faceCells[iface].push_back(~int(a));
       qmesh.faceCells[iface].push_back(b);
     }
+
+    // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
+    if (infEdge) {
+      k = qmesh.edge2id[meshEdges[edgeOrder[1]]];
+      qmesh.infEdges.push_back(k);
+      cellInfEdges[a].push_back(meshEdges[edgeOrder[1]]);
+      cellInfEdges[b].push_back(meshEdges[edgeOrder[1]]);
+    }
   }
 
   // Build any infFaces we need.
   // For now we assume there is at most one infFace per cell, which is not true for all
   // degenerate cases!  Fix at some point...
   for (i = 0; i != numGenerators; ++i) {
-    if (!cellInfEdges[i].empty()) {
-      POLY_ASSERT(cellInfEdges[i].size() >= 3);
-      vector<unsigned> faceNodes, hangingNodes;
-      computeSortedFaceNodes(vector<EdgeHash>(cellInfEdges[i].begin(), cellInfEdges[i].end()), faceNodes, hangingNodes);
-      POLY_ASSERT(hangingNodes.size() == 0);
-      POLY_ASSERT(faceNodes.size() >= 2);
-      if (faceNodes.size() > 2) {
-        // Check if we need to reverse the face node order.
-        ehat.x = mesh.nodes[3*faceNodes[0]]   - generators[3*i];
-        ehat.y = mesh.nodes[3*faceNodes[0]+1] - generators[3*i+1];
-        ehat.z = mesh.nodes[3*faceNodes[0]+2] - generators[3*i+2];
-        f1.x = mesh.nodes[3*faceNodes[1]]   - mesh.nodes[3*faceNodes[0]];  
-        f1.y = mesh.nodes[3*faceNodes[1]+1] - mesh.nodes[3*faceNodes[0]+1];
-        f1.z = mesh.nodes[3*faceNodes[1]+2] - mesh.nodes[3*faceNodes[0]+2];
-        f2.x = mesh.nodes[3*faceNodes[2]]   - mesh.nodes[3*faceNodes[0]];
-        f2.y = mesh.nodes[3*faceNodes[2]+1] - mesh.nodes[3*faceNodes[0]+1];
-        f2.z = mesh.nodes[3*faceNodes[2]+2] - mesh.nodes[3*faceNodes[0]+2];
-        geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
-        if (geometry::dot<3, RealType>(&ehat.x, &fhat.x) < 0.0) {
-          reverse(faceNodes.begin(), faceNodes.end());
-        }
-        iface = mesh.faces.size();
-        mesh.faces.push_back(faceNodes);
-        mesh.faceCells.push_back(vector<int>(1, i));
-        mesh.infFaces.push_back(iface);
+    if (cellInfEdges[i].size() > 2) {
+      vector<int> edgeOrder;
+      computeSortedFaceEdges(cellInfEdges[i], edgeOrder);
+
+      // Check if we need to reverse the face node order.
+      e0 = qmesh.edgePosition(cellInfEdges[i][0]);
+      e1 = qmesh.edgePosition(cellInfEdges[i][1]);
+      e2 = qmesh.edgePosition(cellInfEdges[i][2]);
+      f1 = e1 - e0;
+      f2 = e2 - e0;
+      ghat.x = e0.x - generators[3*a];
+      ghat.y = e0.y - generators[3*a+1];
+      ghat.z = e0.z - generators[3*a+2];
+      geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
+      if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) < 0.0) {
+        reverse(cellInfEdges[i].begin(), cellInfEdges[i].end());
+        reverse(edgeOrder.begin(), edgeOrder.end());
+        for (j = 0; j != edgeOrder.size(); ++j) edgeOrder[j] = ~edgeOrder[j];
       }
+      iface = qmesh.faces.size();
+      qmesh.faces.push_back(vector<int>());
+      for (vector<int>::const_iterator itr = edgeOrder.begin();
+           itr != edgeOrder.end();
+           ++itr) {
+        const bool flip = (*itr < 0);
+        k = (flip ? ~(*itr) : *itr);
+        iedge = qmesh.addNewEdge(cellInfEdges[i][k]);
+        qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
+      }
+      qmesh.cells[i].push_back(iface);
+      qmesh.faceCells.push_back(vector<int>(1, i));
+      qmesh.infFaces.push_back(iface);
     }
   }
-
-  // Rescale the mesh node positions for the input geometry.
-  for (i = 0; i != mesh.nodes.size(); ++i) {
-    j = i % 3;
-    mesh.nodes[i] = low[j] + mesh.nodes[i]*box[j];
-  }
-
 }
 
 
