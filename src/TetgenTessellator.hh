@@ -16,6 +16,7 @@
 
 #include "Tessellator.hh"
 #include "Point.hh"
+#include "QuantTessellation.hh"
 
 namespace polytope {
 
@@ -65,9 +66,9 @@ private:
   static CoordHash coordMax;
   static RealType mDegeneracy;
 
-  // Internal method to compute the tessellation by tetrahedralizing and computing the dual.
-  void computeVoronoiThroughTetrahedralization(const std::vector<RealType>& points,
-                                               Tessellation<3, RealType>& mesh) const;
+  // Internal method to compute the quantized tessellation.
+  void computeUnboundedQuantizedTessellation(const std::vector<RealType>& points,
+                                             internal::QuantTessellation<3, RealType>& mesh) const;
 };
 
 }

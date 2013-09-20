@@ -50,6 +50,8 @@ struct Point2 {
   Point2& operator-=(const Point2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
   Point2& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; return *this; }
   Point2& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; return *this; }
+  Point2 operator+(const Point2& rhs) { Point2 result(*this); result += rhs; return result; }
+  Point2 operator-(const Point2& rhs) { Point2 result(*this); result -= rhs; return result; }
 };
 
 // It's nice being able to print these things.
@@ -121,6 +123,8 @@ struct Point3 {
   Point3& operator-=(const Point3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
   Point3& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
   Point3& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
+  Point3 operator+(const Point3& rhs) { Point3 result(*this); result += rhs; return result; }
+  Point3 operator-(const Point3& rhs) { Point3 result(*this); result -= rhs; return result; }
 };
 
 // It's nice being able to print these things.

@@ -257,7 +257,6 @@ endif()
 
 # Library install targets
 install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
                "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
                "${PROJECT_SOURCE_DIR}/src/TessellatorInline.hh" 
                "${PROJECT_SOURCE_DIR}/src/Tessellation.hh" 
@@ -265,6 +264,8 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
                "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
+               "${PROJECT_SOURCE_DIR}/src/QuantTessellation.hh" 
 	       "${PROJECT_SOURCE_DIR}/src/QuantizedCoordinates.hh"
                "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
