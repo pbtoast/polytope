@@ -60,6 +60,12 @@ public:
   // Return the tessellator name
   std::string name() const { return "TriangleTessellator"; }
 
+  //! Returns the accuracy to which this tessellator can distinguish coordinates.
+  //! Should be returned appropriately for normalized coordinates, i.e., if all
+  //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
+  //! delta in x.
+  virtual RealType degeneracy() const { return 1.0e-8; }
+
 private:
   //-------------------- Private interface ---------------------- //
 
@@ -69,14 +75,14 @@ private:
   typedef boost::geometry::model::polygon<IntPoint,    // point type
                                           false>       // clockwise
     BGpolygon;
-  typedef boost::geometry::model::polygon<RealPoint,
-					   false>
+  typedef boost::geometry::model::polygon<RealPoint,   // point type
+                                          false>       // clockwise
     RealPolygon;
   typedef boost::geometry::model::ring<IntPoint,       // point type
                                        false>          // clockwise
     BGring;
   typedef boost::geometry::model::ring<RealPoint,
-				       false>
+                                       false>
     RealRing;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 

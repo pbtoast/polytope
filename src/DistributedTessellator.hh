@@ -89,6 +89,12 @@ public:
 
   virtual std::string name() const { return mSerialTessellator->name(); }
 
+  //! Returns the accuracy to which this tessellator can distinguish coordinates.
+  //! Should be returned appropriately for normalized coordinates, i.e., if all
+  //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
+  //! delta in x.
+  virtual RealType degeneracy() const { return mSerialTessellator->degeneracy(); }
+
 protected:
   // Define an enum to keep track of which type of tessellation is currently
   // being called.

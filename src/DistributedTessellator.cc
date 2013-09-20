@@ -283,7 +283,6 @@ computeDistributedTessellation(const vector<RealType>& points,
       
       // We have a lower-dimension hull. Every point is visible
       else {
-        cerr << "Lower-dimensional data" << endl;
         Tessellation<Dimension, RealType> localMesh;
         mSerialTessellator->tessellate(points, localMesh);
         localHull.points = generators;
@@ -322,13 +321,34 @@ computeDistributedTessellation(const vector<RealType>& points,
       copy(domainHulls[i].points.begin(), domainHulls[i].points.end(), back_inserter(hullGenerators));
     }
     POLY_ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
+    
     Tessellation<Dimension, RealType> hullMesh;
-    this->tessellationWrapper(hullGenerators, hullMesh);
+    
+    //this->tessellationWrapper(hullGenerators, hullMesh);
 
-    // PLC<Dimension, RealType> plcTmp;
-    // plcTmp.facets = mPLCptr->facets;
-    // mSerialTessellator->tessellate(hullGenerators, *mPLCpointsPtr, plcTmp, hullMesh);
-
+    switch (mType) {
+    case unbounded:
+      mSerialTessellator->tessellate(hullGenerators, hullMesh);
+      break;
+    case box:
+      mSerialTessellator->tessellate(hullGenerators, mLow, mHigh, hullMesh);
+      break;
+    case plc:
+      const unsigned numFacets = (mPLCptr->facets).size();
+      PLC<Dimension, RealType> outerPLC;
+      vector<double> outerPLCpoints(2*numFacets);
+      outerPLC.facets.resize(numFacets);
+      for (int i = 0; i != numFacets; ++i) {
+        outerPLC.facets[i].resize(2);
+        outerPLC.facets[i][0] = i;
+        outerPLC.facets[i][1] = (i+1)%numFacets;
+        unsigned index = (mPLCptr->facets)[i][0];
+        outerPLCpoints[2*i  ] = (*mPLCpointsPtr)[2*index  ];
+        outerPLCpoints[2*i+1] = (*mPLCpointsPtr)[2*index+1];
+      }
+      mSerialTessellator->tessellate(hullGenerators, outerPLCpoints, outerPLC, hullMesh);
+      break;
+    }
 
     // Blago!
 #if HAVE_SILO
@@ -666,7 +686,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
+    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 26);
     
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();

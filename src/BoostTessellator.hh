@@ -147,11 +147,14 @@ public:
   // The name of the tessellator
   std::string name() const { return "BoostTessellator"; }
 
+  //! Returns the accuracy to which this tessellator can distinguish coordinates.
+  //! Should be returned appropriately for normalized coordinates, i.e., if all
+  //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
+  //! delta in x.
+  virtual RealType degeneracy() const { return 1.0e-8; }
+
 private:
   //-------------------- Private interface ---------------------- //
-
-  static CoordHash coordMax;
-  static double degeneracy;
 
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
