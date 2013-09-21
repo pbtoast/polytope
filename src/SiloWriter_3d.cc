@@ -287,9 +287,20 @@ write(const Tessellation<3, RealType>& mesh,
   }
   POLY_ASSERT(faceNodeCounts.size() == numFaces);
 
-  // Construct the silo cell-face info.  We have to account for the convention
-  // that the tessellation lists faces as the 1s complement when the orientation
-  // should be reversed for the cell in question.
+  // Create flags indicating any exterior faces.  For our purposes we'll just 
+  // flag infFaces as exterior.
+  vector<char> infFaceFlags(numFaces, 0x0);
+  for (vector<unsigned>::const_iterator itr = mesh.infFaces.begin();
+       itr != mesh.infFaces.end();
+       ++itr) 
+  {
+    POLY_ASSERT(*itr < numFaces);
+    infFaceFlags[*itr] = 0x1;
+  }
+
+  // Construct the silo cell-face info.  Silo uses the same 1's complement
+  // convention polytope does for indicating face orientation, so we can
+  // simply copy our faces.
   const int numCells = mesh.cells.size();
   vector<int> cellFaceCounts, allCellFaces;
   cellFaceCounts.reserve(numCells);
@@ -298,10 +309,7 @@ write(const Tessellation<3, RealType>& mesh,
   {
     n = mesh.cells[icell].size();
     cellFaceCounts.push_back(n);
-    for (i = 0; i != n; ++i) {
-      j = mesh.cells[icell][i];
-      allCellFaces.push_back(j < 0 ? ~j : j);
-    }
+    std::copy(mesh.cells[icell].begin(), mesh.cells[icell].end(), std::back_inserter(allCellFaces));
   }
   POLY_ASSERT(cellFaceCounts.size() == numCells);
 
@@ -316,7 +324,8 @@ write(const Tessellation<3, RealType>& mesh,
   // Write the connectivity information.
   DBPutPHZonelist(file, (char*)"mesh_zonelist", 
                   faceNodeCounts.size(), &faceNodeCounts[0], 
-                  allFaceNodes.size(), &allFaceNodes[0], 0, 
+                  allFaceNodes.size(), &allFaceNodes[0], 
+                  &infFaceFlags[0], 
                   cellFaceCounts.size(), &cellFaceCounts[0],
                   allCellFaces.size(), &allCellFaces[0], 
                   0, 0, numCells-1, optlist);
