@@ -14,6 +14,13 @@
 using namespace std;
 using namespace polytope;
 
+namespace {
+  template<typename T> 
+  int sgn(T val) {
+    return (val >= T(0) ? 1 : -1);
+  }
+}
+
 //------------------------------------------------------------------------------
 // Emergency dump of the mesh.
 //------------------------------------------------------------------------------
@@ -72,6 +79,32 @@ void unboundedTessellation(const unsigned nx,
     } else {
       // Interior, fully bounded cell.
       POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
+    }
+
+    // Check face orientations.
+    for (unsigned j = 0; j != mesh.cells[i].size(); ++j) {
+      const int faceSgn = sgn(mesh.cells[i][j]);
+      const unsigned iface = internal::positiveID(mesh.cells[i][j]);
+      const unsigned nnodes = mesh.faces[iface].size();
+      for (unsigned k = 0; k != nnodes; ++k) {
+        const unsigned inode1 = mesh.faces[iface][k];
+        const unsigned inode2 = mesh.faces[iface][(k + 1) % nnodes];
+        const unsigned inode3 = mesh.faces[iface][(k + 2) % nnodes];
+        POLY_CHECK(inode1 < mesh.nodes.size()/3);
+        POLY_CHECK(inode2 < mesh.nodes.size()/3);
+        POLY_CHECK(inode3 < mesh.nodes.size()/3);
+        const double vol = geometry::tetrahedralVolume6(&generators[3*i],
+                                                        &mesh.nodes[3*inode3],
+                                                        &mesh.nodes[3*inode2],
+                                                        &mesh.nodes[3*inode1]);
+        POLY_CHECK2(faceSgn*vol > 0.0,
+                    "Volume sign error : " << i << " " << iface << " "
+                    << faceSgn << " " << vol << " : " << nnodes << " " << inode1 << " " << inode2 << " " << inode3 << " : "
+                    << " (" << generators[3*i] << " " << generators[3*i+1] << " " << generators[3*i+2] << ") "
+                    << " (" << mesh.nodes[3*inode1] << " " << mesh.nodes[3*inode1+1] << " " << mesh.nodes[3*inode1+2] << ") "
+                    << " (" << mesh.nodes[3*inode2] << " " << mesh.nodes[3*inode2+1] << " " << mesh.nodes[3*inode2+2] << ") "
+                    << " (" << mesh.nodes[3*inode3] << " " << mesh.nodes[3*inode3+1] << " " << mesh.nodes[3*inode3+2] << ") ");
+      }
     }
   }
 
@@ -195,7 +228,9 @@ int main(int argc, char** argv) {
 
   // Create the generators.
   const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
-  const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
+  const double x2 = 1.0, y2 = 1.0, z2 = 1.0;
+  // const double x1 = 0.0, y1 = 0.0, z1 = 0.0;
+  // const double x2 = 100.0, y2 = 100.0, z2 = 100.0;
   unsigned ix, iy, iz;
   double xi, yi, zi;
   for (int nx = 2; nx != 30; ++nx) {

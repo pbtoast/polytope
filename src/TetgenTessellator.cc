@@ -978,7 +978,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   qmesh.high_outer.x = max(qmesh.high_outer.x, qmesh.high_inner.x);
   qmesh.high_outer.y = max(qmesh.high_outer.y, qmesh.high_inner.y);
   qmesh.high_outer.z = max(qmesh.high_outer.z, qmesh.high_inner.z);
-  RealType rinf = 1.5*max(    qmesh.high_outer.x - qmesh.low_outer.x,
+  RealType rinf = 4.0*max(    qmesh.high_outer.x - qmesh.low_outer.x,
                           max(qmesh.high_outer.y - qmesh.low_outer.y,
                               qmesh.high_outer.z - qmesh.low_outer.z));
   const RealPoint centroid_outer = (qmesh.low_outer + qmesh.high_outer)/2;
@@ -1075,6 +1075,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   // actualy the line connecting two generators, so not the edge of the mesh we want.
   int iedge, iface;
   RealPoint ghat, e0, e1, e2, f1, f2;
+  RealType vol;
   map<EdgeHash, int> faceMap;
   qmesh.faces.reserve(edge2tets.size());
   qmesh.cells = vector<vector<int> >(numGenerators);
@@ -1158,16 +1159,12 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         // Add the face to its cells.
         POLY_ASSERT(qmesh.faceCells.size() == iface);
         qmesh.faceCells.push_back(vector<int>());
-        ghat.x = qmesh.generators[3*b]   - qmesh.generators[3*a];
-        ghat.y = qmesh.generators[3*b+1] - qmesh.generators[3*a+1];
-        ghat.z = qmesh.generators[3*b+2] - qmesh.generators[3*a+2];
-        e0 = qmesh.edgePosition(meshEdges[0]);
-        e1 = qmesh.edgePosition(meshEdges[1]);
-        e2 = qmesh.edgePosition(meshEdges[2]);
-        f1 = e1 - e0;
-        f2 = e2 - e0;
-        geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
-        if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) > 0.0) {
+        e0 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[0])]);
+        e1 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[1])]);
+        e2 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[2])]);
+        vol = geometry::tetrahedralVolume6(&qmesh.generators[3*a], &e2.x, &e1.x, &e0.x);
+        POLY_ASSERT(vol != 0.0);
+        if (vol > 0.0) {
           qmesh.cells[a].push_back(iface);
           qmesh.cells[b].push_back(~iface);
           qmesh.faceCells[iface].push_back(a);
@@ -1200,17 +1197,12 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
       computeSortedFaceEdges(cellInfEdges[i], edgeOrder);
 
       // Check if we need to reverse the face node order.
-      e0 = qmesh.edgePosition(cellInfEdges[i][0]);
-      e1 = qmesh.edgePosition(cellInfEdges[i][1]);
-      e2 = qmesh.edgePosition(cellInfEdges[i][2]);
-      f1 = e1 - e0;
-      f2 = e2 - e0;
-      ghat.x = e0.x - qmesh.generators[3*a];
-      ghat.y = e0.y - qmesh.generators[3*a+1];
-      ghat.z = e0.z - qmesh.generators[3*a+2];
-      geometry::cross<3, RealType>(&f1.x, &f2.x, &fhat.x);
-      if (geometry::dot<3, RealType>(&ghat.x, &fhat.x) < 0.0) {
-        reverse(cellInfEdges[i].begin(), cellInfEdges[i].end());
+      e0 = qmesh.edgePosition(cellInfEdges[i][internal::positiveID(edgeOrder[0])]);
+      e1 = qmesh.edgePosition(cellInfEdges[i][internal::positiveID(edgeOrder[1])]);
+      e2 = qmesh.edgePosition(cellInfEdges[i][internal::positiveID(edgeOrder[2])]);
+      vol = geometry::tetrahedralVolume6(&qmesh.generators[3*a], &e2.x, &e1.x, &e0.x);
+      POLY_ASSERT(vol != 0.0);
+      if (vol < 0.0) {
         reverse(edgeOrder.begin(), edgeOrder.end());
         for (j = 0; j != edgeOrder.size(); ++j) edgeOrder[j] = ~edgeOrder[j];
       }
