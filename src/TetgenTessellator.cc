@@ -887,8 +887,8 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Do the tetrahedralization.
   tetgenio out;
-  // tetrahedralize((char*)"Q", &in, &out);
-  tetrahedralize((char*)"V", &in, &out);
+  tetrahedralize((char*)"Q", &in, &out);
+  // tetrahedralize((char*)"V", &in, &out);
 
   // Make sure we got something.
   if (out.numberoftetrahedra == 0)
@@ -1153,6 +1153,9 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
           const bool flip = (*itr < 0);
           k = (flip ? ~(*itr) : *itr);
           iedge = qmesh.addNewEdge(meshEdges[k]);
+          qmesh.nodeEdges[meshEdges[k].first].push_back(iedge);
+          qmesh.nodeEdges[meshEdges[k].second].push_back(iedge);
+          qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
           qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
         }
 
@@ -1215,12 +1218,103 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         k = (flip ? ~(*itr) : *itr);
         iedge = qmesh.addNewEdge(cellInfEdges[i][k]);
         qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
+        qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
       }
       qmesh.cells[i].push_back(iface);
       qmesh.faceCells.push_back(vector<int>(1, i));
       qmesh.infFaces.push_back(iface);
     }
   }
+
+  // Reduce the sets nodeEdges to their unique values.
+  for (i = 0; i != qmesh.nodeEdges.size(); ++i) {
+    sort(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end());
+    qmesh.nodeEdges[i].erase(unique(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end()), qmesh.nodeEdges[i].end());
+  }
+
+  // Post-conditions.
+  POLY_BEGIN_CONTRACT_SCOPE;
+  {
+    POLY_ASSERT(qmesh.points.size() == qmesh.point2id.size());
+    POLY_ASSERT(qmesh.edges.size() == qmesh.edge2id.size());
+    POLY_ASSERT(qmesh.cells.size() == numGenerators);
+    POLY_ASSERT(qmesh.nodeEdges.size() == qmesh.point2id.size());
+    POLY_ASSERT(qmesh.edgeFaces.size() == qmesh.edges.size());
+    POLY_ASSERT(qmesh.faceCells.size() == qmesh.faces.size());
+    for (i = 0; i != qmesh.points.size(); ++i) {
+      for (j = 0; j != qmesh.nodeEdges[i].size(); ++j) {
+        POLY_ASSERT(qmesh.edges[qmesh.nodeEdges[i][j]].first == i or qmesh.edges[qmesh.nodeEdges[i][j]].second == i);
+      }
+    }
+    for (i = 0; i != qmesh.edges.size(); ++i) {
+      POLY_ASSERT(qmesh.edges[i].first < qmesh.points.size());
+      POLY_ASSERT(qmesh.edges[i].second < qmesh.points.size());
+      POLY_ASSERT(count(qmesh.nodeEdges[qmesh.edges[i].first].begin(),
+                        qmesh.nodeEdges[qmesh.edges[i].first].end(), 
+                        i) == 1);
+      POLY_ASSERT(count(qmesh.nodeEdges[qmesh.edges[i].second].begin(),
+                        qmesh.nodeEdges[qmesh.edges[i].second].end(), 
+                        i) == 1);
+      for (j = 0; j != qmesh.edgeFaces[i].size(); ++j) {
+        iface = qmesh.edgeFaces[i][j];
+        POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
+        if (iface < 0) {
+          POLY_ASSERT(count(qmesh.faces[~iface].begin(), qmesh.faces[~iface].end(), ~i) == 1);
+        } else {
+          POLY_ASSERT(count(qmesh.faces[iface].begin(), qmesh.faces[iface].end(), i) == 1);
+        }
+      }
+    }
+    for (i = 0; i != qmesh.faces.size(); ++i) {
+      const unsigned nedges = qmesh.faces[i].size();
+      POLY_ASSERT(nedges >= 3);
+      for (j = 0; j != nedges; ++j) {
+        k = (j + 1) % nedges;
+        const int iedge1 = qmesh.faces[i][j];
+        const int iedge2 = qmesh.faces[i][k];
+        POLY_ASSERT(internal::positiveID(iedge1) < qmesh.edges.size());
+        POLY_ASSERT(internal::positiveID(iedge2) < qmesh.edges.size());
+        if (iedge1 >= 0 and iedge2 >= 0) {
+          POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[iedge2].first);
+        } else if (iedge1 >= 0 and iedge2 < 0) {
+          POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[~iedge2].second);
+        } else if (iedge1 < 0 and iedge2 >= 0) {
+          POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[iedge2].first);
+        } else {
+          POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[~iedge2].second);
+        }
+        if (iedge1 < 0) {
+          POLY_ASSERT(count(qmesh.edgeFaces[~iedge1].begin(), qmesh.edgeFaces[~iedge1].end(), ~i) == 1);
+        } else {
+          POLY_ASSERT(count(qmesh.edgeFaces[iedge1].begin(), qmesh.edgeFaces[iedge1].end(), i) == 1);
+        }
+      }
+      POLY_ASSERT(qmesh.faceCells[i].size() == 1 or qmesh.faceCells[i].size() == 2);
+      for (j = 0; j != qmesh.faceCells[i].size(); ++ j) {
+        const int icell = qmesh.faceCells[i][j];
+        POLY_ASSERT(internal::positiveID(icell) < numGenerators);
+        if (icell < 0) {
+          POLY_ASSERT(count(qmesh.cells[~icell].begin(), qmesh.cells[~icell].begin(), ~i) == 1);
+        } else {
+          POLY_ASSERT(count(qmesh.cells[icell].begin(), qmesh.cells[icell].begin(), i) == 1);
+        }
+      }
+    }
+    for (i = 0; i != numGenerators; ++i) {
+      const unsigned nfaces = qmesh.cells[i].size();
+      POLY_ASSERT(nfaces >= 4);
+      for (j = 0; j != nfaces; ++j) {
+        iface = qmesh.cells[i][j];
+        POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
+        if (iface < 0) {
+          POLY_ASSERT(count(qmesh.faceCells[~iface].begin(), qmesh.faceCells[~iface].end(), ~i) == 1);
+        } else {
+          POLY_ASSERT(count(qmesh.faceCells[iface].begin(), qmesh.faceCells[iface].end(), i) == 1);
+        }
+      }
+    }
+  }
+  POLY_END_CONTRACT_SCOPE;
 }
 
 
