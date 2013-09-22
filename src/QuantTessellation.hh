@@ -26,18 +26,20 @@ public:
   RealType degeneracy;
 
   //----------------------------------------------------------------------------
-  // The mesh elements.
+  // The mesh elements and connectivity.
   //----------------------------------------------------------------------------
-  std::map<PointHash, int> point2id;         // PointHash -> unique point ID
-  std::map<EdgeHash, int> edge2id;           // EdgeHash  -> unique edge ID
-  std::vector<PointHash> points;             // Hashed node positions.
-  std::vector<EdgeHash> edges;               // Hashed edges (node index pairs).
-  std::vector<std::vector<int> > faces;      // Faces made of edges (with orientation)
-  std::vector<std::vector<int> > cells;      // Cells made of faces (with orientation)
-  std::vector<std::vector<int> > faceCells;  // Cells of each face.
-  std::vector<unsigned> infNodes;            // Indices of nodes projected to the infSphere
-  std::vector<unsigned> infEdges;            // Indices of edges projected to the infSphere
-  std::vector<unsigned> infFaces;            // Indices of faces projected to the infSphere
+  std::map<PointHash, int> point2id;              // PointHash -> unique point ID
+  std::map<EdgeHash, int> edge2id;                // EdgeHash  -> unique edge ID
+  std::vector<PointHash> points;                  // Hashed node positions.
+  std::vector<EdgeHash> edges;                    // Hashed edges (node index pairs).
+  std::vector<std::vector<int> > faces;           // Faces made of edges (with orientation)
+  std::vector<std::vector<int> > cells;           // Cells made of faces (with orientation)
+  std::vector<std::vector<unsigned> > nodeEdges;  // Edges of each node.
+  std::vector<std::vector<int> > edgeFaces;       // Faces of each edge. (with orientation)
+  std::vector<std::vector<int> > faceCells;       // Cells of each face. (with orientation)
+  std::vector<unsigned> infNodes;                 // Indices of nodes projected to the infSphere
+  std::vector<unsigned> infEdges;                 // Indices of edges projected to the infSphere
+  std::vector<unsigned> infFaces;                 // Indices of faces projected to the infSphere
 
   //----------------------------------------------------------------------------
   // Hash the given position.
@@ -55,15 +57,24 @@ public:
     const PointHash ix = hashPosition(x);
     const int k = point2id.size();
     const int result = internal::addKeyToMap(ix, point2id);
-    if (result == k) points.push_back(ix);
+    if (result == k) {
+      points.push_back(ix);
+      nodeEdges.push_back(std::vector<unsigned>());
+    }
     POLY_ASSERT(points.size() == point2id.size());
+    POLY_ASSERT(nodeEdges.size() == point2id.size());
     return result;
   }
+
   int addNewEdge(const EdgeHash& x) {
     const int k = edge2id.size();
     const int result = internal::addKeyToMap(x, edge2id);
-    if (result == k) edges.push_back(x);
+    if (result == k) {
+      edges.push_back(x);
+      edgeFaces.push_back(std::vector<int>());
+    }
     POLY_ASSERT(edges.size() == edge2id.size());
+    POLY_ASSERT(edgeFaces.size() == edge2id.size());
     return result;
   }
 
