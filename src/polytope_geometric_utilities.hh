@@ -45,6 +45,12 @@ template<int Dimension, typename RealType> struct Hasher;
 // 2D
 template<typename RealType> struct Hasher<2, RealType> {
 
+  static uint64_t outerFlag()               { return (1ULL << 63); }
+  static uint64_t xmask()                   { return (1ULL << 31) - 1ULL; }
+  static uint64_t ymask()                   { return xmask() << 31; }
+  static uint64_t qxval(const uint64_t val) { return (val & xmask()); }
+  static uint64_t qyval(const uint64_t val) { return (val & ymask()) >> 31; }
+
   // Hash a 2 position
   static uint64_t hashPosition(RealType* pos,
                                RealType* xlow_inner,
@@ -130,6 +136,14 @@ template<typename RealType> struct Hasher<2, RealType> {
 // 3D
 template<typename RealType> struct Hasher<3, RealType> {
 
+  static uint64_t outerFlag()               { return (1ULL << 63); }
+  static uint64_t xmask()                   { return (1ULL << 21) - 1ULL; }
+  static uint64_t ymask()                   { return xmask() << 21; }
+  static uint64_t zmask()                   { return xmask() << 42; }
+  static uint64_t qxval(const uint64_t val) { return (val & xmask()); }
+  static uint64_t qyval(const uint64_t val) { return (val & ymask()) >> 21; }
+  static uint64_t qzval(const uint64_t val) { return (val & zmask()) >> 42; }
+
   // Hash a 3 position
   static uint64_t hashPosition(RealType* pos,
                                RealType* xlow_inner,
@@ -211,8 +225,8 @@ template<typename RealType> struct Hasher<3, RealType> {
                             std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
                             std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
     const uint64_t xmask = (1ULL << 21) - 1ULL,
-      ymask = xmask << 21,
-      zmask = ymask << 21;
+                   ymask = xmask << 21,
+                   zmask = ymask << 21;
     pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
     pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
     pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];

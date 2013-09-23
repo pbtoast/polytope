@@ -263,10 +263,13 @@ tessellate(const vector<double>& points,
            double* high,
            Tessellation<3, double>& mesh) const {
 
+  typedef geometry::Hasher<3, double> HasherType;
   typedef internal::QuantTessellation<3, double>::PointHash PointHash;
   typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
   typedef internal::QuantTessellation<3, double>::IntPoint IntPoint;
   typedef internal::QuantTessellation<3, double>::RealPoint RealPoint;
+
+  const PointHash outerFlag = HasherType::outerFlag();
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
@@ -282,34 +285,49 @@ tessellate(const vector<double>& points,
   }
 
   // Create the unbounded QuantTessellation.
-  internal::QuantTessellation<3, double> qmesh;
+  internal::QuantTessellation<3, double> qmesh0;
   vector<double> nonGeneratingPoints(6);
   copy(low, low + 3, &nonGeneratingPoints[0]);
   copy(high, high + 3, &nonGeneratingPoints[3]);
-  this->computeUnboundedQuantizedTessellation(points, nonGeneratingPoints, qmesh);
+  this->computeUnboundedQuantizedTessellation(points, nonGeneratingPoints, qmesh0);
 
-  // Compute the quantized consistent box boundaries.
-  RealPoint box_labframe = qmesh.high_labframe - qmesh.low_labframe;
-  POLY_ASSERT(qmesh.low_labframe.x <= low[0] and low[0] <= qmesh.high_labframe.x);
-  POLY_ASSERT(qmesh.low_labframe.y <= low[1] and low[1] <= qmesh.high_labframe.y);
-  POLY_ASSERT(qmesh.low_labframe.z <= low[2] and low[2] <= qmesh.high_labframe.z);
-  const RealPoint plow = qmesh.unhashPosition(qmesh.hashPosition(RealPoint((low[0] - qmesh.low_labframe.x)/box_labframe.x,
-                                                                           (low[1] - qmesh.low_labframe.y)/box_labframe.y,
-                                                                           (low[2] - qmesh.low_labframe.z)/box_labframe.z))),
-                 phigh = qmesh.unhashPosition(qmesh.hashPosition(RealPoint((high[0] - qmesh.low_labframe.x)/box_labframe.x,
-                                                                           (high[1] - qmesh.low_labframe.y)/box_labframe.y,
-                                                                           (high[2] - qmesh.low_labframe.z)/box_labframe.z)));
+  // Find the quantized box boundaries.  Both points should be in the inner bounding
+  // box.
+  const PointHash plow = qmesh0.hashPosition(RealPoint(low[0], low[1], low[2])),
+                 phigh = qmesh0.hashPosition(RealPoint(high[0], high[1], high[2]));
+  POLY_ASSERT(plow ^ outerFlag);
+  POLY_ASSERT(phigh ^ outerFlag);
+  const PointHash qxlow = HasherType::qxval(plow), 
+                  qylow = HasherType::qyval(plow), 
+                  qzlow = HasherType::qzval(plow),
+                 qxhigh = HasherType::qxval(phigh), 
+                 qyhigh = HasherType::qyval(phigh), 
+                 qzhigh = HasherType::qzval(phigh);
 
-  // Scan for any nodes outside the bounding box.
-  vector<unsigned> nodes2kill;
-  for (unsigned i = 0; i != qmesh.points.size(); ++i) {
-    const RealPoint p = qmesh.nodePosition(i);
-    if (p.x < plow.x or p.x > phigh.x or
-        p.y < plow.y or p.y > phigh.y or
-        p.z < plow.z or p.z > phigh.z) nodes2kill.push_back(i);
+  // Create a new QuantTessellation.
+  internal::QuantTessellation<3, double> qmesh1;
+  qmesh1.generators = qmesh0.generators;
+  qmesh1.low_labframe = qmesh0.low_labframe;
+  qmesh1.high_labframe = qmesh0.high_labframe;
+  qmesh1.low_inner = qmesh0.low_inner;
+  qmesh1.high_inner = qmesh0.high_inner;
+  qmesh1.degeneracy = qmesh0.degeneracy;
+
+  // Copy over all the surviving points from the unbounded mesh.
+  vector<unsigned> nodes2kill(qmesh0.points.size(), 0);
+  for (unsigned i = 0; i != qmesh0.points.size(); ++i) {
+    if ((qmesh0.points[i] & outerFlag) or
+        (HasherType::qxval(qmesh0.points[i]) < qxlow or HasherType::qxval(qmesh0.points[i]) > qxhigh) or
+        (HasherType::qyval(qmesh0.points[i]) < qylow or HasherType::qyval(qmesh0.points[i]) > qyhigh) or
+        (HasherType::qzval(qmesh0.points[i]) < qzlow or HasherType::qzval(qmesh0.points[i]) > qzhigh)) {
+      nodes2kill[i] = 1;
+    } else {
+      qmesh1.point2id[qmesh0.points[i]] = qmesh1.points.size();
+      qmesh1.points.push_back(qmesh0.points[i]);
+    }
   }
 
-  // CONTINUE FROM HERE!
+
 
   // Flag all the inf nodes in a fast lookup array.
   unsigned nnodes = mesh.nodes.size()/3;
@@ -672,15 +690,10 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
           const bool flip = (*itr < 0);
           k = (flip ? ~(*itr) : *itr);
           iedge = qmesh.addNewEdge(meshEdges[k]);
-          // qmesh.nodeEdges[meshEdges[k].first].push_back(iedge);
-          // qmesh.nodeEdges[meshEdges[k].second].push_back(iedge);
-          // qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
           qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
         }
 
         // Add the face to its cells.
-        // POLY_ASSERT(qmesh.faceCells.size() == iface);
-        // qmesh.faceCells.push_back(vector<int>());
         e0 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[0])]);
         e1 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[1])]);
         e2 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[2])]);
@@ -689,13 +702,9 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         if (vol > 0.0) {
           qmesh.cells[a].push_back(iface);
           qmesh.cells[b].push_back(~iface);
-          // qmesh.faceCells[iface].push_back(a);
-          // qmesh.faceCells[iface].push_back(~int(b));
         } else {
           qmesh.cells[a].push_back(~iface);
           qmesh.cells[b].push_back(iface);
-          // qmesh.faceCells[iface].push_back(~int(a));
-          // qmesh.faceCells[iface].push_back(b);
         }
 
         // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
@@ -737,19 +746,11 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         k = (flip ? ~(*itr) : *itr);
         iedge = qmesh.addNewEdge(cellInfEdges[i][k]);
         qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
-        // qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
       }
       qmesh.cells[i].push_back(iface);
-      // qmesh.faceCells.push_back(vector<int>(1, i));
       qmesh.infFaces.push_back(iface);
     }
   }
-
-  // // Reduce the sets nodeEdges to their unique values.
-  // for (i = 0; i != qmesh.nodeEdges.size(); ++i) {
-  //   sort(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end());
-  //   qmesh.nodeEdges[i].erase(unique(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end()), qmesh.nodeEdges[i].end());
-  // }
 
   // Post-conditions.
   POLY_BEGIN_CONTRACT_SCOPE;
