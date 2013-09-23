@@ -13,6 +13,8 @@ class QuantTessellation {
 public:
   typedef uint64_t PointHash;
   typedef std::pair<int, int> EdgeHash;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
 
   // The normalized generator coordinates.
@@ -49,6 +51,14 @@ public:
                                                                &low_inner.x, &high_inner.x, 
                                                                &low_outer.x, &high_outer.x);
   }
+  RealPoint unhashPosition(const PointHash ip) {
+    RealPoint result;
+    geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
+                                                          &low_inner.x, &high_inner.x, 
+                                                          &low_outer.x, &high_outer.x, 
+                                                          ip);
+    return result;
+  }
 
   //----------------------------------------------------------------------------
   // Add new elements, and return the unique index.
@@ -83,12 +93,7 @@ public:
   //----------------------------------------------------------------------------
   RealPoint nodePosition(const unsigned i) {
     POLY_ASSERT(i < points.size());
-    RealPoint result;
-    geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
-                                                          &low_inner.x, &high_inner.x, 
-                                                          &low_outer.x, &high_outer.x, 
-                                                          points[i]);
-    return result;
+    return unhashPosition(points[i]);
   }
 
   //----------------------------------------------------------------------------

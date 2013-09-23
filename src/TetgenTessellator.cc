@@ -263,6 +263,11 @@ tessellate(const vector<double>& points,
            double* high,
            Tessellation<3, double>& mesh) const {
 
+  typedef internal::QuantTessellation<3, double>::PointHash PointHash;
+  typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
+  typedef internal::QuantTessellation<3, double>::IntPoint IntPoint;
+  typedef internal::QuantTessellation<3, double>::RealPoint RealPoint;
+
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
@@ -282,6 +287,27 @@ tessellate(const vector<double>& points,
   copy(low, low + 3, &nonGeneratingPoints[0]);
   copy(high, high + 3, &nonGeneratingPoints[3]);
   this->computeUnboundedQuantizedTessellation(points, nonGeneratingPoints, qmesh);
+
+  // Compute the quantized consistent box boundaries.
+  RealPoint box_labframe = qmesh.high_labframe - qmesh.low_labframe;
+  POLY_ASSERT(qmesh.low_labframe.x <= low[0] and low[0] <= qmesh.high_labframe.x);
+  POLY_ASSERT(qmesh.low_labframe.y <= low[1] and low[1] <= qmesh.high_labframe.y);
+  POLY_ASSERT(qmesh.low_labframe.z <= low[2] and low[2] <= qmesh.high_labframe.z);
+  const RealPoint plow = qmesh.unhashPosition(qmesh.hashPosition(RealPoint((low[0] - qmesh.low_labframe.x)/box_labframe.x,
+                                                                           (low[1] - qmesh.low_labframe.y)/box_labframe.y,
+                                                                           (low[2] - qmesh.low_labframe.z)/box_labframe.z))),
+                 phigh = qmesh.unhashPosition(qmesh.hashPosition(RealPoint((high[0] - qmesh.low_labframe.x)/box_labframe.x,
+                                                                           (high[1] - qmesh.low_labframe.y)/box_labframe.y,
+                                                                           (high[2] - qmesh.low_labframe.z)/box_labframe.z)));
+
+  // Scan for any nodes outside the bounding box.
+  vector<unsigned> nodes2kill;
+  for (unsigned i = 0; i != qmesh.points.size(); ++i) {
+    const RealPoint p = qmesh.nodePosition(i);
+    if (p.x < plow.x or p.x > phigh.x or
+        p.y < plow.y or p.y > phigh.y or
+        p.z < plow.z or p.z > phigh.z) nodes2kill.push_back(i);
+  }
 
   // CONTINUE FROM HERE!
 

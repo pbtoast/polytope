@@ -114,7 +114,7 @@ template<typename RealType> struct Hasher<2, RealType> {
     const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
                             std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
     const uint64_t xmask = (1ULL << 31) - 1ULL,
-      ymask = xmask << 31;
+                   ymask = xmask << 31;
     pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
     pos[1] = xlow[1] + (((hashedPosition & ymask) >> 31) + 0.5)*dx[1];
 

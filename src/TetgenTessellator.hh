@@ -60,9 +60,6 @@ public:
 private:
   //-------------------- Private interface --------------------
   typedef int64_t CoordHash;
-  typedef std::pair<int, int> EdgeHash;
-  typedef Point3<CoordHash> IntPoint;
-  typedef Point3<RealType> RealPoint;
   static CoordHash coordMax;
   static RealType mDegeneracy;
 
