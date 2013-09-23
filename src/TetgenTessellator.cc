@@ -681,15 +681,15 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
           const bool flip = (*itr < 0);
           k = (flip ? ~(*itr) : *itr);
           iedge = qmesh.addNewEdge(meshEdges[k]);
-          qmesh.nodeEdges[meshEdges[k].first].push_back(iedge);
-          qmesh.nodeEdges[meshEdges[k].second].push_back(iedge);
-          qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
+          // qmesh.nodeEdges[meshEdges[k].first].push_back(iedge);
+          // qmesh.nodeEdges[meshEdges[k].second].push_back(iedge);
+          // qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
           qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
         }
 
         // Add the face to its cells.
-        POLY_ASSERT(qmesh.faceCells.size() == iface);
-        qmesh.faceCells.push_back(vector<int>());
+        // POLY_ASSERT(qmesh.faceCells.size() == iface);
+        // qmesh.faceCells.push_back(vector<int>());
         e0 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[0])]);
         e1 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[1])]);
         e2 = qmesh.edgePosition(meshEdges[internal::positiveID(edgeOrder[2])]);
@@ -698,13 +698,13 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         if (vol > 0.0) {
           qmesh.cells[a].push_back(iface);
           qmesh.cells[b].push_back(~iface);
-          qmesh.faceCells[iface].push_back(a);
-          qmesh.faceCells[iface].push_back(~int(b));
+          // qmesh.faceCells[iface].push_back(a);
+          // qmesh.faceCells[iface].push_back(~int(b));
         } else {
           qmesh.cells[a].push_back(~iface);
           qmesh.cells[b].push_back(iface);
-          qmesh.faceCells[iface].push_back(~int(a));
-          qmesh.faceCells[iface].push_back(b);
+          // qmesh.faceCells[iface].push_back(~int(a));
+          // qmesh.faceCells[iface].push_back(b);
         }
 
         // Did we create a new infEdge?  If so we know it was the second one in the ordered list.
@@ -746,45 +746,48 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         k = (flip ? ~(*itr) : *itr);
         iedge = qmesh.addNewEdge(cellInfEdges[i][k]);
         qmesh.faces[iface].push_back(flip ? ~iedge : iedge);
-        qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
+        // qmesh.edgeFaces[iedge].push_back(flip ? ~iface : iface);
       }
       qmesh.cells[i].push_back(iface);
-      qmesh.faceCells.push_back(vector<int>(1, i));
+      // qmesh.faceCells.push_back(vector<int>(1, i));
       qmesh.infFaces.push_back(iface);
     }
   }
 
-  // Reduce the sets nodeEdges to their unique values.
-  for (i = 0; i != qmesh.nodeEdges.size(); ++i) {
-    sort(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end());
-    qmesh.nodeEdges[i].erase(unique(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end()), qmesh.nodeEdges[i].end());
-  }
+  // // Reduce the sets nodeEdges to their unique values.
+  // for (i = 0; i != qmesh.nodeEdges.size(); ++i) {
+  //   sort(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end());
+  //   qmesh.nodeEdges[i].erase(unique(qmesh.nodeEdges[i].begin(), qmesh.nodeEdges[i].end()), qmesh.nodeEdges[i].end());
+  // }
 
   // Post-conditions.
   POLY_BEGIN_CONTRACT_SCOPE;
   {
+    const vector<vector<unsigned> > nodeEdges = qmesh.nodeEdges();
+    const vector<vector<int> > edgeFaces = qmesh.edgeFaces();
+    const vector<vector<int> > faceCells = qmesh.faceCells();
     POLY_ASSERT(qmesh.points.size() == qmesh.point2id.size());
     POLY_ASSERT(qmesh.edges.size() == qmesh.edge2id.size());
     POLY_ASSERT(qmesh.cells.size() == numGenerators);
-    POLY_ASSERT(qmesh.nodeEdges.size() == qmesh.point2id.size());
-    POLY_ASSERT(qmesh.edgeFaces.size() == qmesh.edges.size());
-    POLY_ASSERT(qmesh.faceCells.size() == qmesh.faces.size());
+    POLY_ASSERT(nodeEdges.size() == qmesh.point2id.size());
+    POLY_ASSERT(edgeFaces.size() == qmesh.edges.size());
+    POLY_ASSERT(faceCells.size() == qmesh.faces.size());
     for (i = 0; i != qmesh.points.size(); ++i) {
-      for (j = 0; j != qmesh.nodeEdges[i].size(); ++j) {
-        POLY_ASSERT(qmesh.edges[qmesh.nodeEdges[i][j]].first == i or qmesh.edges[qmesh.nodeEdges[i][j]].second == i);
+      for (j = 0; j != nodeEdges[i].size(); ++j) {
+        POLY_ASSERT(qmesh.edges[nodeEdges[i][j]].first == i or qmesh.edges[nodeEdges[i][j]].second == i);
       }
     }
     for (i = 0; i != qmesh.edges.size(); ++i) {
       POLY_ASSERT(qmesh.edges[i].first < qmesh.points.size());
       POLY_ASSERT(qmesh.edges[i].second < qmesh.points.size());
-      POLY_ASSERT(count(qmesh.nodeEdges[qmesh.edges[i].first].begin(),
-                        qmesh.nodeEdges[qmesh.edges[i].first].end(), 
+      POLY_ASSERT(count(nodeEdges[qmesh.edges[i].first].begin(),
+                        nodeEdges[qmesh.edges[i].first].end(), 
                         i) == 1);
-      POLY_ASSERT(count(qmesh.nodeEdges[qmesh.edges[i].second].begin(),
-                        qmesh.nodeEdges[qmesh.edges[i].second].end(), 
+      POLY_ASSERT(count(nodeEdges[qmesh.edges[i].second].begin(),
+                        nodeEdges[qmesh.edges[i].second].end(), 
                         i) == 1);
-      for (j = 0; j != qmesh.edgeFaces[i].size(); ++j) {
-        iface = qmesh.edgeFaces[i][j];
+      for (j = 0; j != edgeFaces[i].size(); ++j) {
+        iface = edgeFaces[i][j];
         POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
         if (iface < 0) {
           POLY_ASSERT(count(qmesh.faces[~iface].begin(), qmesh.faces[~iface].end(), ~i) == 1);
@@ -812,14 +815,14 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
           POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[~iedge2].second);
         }
         if (iedge1 < 0) {
-          POLY_ASSERT(count(qmesh.edgeFaces[~iedge1].begin(), qmesh.edgeFaces[~iedge1].end(), ~i) == 1);
+          POLY_ASSERT(count(edgeFaces[~iedge1].begin(), edgeFaces[~iedge1].end(), ~i) == 1);
         } else {
-          POLY_ASSERT(count(qmesh.edgeFaces[iedge1].begin(), qmesh.edgeFaces[iedge1].end(), i) == 1);
+          POLY_ASSERT(count(edgeFaces[iedge1].begin(), edgeFaces[iedge1].end(), i) == 1);
         }
       }
-      POLY_ASSERT(qmesh.faceCells[i].size() == 1 or qmesh.faceCells[i].size() == 2);
-      for (j = 0; j != qmesh.faceCells[i].size(); ++ j) {
-        const int icell = qmesh.faceCells[i][j];
+      POLY_ASSERT(faceCells[i].size() == 1 or faceCells[i].size() == 2);
+      for (j = 0; j != faceCells[i].size(); ++ j) {
+        const int icell = faceCells[i][j];
         POLY_ASSERT(internal::positiveID(icell) < numGenerators);
         if (icell < 0) {
           POLY_ASSERT(count(qmesh.cells[~icell].begin(), qmesh.cells[~icell].begin(), ~i) == 1);
@@ -835,9 +838,9 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
         iface = qmesh.cells[i][j];
         POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
         if (iface < 0) {
-          POLY_ASSERT(count(qmesh.faceCells[~iface].begin(), qmesh.faceCells[~iface].end(), ~i) == 1);
+          POLY_ASSERT(count(faceCells[~iface].begin(), faceCells[~iface].end(), ~i) == 1);
         } else {
-          POLY_ASSERT(count(qmesh.faceCells[iface].begin(), qmesh.faceCells[iface].end(), i) == 1);
+          POLY_ASSERT(count(faceCells[iface].begin(), faceCells[iface].end(), i) == 1);
         }
       }
     }

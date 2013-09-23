@@ -36,9 +36,6 @@ public:
   std::vector<EdgeHash> edges;                    // Hashed edges (node index pairs).
   std::vector<std::vector<int> > faces;           // Faces made of edges (with orientation)
   std::vector<std::vector<int> > cells;           // Cells made of faces (with orientation)
-  std::vector<std::vector<unsigned> > nodeEdges;  // Edges of each node.
-  std::vector<std::vector<int> > edgeFaces;       // Faces of each edge. (with orientation)
-  std::vector<std::vector<int> > faceCells;       // Cells of each face. (with orientation)
   std::vector<unsigned> infNodes;                 // Indices of nodes projected to the infSphere
   std::vector<unsigned> infEdges;                 // Indices of edges projected to the infSphere
   std::vector<unsigned> infFaces;                 // Indices of faces projected to the infSphere
@@ -69,10 +66,8 @@ public:
     const int result = internal::addKeyToMap(ix, point2id);
     if (result == k) {
       points.push_back(ix);
-      nodeEdges.push_back(std::vector<unsigned>());
     }
     POLY_ASSERT(points.size() == point2id.size());
-    POLY_ASSERT(nodeEdges.size() == point2id.size());
     return result;
   }
 
@@ -81,10 +76,8 @@ public:
     const int result = internal::addKeyToMap(x, edge2id);
     if (result == k) {
       edges.push_back(x);
-      edgeFaces.push_back(std::vector<int>());
     }
     POLY_ASSERT(edges.size() == edge2id.size());
-    POLY_ASSERT(edgeFaces.size() == edge2id.size());
     return result;
   }
 
@@ -118,6 +111,58 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  // Compute the node->edge connectivity.
+  //----------------------------------------------------------------------------
+  std::vector<std::vector<unsigned> > nodeEdges() const {
+    std::vector<std::vector<unsigned> > result(points.size());
+    for (unsigned iedge = 0; iedge != edges.size(); ++iedge) {
+      POLY_ASSERT(edges[iedge].first < points.size());
+      POLY_ASSERT(edges[iedge].second < points.size());
+      result[edges[iedge].first].push_back(iedge);
+      result[edges[iedge].second].push_back(iedge);
+    }
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  // Compute the edge->face connectivity.
+  //----------------------------------------------------------------------------
+  std::vector<std::vector<int> > edgeFaces() const {
+    std::vector<std::vector<int> > result(edges.size());
+    for (int iface = 0; iface != faces.size(); ++iface) {
+      for (unsigned k = 0; k != faces[iface].size(); ++k) {
+        if (faces[iface][k] < 0) {
+          POLY_ASSERT(~faces[iface][k] < edges.size());
+          result[~faces[iface][k]].push_back(~iface);
+        } else {
+          POLY_ASSERT(faces[iface][k] < edges.size());
+          result[faces[iface][k]].push_back(iface);
+        }
+      }
+    }
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  // Compute the face->cell connectivity.
+  //----------------------------------------------------------------------------
+  std::vector<std::vector<int> > faceCells() const {
+    std::vector<std::vector<int> > result(faces.size());
+    for (int icell = 0; icell != cells.size(); ++icell) {
+      for (unsigned k = 0; k != cells[icell].size(); ++k) {
+        if (cells[icell][k] < 0) {
+          POLY_ASSERT(~cells[icell][k] < faces.size());
+          result[~cells[icell][k]].push_back(~icell);
+        } else {
+          POLY_ASSERT(cells[icell][k] < faces.size());
+          result[cells[icell][k]].push_back(icell);
+        }
+      }
+    }
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
   // Convert our internal data to a standard polytope Tessellation.
   //----------------------------------------------------------------------------
   void tessellation(Tessellation<Dimension, RealType>& mesh) {
@@ -131,7 +176,6 @@ public:
     }
 
     // Faces.
-    POLY_ASSERT(faces.size() == faceCells.size());
     mesh.faces.reserve(faces.size());
     for (unsigned i = 0; i != faces.size(); ++i) {
       mesh.faces.push_back(std::vector<unsigned>());
@@ -150,7 +194,7 @@ public:
     mesh.cells = cells;
     mesh.infNodes = infNodes;
     mesh.infFaces = infFaces;
-    mesh.faceCells = faceCells;
+    mesh.faceCells = this->faceCells();
   }
 
 };
