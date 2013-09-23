@@ -388,7 +388,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the normalized generators.
   const unsigned numGenerators = points.size() / 3;
-  qmesh.generators = this->computeNormalizedPoints(points, points, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
+  qmesh.generators = this->computeNormalizedPoints(points, nonGeneratingPoints, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
   unsigned i, j, k;
 
   // Build the input to tetgen.
@@ -489,15 +489,6 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
                 qmesh.low_outer.z < qmesh.high_outer.z);
   }
   POLY_END_CONTRACT_SCOPE;
-
-  // Make sure the outer bounding box encompasses any non-generating points
-  // we were handed.
-  for (i = 0; i != nonGeneratingPoints.size()/3; ++i) {
-    for (j = 0; j != 3; ++j) {
-      qmesh.low_outer[j] = min(qmesh.low_outer[j], nonGeneratingPoints[3*i + j]);
-      qmesh.high_outer[j] = max(qmesh.high_outer[j], nonGeneratingPoints[3*i + j]);
-    }
-  }
 
   // Expand the outer bounding box, and choose our infSphere radius.
   qmesh.low_outer.x = min(qmesh.low_outer.x, qmesh.low_inner.x);
