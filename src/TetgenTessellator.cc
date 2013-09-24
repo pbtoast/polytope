@@ -219,6 +219,85 @@ findOtherTetIndices(const int* indices,
   }
 }
 
+//------------------------------------------------------------------------------
+// Build a ReducedPLC representation of a cell.
+//------------------------------------------------------------------------------
+template<typename RealType>
+ReducedPLC<3, typename internal::QuantTessellation<3, RealType>::PointHash>
+plcOfCell(const internal::QuantTessellation<3, RealType>& qmesh,
+          const unsigned icell) {
+  typedef typename internal::QuantTessellation<3, RealType>::PointHash PointHash;
+  ReducedPLC<3, PointHash> result;
+  std::map<int, int> old2new;
+  for (unsigned i = 0; i != qmesh.cells[icell].size(); ++i) {
+    result.facets.push_back(vector<int>());
+    if (qmesh.cells[icell][i] < 0) {
+      const unsigned iface = ~qmesh.cells[icell][i];
+      const unsigned nnodes = qmesh.faces[iface].size();
+      for (int j = nnodes - 1; j != -1; --j) {
+        const int iedge = qmesh.faces[iface][j];
+        const int ip = iedge < 0 ? qmesh.edges[~iedge].first : qmesh.edges[~iedge].second;
+        if (old2new.find(ip) == old2new.end()) {
+          old2new[ip] = result.points.size();
+          result.points.push_back(qmesh.points[ip]);
+        }
+        result.facets.back().push_back(old2new[ip]);
+      }
+      POLY_ASSERT(result.facets.back().size() == nnodes);
+    } else {
+      const unsigned iface = qmesh.cells[icell][i];
+      const unsigned nnodes = qmesh.faces[iface].size();
+      for (int j = 0; j != nnodes; ++j) {
+        const int iedge = qmesh.faces[iface][j];
+        const int ip = iedge < 0 ? qmesh.edges[iedge].second : qmesh.edges[iedge].first;
+        if (old2new.find(ip) == old2new.end()) {
+          old2new[ip] = result.points.size();
+          result.points.push_back(qmesh.points[ip]);
+        }
+        result.facets.back().push_back(old2new[ip]);
+      }
+      POLY_ASSERT(result.facets.back().size() == nnodes);
+    }
+  }
+  POLY_ASSERT(result.facets.size() == qmesh.cells[icell].size());
+  return result;
+}
+
+// //------------------------------------------------------------------------------
+// // Compare a point with plane: returns (-1,0,1) for the point 
+// // (below,coplanar,above) the plane
+// //------------------------------------------------------------------------------
+// int
+// compare(const uint64_t point,
+//         const uint64_t pointPlane,
+//         const uint64_t normalPlane) {
+//   typedef Point3<int64_t> Point;
+//   typedef geometry::Hasher<3, double> HasherType;
+  
+//   Point p(
+// }
+
+//------------------------------------------------------------------------------
+// Clip a ReducedPLC with a plane.  The plane is specified in (point, normal)
+// form in the arguments.  For now we require the plane be aligned in the x, y,
+// or z direction: i.e., normals (1,0,0), (0,1,0), or (0,0,1).
+//------------------------------------------------------------------------------
+template<typename RealType>
+ReducedPLC<3, typename internal::QuantTessellation<3, RealType>::PointHash>
+clipReducedPLC(const ReducedPLC<3, typename internal::QuantTessellation<3, RealType>::PointHash>& cell,
+               const PointHash pointPlane,
+               const PointHash normalPlane) {
+  typedef typename internal::QuantTessellation<3, RealType>::PointHash PointHash;
+  typedef geometry::Hasher<3, double> HasherType;
+  const PointHash xnorm = HasherType::qxval(normalPlane),
+                  ynorm = HasherType::qyval(normalPlane),
+                  znorm = HasherType::qzval(normalPlane);
+  POLY_ASSERT(xnorm + ynorm + znorm == 1);
+
+  
+
+}
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -313,6 +392,17 @@ tessellate(const vector<double>& points,
   qmesh1.high_inner = qmesh0.high_inner;
   qmesh1.degeneracy = qmesh0.degeneracy;
 
+  // Walk each of the cells in the unbounded tessellation.
+  for (unsigned icell = 0; icell != numGenerators; ++icell) {
+
+    // Build a PLC to represent just this cell.
+    ReducedPLC<3, PointHash> cell = plcOfCell(qmesh0, icell);
+
+    // Clip this PLC by each plane of our bounding box.
+    
+
+  }
+
   // Copy over all the surviving points from the unbounded mesh.
   vector<unsigned> nodes2kill(qmesh0.points.size(), 0);
   for (unsigned i = 0; i != qmesh0.points.size(); ++i) {
@@ -327,58 +417,6 @@ tessellate(const vector<double>& points,
     }
   }
 
-
-
-  // Flag all the inf nodes in a fast lookup array.
-  unsigned nnodes = mesh.nodes.size()/3;
-  int i, j, k, j0, k0, jplane, kplane;
-  //vector<unsigned> infNodeFlags(nnodes, 0);
-  //for (i = 0; i != mesh.infNodes.size(); ++i) infNodeFlags[mesh.infNodes[i]] = 1;
-
-  // Find the faces with "inf" nodes, and close them with edges along the
-  // bounding box.
-  RealPoint ray_hat;
-  unsigned nfaces = mesh.faces.size();
-  for (i = 0; i != nfaces; ++i) {
-    vector<unsigned>& faceNodes = mesh.faces[i];
-    j = 0;
-    while (j < faceNodes.size() and mesh.infNodes[faceNodes[j]] == 0) ++j;
-    if (j < faceNodes.size()) {
-
-      // Yep, this face has inf nodes.  There should be two of 'em.
-      k = (j + 1) % faceNodes.size();
-      j0 = (j - 1) % faceNodes.size(); 
-      k0 = (k - 1) % faceNodes.size(); 
-      POLY_ASSERT(mesh.infNodes[faceNodes[j]] == 1 and
-                  mesh.infNodes[faceNodes[k]] == 1 and
-                  mesh.infNodes[faceNodes[j0]] == 0 and
-                  mesh.infNodes[faceNodes[k0]] == 0);
-      ray_hat.x = mesh.nodes[3*j]   - mesh.nodes[3*j0];
-      ray_hat.y = mesh.nodes[3*j+1] - mesh.nodes[3*j0+1];
-      ray_hat.z = mesh.nodes[3*j+2] - mesh.nodes[3*j0+2];
-      geometry::unitVector<3, RealType>(&ray_hat.x);
-      jplane = geometry::rayBoxIntersection(&mesh.nodes[3*j0],
-                                            &ray_hat.x,
-                                            low,
-                                            high,
-                                            mDegeneracy,
-                                            &mesh.nodes[3*j]);
-      ray_hat.x = mesh.nodes[3*k]   - mesh.nodes[3*k0];
-      ray_hat.y = mesh.nodes[3*k+1] - mesh.nodes[3*k0+1];
-      ray_hat.z = mesh.nodes[3*k+2] - mesh.nodes[3*k0+2];
-      geometry::unitVector<3, RealType>(&ray_hat.x);
-      kplane = geometry::rayBoxIntersection(&mesh.nodes[3*k0],
-                                            &ray_hat.x,
-                                            low,
-                                            high,
-                                            mDegeneracy,
-                                            &mesh.nodes[3*k]);
-
-      // // Do we need to introduce a new node for this face?
-      // if (jplane != kplane) {
-      //   POLY_ASSERT(
-    }
-  }
 
 }
 
