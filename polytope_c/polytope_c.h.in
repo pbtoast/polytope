@@ -14,6 +14,8 @@
 #define HAVE_BOOST @HAVE_BOOST@
 #define HAVE_BOOST_VORONOI @HAVE_BOOST_VORONOI@
 
+#define polytope_real_t REAL_TYPE
+
 #include <stdbool.h>
 #include "polytope_tessellator.h"
 #include "polytope_silo_writer.h"

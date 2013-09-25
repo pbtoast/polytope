@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_TESSELLATOR_H
-#define POLYTOPE_TESSELLATOR_H
+#ifndef POLYTOPE_C_TESSELLATOR_H
+#define POLYTOPE_C_TESSELLATOR_H
 
 #include "polytope_c.h"
 #include "polytope_tessellation.h"
