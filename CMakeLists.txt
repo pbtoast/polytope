@@ -167,7 +167,7 @@ if (${USE_SILO} EQUAL 1)
   endif()
 
   # Add paths only if both SILO and HDF5 found.
-  if (${HDF5_FOUND} AND ${SILO_FOUND})
+  if (HDF5_FOUND AND SILO_FOUND)
     set(HAVE_SILO true)
     set(HAVE_HDF5 true)
     include_directories("${SILO_INCLUDE_DIRS}")
