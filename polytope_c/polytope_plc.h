@@ -1,5 +1,7 @@
-#ifndef POLYTOPE_C_PLC_HH
-#define POLYTOPE_C_PLC_HH
+#ifndef POLYTOPE_C_PLC_H
+#define POLYTOPE_C_PLC_H
+
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -8,7 +10,7 @@ extern "C"
 
 // This struct represents a piecewise linear complex corresponding to the 
 // C++ class polytope::PLC.
-typedef struct polytope_plc_t;
+typedef struct polytope_plc_t polytope_plc_t;
 
 // Creates a new empty PLC with the given dimension.
 polytope_plc_t* polytope_plc_new(int dimension);
@@ -29,7 +31,7 @@ int polytope_plc_add_hole(polytope_plc_t* plc);
 int polytope_plc_add_hole_facet(polytope_plc_t* plc, int hole);
 
 // Adds a node index to the given facet in the given hole within the PLC.
-void polytope_plc_add_hole_facet_node(polytope_plc_t* plc, int facet, int node);
+void polytope_plc_add_hole_facet_node(polytope_plc_t* plc, int hole, int facet, int node);
 
 // Returns the number of nodes in the given facet within the PLC.
 int polytope_plc_num_facet_nodes(polytope_plc_t* plc, int facet);

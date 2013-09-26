@@ -1,6 +1,7 @@
 #ifndef POLYTOPE_C_TESSELLATION_H
 #define POLYTOPE_C_TESSELLATION_H
 
+#include "polytope_c.h"
 #include "polytope_plc.h"
 
 #ifdef __cplusplus
@@ -10,7 +11,7 @@ extern "C"
 
 // This struct represents a tessellation corresponding to the C++ 
 // polytope::Tessellation class.
-typedef struct polytope_tessellation_t;
+typedef struct polytope_tessellation_t polytope_tessellation_t;
 
 // This function creates an empty tessellation with the given dimension.
 polytope_tessellation_t* polytope_tessellation_new(int dimension);

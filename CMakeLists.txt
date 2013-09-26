@@ -242,8 +242,8 @@ include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
 # Polytope C library -- not soup yet.
-#include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-#add_subdirectory(polytope_c)
+include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+add_subdirectory(polytope_c)
 
 # Tests directory
 if (${TESTING} EQUAL 1)
