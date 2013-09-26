@@ -18,6 +18,9 @@ polytope_tessellation_t* polytope_tessellation_new(int dimension);
 // This function should be called to destroy a tessellation.
 void polytope_tessellation_free(polytope_tessellation_t* tessellation);
 
+// Returns the dimension of the tessellation.
+int polytope_tessellation_dimension(polytope_tessellation_t* tessellation);
+
 // Clear the tessellation, emptying it of all data.
 void polytope_tessellation_clear(polytope_tessellation_t* tessellation);
 
@@ -74,21 +77,34 @@ void polytope_tessellation_get_face_cells(polytope_tessellation_t* tessellation,
 // hull yourself.
 polytope_plc_t* polytope_tessellation_convex_hull(polytope_tessellation_t* tessellation);
 
-// In the case of a parallel calculation, this function returns an internal
+// In the case of a parallel calculation, this function returns the number of 
+// neighbor domains this portion of the tessellation is in contact with. In a 
+// serial calculation, this returns 0.
+int polytope_tessellation_num_neighbor_domains(polytope_tessellation_t* tessellation);
+
+// In the case of a parallel calculation, this function retrieves an 
 // array containing the set of neighbor domains this portion of the 
 // tessellation is in contact with. In a serial calculation, this 
 // returns NULL.
-unsigned* polytope_tessellation_neighbor_domains(polytope_tessellation_t* tessellation, int* num_domains);
+void polytope_tessellation_get_neighbor_domains(polytope_tessellation_t* tessellation, unsigned* domains);
+
+// In the case of a parallel calculation, this function returns the number of 
+// nodes this tessellation interacts with on the given neighboring domain.
+int polytope_tessellation_num_neighbor_nodes(polytope_tessellation_t* tessellation, unsigned domain);
 
 // In the case of a parallel calculation, this function returns an internal
 // array containing the indices of nodes that are shared with the given 
 // neighbor domain.
-unsigned* polytope_tessellation_neighbor_nodes(polytope_tessellation_t* tessellation, unsigned domain, int* num_nodes);
+void polytope_tessellation_get_neighbor_nodes(polytope_tessellation_t* tessellation, unsigned domain, unsigned* nodes);
+
+// In the case of a parallel calculation, this function returns the number of 
+// faces this tessellation interacts with on the given neighboring domain.
+int polytope_tessellation_num_neighbor_faces(polytope_tessellation_t* tessellation, unsigned domain);
 
 // In the case of a parallel calculation, this function returns an internal
 // array containing the indices of faces that are shared with the given 
 // neighbor domain.
-unsigned* polytope_tessellation_neighbor_faces(polytope_tessellation_t* tessellation, unsigned domain, int* num_faces);
+void polytope_tessellation_get_neighbor_faces(polytope_tessellation_t* tessellation, unsigned domain, unsigned* faces);
 
 // Retrieves arrays containing the indices of the cells 
 // that touch the given mesh node. (CRS)
