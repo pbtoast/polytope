@@ -11,7 +11,7 @@ extern "C"
 
 // This struct represents a tessellator object that corresponds to the 
 // C++ polytope::Tessellator class.
-typedef struct polytope_tessellator_t;
+typedef struct polytope_tessellator_t polytope_tessellator_t;
 
 // This function should be called to destroy a tessellator.
 void polytope_tessellator_free(polytope_tessellator_t* tessellator);
