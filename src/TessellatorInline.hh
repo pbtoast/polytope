@@ -194,6 +194,12 @@ computeNormalizedPoints(const std::vector<RealType>& points,
       high[j] = std::max(high[j], high1[j]);
       POLY_ASSERT(low[j] < high[j]);
     }
+    // Add a small safety factor.
+    for (unsigned j = 0; j != Dimension; ++j) {
+      const double dx = 0.005*(high[j] - low[j]);
+      low[j] -= dx;
+      high[j] += dx;
+    }
   }
   double boxInv[Dimension];
   for (unsigned j = 0; j != Dimension; ++j) boxInv[j] = 1.0/std::max(1e-30, high[j] - low[j]);

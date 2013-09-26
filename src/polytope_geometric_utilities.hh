@@ -629,9 +629,9 @@ rayPlaneIntersection(const RealType* p_ray,
   const RealType d = dot<3, RealType>(delta, n_plane)/ndots;
   if (d >= 0.0) {
     // Yep, they intersect.
-    result[0] = p_ray[0] + d*p_ray[0];
-    result[1] = p_ray[1] + d*p_ray[1];
-    result[2] = p_ray[2] + d*p_ray[2];
+    result[0] = p_ray[0] + d*n_ray[0];
+    result[1] = p_ray[1] + d*n_ray[1];
+    result[2] = p_ray[2] + d*n_ray[2];
     return true;
   } else {
     // The intersection is the wrong direction from the origin of the ray,
