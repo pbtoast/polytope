@@ -424,6 +424,59 @@ planeIntersection(const uint64_t e1,
 }
 
 //------------------------------------------------------------------------------
+// Sort the points of a facet counter-clockwise with respect to the given
+// normal.
+// This is basically stripped and specialized from our 2D convex hull method.
+//------------------------------------------------------------------------------
+// Local method used by sortFacetPoints.
+int cross_sign(const uint64_t p1, const uint64_t p2, const uint64_t p3,
+               const int64_t xnorm, const int64_t ynorm, const int64_t znorm) {
+  typedef geometry::Hasher<3, double> HasherType;
+  typedef Point3<double> RealPoint;
+  const RealPoint p12(double(HasherType::qxval(p2)) - double(HasherType::qxval(p1)),
+                      double(HasherType::qyval(p2)) - double(HasherType::qyval(p1)),
+                      double(HasherType::qzval(p2)) - double(HasherType::qzval(p1))),
+                  p13(double(HasherType::qxval(p3)) - double(HasherType::qxval(p1)),
+                      double(HasherType::qyval(p3)) - double(HasherType::qyval(p1)),
+                      double(HasherType::qzval(p3)) - double(HasherType::qzval(p1)));
+  RealPoint p12crossp13;
+  geometry::cross<3, double>(&p12.x, &p13.x, &p12crossp13.x);
+  const double test = p12crossp13.x*xnorm +p12crossp13.y*ynorm +p12crossp13.z*znorm;
+  return (test < 0.0 ? -1 :
+          test > 0.0 ?  1 :
+          0);
+}
+
+void
+sortFacetPoints(std::vector<uint64_t>& points,
+                const int64_t xnorm,
+                const int64_t ynorm,
+                const int64_t znorm) {
+  POLY_ASSERT(points.size() >= 3);
+  unsigned i, j, k, t;
+  const unsigned n = points.size();
+  std::vector<int> order(2*n);
+
+  // Build the lower hull.
+  for (i = 0, k = 0; i < n; i++) {
+    while (k >= 2 and
+           cross_sign(points[order[k - 2]], points[order[k - 1]], points[i], xnorm, ynorm, znorm) <= 0) k--;
+    order[k++] = i;
+  }
+    
+  // Build the upper hull.
+  for (i = n - 2, t = k + 1; i >= 0; i--) {
+    while (k >= t and
+           cross_sign(points[order[k - 2]], points[order[k - 1]], points[i], xnorm, ynorm, znorm) <= 0) k--;
+    order[k++] = i;
+  }
+
+  // Put the points in the right order, and we're done.
+  vector<uint64_t> oldpoints(points);
+  for (i = 0; i != n; ++i) points[i] = oldpoints[order[i]];
+}
+
+//------------------------------------------------------------------------------
 // Clip a ReducedPLC with a plane.  The plane is specified in (point, normal)
 // form in the arguments.  
 // For now we require the plane be aligned in the x, y, or z direction: i.e., 
@@ -447,6 +500,16 @@ clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
 
   // Prepare to build the result up.
   ReducedPLC<3, PointHash> result;
+  cerr << "--------------------------------------------------------------------------------" << endl
+       << "Clipping against " << qmesh.unhashPosition(pointPlane_fine) << " (" << xnorm << " " << ynorm << " " << znorm << ")" << endl;
+  for (unsigned i = 0; i != cell.facets.size(); ++i) {
+    for (unsigned j = 0; j != cell.facets[i].size(); ++j) {
+      cerr << "  " << qmesh.unhashPosition(cell.points[cell.facets[i][j]]);
+    }
+    cerr << endl;
+  }
+  cerr << "--------------------------------------------------------------------------------" << endl;
+
 
   // If the entire PLC is on one side of the input plane the answer is simple.
   const int allcompare = compare(cell.points, pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
@@ -461,10 +524,11 @@ clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
   // The plane intersects this polyhedron.  Walk each face and intersect it with
   // the plane.
   map<PointHash, int> point2id;
+  vector<PointHash> newfacet;  // We may create at most one new facet by clipping with a plane.
   for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
     const unsigned nnodes = cell.facets[iface].size();
     POLY_ASSERT(nnodes >= 3);
-    vector<int> newfacet;
+    vector<int> clippedfacet;
     cerr << "Adding new facet: ";
     for (unsigned i = 0; i != nnodes; ++i) {
       const unsigned e1 = cell.facets[iface][i];
@@ -473,13 +537,13 @@ clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
         const unsigned oldsize = point2id.size();
         const unsigned k = internal::addKeyToMap(cell.points[e1], point2id);
         if (k == oldsize) result.points.push_back(cell.points[e1]);
-        newfacet.push_back(k);
+        clippedfacet.push_back(k);
         cerr << " " << qmesh.unhashPosition(result.points[k]);
       } else {
         // This point is outside the surface, check if the edge connecting
         // to the next point intersects the surface somewhere.
         // Avoid 0 -- the above case catches it.
-        const unsigned e2 = (i + 1) % nnodes;
+        const unsigned e2 = cell.facets[iface][(i + 1) % nnodes];
         cerr << "[checking edge " << qmesh.unhashPosition(cell.points[e1]) << " " << qmesh.unhashPosition(cell.points[e2]) << "]";
         if (compare(cell.points[e2], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh) == 1) {
           const PointHash newpoint = planeIntersection(cell.points[e1],
@@ -492,13 +556,25 @@ clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
           const unsigned oldsize = point2id.size();
           const unsigned k = internal::addKeyToMap(newpoint, point2id);
           if (k == oldsize) result.points.push_back(newpoint);
-          newfacet.push_back(k);
+          clippedfacet.push_back(k);
+          newfacet.push_back(newpoint);
           cerr << " ! " << qmesh.unhashPosition(result.points[k]);
         }
       }
     }
     cerr << endl;
-    if (newfacet.size() >= 3) result.facets.push_back(newfacet);
+    if (clippedfacet.size() >= 3) result.facets.push_back(clippedfacet);
+  }
+
+  // Did we create a new facet?
+  sort(newfacet.begin(), newfacet.end());
+  newfacet.erase(std::unique(newfacet.begin(), newfacet.end()), newfacet.end());
+  if (newfacet.size() >= 3) {
+    // We need to sort the points in counter-clockwise order around the new facet.
+    sortFacetPoints(newfacet, -xnorm, -ynorm, -znorm);
+    vector<int> newfacetIDs;
+    for (unsigned i = 0; i != newfacet.size(); ++i) newfacetIDs.push_back(point2id[newfacet[i]]);
+    result.facets.push_back(newfacetIDs);
   }
 
   // That's it.
