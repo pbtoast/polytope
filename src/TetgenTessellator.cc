@@ -405,9 +405,9 @@ planeIntersection(const uint64_t e1,
   // Export our work to the floating method.
   // This is definitely not the most efficient thing we could do, but it's expedient
   // while we get stuff working!
-  const int64_t e1x = HasherType::qxval(e1), e1y = HasherType::qyval(e1), e1z = HasherType::qzval(e1),
-                e2x = HasherType::qxval(e2), e2y = HasherType::qyval(e2), e2z = HasherType::qzval(e2),
-                ppx = HasherType::qxval(pointPlane), ppy = HasherType::qyval(pointPlane), ppz = HasherType::qzval(pointPlane);
+  // const int64_t e1x = HasherType::qxval(e1), e1y = HasherType::qyval(e1), e1z = HasherType::qzval(e1),
+  //               e2x = HasherType::qxval(e2), e2y = HasherType::qyval(e2), e2z = HasherType::qzval(e2),
+  //               ppx = HasherType::qxval(pointPlane), ppy = HasherType::qyval(pointPlane), ppz = HasherType::qzval(pointPlane);
   RealPoint p_ray = qmesh.unhashPosition(e1),
             n_ray = qmesh.unhashPosition(e2) - p_ray,
             p_plane = qmesh.unhashPosition(pointPlane),
@@ -417,7 +417,8 @@ planeIntersection(const uint64_t e1,
   geometry::unitVector<3, RealType>(&n_plane.x);
   const bool valid = geometry::rayPlaneIntersection(&p_ray.x, &n_ray.x, &p_plane.x, &n_plane.x,
                                                     qmesh.degeneracy, &p_intersect.x);
-  POLY_ASSERT(valid);
+  cerr << endl << "Intersection test : " << p_ray << " " << n_ray << " " << p_plane << " " << n_plane << " " << p_intersect << endl;
+  POLY_ASSERT2(valid, p_ray << " " << n_ray << " " << p_plane << " " << n_plane << " " << p_intersect);
 
   // Convert the answer to a quantized coordinate and we're done.
   return qmesh.hashPosition(p_intersect);
@@ -453,7 +454,7 @@ sortFacetPoints(std::vector<uint64_t>& points,
                 const int64_t ynorm,
                 const int64_t znorm) {
   POLY_ASSERT(points.size() >= 3);
-  unsigned i, j, k, t;
+  int i, j, k, t;
   const unsigned n = points.size();
   std::vector<int> order(2*n);
 
@@ -531,39 +532,49 @@ clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
     vector<int> clippedfacet;
     cerr << "Adding new facet: ";
     for (unsigned i = 0; i != nnodes; ++i) {
-      const unsigned e1 = cell.facets[iface][i];
-      if (compare(cell.points[e1], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh) != -1) {
-        // This point makes the cut.
+      const unsigned e1 = cell.facets[iface][i],
+                     e2 = cell.facets[iface][(i + 1) % nnodes];
+      const int compare1 = compare(cell.points[e1], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh),
+                compare2 = compare(cell.points[e2], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
+
+      // Does the first point of this edge make the cut?
+      if (compare1 != -1) {
         const unsigned oldsize = point2id.size();
         const unsigned k = internal::addKeyToMap(cell.points[e1], point2id);
         if (k == oldsize) result.points.push_back(cell.points[e1]);
         clippedfacet.push_back(k);
         cerr << " " << qmesh.unhashPosition(result.points[k]);
-      } else {
-        // This point is outside the surface, check if the edge connecting
-        // to the next point intersects the surface somewhere.
-        // Avoid 0 -- the above case catches it.
-        const unsigned e2 = cell.facets[iface][(i + 1) % nnodes];
+      }
+
+      // Does this edge stradle the plane?
+      if (compare1*compare2 == -1) {
         cerr << "[checking edge " << qmesh.unhashPosition(cell.points[e1]) << " " << qmesh.unhashPosition(cell.points[e2]) << "]";
-        if (compare(cell.points[e2], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh) == 1) {
-          const PointHash newpoint = planeIntersection(cell.points[e1],
-                                                       cell.points[e2],
-                                                       pointPlane_fine,
-                                                       xnorm,
-                                                       ynorm,
-                                                       znorm,
-                                                       qmesh);
-          const unsigned oldsize = point2id.size();
-          const unsigned k = internal::addKeyToMap(newpoint, point2id);
-          if (k == oldsize) result.points.push_back(newpoint);
-          clippedfacet.push_back(k);
-          newfacet.push_back(newpoint);
-          cerr << " ! " << qmesh.unhashPosition(result.points[k]);
-        }
+        const PointHash newpoint = planeIntersection(cell.points[e1],
+                                                     cell.points[e2],
+                                                     pointPlane_fine,
+                                                     xnorm,
+                                                     ynorm,
+                                                     znorm,
+                                                     qmesh);
+        const unsigned oldsize = point2id.size();
+        const unsigned k = internal::addKeyToMap(newpoint, point2id);
+        if (k == oldsize) result.points.push_back(newpoint);
+        clippedfacet.push_back(k);
+        newfacet.push_back(newpoint);
+        cerr << " ! " << qmesh.unhashPosition(result.points[k]) << " == " << qmesh.unhashPosition(newpoint);
       }
     }
     cerr << endl;
-    if (clippedfacet.size() >= 3) result.facets.push_back(clippedfacet);
+
+    // Make sure there are no repeats in the clipped facet.
+    if (clippedfacet.size() >= 3) {
+      vector<int> clippedfacet2;
+      for (int i = 0; i != clippedfacet.size(); ++i) {
+        int j = (i + 1) % clippedfacet.size();
+        if (clippedfacet[i] != clippedfacet[j]) clippedfacet2.push_back(clippedfacet[i]);
+      }
+      if (clippedfacet2.size() >= 3) result.facets.push_back(clippedfacet2);
+    }
   }
 
   // Did we create a new facet?
@@ -693,11 +704,13 @@ tessellate(const vector<double>& points,
 
     // Clip this PLC by each plane of our bounding box.
     cell = clipReducedPLC(cell, plow_fine, plow_coarse, 1, 0, 0, qmesh0);
+    cerr << "First clip: " << cell << endl;
     cell = clipReducedPLC(cell, plow_fine, plow_coarse, 0, 1, 0, qmesh0);
-    cell = clipReducedPLC(cell, plow_fine, plow_coarse, 0, 0, 1, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse, -1,  0,  0, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0, -1,  0, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0,  0, -1, qmesh0);
+    cerr << "Second clip: " << cell << endl;
+    // cell = clipReducedPLC(cell, plow_fine, plow_coarse, 0, 0, 1, qmesh0);
+    // cell = clipReducedPLC(cell, phigh_fine, phigh_coarse, -1,  0,  0, qmesh0);
+    // cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0, -1,  0, qmesh0);
+    // cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0,  0, -1, qmesh0);
     POLY_ASSERT(cell.facets.size() >= 4);
 
     // Add this cell and its elements to the new tessellation.

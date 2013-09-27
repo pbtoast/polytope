@@ -613,9 +613,9 @@ rayPlaneIntersection(const RealType* p_ray,
                      RealType* result) {
   const RealType ndots = dot<3, RealType>(n_ray, n_plane);
   const RealType delta[3] = {p_plane[0] - p_ray[0], p_plane[1] - p_ray[1], p_plane[2] - p_ray[2]};
-  if (ndots < tol) {
+  if (std::abs(ndots) < tol) {
     // Ray is parallel to the plane.
-    if (dot<3, RealType>(p_ray, delta) < tol) {
+    if (std::abs(dot<3, RealType>(p_ray, delta)) < tol) {
       // Ray is in the plane, just choose the origin point.
       result[0] = p_ray[0]; result[1] = p_ray[1]; result[2] = p_ray[2];
       return true;
