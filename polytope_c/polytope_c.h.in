@@ -1,0 +1,23 @@
+// Generator file for polytope_c.h. Modify this file, not polytope.h.
+
+// Version numbers
+#define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
+#define POLYTOPE_VERSION_MINOR @POLYTOPE_VERSION_MINOR@
+
+// Various flags determined by how polytope is configured.
+#define HAVE_MPI @HAVE_MPI@
+#define HAVE_HDF5 @HAVE_HDF5@
+#define HAVE_PARALLEL_HDF5 @HAVE_PARALLEL_HDF5@
+#define HAVE_SILO @HAVE_SILO@
+#define HAVE_TRIANGLE @HAVE_TRIANGLE@
+#define HAVE_TETGEN @HAVE_TETGEN@
+#define HAVE_BOOST @HAVE_BOOST@
+#define HAVE_BOOST_VORONOI @HAVE_BOOST_VORONOI@
+
+#define polytope_real_t @C_REAL_TYPE@
+
+#include <stdbool.h>
+#include <stdio.h>
+#include "polytope_tessellator.h"
+#include "polytope_silo_writer.h"
+

@@ -13,6 +13,7 @@ use_python     = 0
 python_exe     = not-set
 python_version = not-set
 build_tests    = 1
+c_real_type    = double
 
 # This proxies everything to the builddir cmake.
 
@@ -98,6 +99,9 @@ endif
 
 # Choose to build python bindings with pybindgen
 CONFIG_FLAGS += -DUSE_PYTHON=$(use_python)
+
+# real number type for C library
+CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
 
 # Special considerations for specific systems.
 ifeq ($(systype), Darwin)
