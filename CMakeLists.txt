@@ -167,7 +167,7 @@ if (${USE_SILO} EQUAL 1)
   endif()
 
   # Add paths only if both SILO and HDF5 found.
-  if (${HDF5_FOUND} AND ${SILO_FOUND})
+  if (HDF5_FOUND AND SILO_FOUND)
     set(HAVE_SILO true)
     set(HAVE_HDF5 true)
     include_directories("${SILO_INCLUDE_DIRS}")
@@ -240,6 +240,10 @@ add_subdirectory(voro_3d)
 # Polytope proper.
 include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
+
+# Polytope C library -- not soup yet.
+include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+add_subdirectory(polytope_c)
 
 # Tests directory
 if (${TESTING} EQUAL 1)
