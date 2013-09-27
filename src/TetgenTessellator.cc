@@ -388,63 +388,6 @@ planeIntersection(const uint64_t e1,
   return qmesh.hashPosition(p_intersect);
 }
 
-//------------------------------------------------------------------------------
-// Sort the points of a facet counter-clockwise with respect to the given
-// normal.
-// This is basically stripped and specialized from our 2D convex hull method.
-//------------------------------------------------------------------------------
-// Local method used by sortFacetPoints.
-int cross_sign(const uint64_t p1, const uint64_t p2, const uint64_t p3,
-               const int64_t xnorm, const int64_t ynorm, const int64_t znorm) {
-  typedef geometry::Hasher<3, double> HasherType;
-  typedef Point3<double> RealPoint;
-  const RealPoint p12(double(HasherType::qxval(p2)) - double(HasherType::qxval(p1)),
-                      double(HasherType::qyval(p2)) - double(HasherType::qyval(p1)),
-                      double(HasherType::qzval(p2)) - double(HasherType::qzval(p1))),
-                  p13(double(HasherType::qxval(p3)) - double(HasherType::qxval(p1)),
-                      double(HasherType::qyval(p3)) - double(HasherType::qyval(p1)),
-                      double(HasherType::qzval(p3)) - double(HasherType::qzval(p1)));
-  RealPoint p12crossp13;
-  geometry::cross<3, double>(&p12.x, &p13.x, &p12crossp13.x);
-  const double test = p12crossp13.x*xnorm +p12crossp13.y*ynorm +p12crossp13.z*znorm;
-  return (test < 0.0 ? -1 :
-          test > 0.0 ?  1 :
-          0);
-}
-
-void
-sortFacetPoints(std::vector<uint64_t>& points,
-                const int64_t xnorm,
-                const int64_t ynorm,
-                const int64_t znorm) {
-  POLY_ASSERT(points.size() >= 3);
-  int i, k, t;
-  const unsigned n = points.size();
-  std::vector<int> order(2*n);
-
-  // Sort the points.
-  std::sort(points.begin(), points.end());
-
-  // Build the lower hull.
-  for (i = 0, k = 0; i < n; i++) {
-    while (k >= 2 and
-           cross_sign(points[order[k - 2]], points[order[k - 1]], points[i], xnorm, ynorm, znorm) <= 0) k--;
-    order[k++] = i;
-  }
-    
-  // Build the upper hull.
-  for (i = n - 2, t = k + 1; i >= 0; i--) {
-    while (k >= t and
-           cross_sign(points[order[k - 2]], points[order[k - 1]], points[i], xnorm, ynorm, znorm) <= 0) k--;
-    order[k++] = i;
-  }
-  POLY_ASSERT(k == n);
-
-  // Put the points in the right order, and we're done.
-  vector<uint64_t> oldpoints(points);
-  for (i = 0; i != n; ++i) points[i] = oldpoints[order[i]];
-}
-
 // //------------------------------------------------------------------------------
 // // Clip a ReducedPLC with a plane.  The plane is specified in (point, normal)
 // // form in the arguments.  

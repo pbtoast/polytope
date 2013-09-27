@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <ctime>
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
@@ -118,61 +119,51 @@ void boxBoundedTessellation(const unsigned nx,
   double high[3] = {x2, y2, z2};
   tetgen.tessellate(generators, low, high, mesh);
 
-  escapePod(nx, generators, mesh);
+  // Check for validity.
+  const unsigned nx1 = nx + 1;
+  POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1);
+  POLY_CHECK(mesh.cells.size() == nx*nx*nx);
+  POLY_CHECK(mesh.infNodes.size() == 0);
+  POLY_CHECK(mesh.infFaces.size() == 0);
 
-  // // Check for validity.
-  // const unsigned nx1 = nx - 1;
-  // POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1 + 6*nx1*nx1);
-  // POLY_CHECK(mesh.cells.size() == nx*nx*nx);
-  // POLY_CHECK2(mesh.infNodes.size() == 6*nx1*nx1, "Number of infNodes: " << mesh.infNodes.size() << escapePod(nx, generators, mesh));
-  // for (unsigned i = 0; i != nx*nx*nx; ++i) {
-  //   const unsigned 
-  //     ix = i % nx,
-  //     iy = (i / nx) % nx,
-  //     iz = i / (nx*nx);
-  //   const unsigned ntouch = (unsigned(ix == 0 or ix == nx1) + 
-  //                            unsigned(iy == 0 or iy == nx1) + 
-  //                            unsigned(iz == 0 or iz == nx1));
-  //   if (ntouch == 3) {
-  //     // Corner cell.
-  //     POLY_CHECK2(mesh.cells[i].size() == 4, escapePod(nx, generators, mesh));
-  //   } else if (ntouch == 2) {
-  //     // Along one of the edges of the volume.
-  //     POLY_CHECK2(mesh.cells[i].size() == 5, escapePod(nx, generators, mesh));
-  //   } else if (ntouch == 1) {
-  //     // Along one of the faces of the volume.
-  //     POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
-  //   } else {
-  //     // Interior, fully bounded cell.
-  //     POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
-  //   }
+  // Check nodes.
+  const double tol = 1.0e-5*(x2 - x1);
+  for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
+    POLY_CHECK2(x1 - tol <= mesh.nodes[3*i  ] and mesh.nodes[3*i  ] <= x2 + tol, "x bounds error: " << mesh.nodes[3*i  ] << " !\\in [" << x1 << ", " << x2 << "]");
+    POLY_CHECK2(y1 - tol <= mesh.nodes[3*i+1] and mesh.nodes[3*i+1] <= y2 + tol, "y bounds error: " << mesh.nodes[3*i+1] << " !\\in [" << y1 << ", " << y2 << "]");
+    POLY_CHECK2(z1 - tol <= mesh.nodes[3*i+2] and mesh.nodes[3*i+2] <= z2 + tol, "z bounds error: " << mesh.nodes[3*i+2] << " !\\in [" << z1 << ", " << z2 << "]");
+  }
 
-  //   // Check face orientations.
-  //   for (unsigned j = 0; j != mesh.cells[i].size(); ++j) {
-  //     const int faceSgn = sgn(mesh.cells[i][j]);
-  //     const unsigned iface = internal::positiveID(mesh.cells[i][j]);
-  //     const unsigned nnodes = mesh.faces[iface].size();
-  //     for (unsigned k = 0; k != nnodes; ++k) {
-  //       const unsigned inode1 = mesh.faces[iface][k];
-  //       const unsigned inode2 = mesh.faces[iface][(k + 1) % nnodes];
-  //       const unsigned inode3 = mesh.faces[iface][(k + 2) % nnodes];
-  //       POLY_CHECK(inode1 < mesh.nodes.size()/3);
-  //       POLY_CHECK(inode2 < mesh.nodes.size()/3);
-  //       POLY_CHECK(inode3 < mesh.nodes.size()/3);
-  //       const double vol = geometry::tetrahedralVolume6(&generators[3*i],
-  //                                                       &mesh.nodes[3*inode3],
-  //                                                       &mesh.nodes[3*inode2],
-  //                                                       &mesh.nodes[3*inode1]);
-  //       POLY_CHECK2(faceSgn*vol > 0.0,
-  //                   "Volume sign error : " << i << " " << iface << " "
-  //                   << faceSgn << " " << vol << " : " << nnodes << " " << inode1 << " " << inode2 << " " << inode3 << " : "
-  //                   << " (" << generators[3*i] << " " << generators[3*i+1] << " " << generators[3*i+2] << ") "
-  //                   << " (" << mesh.nodes[3*inode1] << " " << mesh.nodes[3*inode1+1] << " " << mesh.nodes[3*inode1+2] << ") "
-  //                   << " (" << mesh.nodes[3*inode2] << " " << mesh.nodes[3*inode2+1] << " " << mesh.nodes[3*inode2+2] << ") "
-  //                   << " (" << mesh.nodes[3*inode3] << " " << mesh.nodes[3*inode3+1] << " " << mesh.nodes[3*inode3+2] << ") ");
-  //     }
-  //   }
-  // }
+  // Check cells.
+  for (unsigned i = 0; i != nx*nx*nx; ++i) {
+    POLY_CHECK2(mesh.cells[i].size() == 6, escapePod(nx, generators, mesh));
+
+    // Check face orientations.
+    for (unsigned j = 0; j != mesh.cells[i].size(); ++j) {
+      const int faceSgn = sgn(mesh.cells[i][j]);
+      const unsigned iface = internal::positiveID(mesh.cells[i][j]);
+      const unsigned nnodes = mesh.faces[iface].size();
+      for (unsigned k = 0; k != nnodes; ++k) {
+        const unsigned inode1 = mesh.faces[iface][k];
+        const unsigned inode2 = mesh.faces[iface][(k + 1) % nnodes];
+        const unsigned inode3 = mesh.faces[iface][(k + 2) % nnodes];
+        POLY_CHECK(inode1 < mesh.nodes.size()/3);
+        POLY_CHECK(inode2 < mesh.nodes.size()/3);
+        POLY_CHECK(inode3 < mesh.nodes.size()/3);
+        const double vol = geometry::tetrahedralVolume6(&generators[3*i],
+                                                        &mesh.nodes[3*inode3],
+                                                        &mesh.nodes[3*inode2],
+                                                        &mesh.nodes[3*inode1]);
+        POLY_CHECK2(faceSgn*vol > 0.0,
+                    "Volume sign error : " << i << " " << iface << " "
+                    << faceSgn << " " << vol << " : " << nnodes << " " << inode1 << " " << inode2 << " " << inode3 << " : "
+                    << " (" << generators[3*i] << " " << generators[3*i+1] << " " << generators[3*i+2] << ") "
+                    << " (" << mesh.nodes[3*inode1] << " " << mesh.nodes[3*inode1+1] << " " << mesh.nodes[3*inode1+2] << ") "
+                    << " (" << mesh.nodes[3*inode2] << " " << mesh.nodes[3*inode2+1] << " " << mesh.nodes[3*inode2+2] << ") "
+                    << " (" << mesh.nodes[3*inode3] << " " << mesh.nodes[3*inode3+1] << " " << mesh.nodes[3*inode3+2] << ") ");
+      }
+    }
+  }
 
 }
 
@@ -289,10 +280,22 @@ int main(int argc, char** argv) {
     }
 
     // Unbounded test.
-    unboundedTessellation(nx, generators);
+    {
+      cout << "Unbounded tessellation...";
+      clock_t t0 = clock();
+      unboundedTessellation(nx, generators);
+      clock_t t1 = clock();
+      cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+    }
 
     // Box bounded test.
-    boxBoundedTessellation(nx, x1, y1, z1, x2, y2, z2, generators);
+    {
+      cout << "Box bounded tessellation...";
+      clock_t t0 = clock();
+      boxBoundedTessellation(nx, x1, y1, z1, x2, y2, z2, generators);
+      clock_t t1 = clock();
+      cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+    }
   }
 
   cout << "PASS" << endl;
