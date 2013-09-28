@@ -19,5 +19,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "polytope_tessellator.h"
-#include "polytope_silo_writer.h"
+#include "polytope_read_silo.h"
+#include "polytope_write_silo.h"
 
