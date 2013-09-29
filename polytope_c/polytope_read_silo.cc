@@ -14,7 +14,7 @@ void polytope_read_silo(polytope_tessellation_t* mesh,
                         const char* file_prefix,
                         const char* directory,
                         int cycle,
-                        RealType& time,
+                        polytope_real_t time,
                         MPI_Comm comm,
                         int num_files,
                         int mpi_tag)
