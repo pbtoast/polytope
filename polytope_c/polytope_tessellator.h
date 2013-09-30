@@ -2,12 +2,14 @@
 #define POLYTOPE_C_TESSELLATOR_H
 
 #include "polytope_c.h"
-#include "polytope_tessellation.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+// Forward declaration.
+struct polytope_tessellation_t;
 
 // This struct represents a tessellator object that corresponds to the 
 // C++ polytope::Tessellator class.

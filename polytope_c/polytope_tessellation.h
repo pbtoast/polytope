@@ -2,113 +2,102 @@
 #define POLYTOPE_C_TESSELLATION_H
 
 #include "polytope_c.h"
-#include "polytope_plc.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-// This struct represents a tessellation corresponding to the C++ 
-// polytope::Tessellation class.
+// This struct represents a proxy for the C++ polytope::Tessellation class
+// that can be queried accordingly.
 typedef struct polytope_tessellation_t polytope_tessellation_t;
 
-// This function creates an empty tessellation with the given dimension.
-polytope_tessellation_t* polytope_tessellation_new(int dimension);
+// This struct holds the data from a tessellation created in polytope, and 
+// can be emitted by a polytope_tessellation object. All of its data is 
+// copied, so it must be destroyed accordingly.
+typedef struct 
+{
+  // The dimension of the tessellation.
+  int dimension;
 
-// This function should be called to destroy a tessellation.
-void polytope_tessellation_free(polytope_tessellation_t* tessellation);
+  // An array of (Dimension*numNodes) values containing components of 
+  // node positions. The components are stored in node-major order and 
+  // the 0th component of the ith node appears in nodes[Dimension*i].
+  int num_nodes; 
+  polytope_real_t* nodes;
 
-// Returns the dimension of the tessellation.
-int polytope_tessellation_dimension(polytope_tessellation_t* tessellation);
+  // These arrays define the cell-face topology of the mesh in Compressed 
+  // Row Storage format. That is, cell_offsets[i] gives the offset within 
+  // the cell_faces array that denotes the first face of the ith cell.
+  int num_cells;
+  int* cell_offsets;
+  int* cell_faces;
 
-// Clear the tessellation, emptying it of all data.
-void polytope_tessellation_clear(polytope_tessellation_t* tessellation);
+  // These arrays defines the topology of the faces of the mesh in Compressed
+  // Row Storage format. A face has an arbitrary number of nodes in 3D and 2 
+  // nodes in 2D. face_offsets[i] gives the offset within the face_nodes 
+  // array that denotes the first node of the ith face. Nodes for a given face 
+  // are arranged counterclockwise around the face viewed from the 
+  // "positive" (outside) direction. 
+  int num_faces;
+  int* face_offsets;
+  unsigned* face_nodes;
 
-// Returns true if the tessellation is empty (not defined), false otherwise.
-bool polytope_tessellation_empty(polytope_tessellation_t* tessellation);
+  // Array of node indices: 0 for interior nodes and 1 for nodes at
+  // "infinity" if this is an unbounded tessellation. The infinite node
+  // is the termination point on a spherical surface of a ray going
+  // out to infinity.
+  int num_inf_nodes;
+  unsigned* inf_nodes;
 
-// Returns the number of nodes in the tessellation.
-int polytope_tessellation_num_nodes(polytope_tessellation_t* tessellation);
+  // Array of face indices: 0 for interior faces and 1 for faces at
+  // "infinity" for unbounded tessellations. The infinite face connects
+  // the collection of infinite nodes for a given unbounded cell.
+  int num_inf_faces;
+  unsigned* inf_faces;
 
-// Retrieves the array of (Dimension*numNodes) node position coordinates for 
-// the tessellation. The components are stored in node-major order and 
-// the 0th component of the ith node appears in node_coords[Dimension*i].
-void polytope_tessellation_get_nodes(polytope_tessellation_t* tessellation,
-                                     polytope_real_t* node_coords);
+  // An array of cell indices for each face, i.e., the cells that share
+  // the face. face_cells[2*i] is the index of the first cell for the ith 
+  // face, and face_cells[2*i+1] is the index of the second cell, or -1 if 
+  // that face lies on the boundary of the tessellation.
+  int* face_cells;
 
-// Returns the number of cells in the tessellation.
-int polytope_tessellation_num_cells(polytope_tessellation_t* tessellation);
+  // The convex hull, if it was computed by the tessellator.
+  polytope_plc_t* convex_hull;
 
-// Retrieves the cell-face connectivity of the tessellation in a compressed-
-// row-storage format.
-void polytope_get_num_cell_faces(polytope_tessellation_t* tessellation,
-                                 int* num_cell_faces);
+  // In parallel calculations, the set of neighbor domains this portion of
+  // the tessellation is in contact with.
+  int num_neighbor_domains;
+  unsigned* neighbor_domains;
 
-void polytope_get_cell_faces(polytope_tessellation_t* tessellation,
-                             int* cell_face_indices);
+  // In parallel calculations, the nodes and faces this domain shares with
+  // each neighbor domain. These arrays are stored in compressed row storage
+  // format like those above.
+  // NOTE: we implicitly assume that any domains of rank less than ours we
+  //       are receiving from, while any domains of greater rank we send
+  //       to.
+  int* shared_node_domain_offsets;
+  unsigned* shared_nodes;
+  int* shared_face_domain_offsets;
+  unsigned* shared_faces;
+
+} polytope_tessellation_data_t;
+
+// This function should be called to destroy a tessellation_data object.
+void polytope_tessellation_data_free(polytope_tessellation_data_t* tessellation_data);
 
 // Writes a human-readable representation of the tessellation to the given file.
 void polytope_tessellation_fprintf(polytope_tessellation_t* tessellation, FILE* stream);
 
-int polytope_tessellation_num_inf_nodes(polytope_tessellation_t* tessellation);
+// This function should be called to destroy a tessellation.
+void polytope_tessellation_free(polytope_tessellation_t* tessellation);
 
-// Retrieves the array of node indices: 0 for interior nodes and 1 for nodes at
-// "infinity" if this is an unbounded tessellation. The infinite node
-// is the termination point on a spherical surface of a ray going
-// out to infinity.
-void polytope_tessellation_get_inf_nodes(polytope_tessellation_t* tessellation, unsigned* inf_nodes);
-
-int polytope_tessellation_num_inf_faces(polytope_tessellation_t* tessellation);
-
-// Returns the array of face indices: 0 for interior faces and 1 for faces at
-// "infinity" if this is an unbounded tessellation. The infinite face connects
-// the collection of infinite nodes for a given unbounded cell.
-void polytope_tessellation_get_inf_faces(polytope_tessellation_t* tessellation, unsigned* inf_faces);
-
-// Retrieves the array of cell indices for each face, i.e., the cells that share
-// the face. There are two entries per face: the first and second cells attached 
-// to the face. An index of -1 as the second cell index indicates that the 
-// face lies on a boundary of the tessellation.
-void polytope_tessellation_get_face_cells(polytope_tessellation_t* tessellation, int* face_cells);
-
-// Returns a newly-created piecewise linear complex containing the 
-// convex hull of the point distribution. Not all Tessellators hand back the convex 
-// hull, so this may be empty, in which case you must compute the convex 
-// hull yourself.
-polytope_plc_t* polytope_tessellation_convex_hull(polytope_tessellation_t* tessellation);
-
-// In the case of a parallel calculation, this function returns the number of 
-// neighbor domains this portion of the tessellation is in contact with. In a 
-// serial calculation, this returns 0.
-int polytope_tessellation_num_neighbor_domains(polytope_tessellation_t* tessellation);
-
-// In the case of a parallel calculation, this function retrieves an 
-// array containing the set of neighbor domains this portion of the 
-// tessellation is in contact with. In a serial calculation, this 
-// returns NULL.
-void polytope_tessellation_get_neighbor_domains(polytope_tessellation_t* tessellation, unsigned* domains);
-
-// In the case of a parallel calculation, this function returns the number of 
-// nodes this tessellation interacts with on the given neighboring domain.
-int polytope_tessellation_num_neighbor_nodes(polytope_tessellation_t* tessellation, unsigned domain);
-
-// In the case of a parallel calculation, this function returns an internal
-// array containing the indices of nodes that are shared with the given 
-// neighbor domain.
-void polytope_tessellation_get_neighbor_nodes(polytope_tessellation_t* tessellation, unsigned domain, unsigned* nodes);
-
-// In the case of a parallel calculation, this function returns the number of 
-// faces this tessellation interacts with on the given neighboring domain.
-int polytope_tessellation_num_neighbor_faces(polytope_tessellation_t* tessellation, unsigned domain);
-
-// In the case of a parallel calculation, this function returns an internal
-// array containing the indices of faces that are shared with the given 
-// neighbor domain.
-void polytope_tessellation_get_neighbor_faces(polytope_tessellation_t* tessellation, unsigned domain, unsigned* faces);
+// Emits a newly-allocated struct containing the data within the tessellation. 
+// This struct must be freed with tessellation_data_free().
+polytope_tessellation_data_t* polytope_tessellation_data(polytope_tessellation_t* tessellation);
 
 // Retrieves arrays containing the indices of the cells 
-// that touch the given mesh node. (CRS)
+// that touch the given mesh node. (CRS format)
 void polytope_get_num_node_cells(polytope_tessellation_t* tessellation,
                                  int* num_node_cells);
 void polytope_get_node_cells(polytope_tessellation_t* tessellation,
