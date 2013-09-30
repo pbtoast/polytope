@@ -1,6 +1,4 @@
-#include "polytope_plc.h"
-#include "polytope_tessellation.h"
-#include "polytope_tessellator.h"
+#include "polytope_c.h"
 #include "polytope.hh"
 
 using namespace std;
