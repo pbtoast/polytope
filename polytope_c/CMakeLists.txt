@@ -6,7 +6,7 @@ configure_file(
 )
 
 add_library(polytope_c polytope_plc.cc polytope_tessellator.cc 
-            polytope_read_silo.cc polytope_write_silo.cc)
+            polytope_tessellation.cc polytope_read_silo.cc polytope_write_silo.cc)
 target_link_libraries(polytope_c polytope)
 
 # Library install targets

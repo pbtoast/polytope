@@ -1,4 +1,4 @@
-// Generator file for polytope_c.h. Modify this file, not polytope.h.
+// Generator file for polytope_c.h. Modify this file, not polytope_c.h.
 
 // Version numbers
 #define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
@@ -18,6 +18,8 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include "polytope_plc.h"
+#include "polytope_tessellation.h"
 #include "polytope_tessellator.h"
 #include "polytope_read_silo.h"
 #include "polytope_write_silo.h"
