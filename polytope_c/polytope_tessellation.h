@@ -1,20 +1,13 @@
 #ifndef POLYTOPE_C_TESSELLATION_H
 #define POLYTOPE_C_TESSELLATION_H
 
-#include "polytope_c.h"
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-// This struct represents a proxy for the C++ polytope::Tessellation class
-// that can be queried accordingly.
-typedef struct polytope_tessellation_t polytope_tessellation_t;
-
-// This struct holds the data from a tessellation created in polytope, and 
-// can be emitted by a polytope_tessellation object. All of its data is 
-// copied, so it must be destroyed accordingly.
+// This struct holds the data from a tessellation created in polytope.
+// It owns all of its data, so it must be destroyed with polytope_tessellation_free.
 typedef struct 
 {
   // The dimension of the tessellation.
@@ -81,27 +74,26 @@ typedef struct
   int* shared_face_domain_offsets;
   unsigned* shared_faces;
 
-} polytope_tessellation_data_t;
+  // These arrays store the cells connected to nodes in compressed row storage
+  // format IF this data was requested from the tessellator--otherwise they 
+  // are NULL.
+  int* node_cell_offsets;
+  int* node_cells;
 
-// This function should be called to destroy a tessellation_data object.
-void polytope_tessellation_data_free(polytope_tessellation_data_t* tessellation_data);
+} polytope_tessellation_t;
+
+// Creates an empty container that will store a tessellation with the given 
+// dimension.
+polytope_tessellation_t* polytope_tessellation_new(int dimension);
+
+// Writes a human-readable representation of the tessellation to the given string, truncating after n characters.
+void polytope_tessellation_snprintf(polytope_tessellation_t* tessellation, char* str, int n);
 
 // Writes a human-readable representation of the tessellation to the given file.
 void polytope_tessellation_fprintf(polytope_tessellation_t* tessellation, FILE* stream);
 
 // This function should be called to destroy a tessellation.
 void polytope_tessellation_free(polytope_tessellation_t* tessellation);
-
-// Emits a newly-allocated struct containing the data within the tessellation. 
-// This struct must be freed with tessellation_data_free().
-polytope_tessellation_data_t* polytope_tessellation_data(polytope_tessellation_t* tessellation);
-
-// Retrieves arrays containing the indices of the cells 
-// that touch the given mesh node. (CRS format)
-void polytope_get_num_node_cells(polytope_tessellation_t* tessellation,
-                                 int* num_node_cells);
-void polytope_get_node_cells(polytope_tessellation_t* tessellation,
-                             int* node_cells);
 
 #ifdef __cplusplus
 }

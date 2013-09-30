@@ -9,7 +9,7 @@ extern "C"
 #endif
 
 // Forward declaration.
-struct polytope_tessellation_t;
+//struct polytope_tessellation_t;
 
 // This struct represents a tessellator object that corresponds to the 
 // C++ polytope::Tessellator class.
