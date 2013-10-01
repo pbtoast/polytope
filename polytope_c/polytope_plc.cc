@@ -189,11 +189,48 @@ bool polytope_plc_valid(polytope_plc_t* plc)
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
-void polytope_plc_fprintf(polytope_plc_t* plc, FILE* stream)
+void polytope_plc_snprintf(polytope_plc_t* plc, char* str, int n)
 {
   // FIXME
 }
 //------------------------------------------------------------------------
 
+//------------------------------------------------------------------------
+void polytope_plc_fprintf(polytope_plc_t* plc, FILE* stream)
+{
+  POLY_ASSERT(plc != NULL);
+  // Let's assume, for the moment, that the output of our PLC scales with the 
+  // number of facets.
+  int n = (plc->plc2 != NULL) ? 128 * plc->plc2->facets.size()
+                               : 128 * plc->plc3->facets.size();
+  char* str = (char*)malloc(n * sizeof(char));
+  polytope_plc_snprintf(plc, str, n);
+  fprintf(stream, "%s", str);
+  free(str);
 }
+//------------------------------------------------------------------------
+
+}
+
+// Here's a helper function for constructing C PLCs from C++ ones.
+template <int Dimension>
+polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc)
+{
+  polytope_plc_t* p = polytope_plc_new(Dimension);
+  if (Dimension == 2)
+  {
+    p->plc2->facets = plc.facets;
+    p->plc2->holes = plc.holes;
+  }
+  else
+  {
+    p->plc3->facets = plc.facets;
+    p->plc3->holes = plc.holes;
+  }
+  return p;
+}
+
+// Template instantiations.
+template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<2, polytope_real_t>&);
+template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<3, polytope_real_t>&);
 
