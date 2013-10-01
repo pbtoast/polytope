@@ -212,6 +212,9 @@ void polytope_plc_fprintf(polytope_plc_t* plc, FILE* stream)
 
 }
 
+namespace polytope
+{
+
 // Here's a helper function for constructing C PLCs from C++ ones.
 template <int Dimension>
 polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc)
@@ -233,4 +236,6 @@ polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_re
 // Template instantiations.
 template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<2, polytope_real_t>&);
 template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<3, polytope_real_t>&);
+
+}
 

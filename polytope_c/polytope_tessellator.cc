@@ -7,7 +7,8 @@
 namespace polytope
 {
 
-// Helper function for constructing C PLCs from C++ ones.
+// Helper function for constructing C PLCs from C++ ones. Defined in 
+// polytope_plc.cc
 template <int Dimension>
 polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc);
 
