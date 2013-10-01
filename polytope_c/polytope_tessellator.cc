@@ -87,7 +87,7 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
   {
     tess->shared_node_domain_offsets = (int*)malloc(sizeof(int) * (tess->num_neighbor_domains + 1));
     int size = 0;
-    for (size_t i = 0; i < t.faces.size(); ++i)
+    for (size_t i = 0; i < t.sharedNodes.size(); ++i)
       size += t.sharedNodes[i].size();
     tess->shared_nodes = (unsigned*)malloc(sizeof(unsigned) * (size+1));
     int offset = 0;
@@ -103,7 +103,7 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
   {
     tess->shared_face_domain_offsets = (int*)malloc(sizeof(int) * (tess->num_neighbor_domains + 1));
     int size = 0;
-    for (size_t i = 0; i < t.faces.size(); ++i)
+    for (size_t i = 0; i < t.sharedFaces.size(); ++i)
       size += t.sharedFaces[i].size();
     tess->shared_faces = (unsigned*)malloc(sizeof(unsigned) * (size+1));
     int offset = 0;
