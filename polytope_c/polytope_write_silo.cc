@@ -4,7 +4,13 @@
 
 #if HAVE_SILO
 
+using namespace std;
 using namespace polytope;
+
+// Creates a C++ tessellation from a C one. This template is defined in 
+// polytope_tessellator.cc.
+template <int Dimension>
+void fill_tessellation(polytope_tessellation_t* tess, Tessellation<Dimension, polytope_real_t>& t);
 
 extern "C"
 {
@@ -30,7 +36,36 @@ void polytope_write_silo(polytope_tessellation_t* mesh,
                          int num_files,
                          int mpi_tag)
 {
-  // FIXME
+  POLY_ASSERT(mesh != NULL);
+  map<string, polytope_real_t*> cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields;
+  string cxxPrefix = file_prefix;
+  string cxxDir = directory;
+
+  // Fill fields.
+  for (int i = 0; i < num_node_fields; ++i)
+    cxxNodeFields[node_field_names[i]] = node_fields[i];
+  for (int i = 0; i < num_edge_fields; ++i)
+    cxxEdgeFields[edge_field_names[i]] = edge_fields[i];
+  for (int i = 0; i < num_face_fields; ++i)
+    cxxFaceFields[face_field_names[i]] = face_fields[i];
+  for (int i = 0; i < num_cell_fields; ++i)
+    cxxCellFields[cell_field_names[i]] = cell_fields[i];
+
+  if (mesh->dimension == 2)
+  {
+    Tessellation<2, polytope_real_t> cxxMesh;
+    fill_tessellation(mesh, cxxMesh);
+    SiloWriter::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
+                      cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
+  }
+  else
+  {
+    POLY_ASSERT(mesh->dimension == 3);
+    fill_tessellation(mesh, cxxMesh);
+    Tessellation<3, polytope_real_t> cxxMesh;
+    SiloWriter::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
+                      cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
+  }
 }
 
 }
