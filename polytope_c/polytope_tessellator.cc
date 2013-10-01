@@ -7,6 +7,124 @@
 using namespace std;
 using namespace polytope;
 
+// Helper function for constructing C PLCs from C++ ones.
+template <int Dimension>
+polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc);
+
+namespace 
+{
+
+// This helper crafts a C polytope_tessellation object from a C++ Tessellation.
+template <int Dimension>
+void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polytope_tessellation_t* tess)
+{
+  // Copy node coordinates.
+  tess->num_nodes = t.nodes.size()/Dimension;
+  tess->nodes = (polytope_real_t*)malloc(sizeof(polytope_real_t) * Dimension * tess->num_nodes);
+  copy(t.nodes.begin(), t.nodes.end(), tess->nodes);
+
+  // Copy cell-face data.
+  {
+    tess->num_cells = t.cells.size();
+    tess->cell_offsets = (int*)malloc(sizeof(int) * tess->num_cells);
+    int size = 0;
+    for (size_t i = 0; i < t.cells.size(); ++i)
+      size += t.cells[i].size();
+    tess->cell_faces = (int*)malloc(sizeof(int) * (size+1));
+    int offset = 0;
+    for (size_t i = 0; i < t.cells.size(); ++i)
+    {
+      tess->cell_offsets[i] = offset;
+      for (size_t j = 0; j < t.cells[i].size(); ++j, ++offset)
+        tess->cell_faces[offset] = t.cells[i][j];
+    }
+    tess->cell_offsets[t.cells.size()] = offset;
+  }
+
+  // Copy face-node data.
+  {
+    tess->num_faces = t.faces.size();
+    tess->face_offsets = (int*)malloc(sizeof(int) * tess->num_faces);
+    int size = 0;
+    for (size_t i = 0; i < t.faces.size(); ++i)
+      size += t.faces[i].size();
+    tess->face_nodes = (unsigned*)malloc(sizeof(unsigned) * (size+1));
+    int offset = 0;
+    for (size_t i = 0; i < t.faces.size(); ++i)
+    {
+      tess->face_offsets[i] = offset;
+      for (size_t j = 0; j < t.faces[i].size(); ++j, ++offset)
+        tess->face_nodes[offset] = t.faces[i][j];
+    }
+    tess->face_offsets[t.faces.size()] = offset;
+  }
+
+  // Inf nodes and faces.
+  tess->num_inf_nodes = (int)t.infNodes.size();
+  tess->inf_nodes = (unsigned*)malloc(sizeof(unsigned) * tess->num_inf_nodes);
+  copy(t.infNodes.begin(), t.infNodes.end(), tess->inf_nodes);
+
+  tess->num_inf_faces = (int)t.infFaces.size();
+  tess->inf_faces = (unsigned*)malloc(sizeof(unsigned) * tess->num_inf_faces);
+  copy(t.infFaces.begin(), t.infFaces.end(), tess->inf_faces);
+
+  // Cells attached to faces.
+  POLY_ASSERT(tess->num_faces == (int)t.faceCells.size());
+  tess->face_cells = (int*)malloc(2 * tess->num_faces * sizeof(int));
+  for (int f = 0; f < t.faceCells.size(); ++f)
+  {
+    tess->face_cells[2*f] = t.faceCells[f][0];
+    tess->face_cells[2*f+1] = (t.faceCells[f].size() == 2) ? t.faceCells[f][1] : -1;
+  }
+
+  // Convex hull.
+  if (!t.convexHull.empty())
+    tess->convex_hull = polytope_plc_from_PLC(t.convexHull);
+
+  // Neighbor domain information.
+  tess->num_neighbor_domains = (int)t.neighborDomains.size();
+  tess->neighbor_domains = (unsigned*)malloc(sizeof(unsigned) * tess->num_neighbor_domains);
+  copy(t.neighborDomains.begin(), t.neighborDomains.end(), tess->neighbor_domains);
+
+  {
+    tess->shared_node_domain_offsets = (int*)malloc(sizeof(int) * (tess->num_neighbor_domains + 1));
+    int size = 0;
+    for (size_t i = 0; i < t.faces.size(); ++i)
+      size += t.sharedNodes[i].size();
+    tess->shared_nodes = (unsigned*)malloc(sizeof(unsigned) * (size+1));
+    int offset = 0;
+    for (size_t i = 0; i < t.sharedNodes.size(); ++i)
+    {
+      tess->shared_node_domain_offsets[i] = offset;
+      for (size_t j = 0; j < t.sharedNodes[i].size(); ++j, ++offset)
+        tess->shared_nodes[offset] = t.sharedNodes[i][j];
+    }
+    tess->shared_node_domain_offsets[t.sharedNodes.size()] = offset;
+  }
+
+  {
+    tess->shared_face_domain_offsets = (int*)malloc(sizeof(int) * (tess->num_neighbor_domains + 1));
+    int size = 0;
+    for (size_t i = 0; i < t.faces.size(); ++i)
+      size += t.sharedFaces[i].size();
+    tess->shared_faces = (unsigned*)malloc(sizeof(unsigned) * (size+1));
+    int offset = 0;
+    for (size_t i = 0; i < t.sharedFaces.size(); ++i)
+    {
+      tess->shared_face_domain_offsets[i] = offset;
+      for (size_t j = 0; j < t.sharedFaces[i].size(); ++j, ++offset)
+        tess->shared_faces[offset] = t.sharedFaces[i][j];
+    }
+    tess->shared_face_domain_offsets[t.sharedFaces.size()] = offset;
+  }
+
+
+  // Node->cell connectivity.
+  // FIXME
+}
+
+}
+
 extern "C"
 {
 
@@ -34,6 +152,21 @@ void polytope_tessellator_tessellate_unbounded(polytope_tessellator_t* tessellat
                                                polytope_real_t* points, int num_points,
                                                polytope_tessellation_t* mesh)
 {
+  if (tessellator->tess2 != NULL)
+  {
+    vector<polytope_real_t> pts(points, points + 2*num_points);
+    Tessellation<2, polytope_real_t> t;
+    tessellator->tess2->tessellate(pts, t);
+    fill_tessellation(t, mesh);
+  }
+  else
+  {
+    POLY_ASSERT(tessellator->tess3 != NULL);
+    vector<polytope_real_t> pts(points, points + 3*num_points);
+    Tessellation<3, polytope_real_t> t;
+    tessellator->tess3->tessellate(pts, t);
+    fill_tessellation(t, mesh);
+  }
 }
 //------------------------------------------------------------------------
 

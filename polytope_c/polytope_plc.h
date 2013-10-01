@@ -58,6 +58,9 @@ bool polytope_plc_empty(polytope_plc_t* plc);
 // is obviously invalid. This is not a rigorous check!
 bool polytope_plc_valid(polytope_plc_t* plc);
 
+// Writes a human-readable representation of the PLC to the given string.
+void polytope_plc_snprintf(polytope_plc_t* plc, char* str, int n);
+
 // Writes a human-readable representation of the PLC to the given file.
 void polytope_plc_fprintf(polytope_plc_t* plc, FILE* stream);
 
