@@ -92,6 +92,9 @@ void polytope_tessellation_snprintf(polytope_tessellation_t* tessellation, char*
 // Writes a human-readable representation of the tessellation to the given file.
 void polytope_tessellation_fprintf(polytope_tessellation_t* tessellation, FILE* stream);
 
+// Clears a tessellation, emptying its contents.
+void polytope_tessellation_clear(polytope_tessellation_t* tessellation);
+
 // This function should be called to destroy a tessellation.
 void polytope_tessellation_free(polytope_tessellation_t* tessellation);
 
