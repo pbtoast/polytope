@@ -4,15 +4,12 @@
 #include "TriangleTessellator.hh"
 #include "TetgenTessellator.hh"
 
-using namespace std;
-using namespace polytope;
+namespace polytope
+{
 
 // Helper function for constructing C PLCs from C++ ones.
 template <int Dimension>
 polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc);
-
-namespace 
-{
 
 // This helper crafts a C polytope_tessellation object from a C++ Tessellation.
 template <int Dimension>
@@ -123,7 +120,85 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
   // FIXME
 }
 
+// This helper crafts a C++ Tessellation object from a C polytope_tessellation_t.
+template <int Dimension>
+void fill_tessellation(polytope_tessellation_t* tess, Tessellation<Dimension, polytope_real_t>& t)
+{
+  // Copy node coordinates.
+  t.nodes.resize(tess->num_nodes);
+  copy(tess->nodes, tess->nodes + Dimension * tess->num_nodes, t.nodes.begin());
+
+  // Copy cell-face data.
+  t.cells.resize(tess->num_cells);
+  for (size_t i = 0; i < t.cells.size(); ++i)
+  {
+    int num_faces = tess->cell_offsets[i+1] - tess->cell_offsets[i];
+    t.cells[i].resize(num_faces);
+    for (int j = 0; j < num_faces; ++j)
+      t.cells[i][j] = tess->cell_faces[tess->cell_offsets[i] + j];
+  }
+
+  // Copy face-node data.
+  t.faces.resize(tess->num_faces);
+  for (size_t i = 0; i < t.faces.size(); ++i)
+  {
+    int num_nodes = tess->face_offsets[i+1] - tess->face_offsets[i];
+    t.faces[i].resize(num_nodes);
+    for (int j = 0; j < num_nodes; ++j)
+      t.faces[i][j] = tess->face_nodes[tess->face_offsets[i] + j];
+  }
+
+  // Inf nodes and faces.
+  t.infNodes.resize(tess->num_inf_nodes);
+  copy(tess->inf_nodes, tess->inf_nodes + tess->num_inf_nodes, t.infNodes.begin());
+
+  t.infFaces.resize(tess->num_inf_faces);
+  copy(tess->inf_faces, tess->inf_faces + tess->num_inf_faces, t.infFaces.begin());
+
+  // Cells attached to faces.
+  t.faceCells.resize(tess->num_faces);
+  for (size_t i = 0; i < t.faceCells.size(); ++i)
+  {
+    int num_cells = (tess->face_cells[2*i+1] != -1) ? 2 : 1;
+    t.faceCells[i].resize(num_cells);
+    for (int j = 0; j < num_cells; ++j)
+      t.faceCells[i][j] = tess->face_cells[2*i+j];
+  }
+
+  // Convex hull.
+  // FIXME: Not yet supported.
+
+  // Neighbor domain information.
+  t.neighborDomains.resize(tess->num_neighbor_domains);
+  t.sharedNodes.resize(tess->num_neighbor_domains);
+  t.sharedFaces.resize(tess->num_neighbor_domains);
+  copy(tess->neighbor_domains, tess->neighbor_domains + tess->num_neighbor_domains, t.neighborDomains.begin());
+  for (size_t i = 0; i < t.neighborDomains.size(); ++i)
+  {
+    int num_nodes = tess->shared_node_domain_offsets[i+1] - tess->shared_node_domain_offsets[i];
+    t.sharedNodes[i].resize(num_nodes);
+    for (int j = 0; j < num_nodes; ++j)
+      t.sharedNodes[i][j] = tess->shared_nodes[tess->shared_node_domain_offsets[i] + j];
+
+    int num_faces = tess->shared_face_domain_offsets[i+1] - tess->shared_face_domain_offsets[i];
+    t.sharedFaces[i].resize(num_faces);
+    for (int j = 0; j < num_faces; ++j)
+      t.sharedFaces[i][j] = tess->shared_faces[tess->shared_face_domain_offsets[i] + j];
+  }
+
+  // We ignore Node->cell connectivity, since it can always be generated.
 }
+
+// Template instantiations.
+template void fill_tessellation(const Tessellation<2, polytope_real_t>& t, polytope_tessellation_t* tess);
+template void fill_tessellation(const Tessellation<3, polytope_real_t>& t, polytope_tessellation_t* tess);
+template void fill_tessellation(polytope_tessellation_t* tess, Tessellation<2, polytope_real_t>& t);
+template void fill_tessellation(polytope_tessellation_t* tess, Tessellation<3, polytope_real_t>& t);
+
+}
+
+using namespace std;
+using namespace polytope;
 
 extern "C"
 {
