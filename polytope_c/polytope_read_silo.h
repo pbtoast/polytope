@@ -16,10 +16,6 @@ extern "C"
 {
 #endif
 
-// This struct represents a tessellation corresponding to the C++ 
-// polytope::Tessellation class.
-typedef struct polytope_tessellation_t polytope_tessellation_t;
-
 //! Reads an arbitrary polygonal mesh and an associated set of 
 //! cell-centered fields to a SILO file in the given directory.
 void polytope_read_silo(polytope_tessellation_t* mesh, 
