@@ -1,3 +1,4 @@
+#include <cstring>
 #include "polytope_read_silo.h"
 #include "polytope_c.h"
 #include "polytope.hh"
@@ -51,16 +52,16 @@ void polytope_read_silo(polytope_tessellation_t* mesh,
   // Parse the field information.
   int N = (int)cxxFields.size();
   *num_fields = N;
-  *field_names = (char*)malloc(sizeof(char*) * N);
-  *fields = (polytope_real_t*)malloc(sizeof(polytope_real_t*) * N);
+  *field_names = (char**)malloc(sizeof(char*) * N);
+  *fields = (polytope_real_t**)malloc(sizeof(polytope_real_t*) * N);
   int index = 0;
   for (map<string, vector<polytope_real_t> >::const_iterator 
        iter = cxxFields.begin(); iter != cxxFields.end(); ++iter)
   {
-    field_names[index] = (char*)malloc(sizeof(char) * (iter->first.length() + 1));
-    strcpy(field_names[index], iter->first.c_str());
-    fields[index] = (polytope_real_t*)malloc(sizeof(polytope_real_t) * iter->second.size());
-    copy(iter->second.begin(), iter->second.end(), fields[index]);
+    *field_names[index] = (char*)malloc(sizeof(char) * (iter->first.length() + 1));
+    strcpy(*field_names[index], iter->first.c_str());
+    *fields[index] = (polytope_real_t*)malloc(sizeof(polytope_real_t) * iter->second.size());
+    copy(iter->second.begin(), iter->second.end(), *fields[index]);
     ++index;
   }
 }

@@ -20,7 +20,7 @@ void polytope_write_silo(polytope_tessellation_t* mesh,
                          char** node_field_names,
                          polytope_real_t** node_fields,
                          int num_edge_fields,
-                         char** edge_edge_names,
+                         char** edge_field_names,
                          polytope_real_t** edge_fields,
                          int num_face_fields,
                          char** face_field_names,
@@ -55,16 +55,16 @@ void polytope_write_silo(polytope_tessellation_t* mesh,
   {
     Tessellation<2, polytope_real_t> cxxMesh;
     fill_tessellation(mesh, cxxMesh);
-    SiloWriter::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
-                      cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
+    SiloWriter<2, polytope_real_t>::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
+                                          cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
   }
   else
   {
     POLY_ASSERT(mesh->dimension == 3);
-    fill_tessellation(mesh, cxxMesh);
     Tessellation<3, polytope_real_t> cxxMesh;
-    SiloWriter::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
-                      cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
+    fill_tessellation(mesh, cxxMesh);
+    SiloWriter<3, polytope_real_t>::write(cxxMesh, cxxNodeFields, cxxEdgeFields, cxxFaceFields, cxxCellFields,
+                                          cxxPrefix, cxxDir, cycle, time, comm, num_files, mpi_tag);
   }
 }
 
