@@ -52,7 +52,8 @@ void test1(polytope_tessellator_t* tessellator) {
   polytope_plc_add_facet(plc);
   polytope_plc_add_facet(plc);
   polytope_plc_add_facet(plc);
-  for (int i = 0; i < 4; ++i) 
+  int i;
+  for (i = 0; i < 4; ++i) 
   {
     polytope_plc_add_facet_node(plc, i, i);
     polytope_plc_add_facet_node(plc, i, (i+1)%4);
