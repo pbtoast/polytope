@@ -242,10 +242,6 @@ add_subdirectory(voro_3d)
 include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
-# Polytope C library -- not soup yet.
-include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-add_subdirectory(polytope_c)
-
 # Tests directory
 if (${TESTING} EQUAL 1)
   enable_testing()
@@ -253,6 +249,10 @@ if (${TESTING} EQUAL 1)
   include (CTest)
 endif()
   
+# Polytope C library.
+include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+add_subdirectory(polytope_c)
+
 # Python bindings.
 if(HAVE_PYTHON)
   include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
