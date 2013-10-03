@@ -35,16 +35,18 @@ void output_mesh(polytope_tessellation_t* mesh,
   double* index = (double*)malloc(sizeof(double) * mesh->num_cells);
   double* genx = (double*)malloc(sizeof(double) * mesh->num_cells);
   double* geny = (double*)malloc(sizeof(double) * mesh->num_cells);
-  for (int i = 0; i < mesh->num_cells; ++i)
+  int i;
+  for (i = 0; i < mesh->num_cells; ++i)
   {
     index[i] = 1.0 * i;
-    if (mesh->num_points != 0)
+    if (mesh->num_nodes != 0)
     {
       genx[i] = points[2*i  ];
       geny[i] = points[2*i+1];
     }
   }
-  double *cellFields[mesh->dimension + 1];
+  char *cell_field_names[mesh->dimension + 1];
+  double *cell_fields[mesh->dimension + 1];
   cell_field_names[0] = (char*)"cell_index";
   cell_fields[0] = index;
   cell_field_names[1] = (char*)"gen_x";

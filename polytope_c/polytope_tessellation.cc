@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "polytope_c.h"
 #include "Tessellation.hh"
 
