@@ -8,6 +8,7 @@
 #else
 #ifndef MPI_Comm
 #define MPI_Comm int
+#define MPI_COMM_WORLD 0
 #endif
 #endif 
 

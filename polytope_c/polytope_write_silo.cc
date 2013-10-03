@@ -4,6 +4,15 @@
 
 #if HAVE_SILO
 
+#if HAVE_MPI
+#include <mpi.h>
+#else
+#ifndef MPI_Comm
+#define MPI_Comm int
+#define MPI_COMM_WORLD 0
+#endif
+#endif 
+
 namespace polytope
 {
 
