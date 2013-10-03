@@ -5,13 +5,18 @@
 
 #if HAVE_SILO
 
-using namespace std;
-using namespace polytope;
+namespace polytope
+{
 
 // Creates a C tessellation from a C++ one. This template is defined in 
 // polytope_tessellator.cc.
 template <int Dimension>
 void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polytope_tessellation_t* tess);
+
+}
+
+using namespace std;
+using namespace polytope;
 
 extern "C"
 {
