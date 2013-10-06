@@ -126,7 +126,7 @@ template <int Dimension>
 void fill_tessellation(polytope_tessellation_t* tess, Tessellation<Dimension, polytope_real_t>& t)
 {
   // Copy node coordinates.
-  t.nodes.resize(tess->num_nodes);
+  t.nodes.resize(Dimension * tess->num_nodes);
   copy(tess->nodes, tess->nodes + Dimension * tess->num_nodes, t.nodes.begin());
 
   // Copy cell-face data.
