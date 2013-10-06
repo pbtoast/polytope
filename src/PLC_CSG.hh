@@ -28,9 +28,9 @@ namespace CSG {
 //------------------------------------------------------------------------------
 // Public interface methods (forward declaration).
 //------------------------------------------------------------------------------
-template<typename RealType> ReducedPLC<3, RealType> csg_union       (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
-template<typename RealType> ReducedPLC<3, RealType> csg_intersection(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
-template<typename RealType> ReducedPLC<3, RealType> csg_difference  (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_union     (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_intersect (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_difference(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
 
 //------------------------------------------------------------------------------
 // Everything from here down is implementation detail.
@@ -260,7 +260,7 @@ Node<RealType>* csg_union(const Node<RealType>* a1, const Node<RealType>* b1) {
 // Return a new CSG solid representing space in this solid but not in the
 // solid `csg`. Neither this solid nor the solid `csg` are modified.
 template<typename RealType>
-Node<RealType>* subtract(const Node<RealType>* a1, const Node<RealType> * b1) {
+Node<RealType>* csg_subtract(const Node<RealType>* a1, const Node<RealType> * b1) {
   Node<RealType>* a = a1->clone();
   Node<RealType>* b = b1->clone();
   a->invert();
@@ -280,7 +280,7 @@ Node<RealType>* subtract(const Node<RealType>* a1, const Node<RealType> * b1) {
 // Return a new CSG solid representing space both this solid and in the
 // solid `csg`. Neither this solid nor the solid `csg` are modified.
 template<typename RealType>
-Node<RealType>* intersect(const Node<RealType>* a1, const Node<RealType>* b1) {
+Node<RealType>* csg_intersect(const Node<RealType>* a1, const Node<RealType>* b1) {
   Node<RealType>* a = a1->clone();
   Node<RealType>* b = b1->clone();
   a->invert();
@@ -402,7 +402,7 @@ ReducedPLCtoPolygons(const ReducedPLC<3, RealType>& model) {
     POLY_ASSERT(n >= 3);
     PointType normal;
     const unsigned k1 = model.facets[i][0];
-    for (size_t j = 1; j != n; ++j) {
+    for (size_t j = 1; j != n-1; ++j) {
       const unsigned k2 = model.facets[i][j],
                      k3 = model.facets[i][(j + 1) % n];
       if (j == 1) {
@@ -417,8 +417,8 @@ ReducedPLCtoPolygons(const ReducedPLC<3, RealType>& model) {
       triangle[0] = Vertex<RealType>(PointType(coords[3*k1], coords[3*k1 + 1], coords[3*k1 + 2]), normal);
       triangle[1] = Vertex<RealType>(PointType(coords[3*k2], coords[3*k2 + 1], coords[3*k2 + 2]), normal);
       triangle[2] = Vertex<RealType>(PointType(coords[3*k3], coords[3*k3 + 1], coords[3*k3 + 2]), normal);
+      list.push_back(Polygon<RealType>(triangle));
     }
-    list.push_back(Polygon<RealType>(triangle));
   }
   return list;
 }
@@ -434,17 +434,26 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polygons) {
   const unsigned nfacets = polygons.size();
   POLY_ASSERT(nfacets >= 4);
   for (size_t i = 0; i != nfacets; ++i) {
+    std::cerr << "Polygon " << i << " : " << polygons[i].vertices[0].pos << " " << polygons[i].vertices[1].pos;
     const unsigned n = polygons[i].vertices.size();
-    result.facets.push_back(std::vector<int>());
-    for (size_t j = 0; j != n; ++j) {
-      result.facets[i].push_back(result.points.size()/3);
+    for (size_t j = 2; j < n; ++j) {
+      std::cerr << " " << polygons[i].vertices[j].pos;
+      result.facets.push_back(std::vector<int>());
+      result.facets.back().push_back(result.points.size()/3);
+      result.points.push_back(polygons[i].vertices[0].pos.x);
+      result.points.push_back(polygons[i].vertices[0].pos.y);
+      result.points.push_back(polygons[i].vertices[0].pos.z);
+      result.facets.back().push_back(result.points.size()/3);
+      result.points.push_back(polygons[i].vertices[j - 1].pos.x);
+      result.points.push_back(polygons[i].vertices[j - 1].pos.y);
+      result.points.push_back(polygons[i].vertices[j - 1].pos.z);
+      result.facets.back().push_back(result.points.size()/3);
       result.points.push_back(polygons[i].vertices[j].pos.x);
       result.points.push_back(polygons[i].vertices[j].pos.y);
       result.points.push_back(polygons[i].vertices[j].pos.z);
     }
-    POLY_ASSERT(result.facets[i].size() == polygons[i].vertices.size());
+    std::cerr << std::endl;
   }
-  POLY_ASSERT(result.facets.size() == nfacets);
   return result;
 }
 
@@ -467,11 +476,11 @@ ReducedPLC<3, RealType> csg_union(const ReducedPLC<3, RealType>& a, const Reduce
 }
 
 template<typename RealType>
-ReducedPLC<3, RealType> csg_intersection(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
+ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
   using namespace CSG_internal;
   Node<RealType>* A = new Node<RealType>(ReducedPLCtoPolygons(a));
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoPolygons(b));
-  Node<RealType>* AB = csg_intersection(A, B);                           // <-- only difference
+  Node<RealType>* AB = csg_intersect(A, B);                           // <-- only difference
   std::vector<Polygon<RealType> > polygons = AB->allPolygons();
   delete A; A = 0;
   delete B; B = 0;
