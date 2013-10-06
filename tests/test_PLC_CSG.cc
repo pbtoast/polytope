@@ -16,6 +16,61 @@
 using namespace std;
 using namespace polytope;
 
+namespace {
+//------------------------------------------------------------------------------
+// Create a single zone pseudo-tessellation from a PLC.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+tessellationFromPLC(const PLC<3, RealType>& plc,
+                    const std::vector<RealType>& points,
+                    Tessellation<3, RealType>& mesh) {
+  // Nodes.
+  mesh.nodes = points;
+
+  // Faces.
+  const unsigned nfaces = plc.facets.size();
+  mesh.faces = vector<vector<unsigned> >(nfaces);
+  for (unsigned i = 0; i != nfaces; ++i) {
+    const unsigned n = plc.facets[i].size();
+    for (unsigned j = 0; j != n; ++j) mesh.faces[i].push_back(plc.facets[i][j]);
+  }
+
+  // Face cells.
+  mesh.faceCells.resize(nfaces, vector<int>(size_t(1), int(0)));
+
+  // The one cell.
+  mesh.cells.resize(1);
+  for (int i = 0; i != nfaces; ++i) mesh.cells[0].push_back(i);
+}
+
+//------------------------------------------------------------------------------
+// Simplify the facets of a PLC -- combine coplanar facets and remove collinear 
+// points around the facets.
+//------------------------------------------------------------------------------
+template<typename RealType>
+PLC<3, RealType>
+simplifyPLCfacets(const PLC<3, RealType>& plc,
+                  const std::vector<RealType>& points) {
+  // PLC<3, RealType> result;
+  
+}
+
+//------------------------------------------------------------------------------
+// Emergency dump.
+//------------------------------------------------------------------------------
+std::string
+escapePod(const std::string nameEnd,
+          const ReducedPLC<3, double>& plc) {
+    std::stringstream os;
+    os << "test_PLC_CSG_" << nameEnd;
+    Tessellation<3, double> mesh;
+    tessellationFromPLC(plc, plc.points, mesh);
+    outputMesh(mesh, os.str());
+    return " : attempted to write to file " + os.str();
+}
+}
+
 //------------------------------------------------------------------------------
 // Return a 3D PLC box.
 //------------------------------------------------------------------------------
@@ -111,7 +166,21 @@ int main(int argc, char** argv) {
 #endif
 
   //----------------------------------------------------------------------
-  // Test 1.  Intesect two boxes offset in x.
+  // Convert from PLC->CSG_internal::Polygons->PLC
+  //----------------------------------------------------------------------
+  {
+    const ReducedPLC<3, double> box1 = boxPLC<double>(0.0, 1.0,
+                                                      0.0, 1.0,
+                                                      0.0, 1.0);
+    const std::vector<CSG::CSG_internal::Polygon<double> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
+    const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
+    // escapePod("box1", box1);
+    // escapePod("box1_from_polys", box2);
+    POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
+  }
+
+  //----------------------------------------------------------------------
+  // Operate on two boxes offset in x.
   //----------------------------------------------------------------------
   {
     const ReducedPLC<3, double> box1 = boxPLC<double>(0.0, 1.0,
@@ -120,14 +189,13 @@ int main(int argc, char** argv) {
                                 box2 = boxPLC<double>(0.5, 1.5,
                                                       0.0, 1.0,
                                                       0.0, 1.0);
-    polytope::CSG::CSG_internal::Plane<double>::EPSILON = 1.0e-8;
     const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
     POLY_CHECK(box_union.points.size() % 3 == 0);
-    cerr << "Point positions: " << endl;
-    for (unsigned i = 0; i != box_union.points.size()/3; ++i) {
-      cerr << "   (" << box_union.points[3*i] << " " << box_union.points[3*i+1] << " " << box_union.points[3*i+2] << ")" << endl;
-    }
-    cerr << "Union : " << box_union << endl;
+    escapePod("box1", box1);
+    escapePod("box2", box2);
+    cerr << escapePod("box_union_test", box_union) << endl;
+    const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);
+    cerr << escapePod("box_intersect_test", box_intersect) << endl;
   }
 
   cout << "PASS" << endl;
