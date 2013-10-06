@@ -33,6 +33,10 @@ polytope_tessellation_t* polytope_tessellation_new(int dimension)
   tess->node_cell_offsets = NULL;
   tess->node_cells = NULL;
   tess->convex_hull = NULL;
+  tess->inf_faces = NULL;
+  tess->num_inf_faces = NULL;
+  tess->inf_nodes = NULL;
+  tess->num_inf_nodes = NULL;
 
   return tess;
 }
