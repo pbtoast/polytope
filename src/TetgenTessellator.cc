@@ -57,140 +57,6 @@ hashFacet(const unsigned i, const unsigned j, const unsigned k) {
 }
 
 //------------------------------------------------------------------------------
-// Sort a set of edges around a face so that sequential edges share nodes.
-// We allow for one break in the chain (representing on unbounded surface).
-// In such a situation we insert the new edge at the beginning of the chain, and
-// return "true" indicating that a new edge was created.
-//------------------------------------------------------------------------------
-bool
-computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
-                       std::vector<int>& result) {
-  typedef std::pair<int, int> EdgeHash;
-
-  unsigned nedges = edges.size();
-  POLY_ASSERT(nedges >= 2);
-
-  // Invert the mapping, from nodes to edges.
-  std::map<int, std::set<unsigned> > nodes2edges;
-  internal::CounterMap<int> nodeUseCount;
-  unsigned i;
-  for (i = 0; i != nedges; ++i) {
-    nodes2edges[edges[i].first].insert(i);
-    nodes2edges[edges[i].second].insert(i);
-    ++nodeUseCount[edges[i].first];
-    ++nodeUseCount[edges[i].second];
-  }
-
-  // // BLAGO!
-  // cerr << "Input edges :";
-  // for (unsigned i = 0; i != edges.size(); ++i) cerr << " (" << edges[i].first << " " << edges[i].second << ")";
-  // cerr << endl << "nodes2edges: " << endl;
-  // for (std::map<int, std::set<EdgeHash> >::const_iterator itr = nodes2edges.begin();
-  //      itr != nodes2edges.end();
-  //      ++itr) {
-  //   cerr << "   " << itr->first << " : ";
-  //   for (std::set<EdgeHash>::const_iterator eitr = itr->second.begin();
-  //        eitr != itr->second.end();
-  //        ++eitr) cerr << " (" << eitr->first << " " << eitr->second << ")";
-  //   cerr << endl;
-  // }
-  // cerr << "nodeUseCount: " << endl;
-  // for (internal::CounterMap<int>::const_iterator itr = nodeUseCount.begin();
-  //      itr != nodeUseCount.end();
-  //      ++itr) {
-  //   cerr << "   " << itr->first << " : " << itr->second << endl;
-  // }
-  // // BLAGO!
-
-  // Look for any edges with one node in the set.  There can be at most
-  // two such edges, representing the two ends of the chain.  We introduce a
-  // new edge hooking those hanging nodes together, and off we go.
-  int lastNode;
-  vector<int> hangingNodes;
-  for (i = 0; i != nedges; ++i) {
-    if (nodeUseCount[edges[i].first] == 1 or
-        nodeUseCount[edges[i].second] == 1) {
-      POLY_ASSERT((nodeUseCount[edges[i].first] == 1 and nodeUseCount[edges[i].second] == 2) or
-                  (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1));
-      result.push_back(i);
-      nodes2edges[edges[i].first].erase(i);
-      nodes2edges[edges[i].second].erase(i);
-      lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
-      hangingNodes.push_back(lastNode);
-    }
-  }
-  POLY_ASSERT(result.size() == 0 or (hangingNodes.size() == 2 and result.size() == 2));
-
-  // If needed create that new edge and put it in the set.
-  if (hangingNodes.size() == 2) {
-    result.insert(result.begin() + 1, edges.size());
-    edges.push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
-    ++nedges;
-    POLY_ASSERT(result.size() == 3);
-  }
-  POLY_ASSERT(edges.size() == nedges);
-
-  // Pick a node to start the chain.
-  if (hangingNodes.size() == 2) {
-    POLY_ASSERT(nodeUseCount[edges[result.back()].first] == 2 or
-                nodeUseCount[edges[result.back()].second] == 2);
-    lastNode = (nodeUseCount[edges[result.back()].first] == 2 ? 
-                edges[result.back()].first :
-                edges[result.back()].second);
-  } else {
-    lastNode = edges[0].first;
-  }
-
-  // Walk the remaining edges
-  EdgeHash ehash;
-  while (result.size() != nedges) {
-    POLY_ASSERT(nodes2edges[lastNode].size() > 0);
-    result.push_back(*nodes2edges[lastNode].begin());
-    ehash = edges[result.back()];
-    nodes2edges[ehash.first].erase(result.back());
-    nodes2edges[ehash.second].erase(result.back());
-    lastNode = (ehash.first == lastNode ? ehash.second : ehash.first);
-  }
-  
-  // // BLAGO!
-  // cerr << "Sorted edges : ";
-  // for (i = 0; i != nedges; ++i) cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
-  // cerr << endl;
-  // // BLAGO!
-
-  // Set the orientation for the ordered edges.
-  lastNode = (edges[result[0]].first == edges[result[1]].first ? edges[result[0]].first : edges[result[0]].second);
-  for (i = 1; i != nedges; ++i) {
-    POLY_ASSERT(edges[result[i]].first == lastNode or edges[result[i]].second == lastNode);
-    if (edges[result[i]].first == lastNode) {
-      lastNode = edges[result[i]].second;
-    } else {
-      lastNode = edges[result[i]].first;
-      result[i] = ~result[i];
-    }
-  }
-
-  // That's it.
-  POLY_BEGIN_CONTRACT_SCOPE;
-  {
-    POLY_ASSERT(edges.size() == result.size());
-    for (int i = 0; i != edges.size(); ++i) {
-      const int j = (i + 1) % edges.size();
-      const int ii = result[i];
-      const int jj = result[j];
-      POLY_ASSERT((ii >= 0 ? ii : ~ii) < edges.size());
-      POLY_ASSERT((jj >= 0 ? jj : ~jj) < edges.size());
-      POLY_ASSERT(((ii >= 0 and jj >= 0) and edges[ii].second == edges[jj].first) or
-                  ((ii >= 0 and jj <  0) and edges[ii].second == edges[~jj].second) or
-                  ((ii <  0 and jj >= 0) and edges[~ii].first == edges[jj].first) or
-                  ((ii <  0 and jj <  0) and edges[~ii].first == edges[~jj].second));
-    }
-  }
-  POLY_END_CONTRACT_SCOPE;
-  return !(hangingNodes.empty());
-}
-
-//------------------------------------------------------------------------------
 // Given an array of 4 integers and 2 unique values, find the other two.
 //------------------------------------------------------------------------------
 void
@@ -1126,7 +992,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
     meshEdges.erase(unique(meshEdges.begin(), meshEdges.end()), meshEdges.end());
     if (meshEdges.size() > 1) {
       vector<int> edgeOrder;
-      const bool infEdge = computeSortedFaceEdges(meshEdges, edgeOrder);
+      const bool infEdge = internal::computeSortedFaceEdges(meshEdges, edgeOrder);
       if (meshEdges.size() > 2) {
 
         // Add the edges and face to the quantized mesh.
@@ -1174,7 +1040,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   for (i = 0; i != numGenerators; ++i) {
     if (cellInfEdges[i].size() > 2) {
       vector<int> edgeOrder;
-      computeSortedFaceEdges(cellInfEdges[i], edgeOrder);
+      internal::computeSortedFaceEdges(cellInfEdges[i], edgeOrder);
 
       // Check if we need to reverse the face node order.
       e0 = qmesh.edgePosition(cellInfEdges[i][internal::positiveID(edgeOrder[0])]);
