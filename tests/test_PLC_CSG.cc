@@ -211,6 +211,34 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   }
   POLY_ASSERT(result.facets.size() >= 4);
 
+  // Make a final pass and remove any points we're not actually using.
+  std::vector<int> mask(result.points.size()/3, -1);
+  for (unsigned i = 0; i != result.facets.size(); ++i) {
+    for (unsigned j = 0; j != result.facets[i].size(); ++j) {
+      mask[result.facets[i][j]] = 1;
+    }
+  }
+  unsigned n = 0;
+  for (unsigned i = 0; i != mask.size(); ++i) {
+    if (mask[i] == 1) mask[i] = n++;
+  }
+  for (unsigned i = 0; i != mask.size(); ++i) {
+    if (mask[i] != -1) {
+      unsigned j = 3*mask[i];
+      result.points[j] = result.points[3*i];
+      result.points[j+1] = result.points[3*i+1];
+      result.points[j+2] = result.points[3*i+2];
+    }
+  }
+  result.points.resize(3*n);
+  for (unsigned i = 0; i != result.facets.size(); ++i) {
+    for (unsigned j = 0; j != result.facets[i].size(); ++j) {
+      const unsigned k = result.facets[i][j];
+      POLY_ASSERT(mask[k] != -1);
+      result.facets[i][j] = mask[k];
+    }
+  }
+
   // That's it.
   return result;
 }
@@ -351,16 +379,18 @@ int main(int argc, char** argv) {
                                                       0.0, 1.0);
     const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
     POLY_CHECK(box_union.points.size() % 3 == 0);
-    escapePod("box1", box1);
-    escapePod("box2", box2);
-    cerr << escapePod("box_union_test", box_union) << endl;
+    // escapePod("box1", box1);
+    // escapePod("box2", box2);
+    // cerr << escapePod("box_union_test", box_union) << endl;
     const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);
-    cerr << escapePod("box_intersect_test", box_intersect) << endl;
+    // cerr << escapePod("box_intersect_test", box_intersect) << endl;
     const ReducedPLC<3, double> box_intersect_simplify = simplifyPLCfacets(box_intersect, box_intersect.points, 1.0e-10);
-    cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
-    cerr << "Simplified PLC: " << box_intersect_simplify << endl
-         << "  points: " << endl;
-    for (unsigned i = 0; i != box_intersect_simplify.points.size()/3; ++i) cerr << "    " << i << " (" << box_intersect_simplify.points[3*i] << " " << box_intersect_simplify.points[3*i+1] << " " << box_intersect_simplify.points[3*i+2] << ")" << endl;
+    // cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
+    // cerr << "Simplified PLC: " << box_intersect_simplify << endl
+    //      << "  points: " << endl;
+    // for (unsigned i = 0; i != box_intersect_simplify.points.size()/3; ++i) cerr << "    " << i << " (" << box_intersect_simplify.points[3*i] << " " << box_intersect_simplify.points[3*i+1] << " " << box_intersect_simplify.points[3*i+2] << ")" << endl;
+    POLY_CHECK(box_intersect_simplify.facets.size() == 6);
+    POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
   }
 
   cout << "PASS" << endl;
