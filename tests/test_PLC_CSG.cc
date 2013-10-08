@@ -20,6 +20,14 @@ using namespace polytope;
 
 namespace {
 //------------------------------------------------------------------------------
+// The sign function.
+//------------------------------------------------------------------------------
+template<typename T> 
+int sgn(T val) {
+  return (val >= T(0) ? 1 : -1);
+}
+
+//------------------------------------------------------------------------------
 // Create a single zone pseudo-tessellation from a PLC.
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -113,6 +121,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::set<unsigned> oldfacets, nodes2check;
       std::map<unsigned, unsigned> nodeFacetUsedCount;
       oldfacets.insert(i);
+      std::cerr << "oldfacets " << i << " : " << i;
       for (std::vector<int>::const_iterator nodeItr = plc.facets[i].begin();
            nodeItr != plc.facets[i].end();
            ++nodeItr) nodes2check.insert(old2new[*nodeItr]);
@@ -122,6 +131,10 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
         for (std::vector<unsigned>::const_iterator otherFacetItr = nodeFacets[*nodeItr].begin();
              otherFacetItr != nodeFacets[*nodeItr].end();
              ++otherFacetItr) {
+          std::cerr << " [" << (*otherFacetItr)
+                    << " " 
+                    << std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0)
+                    << "]";
           if ((*otherFacetItr != i) and (facetUsed[i] == 0) and
               (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0) < tol)) {
             facetUsed[*otherFacetItr] = 1;
@@ -132,10 +145,12 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           }
         }
       }
+      std::cerr << std::endl;
 
       // oldfacets now contains all the facets we're going to glue together into a single new one.
       // Walk the edges of each facet.  Any edges we walk only once is one we're keeping.
       std::vector<EdgeHash> edges;
+      internal::CounterMap<EdgeHash> edgeCount;
       for (std::set<unsigned>::const_iterator facetItr = oldfacets.begin();
            facetItr != oldfacets.end();
            ++facetItr) {
@@ -144,13 +159,13 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
         for (unsigned j = 0; j != n; ++j) {
           const EdgeHash ehash = internal::hashEdge(old2new[facetNodes[j]],
                                                     old2new[facetNodes[(j + 1) % n]]);
-          std::vector<EdgeHash>::iterator itr = find(edges.begin(), edges.end(), ehash);
-          if (itr == edges.end()) {
-            edges.push_back(ehash);
-          } else {
-            edges.erase(itr);
-          }
+          ++edgeCount[ehash];
         }
+      }
+      for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCount.begin();
+           itr != edgeCount.end();
+           ++itr) {
+        if (itr->second == 1) edges.push_back(itr->first);
       }
       POLY_ASSERT(edges.size() >= 3);
 
@@ -165,28 +180,40 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::vector<unsigned> keepEdge(edges.size());
       for (unsigned j = 0; j != edges.size(); ++j) {
         const unsigned k = (j + 1) % edges.size();
-        const EdgeHash ej = edges[edgeOrder[j]], ek = edges[edgeOrder[k]];
-        POLY_ASSERT(ej.first == ek.first or 
-                    ej.second == ek.first or
-                    ej.first == ek.second or
-                    ej.second == ek.second);
+        const int jorder = edgeOrder[j], korder = edgeOrder[k];
+        const EdgeHash ej = edges[internal::positiveID(jorder)], ek = edges[internal::positiveID(korder)];
+        POLY_ASSERT((jorder < 0 ? ej.first : ej.second) == (korder < 0 ? ek.second : ek.first));
         PointType jhat(result.points[3*ej.second  ] - result.points[3*ej.first  ],
                        result.points[3*ej.second+1] - result.points[3*ej.first+1],
                        result.points[3*ej.second+2] - result.points[3*ej.first+2]),
                   khat(result.points[3*ek.second  ] - result.points[3*ek.first  ],
                        result.points[3*ek.second+1] - result.points[3*ek.first+1],
                        result.points[3*ek.second+2] - result.points[3*ek.first+2]);
+        jhat *= sgn(jorder);
+        khat *= sgn(korder);
         geometry::unitVector<3, RealType>(&jhat.x);
         geometry::unitVector<3, RealType>(&khat.x);
         if (1.0 - std::abs(geometry::dot<3, RealType>(&jhat.x, &khat.x)) > tol) {
-          if (newfacet.size() == 0 or ej.second == newfacet.back()) {
-            newfacet.push_back(ej.first);
-          } else {
-            newfacet.push_back(ej.second);
-          }
+          newfacet.push_back(jorder < 0 ? ej.second : ej.first);
         }
       }
       POLY_ASSERT(newfacet.size() >= 3);
+
+      // Do we need to reverse the ordering of this facet?
+      const PointType a0(points[3*plc.facets[i][0]], points[3*plc.facets[i][0]+1], points[3*plc.facets[i][0]+2]), 
+                      b0(points[3*plc.facets[i][1]], points[3*plc.facets[i][1]+1], points[3*plc.facets[i][1]+2]), 
+                      c0(points[3*plc.facets[i][2]], points[3*plc.facets[i][2]+1], points[3*plc.facets[i][2]+2]), 
+                      a1(result.points[3*newfacet[0]], result.points[3*newfacet[0]+1], result.points[3*newfacet[0]+2]), 
+                      b1(result.points[3*newfacet[1]], result.points[3*newfacet[1]+1], result.points[3*newfacet[1]+2]), 
+                      c1(result.points[3*newfacet[2]], result.points[3*newfacet[2]+1], result.points[3*newfacet[2]+2]),
+                      ab0 = b0 - a0,
+                      ac0 = c0 - a0,
+                      ab1 = b1 - a1,
+                      ac1 = c1 - a1;
+      PointType oldnorm, newnorm;
+      geometry::cross<3, RealType>(&ab0.x, &ac0.x, &oldnorm.x);
+      geometry::cross<3, RealType>(&ab1.x, &ac1.x, &newnorm.x);
+      if (geometry::dot<3, RealType>(&oldnorm.x, &newnorm.x) < 0.0) std::reverse(newfacet.begin(), newfacet.end());
     }
   }
   POLY_ASSERT(result.facets.size() >= 4);
@@ -312,11 +339,17 @@ int main(int argc, char** argv) {
                                                       0.0, 1.0,
                                                       0.0, 1.0);
     const std::vector<CSG::CSG_internal::Polygon<double> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
-    const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
-    escapePod("box1", box1);
-    const ReducedPLC<3, double> box3 = simplifyPLCfacets(box2, box2.points, 1.0e-10);
-    // escapePod("box1_from_polys", box2);
     POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
+    const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
+    std::cerr << "box2: " << box2 << std::endl;
+    escapePod("box1", box1);
+    escapePod("box1_from_polys", box2);
+    const ReducedPLC<3, double> box3 = simplifyPLCfacets(box2, box2.points, 1.0e-10);
+    std::cerr << "box2 simplified: " << box3 << std::endl 
+              << "points:  " << std::endl;
+    for (unsigned i = 0; i != box3.points.size()/3; ++i) std::cerr << "  " << i << " (" << box3.points[3*i] << " " << box3.points[3*i+1] << " " << box3.points[3*i+2] << ")" << std::endl;
+    escapePod("box1_from_polys_simplified", box3);
+    POLY_CHECK(box3.facets.size() == 6);
   }
 
   //----------------------------------------------------------------------
