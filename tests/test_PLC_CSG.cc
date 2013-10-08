@@ -121,7 +121,6 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::set<unsigned> oldfacets, nodes2check;
       std::map<unsigned, unsigned> nodeFacetUsedCount;
       oldfacets.insert(i);
-      std::cerr << "oldfacets " << i << " : " << i;
       for (std::vector<int>::const_iterator nodeItr = plc.facets[i].begin();
            nodeItr != plc.facets[i].end();
            ++nodeItr) nodes2check.insert(old2new[*nodeItr]);
@@ -131,11 +130,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
         for (std::vector<unsigned>::const_iterator otherFacetItr = nodeFacets[*nodeItr].begin();
              otherFacetItr != nodeFacets[*nodeItr].end();
              ++otherFacetItr) {
-          std::cerr << " [" << (*otherFacetItr)
-                    << " " 
-                    << std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0)
-                    << "]";
-          if ((*otherFacetItr != i) and (facetUsed[i] == 0) and
+          if ((*otherFacetItr != i) and (facetUsed[*otherFacetItr] == 0) and
               (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0) < tol)) {
             facetUsed[*otherFacetItr] = 1;
             oldfacets.insert(*otherFacetItr);
@@ -145,7 +140,6 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           }
         }
       }
-      std::cerr << std::endl;
 
       // oldfacets now contains all the facets we're going to glue together into a single new one.
       // Walk the edges of each facet.  Any edges we walk only once is one we're keeping.
@@ -177,7 +171,6 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       // Remove any sequential edges that are collinear.
       result.facets.push_back(std::vector<int>());
       vector<int>& newfacet = result.facets.back();
-      std::vector<unsigned> keepEdge(edges.size());
       for (unsigned j = 0; j != edges.size(); ++j) {
         const unsigned k = (j + 1) % edges.size();
         const int jorder = edgeOrder[j], korder = edgeOrder[k];
@@ -194,7 +187,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
         geometry::unitVector<3, RealType>(&jhat.x);
         geometry::unitVector<3, RealType>(&khat.x);
         if (1.0 - std::abs(geometry::dot<3, RealType>(&jhat.x, &khat.x)) > tol) {
-          newfacet.push_back(jorder < 0 ? ej.second : ej.first);
+          newfacet.push_back(korder < 0 ? ek.second : ek.first);
         }
       }
       POLY_ASSERT(newfacet.size() >= 3);
@@ -341,15 +334,9 @@ int main(int argc, char** argv) {
     const std::vector<CSG::CSG_internal::Polygon<double> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
     POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
     const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
-    std::cerr << "box2: " << box2 << std::endl;
-    escapePod("box1", box1);
-    escapePod("box1_from_polys", box2);
     const ReducedPLC<3, double> box3 = simplifyPLCfacets(box2, box2.points, 1.0e-10);
-    std::cerr << "box2 simplified: " << box3 << std::endl 
-              << "points:  " << std::endl;
-    for (unsigned i = 0; i != box3.points.size()/3; ++i) std::cerr << "  " << i << " (" << box3.points[3*i] << " " << box3.points[3*i+1] << " " << box3.points[3*i+2] << ")" << std::endl;
-    escapePod("box1_from_polys_simplified", box3);
     POLY_CHECK(box3.facets.size() == 6);
+    POLY_CHECK(box3.points.size() == 3*8);
   }
 
   //----------------------------------------------------------------------
@@ -369,6 +356,11 @@ int main(int argc, char** argv) {
     cerr << escapePod("box_union_test", box_union) << endl;
     const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);
     cerr << escapePod("box_intersect_test", box_intersect) << endl;
+    const ReducedPLC<3, double> box_intersect_simplify = simplifyPLCfacets(box_intersect, box_intersect.points, 1.0e-10);
+    cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
+    cerr << "Simplified PLC: " << box_intersect_simplify << endl
+         << "  points: " << endl;
+    for (unsigned i = 0; i != box_intersect_simplify.points.size()/3; ++i) cerr << "    " << i << " (" << box_intersect_simplify.points[3*i] << " " << box_intersect_simplify.points[3*i+1] << " " << box_intersect_simplify.points[3*i+2] << ")" << endl;
   }
 
   cout << "PASS" << endl;
