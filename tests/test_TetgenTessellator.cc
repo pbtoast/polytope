@@ -15,13 +15,6 @@
 using namespace std;
 using namespace polytope;
 
-namespace {
-  template<typename T> 
-  int sgn(T val) {
-    return (val >= T(0) ? 1 : -1);
-  }
-}
-
 //------------------------------------------------------------------------------
 // Emergency dump of the mesh.
 //------------------------------------------------------------------------------
@@ -77,7 +70,7 @@ void unboundedTessellation(const unsigned nx,
 
     // Check face orientations.
     for (unsigned j = 0; j != mesh.cells[i].size(); ++j) {
-      const int faceSgn = sgn(mesh.cells[i][j]);
+      const int faceSgn = geometry::sgn(mesh.cells[i][j]);
       const unsigned iface = internal::positiveID(mesh.cells[i][j]);
       const unsigned nnodes = mesh.faces[iface].size();
       for (unsigned k = 0; k != nnodes; ++k) {
@@ -140,7 +133,7 @@ void boxBoundedTessellation(const unsigned nx,
 
     // Check face orientations.
     for (unsigned j = 0; j != mesh.cells[i].size(); ++j) {
-      const int faceSgn = sgn(mesh.cells[i][j]);
+      const int faceSgn = geometry::sgn(mesh.cells[i][j]);
       const unsigned iface = internal::positiveID(mesh.cells[i][j]);
       const unsigned nnodes = mesh.faces[iface].size();
       for (unsigned k = 0; k != nnodes; ++k) {

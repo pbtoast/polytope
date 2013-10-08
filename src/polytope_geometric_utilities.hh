@@ -35,6 +35,13 @@ namespace std {
 namespace polytope {
 namespace geometry {
 
+//------------------------------------------------------------------------------
+// The sgn function.
+//------------------------------------------------------------------------------
+template<typename T> 
+int sgn(T val) {
+  return (val >= T(0) ? 1 : -1);
+}
 
 //------------------------------------------------------------------------------
 // A handy method for computing a hash of a position to a 64 bit quantized
