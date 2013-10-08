@@ -434,10 +434,10 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polygons) {
   const unsigned nfacets = polygons.size();
   POLY_ASSERT(nfacets >= 4);
   for (size_t i = 0; i != nfacets; ++i) {
-    std::cerr << "Polygon " << i << " : " << polygons[i].vertices[0].pos << " " << polygons[i].vertices[1].pos;
+    // std::cerr << "Polygon " << i << " : " << polygons[i].vertices[0].pos << " " << polygons[i].vertices[1].pos;
     const unsigned n = polygons[i].vertices.size();
     for (size_t j = 2; j < n; ++j) {
-      std::cerr << " " << polygons[i].vertices[j].pos;
+      // std::cerr << " " << polygons[i].vertices[j].pos;
       result.facets.push_back(std::vector<int>());
       result.facets.back().push_back(result.points.size()/3);
       result.points.push_back(polygons[i].vertices[0].pos.x);
@@ -452,7 +452,7 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polygons) {
       result.points.push_back(polygons[i].vertices[j].pos.y);
       result.points.push_back(polygons[i].vertices[j].pos.z);
     }
-    std::cerr << std::endl;
+    // std::cerr << std::endl;
   }
   return result;
 }
