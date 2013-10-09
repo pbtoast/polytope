@@ -32,7 +32,9 @@ include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
 
 # The Python library of wrapped Polytope methods
-add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
+#add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
+#add_library(PolytopeModules STATIC ${PYBINDGEN_GENERATED_SOURCE})
+add_library(PolytopeModules MODULE ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
@@ -46,7 +48,7 @@ target_link_libraries(PolytopeModules
 set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 
 # Allow rpath linkage to the Module
-#set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
+set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
 
 # Library install targets
 install (TARGETS PolytopeModules DESTINATION lib)
