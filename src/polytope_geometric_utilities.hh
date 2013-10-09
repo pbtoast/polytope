@@ -4,7 +4,7 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
-#include <cstdlib>
+#include <cmath>
 #include <limits>
 #include <algorithm>
 
@@ -21,16 +21,18 @@ extern int scale_expansion(int elen, double* e, double b, double* h);
 // Sets h = e + b
 extern int grow_expansion(int elen, double* e, double b, double* h);
 
-//------------------------------------------------------------------------------
-// It seems there is a missing specialization for abs(long unsigned int), so 
-// fill it in.
-// This is necessary for the collinear method below to compile.  It seems evil
-// to insert something into namespace std:: like this, by the way.
-//------------------------------------------------------------------------------
-namespace std {
-  // inline long unsigned int abs(long unsigned int x) { return x; }
-  inline uint64_t          abs(uint64_t x)          { return x; }
-}
+
+// //------------------------------------------------------------------------------
+// // It seems there is a missing specialization for abs(long unsigned int), so 
+// // fill it in.
+// // This is necessary for the collinear method below to compile.  It seems evil
+// // to insert something into namespace std:: like this, by the way.
+// //------------------------------------------------------------------------------
+// namespace std {
+//   // inline long unsigned int abs(long unsigned int x) { return x; }
+//   inline uint64_t          abs(uint64_t x)          { return x; }
+// }
+
 
 namespace polytope {
 namespace geometry {
@@ -260,8 +262,8 @@ struct DistanceFunctor<2, RealType> {
   static RealType impl(const RealType* a, const RealType* b) {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
-    //return std::sqrt(dx*dx + dy*dy);
-    return sqrt(dx*dx + dy*dy);
+    return std::sqrt(dx*dx + dy*dy);
+    //return sqrt(dx*dx + dy*dy);
   }
 };
 
@@ -272,8 +274,8 @@ struct DistanceFunctor<3, RealType> {
     const RealType dx = a[0] - b[0];
     const RealType dy = a[1] - b[1];
     const RealType dz = a[2] - b[2];
-    //return std::sqrt(dx*dx + dy*dy + dz*dz);
-    return sqrt(dx*dx + dy*dy + dz*dz);
+    return std::sqrt(dx*dx + dy*dy + dz*dz);
+    //return sqrt(dx*dx + dy*dy + dz*dz);
   }
 };
 
@@ -410,8 +412,10 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
-  // return      abs(     abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
+  RealType tmpVal= dot<Dimension, RealType>(ab, ac);
+  return std::abs(   ( (tmpVal > -1) ? ( tmpVal ) : (-tmpVal) ) - 1.0 )    < tol;
+  //return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  //return abs(abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
 }
 
 //------------------------------------------------------------------------------
@@ -683,8 +687,8 @@ raySphereIntersection(const RealType* p_ray,
     result[0] = p_ray[0]; result[1] = p_ray[1]; result[2] = p_ray[2];
     return true;
   } else {
-    //d = std::sqrt(d);
-    d = sqrt(d);
+    d = std::sqrt(d);
+    //d = sqrt(d);
     const RealType t = 0.5*std::max(-b - d, -b + d);
     POLY_ASSERT(t >= 0.0);
     result[0] = p_ray[0] + t*n_ray[0];
@@ -942,7 +946,7 @@ computeFaceCentroidAndNormal(const Tessellation<3, RealType>& mesh,
   fcent[0] /= n; fcent[1] /= n; fcent[2] /= n;
   
   // Now we can compute the unit normal.
-  POLY_ASSERT2(verts.size() == 3, verts.size());
+  POLY_ASSERT(verts.size() == 3);
   RealType ab[3], ac[3];
   ab[0] = mesh.nodes[3*verts[1]  ] - mesh.nodes[3*verts[0]  ];
   ab[1] = mesh.nodes[3*verts[1]+1] - mesh.nodes[3*verts[0]+1];
