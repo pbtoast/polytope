@@ -27,14 +27,40 @@ namespace {
 template<typename RealType>
 ReducedPLC<3, RealType>
 plc_sphere(const Point3<RealType>& center,
-           const RealType radius) {
+           const RealType radius,
+           const unsigned nphi) {
+  POLY_ASSERT(nphi > 0);
 
   // Prepare the result.
   ReducedPLC<3, RealType> result;
 
   // Put a bunch of points on the sphere.
-  
+  const double dphi = M_PI/nphi;
+  for (unsigned iphi = 0; iphi != nphi; ++iphi) {
+    const double phi = (iphi + 0.5)*dphi;
+    const double dl = radius*dphi;
+    const double rxy = radius*sin(phi);
+    const double circ = 2.0*M_PI*rxy;
+    const unsigned ntheta = std::max(1U, unsigned(circ/dl + 0.5));
+    const double dtheta = 2.0*M_PI/ntheta;
+    for (unsigned itheta = 0; itheta != ntheta; ++itheta) {
+      const double theta = (itheta + 0.5)*dtheta;
+      result.points.push_back(center.x + radius*cos(theta)*sin(phi));
+      result.points.push_back(center.y + radius*sin(theta)*sin(phi));
+      result.points.push_back(center.z + radius*cos(phi));
+    }
+  }
 
+  // Build the convex hull of our points.
+  const RealType low[3] = {center.x - 1.1*radius,
+                           center.y - 1.1*radius,
+                           center.z - 1.1*radius};
+  const RealType dx = radius/(1 << 21);
+  const PLC<3, RealType> hull = polytope::convexHull_3d(result.points, low, dx);
+
+  // Put that topology in our result and we're done.
+  result.facets = hull.facets;
+  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -168,6 +194,7 @@ boxPLC(const RealType x1, const RealType x2,
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv) {
+  typedef Point3<double> PointType;
 
 #if HAVE_MPI
   MPI_Init(&argc, &argv);
@@ -212,6 +239,20 @@ int main(int argc, char** argv) {
     // for (unsigned i = 0; i != box_intersect_simplify.points.size()/3; ++i) cerr << "    " << i << " (" << box_intersect_simplify.points[3*i] << " " << box_intersect_simplify.points[3*i+1] << " " << box_intersect_simplify.points[3*i+2] << ")" << endl;
     POLY_CHECK(box_intersect_simplify.facets.size() == 6);
     POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
+  }
+
+  //----------------------------------------------------------------------
+  // Generate a complicated sphere with holes cut out of it.
+  //----------------------------------------------------------------------
+  {
+    const PointType origin(0.0, 0.0, 0.0);
+    const double router = 2.0;
+    const unsigned nphi = 2;
+    const ReducedPLC<3, double> outer_sphere = plc_sphere<double>(origin, router, nphi);
+    cerr << "sphere : " << outer_sphere << endl;
+    cerr << "points : " << endl;
+    for (unsigned i = 0; i != outer_sphere.points.size()/3; ++i) cerr << "    " << i << " (" << outer_sphere.points[3*i] << " " << outer_sphere.points[3*i+1] << " " << outer_sphere.points[3*i+2] << ")" << endl;
+    escapePod("outer_sphere", outer_sphere);
   }
 
   cout << "PASS" << endl;
