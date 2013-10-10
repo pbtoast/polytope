@@ -141,6 +141,7 @@ struct TriangleFacet {
   std::vector<unsigned> remainingPoints; // Indices of points above this facet. 
   const std::vector<PointType>* points;  // The full set of point positions (i, j, k) refer to.
 
+  TriangleFacet(): inode(0), jnode(0), knode(0), normal(), remainingPoints(), points(0) {}
   TriangleFacet(const unsigned i, 
                 const unsigned j,
                 const unsigned k,
@@ -155,14 +156,14 @@ struct TriangleFacet {
   }
 
   void computeNormal() {
-    const PointType ij = *(points)[jnode] - (*points)[inode];
-    const PointType ik = *(points)[knode] - (*points)[inode];
-    normal = geometry::cross<3, RealType>(ij, ik);
+    const PointType ij = (*points)[jnode] - (*points)[inode];
+    const PointType ik = (*points)[knode] - (*points)[inode];
+    geometry::cross<3, RealType>(&ij.x, &ik.x, &normal.x);
     geometry::unitVector<3, RealType>(&normal.x);
   }
 
   int compare(const PointType& point) const { 
-    const PointType ip = point - (*points[inode]);
+    const PointType ip = point - (*points)[inode];
     const RealType test = geometry::dot<3, RealType>(&ip.x, &normal.x);
     return (test < 0 ? -1 :
             test > 0 ?  1 :
@@ -198,6 +199,17 @@ struct TriangleFacet {
   void flip() { std::swap(inode, jnode); normal *= -1; }
   bool operator==(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) == hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
   bool operator<(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) < hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
+
+  // output operator
+  friend std::ostream& operator<<(std::ostream& os, const TriangleFacet& facet) {
+    os << "TriangleFacet(" << facet.inode << " " << facet.jnode << " " << facet.knode 
+       << ") : remaining points = (";
+    for (std::vector<unsigned>::const_iterator itr = facet.remainingPoints.begin();
+         itr != facet.remainingPoints.end();
+         ++itr) os << " " << *itr;
+    os << ")";
+    return os;
+  }
 };
 
 }
@@ -215,7 +227,6 @@ convexHull_3d(const std::vector<RealType>& points,
 
   // Pre-conditions.
   POLY_ASSERT(points.size() % 3 == 0);
-  const unsigned n = points.size() / 3;
 
   // Reduce to the unique set of input points.
   std::vector<RealType> upoints;
@@ -276,15 +287,15 @@ convexHull_3d(const std::vector<RealType>& points,
   const unsigned apex = std::max_element(ps.begin(), ps.end(), CompareAbsPlaneDistance<RealType>(ps[startingFacet.inode], startingFacet.normal))->index;
 
   // If the apex point is below our starting facet, flip the facet.
-  if (startingFacet.compare(ps[apex]) == -1) startingFacet.flip();
+  if (startingFacet.compare(ps[apex]) == 1) startingFacet.flip();
 
   // Create our working facets from the starting tetrahedron.
-  typedef typename std::set<TriangleFacet<RealType> > FacetSet;
+  typedef typename std::vector<TriangleFacet<RealType> > FacetSet;
   FacetSet workingFacets;
-  workingFacets.insert(startingFacet);
-  workingFacets.insert(TriangleFacet<RealType>(startingFacet.jnode, startingFacet.inode, apex, startingFacet.remainingPoints, ps));
-  workingFacets.insert(TriangleFacet<RealType>(startingFacet.inode, startingFacet.knode, apex, startingFacet.remainingPoints, ps));
-  workingFacets.insert(TriangleFacet<RealType>(startingFacet.knode, startingFacet.jnode, apex, startingFacet.remainingPoints, ps));
+  workingFacets.push_back(startingFacet);
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.jnode, startingFacet.inode, apex, startingFacet.remainingPoints, ps));
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.inode, startingFacet.knode, apex, startingFacet.remainingPoints, ps));
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.knode, startingFacet.jnode, apex, startingFacet.remainingPoints, ps));
   for (typename FacetSet::iterator facetItr = workingFacets.begin();
        facetItr != workingFacets.end();
        ++facetItr) {
@@ -295,16 +306,28 @@ convexHull_3d(const std::vector<RealType>& points,
   bool done = false;
   while (not done) {
     done = true;
+    FacetSet newFacets;
+
+    std::cerr << "NEW PASS!" << std::endl;
     for (typename FacetSet::iterator facetItr = workingFacets.begin();
          facetItr != workingFacets.end();
          ++facetItr) {
 
       // Is this facet done yet?
-      if (!facetItr->remainingPoints().empty()) {
+      if (facetItr->remainingPoints.empty()) {
+
+        // Yep, copy it to the new set.
+        std::cerr << "      Final facet : " << (*facetItr) << std::endl;
+        newFacets.push_back(*facetItr);
+
+      } else {
+
+        // Nope, we need to refine new facets from this one.
         done = false;
 
         // Find the point furthest above this facet.
         const unsigned apex = facetItr->highestRemainingPoint();
+        std::cerr << "      Refining facet : " << (*facetItr) << " with new apex " << apex << std::endl;
 
         // Add our new facets.
         TriangleFacet<RealType> afacet(startingFacet.jnode, startingFacet.inode, apex, facetItr->remainingPoints, ps),
@@ -313,14 +336,17 @@ convexHull_3d(const std::vector<RealType>& points,
         afacet.downselectRemainingPoints();
         bfacet.downselectRemainingPoints();
         cfacet.downselectRemainingPoints();
-        workingFacets.insert(afacet);
-        workingFacets.insert(bfacet);
-        workingFacets.insert(cfacet);
-
-        // Remove this old facet.
-        workingFacets.erase(facetItr);
+        std::cerr << "   new facet : " << afacet << std::endl
+                  << "   new facet : " << bfacet << std::endl
+                  << "   new facet : " << cfacet << std::endl;
+        newFacets.push_back(afacet);
+        newFacets.push_back(bfacet);
+        newFacets.push_back(cfacet);
       }
     }
+
+    // Assign the new set of Facets.
+    workingFacets = newFacets;
   }
 
   // Read out the data to the PLC and we're done.
