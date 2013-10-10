@@ -86,41 +86,67 @@ convexContains(const polytope::PLC<3, RealType>& surface,
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
 
-  // Generate some random seed points.
-  cout << "Generating random points....";
-  clock_t t0 = clock();
-  const unsigned n = 100000;
-  double low[3] = {0.0, 0.0, 0.0};
-  double high[3] = {1.0, 1.0, 1.0};
-  vector<double> points;
-  for (unsigned i = 0; i != n; ++i) {
-    points.push_back(low[0] + (high[0] - low[0])*random01());
-    points.push_back(low[1] + (high[1] - low[1])*random01());
-    points.push_back(low[2] + (high[2] - low[2])*random01());
-  }
-  POLY_CHECK(points.size() == 3*n);
-  clock_t t1 = clock();
-  cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+  // Tessellate a cube.
+  {
+    cout << "Cube test." << endl;
+    double low[3] = {0.0, 0.0, 0.0};
+    double high[3] = {1.0, 1.0, 1.0};
+    vector<double> points(3*8);
+    points[3*0+0] = low[0];  points[3*0+1] = low[1];  points[3*0+2] = high[2];
+    points[3*1+0] = high[0]; points[3*1+1] = low[1];  points[3*1+2] = high[2];
+    points[3*2+0] = low[0];  points[3*2+1] = high[1]; points[3*2+2] = high[2];
+    points[3*3+0] = high[0]; points[3*3+1] = high[1]; points[3*3+2] = high[2];
+    points[3*4+0] = low[0];  points[3*4+1] = low[1];  points[3*4+2] = low[2];
+    points[3*5+0] = high[0]; points[3*5+1] = low[1];  points[3*5+2] = low[2];
+    points[3*6+0] = low[0];  points[3*6+1] = high[1]; points[3*6+2] = low[2];
+    points[3*7+0] = high[0]; points[3*7+1] = high[1]; points[3*7+2] = low[2];
 
-  // Get the hull.
-  cout << "Generating convex hull... ";
-  t0 = clock();
-  const double tolerance = 1.0e-10;
-  polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
-  t1 = clock();
-  cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
-
-  // Check that the hull contains all the input vertices.
-  cout << "Checking hull for containment... ";
-  t0 = clock();
-  unsigned badFacet = 0, nFacets = hull.facets.size();
-  for (unsigned i = 0; i != n; ++i) {
-    badFacet = convexContains(hull, &points.front(), &points[3*i], tolerance);
-    if (badFacet < nFacets) cerr << "Failed containment for facet : " << badFacet << endl;
-    POLY_CHECK(badFacet == nFacets);
+    // Get the hull.
+    cout << "Generating convex hull... ";
+    clock_t t0 = clock();
+    const double tolerance = 1.0e-10;
+    polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
+    clock_t t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
   }
-  t1 = clock();
-  cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+
+  // Tessellate random points.
+  {
+    cout << "Generating random points....";
+    clock_t t0 = clock();
+    const unsigned n = 100000;
+    double low[3] = {0.0, 0.0, 0.0};
+    double high[3] = {1.0, 1.0, 1.0};
+    vector<double> points;
+    for (unsigned i = 0; i != n; ++i) {
+      points.push_back(low[0] + (high[0] - low[0])*random01());
+      points.push_back(low[1] + (high[1] - low[1])*random01());
+      points.push_back(low[2] + (high[2] - low[2])*random01());
+    }
+    POLY_CHECK(points.size() == 3*n);
+    clock_t t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+
+    // Get the hull.
+    cout << "Generating convex hull... ";
+    t0 = clock();
+    const double tolerance = 1.0e-10;
+    polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
+    t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+
+    // Check that the hull contains all the input vertices.
+    cout << "Checking hull for containment... ";
+    t0 = clock();
+    unsigned badFacet = 0, nFacets = hull.facets.size();
+    for (unsigned i = 0; i != n; ++i) {
+      badFacet = convexContains(hull, &points.front(), &points[3*i], tolerance);
+      if (badFacet < nFacets) cerr << "Failed containment for facet : " << badFacet << endl;
+      POLY_CHECK(badFacet == nFacets);
+    }
+    t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+  }
 
   // for (unsigned k = 0; k != hull.facets.size(); ++k) {
   //   cerr << "Facet " << k << " : ";
