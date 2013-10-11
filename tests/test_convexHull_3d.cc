@@ -14,6 +14,7 @@
 #include "polytope_test_utilities.hh"
 #include "simplifyPLCfacets.hh"
 #include "ReducedPLC.hh"
+#include "polytope_write_OOGL.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
@@ -89,33 +90,6 @@ convexContains(const polytope::PLC<3, RealType>& surface,
 }
 
 //------------------------------------------------------------------------------
-// Create a single zone pseudo-tessellation from a PLC.
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-tessellationFromPLC(const polytope::PLC<3, RealType>& plc,
-                    const std::vector<RealType>& points,
-                    polytope::Tessellation<3, RealType>& mesh) {
-  // Nodes.
-  mesh.nodes = points;
-
-  // Faces.
-  const unsigned nfaces = plc.facets.size();
-  mesh.faces = vector<vector<unsigned> >(nfaces);
-  for (unsigned i = 0; i != nfaces; ++i) {
-    const unsigned n = plc.facets[i].size();
-    for (unsigned j = 0; j != n; ++j) mesh.faces[i].push_back(plc.facets[i][j]);
-  }
-
-  // Face cells.
-  mesh.faceCells.resize(nfaces, vector<int>(size_t(1), int(0)));
-
-  // The one cell.
-  mesh.cells.resize(1);
-  for (int i = 0; i != nfaces; ++i) mesh.cells[0].push_back(i);
-}
-
-//------------------------------------------------------------------------------
 // Emergency dump.
 //------------------------------------------------------------------------------
 std::string
@@ -124,9 +98,7 @@ escapePod(const std::string nameEnd,
           const std::vector<double>& points) {
     std::stringstream os;
     os << "test_PLC_convexHull_" << nameEnd;
-    polytope::Tessellation<3, double> mesh;
-    tessellationFromPLC(plc, points, mesh);
-    outputMesh(mesh, os.str());
+    writePLCtoOFF(plc, points, os.str());
     return " : attempted to write to file " + os.str();
 }
 
