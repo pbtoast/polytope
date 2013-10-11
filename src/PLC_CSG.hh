@@ -28,9 +28,9 @@ namespace CSG {
 //------------------------------------------------------------------------------
 // Public interface methods (forward declaration).
 //------------------------------------------------------------------------------
-template<typename RealType> ReducedPLC<3, RealType> csg_union     (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
-template<typename RealType> ReducedPLC<3, RealType> csg_intersect (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
-template<typename RealType> ReducedPLC<3, RealType> csg_difference(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_union    (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
+template<typename RealType> ReducedPLC<3, RealType> csg_subtract (const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
 
 //------------------------------------------------------------------------------
 // Everything from here down is implementation detail.
@@ -489,11 +489,11 @@ ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a, const Re
 }
 
 template<typename RealType>
-ReducedPLC<3, RealType> csg_difference(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
+ReducedPLC<3, RealType> csg_subtract(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
   using namespace CSG_internal;
   Node<RealType>* A = new Node<RealType>(ReducedPLCtoPolygons(a));
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoPolygons(b));
-  Node<RealType>* AB = csg_difference(A, B);                            // <-- only difference
+  Node<RealType>* AB = csg_subtract(A, B);                            // <-- only difference
   std::vector<Polygon<RealType> > polygons = AB->allPolygons();
   delete A; A = 0;
   delete B; B = 0;
