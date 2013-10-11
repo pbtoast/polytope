@@ -11,6 +11,7 @@
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 #include "polytope_test_utilities.hh"
+#include "polytope_write_OOGL.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
@@ -22,7 +23,7 @@ using namespace polytope;
 namespace {
 
 //------------------------------------------------------------------------------
-// Create a single zone pseudo-tessellation from a PLC.
+// Create a PLC representation of a sphere.
 //------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<3, RealType>
@@ -64,30 +65,41 @@ plc_sphere(const Point3<RealType>& center,
 }
 
 //------------------------------------------------------------------------------
-// Create a single zone pseudo-tessellation from a PLC.
+// Create a PLC representation of a cylinder.
 //------------------------------------------------------------------------------
 template<typename RealType>
-void
-tessellationFromPLC(const PLC<3, RealType>& plc,
-                    const std::vector<RealType>& points,
-                    Tessellation<3, RealType>& mesh) {
-  // Nodes.
-  mesh.nodes = points;
+ReducedPLC<3, RealType>
+plc_cylinder(const Point3<RealType>& center,
+             const RealType radius,
+             const RealType length,
+             const unsigned ncirc) {
+  POLY_ASSERT(ncirc >= 3);
 
-  // Faces.
-  const unsigned nfaces = plc.facets.size();
-  mesh.faces = vector<vector<unsigned> >(nfaces);
-  for (unsigned i = 0; i != nfaces; ++i) {
-    const unsigned n = plc.facets[i].size();
-    for (unsigned j = 0; j != n; ++j) mesh.faces[i].push_back(plc.facets[i][j]);
+  // Prepare the result.
+  ReducedPLC<3, RealType> result;
+
+  // Put points on the two end circles.
+  const double dtheta = 2.0*M_PI/ncirc;
+  for (unsigned itheta = 0; itheta != ncirc; ++itheta) {
+    const double theta = (itheta + 0.5)*dtheta;
+    result.points.push_back(center.x + radius*cos(theta));
+    result.points.push_back(center.y + radius*sin(theta));
+    result.points.push_back(center.z + 0.5*length);
+    result.points.push_back(center.x + radius*cos(theta));
+    result.points.push_back(center.y + radius*sin(theta));
+    result.points.push_back(center.z - 0.5*length);
   }
 
-  // Face cells.
-  mesh.faceCells.resize(nfaces, vector<int>(size_t(1), int(0)));
+  // Build the convex hull of our points.
+  const RealType low[3] = {center.x - 1.1*radius,
+                           center.y - 1.1*radius,
+                           center.z - 0.6*length};
+  const RealType dx = length/(1 << 21);
+  const PLC<3, RealType> hull = polytope::convexHull_3d(result.points, low, dx);
 
-  // The one cell.
-  mesh.cells.resize(1);
-  for (int i = 0; i != nfaces; ++i) mesh.cells[0].push_back(i);
+  // Put that topology in our result and we're done.
+  result.facets = hull.facets;
+  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -98,12 +110,11 @@ escapePod(const std::string nameEnd,
           const ReducedPLC<3, double>& plc) {
     std::stringstream os;
     os << "test_PLC_CSG_" << nameEnd;
-    Tessellation<3, double> mesh;
-    tessellationFromPLC(plc, plc.points, mesh);
-    outputMesh(mesh, os.str());
+    writePLCtoOFF(plc, plc.points, os.str());
     return " : attempted to write to file " + os.str();
 }
-}
+
+} // anonymous namespace
 
 //------------------------------------------------------------------------------
 // Return a 3D PLC box.
@@ -234,9 +245,6 @@ int main(int argc, char** argv) {
     // cerr << escapePod("box_intersect_test", box_intersect) << endl;
     const ReducedPLC<3, double> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, 1.0e-10);
     // cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
-    // cerr << "Simplified PLC: " << box_intersect_simplify << endl
-    //      << "  points: " << endl;
-    // for (unsigned i = 0; i != box_intersect_simplify.points.size()/3; ++i) cerr << "    " << i << " (" << box_intersect_simplify.points[3*i] << " " << box_intersect_simplify.points[3*i+1] << " " << box_intersect_simplify.points[3*i+2] << ")" << endl;
     POLY_CHECK(box_intersect_simplify.facets.size() == 6);
     POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
   }
@@ -246,13 +254,12 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------------------
   {
     const PointType origin(0.0, 0.0, 0.0);
-    const double router = 2.0;
-    const unsigned nphi = 2;
+    const double router = 2.0, rinner = 1.0;
+    const unsigned nphi = 10;
     const ReducedPLC<3, double> outer_sphere = plc_sphere<double>(origin, router, nphi);
-    cerr << "sphere : " << outer_sphere << endl;
-    cerr << "points : " << endl;
-    for (unsigned i = 0; i != outer_sphere.points.size()/3; ++i) cerr << "    " << i << " (" << outer_sphere.points[3*i] << " " << outer_sphere.points[3*i+1] << " " << outer_sphere.points[3*i+2] << ")" << endl;
-    escapePod("outer_sphere", outer_sphere);
+    const ReducedPLC<3, double> z_cylinder = plc_cylinder(origin, rinner, 2*router, nphi);
+    const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(outer_sphere, z_cylinder);
+    // escapePod("holey_sphere", holey_sphere);
   }
 
   cout << "PASS" << endl;
