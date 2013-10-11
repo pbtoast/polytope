@@ -293,6 +293,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
          DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.
