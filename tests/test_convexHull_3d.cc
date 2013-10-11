@@ -11,10 +11,17 @@
 
 #include "polytope.hh"
 #include "convexHull_3d.hh"
+#include "polytope_test_utilities.hh"
+#include "simplifyPLCfacets.hh"
+#include "ReducedPLC.hh"
 
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#if HAVE_MPI
+#include "mpi.h"
+#endif
 
 using namespace std;
+
+namespace {
 
 //------------------------------------------------------------------------------
 // Define our own local random number generator wrapping the standard srand &
@@ -82,9 +89,57 @@ convexContains(const polytope::PLC<3, RealType>& surface,
 }
 
 //------------------------------------------------------------------------------
+// Create a single zone pseudo-tessellation from a PLC.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+tessellationFromPLC(const polytope::PLC<3, RealType>& plc,
+                    const std::vector<RealType>& points,
+                    polytope::Tessellation<3, RealType>& mesh) {
+  // Nodes.
+  mesh.nodes = points;
+
+  // Faces.
+  const unsigned nfaces = plc.facets.size();
+  mesh.faces = vector<vector<unsigned> >(nfaces);
+  for (unsigned i = 0; i != nfaces; ++i) {
+    const unsigned n = plc.facets[i].size();
+    for (unsigned j = 0; j != n; ++j) mesh.faces[i].push_back(plc.facets[i][j]);
+  }
+
+  // Face cells.
+  mesh.faceCells.resize(nfaces, vector<int>(size_t(1), int(0)));
+
+  // The one cell.
+  mesh.cells.resize(1);
+  for (int i = 0; i != nfaces; ++i) mesh.cells[0].push_back(i);
+}
+
+//------------------------------------------------------------------------------
+// Emergency dump.
+//------------------------------------------------------------------------------
+std::string
+escapePod(const std::string nameEnd,
+          const polytope::PLC<3, double>& plc,
+          const std::vector<double>& points) {
+    std::stringstream os;
+    os << "test_PLC_convexHull_" << nameEnd;
+    polytope::Tessellation<3, double> mesh;
+    tessellationFromPLC(plc, points, mesh);
+    outputMesh(mesh, os.str());
+    return " : attempted to write to file " + os.str();
+}
+
+}
+
+//------------------------------------------------------------------------------
 // The test itself.
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
+
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
 
   // Tessellate a cube.
   {
@@ -105,9 +160,15 @@ int main(int argc, char** argv) {
     cout << "Generating convex hull... ";
     clock_t t0 = clock();
     const double tolerance = 1.0e-10;
-    polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
+    polytope::PLC<3, double> box_hull = polytope::convexHull_3d(points, low, tolerance);
     clock_t t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+
+    escapePod("box", box_hull, points);
+    polytope::ReducedPLC<3, double> simple_box_hull = simplifyPLCfacets(box_hull,
+                                                                        points,
+                                                                        1.0e-10);
+    escapePod("simple_box", simple_box_hull, points);
   }
 
   // Tessellate random points.
@@ -146,6 +207,12 @@ int main(int argc, char** argv) {
     }
     t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
+
+    escapePod("random", hull, points);
+    polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
+                                                                           points,
+                                                                           1.0e-10);
+    escapePod("simple_random", simple_random_hull, points);
   }
 
   // for (unsigned k = 0; k != hull.facets.size(); ++k) {
@@ -157,5 +224,10 @@ int main(int argc, char** argv) {
   // }
 
   cout << "PASS" << endl;
+
+#if HAVE_MPI
+   MPI_Finalize();
+#endif
+
   return 0;
 }
