@@ -277,14 +277,20 @@ int main(int argc, char** argv) {
   {
     const PointType origin(0.0, 0.0, 0.0);
     const unsigned nphi = 20;
+    clock_t t0 = clock();
     const ReducedPLC<3, double> a = plc_box<double>(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0),
                                 b = plc_sphere<double>(origin, 1.35, nphi),
                                 c = plc_cylinder(origin, 0.7, 2.0, nphi);
     ReducedPLC<3, double> d(c), e(c);
     rotatePoints(d.points, 0.0, M_PI/2.0, 0.0);
     rotatePoints(e.points, 0.0, M_PI/2.0, M_PI/2.0);
+    clock_t t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to generate input PLCs." << endl;
+    t0 = clock();
     const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(CSG::csg_intersect(a, b), 
                                                                  CSG::csg_union(CSG::csg_union(c, d), e));
+    t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to perform CSG operations." << endl;
     escapePod("holey_sphere", holey_sphere);
   }
 
