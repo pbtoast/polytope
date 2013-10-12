@@ -9,8 +9,11 @@
 
 #include "polytope.hh"
 #include "convexHull_2d.hh"
+#include "polytope_test_utilities.hh"
 
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
+#if HAVE_MPI
+#include "mpi.h"
+#endif
 
 using namespace std;
 
@@ -74,6 +77,10 @@ convexContains(const polytope::PLC<2, RealType>& surface,
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
 
+#if HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
   // Generate some random seed points.
   cout << "Generating random points....";
   clock_t t0 = clock();
@@ -118,5 +125,10 @@ int main(int argc, char** argv) {
   // }
 
   cout << "PASS" << endl;
+
+#if HAVE_MPI
+   MPI_Finalize();
+#endif
+
   return 0;
 }

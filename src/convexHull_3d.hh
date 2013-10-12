@@ -1,8 +1,7 @@
 //----------------------------------------------------------------------------//
 // 3D implementation of the convex hull algorithm.
-//
-// Base on some flash code (!) I found at
-// http://en.nicoptere.net/?p=1883
+// My own (possibly loose) interpretation of the incremental hull algorithm
+// in 3D (JMO).
 //----------------------------------------------------------------------------//
 #ifndef __polytope_convexHull_3d__
 #define __polytope_convexHull_3d__
@@ -15,335 +14,417 @@
 
 #include "PLC.hh"
 #include "polytope_internal.hh"
+#include "polytope_geometric_utilities.hh"
+#include "Point.hh"
 
 namespace polytope {
 
-namespace convexHull_helpers {
+namespace {
 
-template<typename CoordType>
-class ConvexHull3d {
-public:
+//------------------------------------------------------------------------------
+// Distance from a point to a line.
+// The line is specified by a point on the line (line0) and a unit direction
+// vector (lineDirection).
+//------------------------------------------------------------------------------
+template<typename RealType>
+RealType
+pointLineDistance(const Point3<RealType>& p,
+                  const Point3<RealType>& line0,
+                  const Point3<RealType>& lineDirection) {
+  const Point3<RealType> delta = p - line0;
+  const RealType a = geometry::dot<3, RealType>(&delta.x, &lineDirection.x);
+  const RealType c2 = geometry::dot<3, RealType>(&delta.x, &delta.x);
+  return sqrt(std::abs(c2 - a*a));
+}
 
-  //----------------------------------------------------------------------------
-  // An internal 3d point class.
-  //----------------------------------------------------------------------------
-  class Point {
-  public:
-    CoordType x, y, z;
-    unsigned index;
-    Point(const CoordType xi = 0, 
-          const CoordType yi = 0, 
-          const CoordType zi = 0,
-          const unsigned i = std::numeric_limits<unsigned>::max()): x(xi), y(yi), z(zi), index(i) {}
-    bool operator<(const Point& rhs) const {
-      return (x < rhs.x ? true :
-              y < rhs.y ? true :
-              z < rhs.z ? true : false);
-    }
-  };
+//------------------------------------------------------------------------------
+// Signed distance from a point to a plane
+// The plane is specified by a point on the plane (line0) and a unit normal to
+// the plane (planeNormal).
+// The return value is signed based on if the point is above (> 0) or below (< 0)
+// the plane based on the normal direction.
+//------------------------------------------------------------------------------
+template<typename RealType>
+RealType
+pointPlaneDistance(const Point3<RealType>& p,
+                   const Point3<RealType>& plane0,
+                   const Point3<RealType>& planeNormal) {
+  const Point3<RealType> delta = p - plane0;
+  return geometry::dot<3, RealType>(&delta.x, &planeNormal.x);
+}
 
-  //------------------------------------------------------------------------------
-  // A fuzzy comparison operator for Point.
-  //------------------------------------------------------------------------------
-  struct FuzzyPointLessThan {
-    CoordType fuzz;
-    FuzzyPointLessThan(const CoordType ifuzz = 1): fuzz(ifuzz) {}
-    bool operator()(const Point& p1, const Point& p2) {
-      return (p2.x - p1.x > fuzz ? true :
-              p2.y - p1.y > fuzz ? true : 
-              p2.z - p1.z > fuzz ? true : false);
-    }
-  };
+//------------------------------------------------------------------------------
+// Comparison by (x,y, or z) coordinate.
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool compareMinX(const Point3<RealType>& a, const Point3<RealType>& b) {
+  return a.x < b.x;
+}
 
-  //----------------------------------------------------------------------------
-  // The internal face class.
-  //----------------------------------------------------------------------------
-  class Face {
-  public:
-    // Public data.
-    static const std::vector<Point>* points;
-    int i0, i1, i2;
-    double nx, ny, nz;
-    
-    // Constructor.
-    Face(const int ii0, const int ii1, const int ii2): i0(ii0), i1(ii1), i2(ii2) { computePlane(); }
-    
-    // The plane of the face.
-    void computePlane() {
-      const Point& p0 = (*points)[i0];
-      const Point& p1 = (*points)[i1];
-      const Point& p2 = (*points)[i2];
-      const double x0 = double(p0.x), y0 = double(p0.y), z0 = double(p0.z);
-      const double x1 = double(p1.x), y1 = double(p1.y), z1 = double(p1.z);
-      const double x2 = double(p2.x), y2 = double(p2.y), z2 = double(p2.z);
-      const double x01 = x1 - x0, y01 = y1 - y0, z01 = z1 - z0;
-      const double x02 = x2 - x0, y02 = y2 - y0, z02 = z2 - z0;
-      nx = y01*z02 - z01*y02;
-      ny = z01*x02 - x01*z02;
-      nz = x01*y02 - y01*x02;
-      const double norm = sqrt(nx*nx + ny*ny + nz*nz);
-      nx /= norm;
-      ny /= norm;
-      nz /= norm;
-    }
+template<typename RealType>
+bool compareMinY(const Point3<RealType>& a, const Point3<RealType>& b) {
+  return a.y < b.y;
+}
 
-    // Test if a point is above the face.
-    bool isVisible(const Point& p) const {
-      const Point& p0 = (*points)[i0];
-      const double dx = double(p.x) - double(p0.x);
-      const double dy = double(p.y) - double(p0.y);
-      const double dz = double(p.z) - double(p0.z);
-      return nx*dx + ny*dy + nz*dz > 0;
-    }
-	
-    // Compute the centroid.
-    Point centroid() const {
-      const Point& p0 = (*points)[i0];
-      const Point& p1 = (*points)[i1];
-      const Point& p2 = (*points)[i2];
-      const double x0 = double(p0.x), y0 = double(p0.y), z0 = double(p0.z);
-      const double x1 = double(p1.x), y1 = double(p1.y), z1 = double(p1.z);
-      const double x2 = double(p2.x), y2 = double(p2.y), z2 = double(p2.z);
-      return Point( CoordType(( x0 + x1 + x2 ) / 3.0 + 0.5),
-                    CoordType(( y0 + y1 + y2 ) / 3.0 + 0.5),
-                    CoordType(( z0 + z1 + z2 ) / 3.0 + 0.5));
-    }
-	
-    // Flip the face.
-    void flip() {
-      std::swap(i0, i1);
-      nx = -nx;
-      ny = -ny;
-      nz = -nz;
-    }
+template<typename RealType>
+bool compareMinZ(const Point3<RealType>& a, const Point3<RealType>& b) {
+  return a.z < b.z;
+}
 
-    // Equality.
-    bool operator==(const Face& rhs) const {
-      return (i0 == rhs.i0) and (i1 == rhs.i1) and (i2 == rhs.i2);
-    }
-
-    // Inequality.
-    bool operator!=(const Face& rhs) const {
-      return not (*this == rhs);
-    }
-  };
-		
-  //----------------------------------------------------------------------------
-  // Compute the centroid of a face with a point.
-  //----------------------------------------------------------------------------
-  static Point centroid(const std::vector<Point>& points, const int index, const Face& face) {
-    const Point& p = points[index];
-    const Point& p0 = points[face.i0];
-    const Point& p1 = points[face.i1];
-    const Point& p2 = points[face.i2];
-    return Point(CoordType(0.25*(double(p.x) + double(p0.x) + double(p1.x) + double(p2.x)) + 0.5),
-                 CoordType(0.25*(double(p.y) + double(p0.y) + double(p1.y) + double(p2.y)) + 0.5),
-                 CoordType(0.25*(double(p.z) + double(p0.z) + double(p1.z) + double(p2.z)) + 0.5));
+//------------------------------------------------------------------------------
+// Compare points by distance from a line.
+//------------------------------------------------------------------------------
+template<typename RealType>
+struct CompareLineDistance {
+  Point3<RealType> point, direction;
+  CompareLineDistance(const Point3<RealType>& p,
+                      const Point3<RealType>& dir): point(p), direction(dir) {}
+  bool operator()(const Point3<RealType>& a, const Point3<RealType>& b) {
+    const RealType adist = pointLineDistance(a, point, direction),
+                   bdist = pointLineDistance(b, point, direction);
+    return adist < bdist;
   }
-
-  //----------------------------------------------------------------------------
-  // The main method -- process the given point cloud and return the hull.
-  //----------------------------------------------------------------------------
-  static std::vector<std::vector<unsigned> > process(const std::vector<Point>& points) {
-
-    // Pre-conditions.
-    POLY_ASSERT(points.size() > 3);
-
-    // Initialize the face static info.
-    Face::points = &points;
-
-    // Creates a face with the first 3 vertices
-    Face face(0, 1, 2);
-			
-    //this is the center of the tetrahedron, all face should point outwards:
-    //they should not be visible to the centroid
-    Point v = centroid(points, 3, face);
-
-    if (face.isVisible(v)) face.flip();
-			
-    Face face0(3, face.i0, face.i1);
-    if (face0.isVisible(v)) face0.flip();
-			
-    Face face1(3, face.i1, face.i2);
-    if (face1.isVisible(v)) face1.flip();
-			
-    Face face2(3, face.i2, face.i0);
-    if (face2.isVisible(v)) face2.flip();
-			
-    //store the tetrahedron faces in the valid faces list
-    std::vector<Face> validFaces;
-    validFaces.push_back(face);
-    validFaces.push_back(face0);
-    validFaces.push_back(face1);
-    validFaces.push_back(face2);
-
-    //so as we have a convex tetrahedron, we can skip the first 4 points
-    for (int i = 4; i < points.size(); ++i) {
-
-      //for each avaiable vertices
-      v = points[i];
-				
-      //checks the point's visibility from all faces
-      std::vector<Face> visibleFaces;
-      for (typename std::vector<Face>::const_iterator faceItr = validFaces.begin();
-           faceItr != validFaces.end();
-           ++faceItr) {
-        if (faceItr->isVisible(v)) visibleFaces.push_back(*faceItr); 
-      }
-				
-      //the vertex is not visible : it is inside the convex hull, keep on
-      if (visibleFaces.size() == 0) continue;
-				
-      //the vertex is outside the convex hull
-      //delete all visible faces from the valid List
-      for (typename std::vector<Face>::const_iterator faceItr = visibleFaces.begin();
-           faceItr != visibleFaces.end();
-           ++faceItr) {
-        validFaces.erase(std::remove(validFaces.begin(), validFaces.end(), *faceItr), validFaces.end());
-      }        
-				
-      //special case : only one face is visible
-      //it's ok to create 3 faces directly for they won't enclose any other point
-      if (visibleFaces.size() == 1) {
-        const int i0 = visibleFaces[0].i0;
-        const int i1 = visibleFaces[0].i1;
-        const int i2 = visibleFaces[0].i2;
-        validFaces.push_back(Face(i, i0, i1));
-        validFaces.push_back(Face(i, i1, i2));
-        validFaces.push_back(Face(i, i2, i0));
-        continue;
-      }
-				
-      //creates all possible new faces from the visibleFaces
-      std::vector<Face> tmpFaces;
-      for (typename std::vector<Face>::const_iterator faceItr = visibleFaces.begin();
-           faceItr != visibleFaces.end();
-           ++faceItr) {
-        tmpFaces.push_back(Face(i, faceItr->i0, faceItr->i1));
-        tmpFaces.push_back(Face(i, faceItr->i1, faceItr->i2));
-        tmpFaces.push_back(Face(i, faceItr->i2, faceItr->i0));
-      }
-				
-      // Look for faces in the tmp set that have no others in front of them.
-      for (typename std::vector<Face>::const_iterator tmpItr = tmpFaces.begin();
-           tmpItr != tmpFaces.end();
-           ++tmpItr) {
-        bool useFace = true;
-        typename std::vector<Face>::const_iterator otherItr = tmpFaces.begin();
-        while (useFace and otherItr != tmpFaces.end()) {
-          if (*otherItr != *tmpItr) {
-            useFace = not tmpItr->isVisible(otherItr->centroid());
-          }
-          ++otherItr;
-        }
-        if (useFace) validFaces.push_back(*tmpItr);
-      }
-    }
-
-    // Put together then indices of faces and we're done.
-    std::vector<std::vector<unsigned> > result;
-    result.reserve(validFaces.size());
-    for (typename std::vector<Face>::const_iterator faceItr = validFaces.begin();
-         faceItr != validFaces.end();
-         ++faceItr) {
-      result.push_back(std::vector<unsigned>());
-      result.back().push_back(points[faceItr->i0].index);
-      result.back().push_back(points[faceItr->i1].index);
-      result.back().push_back(points[faceItr->i2].index);
-    }
-    return result;
-  }
-
 };
 
 //------------------------------------------------------------------------------
-// Compute the face centroid for a triangular face.
+// Compare points by distance from a plane.
+//------------------------------------------------------------------------------
+template<typename RealType>
+struct CompareAbsPlaneDistance {
+  Point3<RealType> point, normal;
+  CompareAbsPlaneDistance(const Point3<RealType>& p,
+                          const Point3<RealType>& norm): point(p), normal(norm) {}
+  bool operator()(const Point3<RealType>& a, const Point3<RealType>& b) {
+    const RealType adist = std::abs(pointPlaneDistance(a, point, normal)),
+                   bdist = std::abs(pointPlaneDistance(b, point, normal));
+    return adist < bdist;
+  }
+};
+
+//------------------------------------------------------------------------------
+// Borrow the Point3 type as a tuple to create 3 node facets hashes.
+//------------------------------------------------------------------------------
+Point3<unsigned>
+hashFacet(const unsigned i, const unsigned j, const unsigned k) {
+  typedef Point3<unsigned> Tuple3;
+  POLY_ASSERT(i != j and i != k and j != k);
+  if (i < j and i < k) {
+    if (j < k) {
+      return Tuple3(i, j, k);
+    } else {
+      return Tuple3(i, k, j);
+    }
+  } else if (j < i and j < k) {
+    if (i < k) {
+      return Tuple3(j, i, k);
+    } else {
+      return Tuple3(j, k, i);
+    }
+  } else {
+    if (i < j) {
+      return Tuple3(k, i, j);
+    } else {
+      return Tuple3(k, j, i);
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+// Hold one of our triangular facets.
+//------------------------------------------------------------------------------
+template<typename RealType>
+struct TriangleFacet {
+  typedef Point3<RealType> PointType;
+  typedef Point3<unsigned> HashType;
+
+  unsigned inode, jnode, knode;          // Indices of the vertices of the triangle.
+  PointType normal;                      // Normal to the surface.
+
+  TriangleFacet(): inode(0), jnode(0), knode(0), normal() {}
+  TriangleFacet(const unsigned i, 
+                const unsigned j,
+                const unsigned k,
+                const std::vector<PointType>& points): inode(i), 
+                                                       jnode(j),
+                                                       knode(k),
+                                                       normal() {
+    this->computeNormal(points);
+  }
+
+  void computeNormal(const std::vector<PointType>& points) {
+    const PointType ij = points[jnode] - points[inode];
+    const PointType ik = points[knode] - points[inode];
+    geometry::cross<3, RealType>(&ij.x, &ik.x, &normal.x);
+    geometry::unitVector<3, RealType>(&normal.x);
+  }
+
+  int compare(const PointType& point, 
+              const std::vector<PointType>& points) const { 
+    const PointType ip = point - points[inode];
+    const RealType test = geometry::dot<3, RealType>(&ip.x, &normal.x);
+    return (std::abs(test) < 1.0e-8 ? 0 :
+            test < 0 ? -1 :
+            1);
+  }
+
+  void flip() { std::swap(inode, jnode); normal *= -1; }
+  bool operator==(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) == hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
+  bool operator<(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) < hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
+
+  // output operator
+  friend std::ostream& operator<<(std::ostream& os, const TriangleFacet& facet) {
+    os << "TriangleFacet(" << facet.inode << " " << facet.jnode << " " << facet.knode 
+       << "), normal = " << facet.normal;
+    return os;
+  }
+};
+
+//------------------------------------------------------------------------------
+// Reduce the given set of point indices to those exterior to the facets.
 //------------------------------------------------------------------------------
 template<typename RealType>
 void 
-faceCentroid(const std::vector<RealType>& points,
-             const std::vector<unsigned>& indices,
-             RealType& xc,
-             RealType& yc,
-             RealType& zc) {
-  POLY_ASSERT(indices.size() == 3);
-  xc = (points[3*indices[0]    ] + points[3*indices[1]    ] + points[3*indices[2]    ])/3.0;
-  yc = (points[3*indices[0] + 1] + points[3*indices[1] + 1] + points[3*indices[2] + 1])/3.0;
-  zc = (points[3*indices[0] + 2] + points[3*indices[1] + 2] + points[3*indices[2] + 2])/3.0;
-}
+exteriorPoints(std::vector<unsigned>& indices,
+               const std::vector<TriangleFacet<RealType> >& facets, 
+               const std::vector<Point3<RealType> >& points) {
+  typedef std::vector<TriangleFacet<RealType> > FacetSet;
+  typedef Point3<RealType> PointType;
 
-}
-
-//------------------------------------------------------------------------------
-// Helper to output the point class.
-//------------------------------------------------------------------------------
-template<typename CoordType>
-inline
-std::ostream&
-operator<<(std::ostream& os, const typename convexHull_helpers::ConvexHull3d<CoordType>::Point& value) {
-  os << "(" << value.x << " " << value.y << " " << value.z << ")";
-  return os;
+  std::vector<unsigned> remainingPoints;
+  for (std::vector<unsigned>::const_iterator iitr = indices.begin();
+       iitr != indices.end();
+       ++iitr) {
+    typename FacetSet::const_iterator fitr = facets.begin();
+    while (fitr != facets.end() and fitr->compare(points[*iitr], points) != 1) ++fitr;
+    if (fitr != facets.end()) remainingPoints.push_back(*iitr);
+  }
+  indices = remainingPoints;
 }
 
 //------------------------------------------------------------------------------
-// The 3D convex hull itself.  This is the one users should call -- it forwards
-// all work to the worker ConvexHull3d class.
+// Reduce the given set of point indices to those exterior to the facets.
+//------------------------------------------------------------------------------
+template<typename RealType>
+unsigned highestPoint(std::vector<unsigned>& indices,
+                      const std::vector<TriangleFacet<RealType> >& facets, 
+                      const std::vector<Point3<RealType> >& points) {
+  typedef std::vector<TriangleFacet<RealType> > FacetSet;
+  typedef Point3<RealType> PointType;
+  int result = -1;
+  RealType maxAltitude = 0.0;
+  for (typename std::vector<unsigned>::const_iterator itr = indices.begin();
+       itr != indices.end();
+       ++itr) {
+    for (typename FacetSet::const_iterator fitr = facets.begin();
+         fitr != facets.end();
+         ++fitr) {
+      const RealType altitude = pointPlaneDistance(points[*itr], points[fitr->inode], fitr->normal);
+      if (altitude > maxAltitude) {
+        maxAltitude = altitude;
+        result = *itr;
+      }
+    }
+  }
+  POLY_ASSERT(result >= 0);
+  return unsigned(result);
+}
+
+//------------------------------------------------------------------------------
+// Cull out the facets visible from the given point (points[apex]).
+// Also computes the remaining horizon edges.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void cullVisibleFacets(std::vector<std::pair<int, int> >& horizonEdges,
+                       std::vector<TriangleFacet<RealType> >& facets, 
+                       const std::vector<Point3<RealType> >& points,
+                       const unsigned apex) {
+
+  typedef std::pair<int, int> EdgeHash;
+  typedef std::vector<TriangleFacet<RealType> > FacetSet;
+  typedef Point3<RealType> PointType;
+
+  FacetSet newFacets;
+  internal::CounterMap<EdgeHash> edgeCount;
+
+  // Walk the facets.
+  for (typename FacetSet::const_iterator fitr = facets.begin();
+       fitr != facets.end();
+       ++fitr) {
+
+    // Is this facet visible from the apex point?
+    if (fitr->compare(points[apex], points) == 1) {
+
+      // Yep, it needs to be removed.  Increment the use count for each
+      // of it's edges.
+      ++edgeCount[internal::hashEdge(fitr->inode, fitr->jnode)];
+      ++edgeCount[internal::hashEdge(fitr->jnode, fitr->knode)];
+      ++edgeCount[internal::hashEdge(fitr->knode, fitr->inode)];
+
+    } else {
+
+      // Nope, copy it to the new set.
+      newFacets.push_back(*fitr);
+
+    }
+  }
+  facets = newFacets;
+
+  // The horizon edges are the ones with a single use count.  All others should
+  // have been hit twice.
+  horizonEdges = std::vector<EdgeHash>();
+  for (internal::CounterMap<EdgeHash>::const_iterator eitr = edgeCount.begin();
+       eitr != edgeCount.end();
+       ++eitr) {
+    POLY_ASSERT(eitr->second == 1 or eitr->second == 2);
+    if (eitr->second == 1) horizonEdges.push_back(eitr->first);
+  }
+}
+
+} // anonymous namespace
+
+//------------------------------------------------------------------------------
+// The 3D convex hull method.
 //------------------------------------------------------------------------------
 template<typename RealType>
 PLC<3, RealType>
 convexHull_3d(const std::vector<RealType>& points,
               const RealType* low,
               const RealType& dx) {
-  typedef int64_t CoordHash;
-  typedef convexHull_helpers::ConvexHull3d<CoordHash>::Point Point;
+
+  typedef Point3<RealType> PointType;
+  typedef std::vector<TriangleFacet<RealType> > FacetSet;
+  typedef std::pair<int, int> EdgeHash;
 
   // Pre-conditions.
   POLY_ASSERT(points.size() % 3 == 0);
-  const unsigned n = points.size() / 3;
 
-  unsigned i;
-
-  const RealType& xmin = low[0];
-  const RealType& ymin = low[1];
-  const RealType& zmin = low[2];
-
-  // Convert the input coordinates to unique integer point types.  Simultaneously we 
-  // reduce to the unique set of points.
-  typedef std::set<Point, convexHull_helpers::ConvexHull3d<CoordHash>::FuzzyPointLessThan> Set;
-  Set pointSet;
-  for (i = 0; i != n; ++i) {
-    pointSet.insert(Point(CoordHash((points[3*i]     - xmin)/dx + 0.5),
-                          CoordHash((points[3*i + 1] - ymin)/dx + 0.5),
-                          CoordHash((points[3*i + 2] - zmin)/dx + 0.5), 
-                          i));
+  // Reduce to the unique set of input points.
+  std::vector<RealType> upoints;
+  std::vector<unsigned> pointMap;
+  geometry::uniquePoints<3, RealType>(points, upoints, pointMap);
+  const unsigned nunique = upoints.size()/3;
+  POLY_ASSERT(nunique >= 4);
+  std::vector<PointType> ps(nunique);
+  for (unsigned i = 0; i != nunique; ++i) {
+    ps[i].x = upoints[3*i];
+    ps[i].y = upoints[3*i+1];
+    ps[i].z = upoints[3*i+2];
+    ps[i].index = i;
   }
-  POLY_ASSERT(pointSet.size() <= n);
 
-  // Extract the unique set of points to a vector.
-  std::vector<Point> uniquePoints(pointSet.begin(), pointSet.end());
-  POLY_ASSERT(uniquePoints.size() == pointSet.size());
+  // Find the points on the min/max x, y, & z.  These must be in the hull.
+  const unsigned ixmin = std::min_element(ps.begin(), ps.end(), compareMinX<RealType>)->index,
+                 ixmax = std::max_element(ps.begin(), ps.end(), compareMinX<RealType>)->index,
+                 iymin = std::min_element(ps.begin(), ps.end(), compareMinY<RealType>)->index,
+                 iymax = std::max_element(ps.begin(), ps.end(), compareMinY<RealType>)->index,
+                 izmin = std::min_element(ps.begin(), ps.end(), compareMinZ<RealType>)->index,
+                 izmax = std::max_element(ps.begin(), ps.end(), compareMinZ<RealType>)->index;
+  POLY_ASSERT(ixmin != ixmax and
+              iymin != iymax and
+              izmin != izmax);
 
-  // // Blago!
-  // std::cout << "Unique points: " << std::endl;
-  // for (unsigned k = 0; k != uniquePoints.size(); ++k) {
-  //   std::cout << "   ---> " << uniquePoints[k].x << " "<< uniquePoints[k].y << " " << uniquePoints[k].z << " " << uniquePoints[k].index << std::endl;
-  // }
-  // // Blago!
+  // Choose the two points furthest apart.
+  const PointType boxx = ps[ixmax] - ps[ixmin], boxy = ps[iymax] - ps[iymin], boxz = ps[izmax] - ps[izmin];
+  const RealType boxx2 = geometry::dot<3, RealType>(&boxx.x, &boxx.x), 
+                 boxy2 = geometry::dot<3, RealType>(&boxy.x, &boxy.x),
+                 boxz2 = geometry::dot<3, RealType>(&boxz.x, &boxz.x);
+  POLY_ASSERT(boxx2 > 0.0 and boxy2 > 0.0 and boxz2 > 0.0);
+  TriangleFacet<RealType> startingFacet;
+  if (boxx2 >= std::max(boxy2, boxz2)) {
+    startingFacet.inode = ixmin;
+    startingFacet.jnode = ixmax;
+  } else if (boxy2 >= boxz2) {
+    startingFacet.inode = iymin;
+    startingFacet.jnode = iymax;
+  } else {
+    POLY_ASSERT(boxz2 >= std::max(boxx2, boxy2));
+    startingFacet.inode = izmin;
+    startingFacet.jnode = izmax;
+  }
 
-  // Dispatch the work 
-  const std::vector<std::vector<unsigned> > faces = convexHull_helpers::ConvexHull3d<CoordHash>::process(uniquePoints);
+  // Select a third point as the most distant from the line defined by the two we just picked.
+  // This one should also be on the hull.
+  PointType lineDirection = ps[startingFacet.jnode] - ps[startingFacet.inode];
+  geometry::unitVector<3, RealType>(&lineDirection.x);
+  startingFacet.knode = std::max_element(ps.begin(), ps.end(), CompareLineDistance<RealType>(ps[startingFacet.inode], lineDirection))->index;
+  startingFacet.computeNormal(ps);
+
+  // We have the triangular base, so pick the furthest point from this base as the apex of our
+  // starting tetrahedron.  This point should also be on the hull.
+  const unsigned apex = std::max_element(ps.begin(), ps.end(), CompareAbsPlaneDistance<RealType>(ps[startingFacet.inode], startingFacet.normal))->index;
+
+  // If the apex point is below our starting facet, flip the facet.
+  if (startingFacet.compare(ps[apex], ps) == 1) startingFacet.flip();
+
+  // Intialize our starting tetrahedron.
+  FacetSet workingFacets;
+  workingFacets.push_back(startingFacet);
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.jnode, startingFacet.inode, apex, ps));
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.inode, startingFacet.knode, apex ,ps));
+  workingFacets.push_back(TriangleFacet<RealType>(startingFacet.knode, startingFacet.jnode, apex, ps));
+  // std::cerr << "Starting facets: " << std::endl
+  //           << "    " << workingFacets[0] << std::endl
+  //           << "    " << workingFacets[1] << std::endl
+  //           << "    " << workingFacets[2] << std::endl
+  //           << "    " << workingFacets[3] << std::endl;
+
+  // Find the set of points exterior to our starting tetrahedron.
+  std::vector<unsigned> remainingPoints(ps.size());
+  for (unsigned i = 0; i != ps.size(); ++i) remainingPoints[i] = i;
+  exteriorPoints(remainingPoints, workingFacets, ps);
+
+  // Iterate until all points are interior to the facets.
+  while (!remainingPoints.empty()) {
+
+    // Find the remaining point furthest from the hull.
+    const unsigned apex = highestPoint(remainingPoints, workingFacets, ps);
+
+    // Remove the visible facets from apex, and compute the horizon edges.
+    std::vector<EdgeHash> horizonEdges;
+    cullVisibleFacets(horizonEdges, workingFacets, ps, apex);
+    POLY_ASSERT(horizonEdges.size() >= 3);
+
+    // Build the new facets from the apex point and horizon edges.
+    // const PointType testPoint = (ps[workingFacets[0].inode] + ps[workingFacets[0].jnode] + ps[workingFacets[0].knode])/3.0;
+    PointType testPoint;
+    for (typename std::vector<EdgeHash>::const_iterator eitr = horizonEdges.begin();
+         eitr != horizonEdges.end();
+         ++eitr) {
+      testPoint += ps[eitr->first];
+      testPoint += ps[eitr->second];
+    }
+    testPoint /= 2*horizonEdges.size();
+    for (typename std::vector<EdgeHash>::const_iterator eitr = horizonEdges.begin();
+         eitr != horizonEdges.end();
+         ++eitr) {
+      workingFacets.push_back(TriangleFacet<RealType>(eitr->first, eitr->second, apex, ps));
+      if (workingFacets.back().compare(testPoint, ps) == 1) workingFacets.back().flip();
+    }
+
+    // Reduce to the new set of exterior points.
+    const unsigned oldsize = remainingPoints.size();
+    exteriorPoints(remainingPoints, workingFacets, ps);
+    POLY_ASSERT(remainingPoints.size() < oldsize);
+
+    // std::cerr << "New pass at facets: " << std::endl;
+    // for (unsigned i = 0; i != workingFacets.size(); ++i) {
+    //   std::cerr << " --> " << workingFacets[i] << std::endl;
+    // }
+    // std::cerr << "Remaining points : ";
+    // std::copy(remainingPoints.begin(), remainingPoints.end(), std::ostream_iterator<unsigned>(std::cerr, " "));
+    // std::cerr << std::endl;
+    // std::cerr << "  --> " << remainingPoints.size() << std::endl;
+  }
 
   // Read out the data to the PLC and we're done.
   PLC<3, RealType> plc;
-  // RealType xc, yc, zc;
-  for (i = 0; i != faces.size(); ++i) {
-    POLY_ASSERT(faces[i].size() == 3);
+  for (typename FacetSet::iterator facetItr = workingFacets.begin();
+       facetItr != workingFacets.end();
+       ++facetItr) {
     plc.facets.push_back(std::vector<int>());
-    plc.facets.back().push_back(faces[i][0]);
-    plc.facets.back().push_back(faces[i][1]);
-    plc.facets.back().push_back(faces[i][2]);
-    // convexHull_helpers::faceCentroid(points, faces[i], xc, yc, zc);
-    // std::cerr << "  -----> " << faces[i][0] << " " << faces[i][1] << " " << faces[i][2] << " : (" << xc << " " << yc << " " << zc << ")" << std::endl;
+    plc.facets.back().push_back(pointMap[facetItr->inode]);
+    plc.facets.back().push_back(pointMap[facetItr->jnode]);
+    plc.facets.back().push_back(pointMap[facetItr->knode]);
   }
   return plc;
 }
