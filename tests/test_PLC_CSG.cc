@@ -103,27 +103,13 @@ plc_cylinder(const Point3<RealType>& center,
 }
 
 //------------------------------------------------------------------------------
-// Emergency dump.
-//------------------------------------------------------------------------------
-std::string
-escapePod(const std::string nameEnd,
-          const ReducedPLC<3, double>& plc) {
-    std::stringstream os;
-    os << "test_PLC_CSG_" << nameEnd;
-    writePLCtoOFF(plc, plc.points, os.str());
-    return " : attempted to write to file " + os.str();
-}
-
-} // anonymous namespace
-
-//------------------------------------------------------------------------------
 // Return a 3D PLC box.
 //------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<3, RealType>
-boxPLC(const RealType x1, const RealType x2,
-       const RealType y1, const RealType y2,
-       const RealType z1, const RealType z2) {
+plc_box(const RealType x1, const RealType x2,
+        const RealType y1, const RealType y2,
+        const RealType z1, const RealType z2) {
 
   // Create the piecewise linear complex representing the box. Note that 
   // the box consists of facets that are defined by their connections to 
@@ -201,6 +187,42 @@ boxPLC(const RealType x1, const RealType x2,
   return box;
 }
 
+//------------------------------------------------------------------------------
+// Rotate a set of points.
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+rotatePoints(std::vector<RealType>& points,
+             const RealType theta,
+             const RealType phi,
+             const RealType psi) {
+  POLY_ASSERT(points.size() % 3 == 0);
+  const RealType R[3][3] = {{ cos(theta)*cos(psi), cos(phi)*sin(psi) + sin(phi)*sin(theta)*cos(psi), sin(phi)*sin(psi) - cos(phi)*sin(theta)*cos(psi)},
+                            {-cos(theta)*sin(psi), cos(phi)*cos(psi) - sin(phi)*sin(theta)*sin(psi), sin(phi)*cos(psi) + cos(phi)*sin(theta)*sin(psi)},
+                            { sin(theta),         -sin(phi)*cos(theta),                              cos(phi)*cos(theta)}};
+  const unsigned n = points.size()/3;
+  for (unsigned i = 0; i != n; ++i) {
+    const RealType x = points[3*i], y = points[3*i+1], z = points[3*i+2];
+    points[3*i  ] = R[0][0]*x + R[0][1]*y + R[0][2]*z;
+    points[3*i+1] = R[1][0]*x + R[1][1]*y + R[1][2]*z;
+    points[3*i+2] = R[2][0]*x + R[2][1]*y + R[2][2]*z;
+  }
+}
+
+//------------------------------------------------------------------------------
+// Emergency dump.
+//------------------------------------------------------------------------------
+std::string
+escapePod(const std::string nameEnd,
+          const ReducedPLC<3, double>& plc) {
+    std::stringstream os;
+    os << "test_PLC_CSG_" << nameEnd;
+    writePLCtoOFF(plc, plc.points, os.str());
+    return " : attempted to write to file " + os.str();
+}
+
+} // anonymous namespace
+
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
@@ -215,9 +237,9 @@ int main(int argc, char** argv) {
   // Convert from PLC->CSG_internal::Polygons->PLC
   //----------------------------------------------------------------------
   {
-    const ReducedPLC<3, double> box1 = boxPLC<double>(0.0, 1.0,
-                                                      0.0, 1.0,
-                                                      0.0, 1.0);
+    const ReducedPLC<3, double> box1 = plc_box<double>(0.0, 1.0,
+                                                       0.0, 1.0,
+                                                       0.0, 1.0);
     const std::vector<CSG::CSG_internal::Polygon<double> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
     POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
     const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
@@ -230,12 +252,12 @@ int main(int argc, char** argv) {
   // Operate on two boxes offset in x.
   //----------------------------------------------------------------------
   {
-    const ReducedPLC<3, double> box1 = boxPLC<double>(0.0, 1.0,
-                                                      0.0, 1.0,
-                                                      0.0, 1.0),
-                                box2 = boxPLC<double>(0.5, 1.5,
-                                                      0.0, 1.0,
-                                                      0.0, 1.0);
+    const ReducedPLC<3, double> box1 = plc_box<double>(0.0, 1.0,
+                                                       0.0, 1.0,
+                                                       0.0, 1.0),
+                                box2 = plc_box<double>(0.5, 1.5,
+                                                       0.0, 1.0,
+                                                       0.0, 1.0);
     const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
     POLY_CHECK(box_union.points.size() % 3 == 0);
     // escapePod("box1", box1);
@@ -254,12 +276,22 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------------------
   {
     const PointType origin(0.0, 0.0, 0.0);
-    const double router = 2.0, rinner = 1.0;
-    const unsigned nphi = 10;
-    const ReducedPLC<3, double> outer_sphere = plc_sphere<double>(origin, router, nphi);
-    const ReducedPLC<3, double> z_cylinder = plc_cylinder(origin, rinner, 2*router, nphi);
-    const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(outer_sphere, z_cylinder);
-    // escapePod("holey_sphere", holey_sphere);
+    const unsigned nphi = 20;
+    clock_t t0 = clock();
+    const ReducedPLC<3, double> a = plc_box<double>(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0),
+                                b = plc_sphere<double>(origin, 1.35, nphi),
+                                c = plc_cylinder(origin, 0.7, 2.0, nphi);
+    ReducedPLC<3, double> d(c), e(c);
+    rotatePoints(d.points, 0.0, M_PI/2.0, 0.0);
+    rotatePoints(e.points, 0.0, M_PI/2.0, M_PI/2.0);
+    clock_t t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to generate input PLCs." << endl;
+    t0 = clock();
+    const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(CSG::csg_intersect(a, b), 
+                                                                 CSG::csg_union(CSG::csg_union(c, d), e));
+    t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to perform CSG operations." << endl;
+    escapePod("holey_sphere", holey_sphere);
   }
 
   cout << "PASS" << endl;
