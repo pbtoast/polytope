@@ -182,10 +182,10 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   }
   for (unsigned i = 0; i != mask.size(); ++i) {
     if (mask[i] != -1) {
-      unsigned j = 3*mask[i];
-      result.points[j] = result.points[3*i];
-      result.points[j+1] = result.points[3*i+1];
-      result.points[j+2] = result.points[3*i+2];
+      POLY_ASSERT(mask[i] <= i);
+      result.points[3*mask[i]]   = result.points[3*i];
+      result.points[3*mask[i]+1] = result.points[3*i+1];
+      result.points[3*mask[i]+2] = result.points[3*i+2];
     }
   }
   result.points.resize(3*n);
