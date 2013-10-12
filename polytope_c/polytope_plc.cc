@@ -220,7 +220,6 @@ template <int Dimension>
 void fill_plc(const polytope::PLC<Dimension, polytope_real_t>& plc,
               polytope_plc_t* c_plc)
 {
-  POLY_ASSERT(c_plc->dimension == Dimension);
   if (Dimension == 2)
   {
     c_plc->plc2->facets = plc.facets;
@@ -238,7 +237,6 @@ template <int Dimension>
 void fill_plc(polytope_plc_t* c_plc,
               polytope::PLC<Dimension, polytope_real_t>& plc)
 {
-  POLY_ASSERT(c_plc->dimension == Dimension);
   if (Dimension == 2)
   {
     plc.facets = c_plc->plc2->facets;
