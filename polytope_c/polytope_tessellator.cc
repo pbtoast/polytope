@@ -7,10 +7,15 @@
 namespace polytope
 {
 
-// Helper function for constructing C PLCs from C++ ones. Defined in 
-// polytope_plc.cc
+// Helper functions for constructing C PLCs from C++ ones and vice versa. 
+// Defined in polytope_plc.cc.
 template <int Dimension>
-polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc);
+void fill_plc(const polytope::PLC<Dimension, polytope_real_t>& plc,
+              polytope_plc_t* c_plc);
+
+template <int Dimension>
+void fill_plc(polytope_plc_t* c_plc,
+              polytope::PLC<Dimension, polytope_real_t>& plc);
 
 // This helper crafts a C polytope_tessellation object from a C++ Tessellation.
 template <int Dimension>
@@ -77,7 +82,10 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
 
   // Convex hull.
   if (!t.convexHull.empty())
-    tess->convex_hull = polytope_plc_from_PLC(t.convexHull);
+  {
+    tess->convex_hull = polytope_plc_new(Dimension);
+    fill_plc(t.convexHull, tess->convex_hull);
+  }
 
   // Neighbor domain information.
   tess->num_neighbor_domains = (int)t.neighborDomains.size();
@@ -253,6 +261,21 @@ void polytope_tessellator_tessellate_in_box(polytope_tessellator_t* tessellator,
                                             polytope_real_t* high,
                                             polytope_tessellation_t* mesh)
 {
+  if (tessellator->tess2 != NULL)
+  {
+    vector<polytope_real_t> pts(points, points + 2*num_points);
+    Tessellation<2, polytope_real_t> t;
+    tessellator->tess2->tessellate(pts, low, high, t);
+    fill_tessellation(t, mesh);
+  }
+  else
+  {
+    POLY_ASSERT(tessellator->tess3 != NULL);
+    vector<polytope_real_t> pts(points, points + 3*num_points);
+    Tessellation<3, polytope_real_t> t;
+    tessellator->tess3->tessellate(pts, low, high, t);
+    fill_tessellation(t, mesh);
+  }
 }
 //------------------------------------------------------------------------
 
@@ -263,6 +286,27 @@ void polytope_tessellator_tessellate_in_plc(polytope_tessellator_t* tessellator,
                                             polytope_plc_t* piecewise_linear_complex,
                                             polytope_tessellation_t* mesh)
 {
+  if (tessellator->tess2 != NULL)
+  {
+    vector<polytope_real_t> pts(points, points + 2*num_points);
+    vector<polytope_real_t> plc_pts(plc_points, plc_points + 2*num_plc_points);
+    PLC<2, polytope_real_t> plc;
+    fill_plc(piecewise_linear_complex, plc);
+    Tessellation<2, polytope_real_t> t;
+    tessellator->tess2->tessellate(pts, plc_pts, plc, t);
+    fill_tessellation(t, mesh);
+  }
+  else
+  {
+    POLY_ASSERT(tessellator->tess3 != NULL);
+    vector<polytope_real_t> pts(points, points + 3*num_points);
+    vector<polytope_real_t> plc_pts(plc_points, plc_points + 3*num_plc_points);
+    PLC<3, polytope_real_t> plc;
+    fill_plc(piecewise_linear_complex, plc);
+    Tessellation<3, polytope_real_t> t;
+    tessellator->tess3->tessellate(pts, plc_pts, plc, t);
+    fill_tessellation(t, mesh);
+  }
 }
 //------------------------------------------------------------------------
 

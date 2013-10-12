@@ -217,25 +217,46 @@ namespace polytope
 
 // Here's a helper function for constructing C PLCs from C++ ones.
 template <int Dimension>
-polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<Dimension, polytope_real_t>& plc)
+void fill_plc(const polytope::PLC<Dimension, polytope_real_t>& plc,
+              polytope_plc_t* c_plc)
 {
-  polytope_plc_t* p = polytope_plc_new(Dimension);
+  POLY_ASSERT(c_plc->dimension == Dimension);
   if (Dimension == 2)
   {
-    p->plc2->facets = plc.facets;
-    p->plc2->holes = plc.holes;
+    c_plc->plc2->facets = plc.facets;
+    c_plc->plc2->holes = plc.holes;
   }
   else
   {
-    p->plc3->facets = plc.facets;
-    p->plc3->holes = plc.holes;
+    c_plc->plc3->facets = plc.facets;
+    c_plc->plc3->holes = plc.holes;
   }
-  return p;
+}
+
+// Here's a helper function for constructing C++ PLCs from C ones.
+template <int Dimension>
+void fill_plc(polytope_plc_t* c_plc,
+              polytope::PLC<Dimension, polytope_real_t>& plc)
+{
+  POLY_ASSERT(c_plc->dimension == Dimension);
+  if (Dimension == 2)
+  {
+    plc.facets = c_plc->plc2->facets;
+    plc.holes = c_plc->plc2->holes;
+  }
+  else
+  {
+    plc.facets = c_plc->plc3->facets;
+    plc.holes = c_plc->plc3->holes;
+  }
 }
 
 // Template instantiations.
-template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<2, polytope_real_t>&);
-template polytope_plc_t* polytope_plc_from_PLC(const polytope::PLC<3, polytope_real_t>&);
+template void fill_plc(const polytope::PLC<2, polytope_real_t>&, polytope_plc_t*);
+template void fill_plc(const polytope::PLC<3, polytope_real_t>&, polytope_plc_t*);
+
+template void fill_plc(polytope_plc_t*, polytope::PLC<2, polytope_real_t>&);
+template void fill_plc(polytope_plc_t*, polytope::PLC<3, polytope_real_t>&);
 
 }
 

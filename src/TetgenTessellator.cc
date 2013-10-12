@@ -744,12 +744,12 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   // Make sure we got something.
   if (out.numberoftetrahedra == 0)
     error("TetgenTessellator: Delauney tetrahedralization produced 0 tetrahedra!");
-  if (out.numberofpoints != numGenerators) {
-    char err[1024];
-    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
-             out.numberofpoints, (int)numGenerators);
-    error(err);
-  }
+//  if (out.numberofpoints != numGenerators) {
+//    char err[1024];
+//    snprintf(err, 1024, "TetgenTessellator: Delauney tetrahedralization produced %d tetrahedra\n(%d generating points given)", 
+//             out.numberofpoints, (int)numGenerators);
+//    error(err);
+//  }
 
   // Compute the circumcenters of the tetrahedra, and the set of tets associated
   // with each generator.
