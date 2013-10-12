@@ -180,20 +180,14 @@ int main(int argc, char** argv) {
     t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
+    cerr << "Initial random hull has (nverts, nfacets) = (" << points.size()/3 <<  ", " << hull.facets.size() << ")" << endl;
     // escapePod("random", hull, points);
     polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
                                                                            points,
                                                                            1.0e-10);
-    // escapePod("simple_random", simple_random_hull, points);
+    cerr << "Simplified random hull has (nverts, nfacets) = (" << simple_random_hull.points.size()/3 <<  ", " << simple_random_hull.facets.size() << ")" << endl;
+    // escapePod("simple_random", simple_random_hull, simple_random_hull.points);
   }
-
-  // for (unsigned k = 0; k != hull.facets.size(); ++k) {
-  //   cerr << "Facet " << k << " : ";
-  //   for (unsigned j = 0; j != hull.facets[k].size(); ++j) cerr << " " << hull.facets[k][j];
-  //   cerr << " : ";
-  //   for (unsigned j = 0; j != hull.facets[k].size(); ++j) cerr << " (" << points[3*hull.facets[k][j]] << " " << points[3*hull.facets[k][j] + 1] << " " << points[3*hull.facets[k][j] + 2] << ")";
-  //   cerr << endl;
-  // }
 
   cout << "PASS" << endl;
 
