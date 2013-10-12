@@ -29,7 +29,7 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
   // Copy cell-face data.
   {
     tess->num_cells = t.cells.size();
-    tess->cell_offsets = (int*)malloc(sizeof(int) * tess->num_cells);
+    tess->cell_offsets = (int*)malloc(sizeof(int) * (tess->num_cells+1));
     int size = 0;
     for (size_t i = 0; i < t.cells.size(); ++i)
       size += t.cells[i].size();
@@ -47,7 +47,7 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
   // Copy face-node data.
   {
     tess->num_faces = t.faces.size();
-    tess->face_offsets = (int*)malloc(sizeof(int) * tess->num_faces);
+    tess->face_offsets = (int*)malloc(sizeof(int) * (tess->num_faces+1));
     int size = 0;
     for (size_t i = 0; i < t.faces.size(); ++i)
       size += t.faces[i].size();
