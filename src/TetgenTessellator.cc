@@ -28,33 +28,33 @@ using std::abs;
 
 namespace {
 
-//------------------------------------------------------------------------------
-// Borrow the Point3 type as a tuple to create 3 node facets hashes.
-//------------------------------------------------------------------------------
-Point3<unsigned>
-hashFacet(const unsigned i, const unsigned j, const unsigned k) {
-  typedef Point3<unsigned> Tuple3;
-  POLY_ASSERT(i != j and i != k and j != k);
-  if (i < j and i < k) {
-    if (j < k) {
-      return Tuple3(i, j, k);
-    } else {
-      return Tuple3(i, k, j);
-    }
-  } else if (j < i and j < k) {
-    if (i < k) {
-      return Tuple3(j, i, k);
-    } else {
-      return Tuple3(j, k, i);
-    }
-  } else {
-    if (i < j) {
-      return Tuple3(k, i, j);
-    } else {
-      return Tuple3(k, j, i);
-    }
-  }
-}
+// //------------------------------------------------------------------------------
+// // Borrow the Point3 type as a tuple to create 3 node facets hashes.
+// //------------------------------------------------------------------------------
+// Point3<unsigned>
+// hashFacet(const unsigned i, const unsigned j, const unsigned k) {
+//   typedef Point3<unsigned> Tuple3;
+//   POLY_ASSERT(i != j and i != k and j != k);
+//   if (i < j and i < k) {
+//     if (j < k) {
+//       return Tuple3(i, j, k);
+//     } else {
+//       return Tuple3(i, k, j);
+//     }
+//   } else if (j < i and j < k) {
+//     if (i < k) {
+//       return Tuple3(j, i, k);
+//     } else {
+//       return Tuple3(j, k, i);
+//     }
+//   } else {
+//     if (i < j) {
+//       return Tuple3(k, i, j);
+//     } else {
+//       return Tuple3(k, j, i);
+//     }
+//   }
+// }
 
 //------------------------------------------------------------------------------
 // Given an array of 4 integers and 2 unique values, find the other two.
