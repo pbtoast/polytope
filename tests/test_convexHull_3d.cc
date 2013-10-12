@@ -136,11 +136,11 @@ int main(int argc, char** argv) {
     clock_t t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
-    escapePod("box", box_hull, points);
+    // escapePod("box", box_hull, points);
     polytope::ReducedPLC<3, double> simple_box_hull = simplifyPLCfacets(box_hull,
                                                                         points,
                                                                         1.0e-10);
-    escapePod("simple_box", simple_box_hull, points);
+    // escapePod("simple_box", simple_box_hull, points);
   }
 
   // Tessellate random points.
@@ -180,11 +180,11 @@ int main(int argc, char** argv) {
     t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
-    escapePod("random", hull, points);
+    // escapePod("random", hull, points);
     polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
                                                                            points,
                                                                            1.0e-10);
-    escapePod("simple_random", simple_random_hull, points);
+    // escapePod("simple_random", simple_random_hull, points);
   }
 
   // for (unsigned k = 0; k != hull.facets.size(); ++k) {
