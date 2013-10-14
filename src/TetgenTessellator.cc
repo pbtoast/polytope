@@ -9,6 +9,10 @@
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
+#include "PLC_CSG.hh"
+#include "simplifyPLCfacets.hh"
+#include "polytope_write_OOGL.hh"
+#include "polytope_plc_canned_geometries.hh"
 
 // Pull in tetgen stuff.
 #define TETLIBRARY
@@ -27,6 +31,19 @@ using std::max;
 using std::abs;
 
 namespace {
+
+//------------------------------------------------------------------------------
+// Emergency dump.
+//------------------------------------------------------------------------------
+std::string
+escapePod(const std::string nameEnd,
+          const polytope::PLC<3, double>& plc,
+          const std::vector<double>& points) {
+    std::stringstream os;
+    os << "test_PLC_" << nameEnd;
+    writePLCtoOFF(plc, points, os.str());
+    return " : attempted to write to file " + os.str();
+}
 
 // //------------------------------------------------------------------------------
 // // Borrow the Point3 type as a tuple to create 3 node facets hashes.
@@ -89,11 +106,12 @@ findOtherTetIndices(const int* indices,
 // Build a ReducedPLC representation of a cell.
 //------------------------------------------------------------------------------
 template<typename RealType>
-ReducedPLC<3, typename internal::QuantTessellation<3, RealType>::PointHash>
+ReducedPLC<3, double>
 plcOfCell(const internal::QuantTessellation<3, RealType>& qmesh,
           const unsigned icell) {
   typedef typename internal::QuantTessellation<3, RealType>::PointHash PointHash;
-  ReducedPLC<3, PointHash> result;
+  typedef Point3<double> RealPoint;
+  ReducedPLC<3, double> result;
   std::map<int, int> old2new;
   for (unsigned i = 0; i != qmesh.cells[icell].size(); ++i) {
     result.facets.push_back(vector<int>());
@@ -104,8 +122,11 @@ plcOfCell(const internal::QuantTessellation<3, RealType>& qmesh,
         const int iedge = qmesh.faces[iface][j];
         const int ip = iedge < 0 ? qmesh.edges[~iedge].first : qmesh.edges[iedge].second;
         if (old2new.find(ip) == old2new.end()) {
-          old2new[ip] = result.points.size();
-          result.points.push_back(qmesh.points[ip]);
+          old2new[ip] = result.points.size()/3;
+          RealPoint p = qmesh.unhashPosition(qmesh.points[ip]);
+          result.points.push_back(p.x);
+          result.points.push_back(p.y);
+          result.points.push_back(p.z);
         }
         result.facets.back().push_back(old2new[ip]);
       }
@@ -117,8 +138,11 @@ plcOfCell(const internal::QuantTessellation<3, RealType>& qmesh,
         const int iedge = qmesh.faces[iface][j];
         const int ip = iedge < 0 ? qmesh.edges[~iedge].second : qmesh.edges[iedge].first;
         if (old2new.find(ip) == old2new.end()) {
-          old2new[ip] = result.points.size();
-          result.points.push_back(qmesh.points[ip]);
+          old2new[ip] = result.points.size()/3;
+          RealPoint p = qmesh.unhashPosition(qmesh.points[ip]);
+          result.points.push_back(p.x);
+          result.points.push_back(p.y);
+          result.points.push_back(p.z);
         }
         result.facets.back().push_back(old2new[ip]);
       }
@@ -129,130 +153,164 @@ plcOfCell(const internal::QuantTessellation<3, RealType>& qmesh,
   return result;
 }
 
-//------------------------------------------------------------------------------
-// Compare a point with plane: returns (-1,0,1) for the point 
-// (below,coplanar,above) the plane.
-// For now we require the plane be aligned in the x, y, or z direction: i.e., 
-// normals (+/-1,0,0), (0,+/-1,0), or (0,0,+/-1).
-//------------------------------------------------------------------------------
-template<typename RealType>
-int
-compare(uint64_t point,
-        uint64_t pointPlane_fine,
-        uint64_t pointPlane_coarse,
-        const int64_t xnorm,
-        const int64_t ynorm,
-        const int64_t znorm,
-        const internal::QuantTessellation<3, RealType>& qmesh) {
-  typedef uint64_t PointHash;
-  typedef geometry::Hasher<3, double> HasherType;
-  typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
-  const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
-  POLY_ASSERT(!(pointPlane_fine & outerFlag));
-  POLY_ASSERT(pointPlane_coarse & outerFlag);
-  POLY_ASSERT(std::abs(xnorm) + std::abs(ynorm) + std::abs(znorm) == 1);
+// //------------------------------------------------------------------------------
+// // Compare a point with plane: returns (-1,0,1) for the point 
+// // (below,coplanar,above) the plane.
+// // For now we require the plane be aligned in the x, y, or z direction: i.e., 
+// // normals (+/-1,0,0), (0,+/-1,0), or (0,0,+/-1).
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// int
+// compare(uint64_t point,
+//         uint64_t pointPlane_fine,
+//         uint64_t pointPlane_coarse,
+//         const int64_t xnorm,
+//         const int64_t ynorm,
+//         const int64_t znorm,
+//         const internal::QuantTessellation<3, RealType>& qmesh) {
+//   typedef uint64_t PointHash;
+//   typedef geometry::Hasher<3, double> HasherType;
+//   typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
+//   const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
+//   POLY_ASSERT(!(pointPlane_fine & outerFlag));
+//   POLY_ASSERT(pointPlane_coarse & outerFlag);
+//   POLY_ASSERT(std::abs(xnorm) + std::abs(ynorm) + std::abs(znorm) == 1);
 
-  const uint64_t pointPlane = (point & outerFlag) ? pointPlane_coarse : pointPlane_fine;
+//   const uint64_t pointPlane = (point & outerFlag) ? pointPlane_coarse : pointPlane_fine;
 
-  // Now check that sucker.
-  int testval;
-  if (std::abs(xnorm) == 1) {
-    testval = int64_t(HasherType::qxval(point) - HasherType::qxval(pointPlane))*xnorm;
-  } else if (std::abs(ynorm) == 1) {
-    testval = int64_t(HasherType::qyval(point) - HasherType::qyval(pointPlane))*ynorm;
-  } else {
-    testval = int64_t(HasherType::qzval(point) - HasherType::qzval(pointPlane))*znorm;
-  }
-  return (testval < 0 ? -1 :
-          testval > 0 ?  1 :
-          0);
-}
+//   // Now check that sucker.
+//   int testval;
+//   if (std::abs(xnorm) == 1) {
+//     testval = int64_t(HasherType::qxval(point) - HasherType::qxval(pointPlane))*xnorm;
+//   } else if (std::abs(ynorm) == 1) {
+//     testval = int64_t(HasherType::qyval(point) - HasherType::qyval(pointPlane))*ynorm;
+//   } else {
+//     testval = int64_t(HasherType::qzval(point) - HasherType::qzval(pointPlane))*znorm;
+//   }
+//   return (testval < 0 ? -1 :
+//           testval > 0 ?  1 :
+//           0);
+// }
 
-//------------------------------------------------------------------------------
-// Same thing for a collection of points.
-//------------------------------------------------------------------------------
-template<typename RealType>
-int
-compare(const std::vector<uint64_t>& points,
-        const uint64_t pointPlane_fine,
-        const uint64_t pointPlane_coarse,
-        const int64_t xnorm,
-        const int64_t ynorm,
-        const int64_t znorm,
-        const internal::QuantTessellation<3, RealType>& qmesh) {
-  typedef uint64_t PointHash;
-  typedef geometry::Hasher<3, double> HasherType;
-  typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
-  const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
-  POLY_ASSERT(!(pointPlane_fine & outerFlag));
-  POLY_ASSERT(pointPlane_coarse & outerFlag);
-  POLY_ASSERT(std::abs(xnorm) + std::abs(ynorm) + std::abs(znorm) == 1);
+// //------------------------------------------------------------------------------
+// // Same thing for a collection of points.
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// int
+// compare(const std::vector<uint64_t>& points,
+//         const uint64_t pointPlane_fine,
+//         const uint64_t pointPlane_coarse,
+//         const int64_t xnorm,
+//         const int64_t ynorm,
+//         const int64_t znorm,
+//         const internal::QuantTessellation<3, RealType>& qmesh) {
+//   typedef uint64_t PointHash;
+//   typedef geometry::Hasher<3, double> HasherType;
+//   typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
+//   const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
+//   POLY_ASSERT(!(pointPlane_fine & outerFlag));
+//   POLY_ASSERT(pointPlane_coarse & outerFlag);
+//   POLY_ASSERT(std::abs(xnorm) + std::abs(ynorm) + std::abs(znorm) == 1);
 
-  int result = 0, resulti, testval;
-  PointHash pointPlanei;
-  for (unsigned i = 0; i != points.size(); ++i) {
+//   int result = 0, resulti, testval;
+//   PointHash pointPlanei;
+//   for (unsigned i = 0; i != points.size(); ++i) {
 
-    // If the test point is quantized in the outer box, we have to translate the 
-    // plane point to the same coarse coordinates.
-    pointPlanei = ((points[i] & outerFlag) ? pointPlane_coarse : pointPlane_fine);
+//     // If the test point is quantized in the outer box, we have to translate the 
+//     // plane point to the same coarse coordinates.
+//     pointPlanei = ((points[i] & outerFlag) ? pointPlane_coarse : pointPlane_fine);
 
-    // Now check that sucker.
-    if (std::abs(xnorm) == 1) {
-      testval = int64_t(HasherType::qxval(points[i]) - HasherType::qxval(pointPlanei))*xnorm;
-    } else if (std::abs(ynorm) == 1) {
-      testval = int64_t(HasherType::qyval(points[i]) - HasherType::qyval(pointPlanei))*ynorm;
-    } else {
-      testval = int64_t(HasherType::qzval(points[i]) - HasherType::qzval(pointPlanei))*znorm;
-    }
-    resulti = (testval < 0 ? -1 :
-               testval > 0 ?  1 :
-               0);
-    if ((resulti == 0) or
-        (i > 0 and resulti != result)) return 0;
-    result = resulti;
-  }
-  return result;
-}
+//     // Now check that sucker.
+//     if (std::abs(xnorm) == 1) {
+//       testval = int64_t(HasherType::qxval(points[i]) - HasherType::qxval(pointPlanei))*xnorm;
+//     } else if (std::abs(ynorm) == 1) {
+//       testval = int64_t(HasherType::qyval(points[i]) - HasherType::qyval(pointPlanei))*ynorm;
+//     } else {
+//       testval = int64_t(HasherType::qzval(points[i]) - HasherType::qzval(pointPlanei))*znorm;
+//     }
+//     resulti = (testval < 0 ? -1 :
+//                testval > 0 ?  1 :
+//                0);
+//     if ((resulti == 0) or
+//         (i > 0 and resulti != result)) return 0;
+//     result = resulti;
+//   }
+//   return result;
+// }
 
-//------------------------------------------------------------------------------
-// Quantized plane intersection with a line segment.
-//------------------------------------------------------------------------------
-template<typename RealType>
-uint64_t
-planeIntersection(const uint64_t e1,
-                  const uint64_t e2,
-                  const uint64_t pointPlane,
-                  const int64_t xnorm,
-                  const int64_t ynorm,
-                  const int64_t znorm,
-                  const internal::QuantTessellation<3, RealType>& qmesh) {
+// //------------------------------------------------------------------------------
+// // Quantized plane intersection with a line segment.
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// uint64_t
+// planeIntersection(const uint64_t e1,
+//                   const uint64_t e2,
+//                   const uint64_t pointPlane,
+//                   const int64_t xnorm,
+//                   const int64_t ynorm,
+//                   const int64_t znorm,
+//                   const internal::QuantTessellation<3, RealType>& qmesh) {
 
-  typedef uint64_t PointHash;
-  typedef geometry::Hasher<3, double> HasherType;
-  typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
-  const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
-  POLY_ASSERT(!(pointPlane & outerFlag));
+//   typedef uint64_t PointHash;
+//   typedef geometry::Hasher<3, double> HasherType;
+//   typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
+//   const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
+//   POLY_ASSERT(!(pointPlane & outerFlag));
 
-  // Export our work to the floating method.
-  // This is definitely not the most efficient thing we could do, but it's expedient
-  // while we get stuff working!
-  // const int64_t e1x = HasherType::qxval(e1), e1y = HasherType::qyval(e1), e1z = HasherType::qzval(e1),
-  //               e2x = HasherType::qxval(e2), e2y = HasherType::qyval(e2), e2z = HasherType::qzval(e2),
-  //               ppx = HasherType::qxval(pointPlane), ppy = HasherType::qyval(pointPlane), ppz = HasherType::qzval(pointPlane);
-  RealPoint p_ray = qmesh.unhashPosition(e1),
-            n_ray = qmesh.unhashPosition(e2) - p_ray,
-            p_plane = qmesh.unhashPosition(pointPlane),
-            n_plane(xnorm, ynorm, znorm),
-            p_intersect;
-  geometry::unitVector<3, RealType>(&n_ray.x);
-  geometry::unitVector<3, RealType>(&n_plane.x);
-  const bool valid = geometry::rayPlaneIntersection(&p_ray.x, &n_ray.x, &p_plane.x, &n_plane.x,
-                                                    qmesh.degeneracy, &p_intersect.x);
-  POLY_ASSERT2(valid, p_ray << " " << n_ray << " " << p_plane << " " << n_plane << " " << p_intersect);
+//   // Export our work to the floating method.
+//   // This is definitely not the most efficient thing we could do, but it's expedient
+//   // while we get stuff working!
+//   // const int64_t e1x = HasherType::qxval(e1), e1y = HasherType::qyval(e1), e1z = HasherType::qzval(e1),
+//   //               e2x = HasherType::qxval(e2), e2y = HasherType::qyval(e2), e2z = HasherType::qzval(e2),
+//   //               ppx = HasherType::qxval(pointPlane), ppy = HasherType::qyval(pointPlane), ppz = HasherType::qzval(pointPlane);
+//   RealPoint p_ray = qmesh.unhashPosition(e1),
+//             n_ray = qmesh.unhashPosition(e2) - p_ray,
+//             p_plane = qmesh.unhashPosition(pointPlane),
+//             n_plane(xnorm, ynorm, znorm),
+//             p_intersect;
+//   geometry::unitVector<3, RealType>(&n_ray.x);
+//   geometry::unitVector<3, RealType>(&n_plane.x);
+//   const bool valid = geometry::rayPlaneIntersection(&p_ray.x, &n_ray.x, &p_plane.x, &n_plane.x,
+//                                                     qmesh.degeneracy, &p_intersect.x);
+//   POLY_ASSERT2(valid, p_ray << " " << n_ray << " " << p_plane << " " << n_plane << " " << p_intersect);
 
-  // Convert the answer to a quantized coordinate and we're done.
-  return qmesh.hashPosition(p_intersect);
-}
+//   // Convert the answer to a quantized coordinate and we're done.
+//   return qmesh.hashPosition(p_intersect);
+// }
+
+// //------------------------------------------------------------------------------
+// // Comparator for sorting points around a face.
+// //------------------------------------------------------------------------------
+// template<typename RealType>
+// struct FacePointComparator {
+//   typedef uint64_t PointHash;
+//   typedef int64_t CoordHash;
+//   typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
+//   PointHash iorigin;
+//   RealPoint origin, normal;
+//   const internal::QuantTessellation<3, RealType>& qmesh;
+//   FacePointComparator(const PointHash origini,
+//                       const CoordHash xnormi,
+//                       const CoordHash ynormi,
+//                       const CoordHash znormi,
+//                       const internal::QuantTessellation<3, RealType>& qmeshi): iorigin(origini),
+//                                                                                origin(qmeshi.unhashPosition(origini)),
+//                                                                                normal(xnormi, ynormi, znormi),
+//                                                                                qmesh(qmeshi) {}
+//   bool operator()(const PointHash a, const PointHash b) {  // Looks like operator<
+//     if (a == iorigin) {
+//       return true;
+//     } else if (b == iorigin) {
+//       return false;
+//     }
+//     const RealPoint da = qmesh.unhashPosition(a) - origin,
+//                     db = qmesh.unhashPosition(b) - origin;
+//     RealPoint da_cross_db;
+//     geometry::cross<3, RealType>(&da.x, &db.x, &da_cross_db.x);
+//     const RealType test = geometry::dot<3, RealType>(&da_cross_db.x, &normal.x);
+//     return test < 0;
+//   }
+// };
 
 // //------------------------------------------------------------------------------
 // // Clip a ReducedPLC with a plane.  The plane is specified in (point, normal)
@@ -278,20 +336,18 @@ planeIntersection(const uint64_t e1,
 
 //   // Prepare to build the result up.
 //   ReducedPLC<3, PointHash> result;
-//   cerr << "--------------------------------------------------------------------------------" << endl
-//        << "Clipping against " << qmesh.unhashPosition(pointPlane_fine) << " (" << xnorm << " " << ynorm << " " << znorm << ")" << endl;
-//   for (unsigned i = 0; i != cell.facets.size(); ++i) {
-//     for (unsigned j = 0; j != cell.facets[i].size(); ++j) {
-//       cerr << "  " << qmesh.unhashPosition(cell.points[cell.facets[i][j]]);
-//     }
-//     cerr << endl;
-//   }
-//   cerr << "--------------------------------------------------------------------------------" << endl;
-
+//   // cerr << "--------------------------------------------------------------------------------" << endl
+//   //      << "Clipping against " << qmesh.unhashPosition(pointPlane_fine) << " (" << xnorm << " " << ynorm << " " << znorm << ")" << endl;
+//   // for (unsigned i = 0; i != cell.facets.size(); ++i) {
+//   //   for (unsigned j = 0; j != cell.facets[i].size(); ++j) {
+//   //     cerr << "  " << qmesh.unhashPosition(cell.points[cell.facets[i][j]]);
+//   //   }
+//   //   cerr << endl;
+//   // }
+//   // cerr << "--------------------------------------------------------------------------------" << endl;
 
 //   // If the entire PLC is on one side of the input plane the answer is simple.
 //   const int allcompare = compare(cell.points, pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
-//   cerr << "allcompare : " << allcompare << endl;
 //   POLY_ASSERT(allcompare >= -1 and allcompare <= 1);
 //   if (allcompare == -1) {
 //     return result;
@@ -299,11 +355,14 @@ planeIntersection(const uint64_t e1,
 //     return cell;
 //   }
 
-//   // Build the set of quantized points resulting from clipping this PLC.
-//   vector<PointHash> newpoints;
+//   // The plane intersects this polyhedron.  Walk each face and intersect it with
+//   // the plane.
+//   map<PointHash, int> point2id;
+//   vector<PointHash> newfacet;  // We may create at most one new facet by clipping with a plane.
 //   for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
 //     const unsigned nnodes = cell.facets[iface].size();
 //     POLY_ASSERT(nnodes >= 3);
+//     vector<int> clippedfacet;
 //     for (unsigned i = 0; i != nnodes; ++i) {
 //       const unsigned e1 = cell.facets[iface][i],
 //                      e2 = cell.facets[iface][(i + 1) % nnodes];
@@ -311,7 +370,14 @@ planeIntersection(const uint64_t e1,
 //                 compare2 = compare(cell.points[e2], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
 
 //       // Does the first point of this edge make the cut?
-//       if (compare1 != -1) newpoints.push_back(cell.points[e1]);
+//       if (compare1 != -1) {
+//         const unsigned oldsize = point2id.size();
+//         const unsigned k = internal::addKeyToMap(cell.points[e1], point2id);
+//         if (k == oldsize) result.points.push_back(cell.points[e1]);
+//         if ((clippedfacet.size() == 0) or
+//             ((i < nnodes - 1) and (k != clippedfacet.back())) or
+//             ((i == nnodes - 1) and (k != clippedfacet.back()) and (k != clippedfacet[0]))) clippedfacet.push_back(k);
+//       }
 
 //       // Does this edge stradle the plane?
 //       if (compare1*compare2 == -1) {
@@ -322,229 +388,50 @@ planeIntersection(const uint64_t e1,
 //                                                      ynorm,
 //                                                      znorm,
 //                                                      qmesh);
-//         newpoints.push_back(newpoint);
+//         const unsigned oldsize = point2id.size();
+//         const unsigned k = internal::addKeyToMap(newpoint, point2id);
+//         if (k == oldsize) result.points.push_back(newpoint);
+//         if ((clippedfacet.size() == 0) or
+//             ((i < nnodes - 1) and (k != clippedfacet.back())) or
+//             ((i == nnodes - 1) and (k != clippedfacet.back()) and (k != clippedfacet[0]))) clippedfacet.push_back(k);
+//         newfacet.push_back(newpoint);
 //       }
 //     }
+
+//     // Make sure there are no repeats in the clipped facet.
+//     if (clippedfacet.size() >= 3) {
+//       vector<int> clippedfacet2;
+//       for (int i = 0; i != clippedfacet.size(); ++i) {
+//         int j = (i + 1) % clippedfacet.size();
+//         if (clippedfacet[i] != clippedfacet[j]) clippedfacet2.push_back(clippedfacet[i]);
+//       }
+//       if (clippedfacet2.size() >= 3) result.facets.push_back(clippedfacet2);
+//     }
 //   }
 
-//   // Reduce to the unique set of points.
-//   std::sort(newpoints.begin(), newpoints.end());
-//   newpoints.erase(std::unique(newpoints.begin(), newpoints.end()), newpoints.end());
-
-//   // Build a new PLC from the convex hull of the new points.
-//   std::vector<int64_t> coords;
-//   coords.reserve(3*newpoints.size());
-//   int64_t low[3] = {std::numeric_limits<int64_t>::max(),
-//                     std::numeric_limits<int64_t>::max(),
-//                     std::numeric_limits<int64_t>::max()};
-//   for (unsigned i = 0; i != newpoints.size(); ++i) {
-//     coords.push_back(HasherType::qxval(newpoints[i]));
-//     coords.push_back(HasherType::qyval(newpoints[i]));
-//     coords.push_back(HasherType::qzval(newpoints[i]));
-//     low[0] = std::min(low[0], coords[3*i]);
-//     low[1] = std::min(low[0], coords[3*i + 1]);
-//     low[2] = std::min(low[0], coords[3*i + 2]);
+//   // Did we create a new facet?
+//   if (newfacet.size() >= 3) {
+//     std::sort(newfacet.begin(), newfacet.end(), FacePointComparator<RealType>(newfacet.front(), xnorm, ynorm, znorm, qmesh));
+//     newfacet.erase(std::unique(newfacet.begin(), newfacet.end()), newfacet.end());
+//     if (newfacet.size() >= 3) {
+//       // cerr << "New facet points : ";
+//       // for (unsigned i = 0; i != newfacet.size(); ++i) cerr << " " << point2id[newfacet[i]];
+//       // cerr << endl;
+//       // cerr << "New facet points ordering : ";
+//       // FacePointComparator<RealType> comp(newfacet.front(), xnorm, ynorm, znorm, qmesh);
+//       // for (unsigned i = 0; i != newfacet.size(); ++i) cerr << " "
+//       //                                                      << comp(newfacet[i], newfacet[(i + 1) % newfacet.size()]);
+//       // cerr << endl;
+//       vector<int> newfacetIDs;
+//       for (unsigned i = 0; i != newfacet.size(); ++i) newfacetIDs.push_back(point2id[newfacet[i]]);
+//       result.facets.push_back(newfacetIDs);
+//     }
 //   }
-//   POLY_ASSERT(coords.size() == 3*newpoints.size());
-//   PLC<3, int64_t> hull = convexHull_3d(coords, low, int64_t(1));
 
-//   // Copy to a ReducedPLC and we're done.
-//   result.points = newpoints;
-//   result.facets = hull.facets;
+//   // That's it.
+//   POLY_ASSERT(result.facets.size() >= 4);
 //   return result;
 // }
-
-//------------------------------------------------------------------------------
-// Comparator for sorting points around a face.
-//------------------------------------------------------------------------------
-template<typename RealType>
-struct FacePointComparator {
-  typedef uint64_t PointHash;
-  typedef int64_t CoordHash;
-  typedef typename internal::QuantTessellation<3, RealType>::RealPoint RealPoint;
-  PointHash iorigin;
-  RealPoint origin, normal;
-  const internal::QuantTessellation<3, RealType>& qmesh;
-  FacePointComparator(const PointHash origini,
-                      const CoordHash xnormi,
-                      const CoordHash ynormi,
-                      const CoordHash znormi,
-                      const internal::QuantTessellation<3, RealType>& qmeshi): iorigin(origini),
-                                                                               origin(qmeshi.unhashPosition(origini)),
-                                                                               normal(xnormi, ynormi, znormi),
-                                                                               qmesh(qmeshi) {}
-  bool operator()(const PointHash a, const PointHash b) {  // Looks like operator<
-    if (a == iorigin) {
-      return true;
-    } else if (b == iorigin) {
-      return false;
-    }
-    const RealPoint da = qmesh.unhashPosition(a) - origin,
-                    db = qmesh.unhashPosition(b) - origin;
-    RealPoint da_cross_db;
-    geometry::cross<3, RealType>(&da.x, &db.x, &da_cross_db.x);
-    const RealType test = geometry::dot<3, RealType>(&da_cross_db.x, &normal.x);
-    return test < 0;
-  }
-};
-
-// template<typename RealType>
-// struct FacePointComparator {
-//   typedef uint64_t PointHash;
-//   typedef int64_t Coord;
-//   typedef geometry::Hasher<3, RealType> HasherType;
-//   PointHash origin;
-//   Coord xorigin, yorigin, zorigin, xnorm, ynorm, znorm;
-//   FacePointComparator(const PointHash origini,
-//                       const Coord xnormi,
-//                       const Coord ynormi,
-//                       const Coord znormi): origin(origini),
-//                                            xorigin(HasherType::qxval(origini)),
-//                                            yorigin(HasherType::qyval(origini)),
-//                                            zorigin(HasherType::qyval(origini)),
-//                                            xnorm(xnormi),
-//                                            ynorm(ynormi),
-//                                            znorm(znormi) { POLY_ASSERT(!(origin & HasherType::outerFlag())); }
-//   bool operator()(const PointHash a, const PointHash b) {  // Looks like operator<
-//     POLY_ASSERT(!(a & HasherType::outerFlag()));
-//     POLY_ASSERT(!(b & HasherType::outerFlag()));
-//     if (a == origin) {
-//       return true;
-//     } else if (b == origin) {
-//       return false;
-//     }
-//     const Coord xa = HasherType::qxval(a), ya = HasherType::qyval(a), za = HasherType::qzval(a),
-//                 xb = HasherType::qxval(b), yb = HasherType::qyval(b), zb = HasherType::qzval(b),
-//                 dxa = xa - xorigin, dya = ya - yorigin, dza = za - zorigin,
-//                 dxb = xb - xorigin, dyb = yb - yorigin, dzb = zb - zorigin,
-//                 xcross = dya*dzb - dza*dyb,
-//                 ycross = dza*dxb - dxa*dzb,
-//                 zcross = dxa*dyb - dya*dxb,
-//                 itest = xcross*xnorm + ycross*ynorm + zcross*znorm;
-//     return itest > 0;
-//   }
-// };
-
-//------------------------------------------------------------------------------
-// Clip a ReducedPLC with a plane.  The plane is specified in (point, normal)
-// form in the arguments.  
-// For now we require the plane be aligned in the x, y, or z direction: i.e., 
-// normals (+/-1,0,0), (0,+/-1,0), or (0,0,+/-1).
-//------------------------------------------------------------------------------
-template<typename RealType>
-ReducedPLC<3, uint64_t>
-clipReducedPLC(const ReducedPLC<3, uint64_t>& cell,
-               const uint64_t pointPlane_fine,
-               const uint64_t pointPlane_coarse,
-               const int64_t xnorm,
-               const int64_t ynorm,
-               const int64_t znorm,
-               const internal::QuantTessellation<3, RealType>& qmesh) {
-  typedef uint64_t PointHash;
-  typedef geometry::Hasher<3, double> HasherType;
-  const PointHash outerFlag = geometry::Hasher<3, RealType>::outerFlag();
-  POLY_ASSERT(!(pointPlane_fine & outerFlag));
-  POLY_ASSERT(pointPlane_coarse & outerFlag);
-  POLY_ASSERT(std::abs(xnorm) + std::abs(ynorm) + std::abs(znorm) == 1);
-
-  // Prepare to build the result up.
-  ReducedPLC<3, PointHash> result;
-  // cerr << "--------------------------------------------------------------------------------" << endl
-  //      << "Clipping against " << qmesh.unhashPosition(pointPlane_fine) << " (" << xnorm << " " << ynorm << " " << znorm << ")" << endl;
-  // for (unsigned i = 0; i != cell.facets.size(); ++i) {
-  //   for (unsigned j = 0; j != cell.facets[i].size(); ++j) {
-  //     cerr << "  " << qmesh.unhashPosition(cell.points[cell.facets[i][j]]);
-  //   }
-  //   cerr << endl;
-  // }
-  // cerr << "--------------------------------------------------------------------------------" << endl;
-
-  // If the entire PLC is on one side of the input plane the answer is simple.
-  const int allcompare = compare(cell.points, pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
-  POLY_ASSERT(allcompare >= -1 and allcompare <= 1);
-  if (allcompare == -1) {
-    return result;
-  } else if (allcompare == 1) {
-    return cell;
-  }
-
-  // The plane intersects this polyhedron.  Walk each face and intersect it with
-  // the plane.
-  map<PointHash, int> point2id;
-  vector<PointHash> newfacet;  // We may create at most one new facet by clipping with a plane.
-  for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
-    const unsigned nnodes = cell.facets[iface].size();
-    POLY_ASSERT(nnodes >= 3);
-    vector<int> clippedfacet;
-    for (unsigned i = 0; i != nnodes; ++i) {
-      const unsigned e1 = cell.facets[iface][i],
-                     e2 = cell.facets[iface][(i + 1) % nnodes];
-      const int compare1 = compare(cell.points[e1], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh),
-                compare2 = compare(cell.points[e2], pointPlane_fine, pointPlane_coarse, xnorm, ynorm, znorm, qmesh);
-
-      // Does the first point of this edge make the cut?
-      if (compare1 != -1) {
-        const unsigned oldsize = point2id.size();
-        const unsigned k = internal::addKeyToMap(cell.points[e1], point2id);
-        if (k == oldsize) result.points.push_back(cell.points[e1]);
-        if ((clippedfacet.size() == 0) or
-            ((i < nnodes - 1) and (k != clippedfacet.back())) or
-            ((i == nnodes - 1) and (k != clippedfacet.back()) and (k != clippedfacet[0]))) clippedfacet.push_back(k);
-      }
-
-      // Does this edge stradle the plane?
-      if (compare1*compare2 == -1) {
-        const PointHash newpoint = planeIntersection(cell.points[e1],
-                                                     cell.points[e2],
-                                                     pointPlane_fine,
-                                                     xnorm,
-                                                     ynorm,
-                                                     znorm,
-                                                     qmesh);
-        const unsigned oldsize = point2id.size();
-        const unsigned k = internal::addKeyToMap(newpoint, point2id);
-        if (k == oldsize) result.points.push_back(newpoint);
-        if ((clippedfacet.size() == 0) or
-            ((i < nnodes - 1) and (k != clippedfacet.back())) or
-            ((i == nnodes - 1) and (k != clippedfacet.back()) and (k != clippedfacet[0]))) clippedfacet.push_back(k);
-        newfacet.push_back(newpoint);
-      }
-    }
-
-    // Make sure there are no repeats in the clipped facet.
-    if (clippedfacet.size() >= 3) {
-      vector<int> clippedfacet2;
-      for (int i = 0; i != clippedfacet.size(); ++i) {
-        int j = (i + 1) % clippedfacet.size();
-        if (clippedfacet[i] != clippedfacet[j]) clippedfacet2.push_back(clippedfacet[i]);
-      }
-      if (clippedfacet2.size() >= 3) result.facets.push_back(clippedfacet2);
-    }
-  }
-
-  // Did we create a new facet?
-  if (newfacet.size() >= 3) {
-    std::sort(newfacet.begin(), newfacet.end(), FacePointComparator<RealType>(newfacet.front(), xnorm, ynorm, znorm, qmesh));
-    newfacet.erase(std::unique(newfacet.begin(), newfacet.end()), newfacet.end());
-    if (newfacet.size() >= 3) {
-      // cerr << "New facet points : ";
-      // for (unsigned i = 0; i != newfacet.size(); ++i) cerr << " " << point2id[newfacet[i]];
-      // cerr << endl;
-      // cerr << "New facet points ordering : ";
-      // FacePointComparator<RealType> comp(newfacet.front(), xnorm, ynorm, znorm, qmesh);
-      // for (unsigned i = 0; i != newfacet.size(); ++i) cerr << " "
-      //                                                      << comp(newfacet[i], newfacet[(i + 1) % newfacet.size()]);
-      // cerr << endl;
-      vector<int> newfacetIDs;
-      for (unsigned i = 0; i != newfacet.size(); ++i) newfacetIDs.push_back(point2id[newfacet[i]]);
-      result.facets.push_back(newfacetIDs);
-    }
-  }
-
-  // That's it.
-  POLY_ASSERT(result.facets.size() >= 4);
-  return result;
-}
 
 } // end anonymous namespace
 
@@ -590,85 +477,103 @@ tessellate(const vector<double>& points,
            double* high,
            Tessellation<3, double>& mesh) const {
 
+  // Create a PLC of the bounding points, and use the ReducedPLC method to do the 
+  // tessellation.
+  ReducedPLC<3, double> box = plc_box<3, double>(low, high);
+  this->tessellate(points, box, mesh);
+
+  // Make a final pass and ensure our bounds are met.
+  for (unsigned i = 0; i != mesh.nodes.size()/3; ++i) {
+    mesh.nodes[3*i  ] = std::max(low[0], std::min(high[0], mesh.nodes[3*i  ]));
+    mesh.nodes[3*i+1] = std::max(low[1], std::min(high[1], mesh.nodes[3*i+1]));
+    mesh.nodes[3*i+2] = std::max(low[2], std::min(high[2], mesh.nodes[3*i+2]));
+  }
+}
+
+//------------------------------------------------------------------------------
+// Tessellate within a PLC.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           const vector<double>& PLCpoints,
+           const PLC<3, double>& geometry,
+           Tessellation<3, double>& mesh) const {
+
+  // We export to the ReducedPLC method.
+  ReducedPLC<3, double> boundary;
+  boundary.facets = geometry.facets;
+  boundary.holes = geometry.holes;
+  boundary.points = PLCpoints;
+  this->tessellate(points, boundary, mesh);
+}
+
+//------------------------------------------------------------------------------
+// Tessellate within a ReducedPLC.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+tessellate(const vector<double>& points,
+           const ReducedPLC<3, double>& geometry,
+           Tessellation<3, double>& mesh) const {
+
   typedef geometry::Hasher<3, double> HasherType;
   typedef internal::QuantTessellation<3, double>::PointHash PointHash;
   typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
   typedef internal::QuantTessellation<3, double>::IntPoint IntPoint;
   typedef internal::QuantTessellation<3, double>::RealPoint RealPoint;
+  typedef geometry::Hasher<3, double> HasherType;
 
   const PointHash outerFlag = HasherType::outerFlag();
+
+  escapePod("boundary", geometry, geometry.points);
 
   // Pre-conditions.
   POLY_ASSERT(not points.empty());
   POLY_ASSERT(points.size() % 3 == 0);
-  POLY_ASSERT(low[0] < high[0] and
-              low[1] < high[1] and
-              low[2] < high[2]);
   const unsigned numGenerators = points.size()/3;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    for (unsigned j = 0; j != 3; ++j) {
-      POLY_ASSERT(low[j] <= points[3*i+j] and points[3*i+j] <= high[j]);
-    }
-  }
+  // for (unsigned i = 0; i != numGenerators; ++i) {
+  //   for (unsigned j = 0; j != 3; ++j) {
+  //     POLY_ASSERT(low[j] <= points[3*i+j] and points[3*i+j] <= high[j]);
+  //   }
+  // }
 
   // Create the unbounded QuantTessellation.
   internal::QuantTessellation<3, double> qmesh0;
-  vector<double> nonGeneratingPoints(6);
-  copy(low, low + 3, &nonGeneratingPoints[0]);
-  copy(high, high + 3, &nonGeneratingPoints[3]);
-  this->computeUnboundedQuantizedTessellation(points, nonGeneratingPoints, qmesh0);
+  this->computeUnboundedQuantizedTessellation(points, geometry.points, qmesh0);
 
-  // Find the quantized box boundaries.  Both points should be in the inner bounding
-  // box.
-  const RealPoint nlow((low[0] - qmesh0.low_labframe[0])/(qmesh0.high_labframe[0] - qmesh0.low_labframe[0]),
-                       (low[1] - qmesh0.low_labframe[1])/(qmesh0.high_labframe[1] - qmesh0.low_labframe[1]),
-                       (low[2] - qmesh0.low_labframe[2])/(qmesh0.high_labframe[2] - qmesh0.low_labframe[2])),
-                 nhigh((high[0] - qmesh0.low_labframe[0])/(qmesh0.high_labframe[0] - qmesh0.low_labframe[0]),
-                       (high[1] - qmesh0.low_labframe[1])/(qmesh0.high_labframe[1] - qmesh0.low_labframe[1]),
-                       (high[2] - qmesh0.low_labframe[2])/(qmesh0.high_labframe[2] - qmesh0.low_labframe[2]));
-  const PointHash plow_fine = qmesh0.hashPosition(nlow), phigh_fine = qmesh0.hashPosition(nhigh),
-                plow_coarse = HasherType::hashPosition(const_cast<RealType*>(&nlow.x), 
-                                                       &qmesh0.low_outer.x, &qmesh0.high_outer.x,
-                                                       &qmesh0.low_outer.x, &qmesh0.high_outer.x) + outerFlag,
-               phigh_coarse = HasherType::hashPosition(const_cast<RealType*>(&nhigh.x), 
-                                                       &qmesh0.low_outer.x, &qmesh0.high_outer.x,
-                                                       &qmesh0.low_outer.x, &qmesh0.high_outer.x) + outerFlag;
-  POLY_ASSERT(!(plow_fine & outerFlag));
-  POLY_ASSERT(!(phigh_fine & outerFlag));
-  POLY_ASSERT(plow_coarse & outerFlag);
-  POLY_ASSERT(phigh_coarse & outerFlag);
-
-  // Create a new QuantTessellation.
+  // Create a new QuantTessellation.  This one will only use the single level of
+  // quantization since we know the PLC is within this inner region.
   internal::QuantTessellation<3, double> qmesh1;
   qmesh1.generators = qmesh0.generators;
   qmesh1.low_labframe = qmesh0.low_labframe;
   qmesh1.high_labframe = qmesh0.high_labframe;
   qmesh1.low_inner = qmesh0.low_inner;
   qmesh1.high_inner = qmesh0.high_inner;
-  qmesh1.low_outer = qmesh0.low_outer;
-  qmesh1.high_outer = qmesh0.high_outer;
-  qmesh1.degeneracy = qmesh0.degeneracy;
+  qmesh1.low_outer = qmesh0.low_inner;
+  qmesh1.high_outer = qmesh0.high_inner;
+  qmesh1.degeneracy = 1.0e-5;
 
   // Walk each of the cells in the unbounded tessellation.
   for (unsigned icell = 0; icell != numGenerators; ++icell) {
+    cerr << "---------------------------------------- cell " << icell << " ----------------------------------------" << endl;
 
     // Build a PLC to represent just this cell.
-    ReducedPLC<3, PointHash> cell = plcOfCell(qmesh0, icell);
+    ReducedPLC<3, double> cell = plcOfCell(qmesh0, icell);
 
-    // Clip this PLC by each plane of our bounding box.
-    cell = clipReducedPLC(cell, plow_fine, plow_coarse, 1, 0, 0, qmesh0);
-    cell = clipReducedPLC(cell, plow_fine, plow_coarse, 0, 1, 0, qmesh0);
-    cell = clipReducedPLC(cell, plow_fine, plow_coarse, 0, 0, 1, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse, -1,  0,  0, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0, -1,  0, qmesh0);
-    cell = clipReducedPLC(cell, phigh_fine, phigh_coarse,  0,  0, -1, qmesh0);
+    // Intersect with the boundary.
+    cell = CSG::csg_intersect(geometry, cell);
+    cell = simplifyPLCfacets(cell, cell.points, &qmesh1.low_inner.x, &qmesh1.high_inner.x, 1.0e-5);   // We have to use a *much* coarser degeneracy here due to CSG accuracy...  :(
     POLY_ASSERT(cell.facets.size() >= 4);
 
     // Add this cell and its elements to the new tessellation.
     vector<int> nodeIDs, edgeIDs, faceIDs;
     qmesh1.cells.push_back(vector<int>());
     for (unsigned i = 0; i != cell.points.size(); ++i) {
-      nodeIDs.push_back(qmesh1.addNewNode(cell.points[i]));
+      nodeIDs.push_back(qmesh1.addNewNode(HasherType::hashPosition(&cell.points[3*i],
+                                                                   const_cast<double*>(&qmesh1.low_inner.x), const_cast<double*>(&qmesh1.high_inner.x),
+                                                                   const_cast<double*>(&qmesh1.low_outer.x), const_cast<double*>(&qmesh1.high_outer.x),
+                                                                   qmesh1.degeneracy)));
     }
     for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
       const unsigned nnodes = cell.facets[iface].size();
@@ -713,7 +618,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   typedef internal::QuantTessellation<3, double>::PointHash PointHash;
   typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
-  typedef Point3<RealType> RealPoint;
+  typedef Point3<double> RealPoint;
   typedef Point3<unsigned> TetFacetHash;  // kind of nefarious!
 
   qmesh.degeneracy = mDegeneracy;
@@ -755,12 +660,12 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   // with each generator.
   qmesh.low_inner = RealPoint(0, 0, 0);
   qmesh.high_inner = RealPoint(1, 1, 1);
-  qmesh.low_outer = RealPoint(numeric_limits<RealType>::max(),
-                              numeric_limits<RealType>::max(),
-                              numeric_limits<RealType>::max());
-  qmesh.high_outer = RealPoint(-numeric_limits<RealType>::max(),
-                               -numeric_limits<RealType>::max(),
-                               -numeric_limits<RealType>::max());
+  qmesh.low_outer = RealPoint(numeric_limits<double>::max(),
+                              numeric_limits<double>::max(),
+                              numeric_limits<double>::max());
+  qmesh.high_outer = RealPoint(-numeric_limits<double>::max(),
+                               -numeric_limits<double>::max(),
+                               -numeric_limits<double>::max());
   vector<RealPoint> circumcenters(out.numberoftetrahedra);
   int a, b, c, d;
   EdgeHash ab, ac, ad, bc, bd, cd;
@@ -829,7 +734,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
   qmesh.high_outer.x = max(qmesh.high_outer.x, qmesh.high_inner.x);
   qmesh.high_outer.y = max(qmesh.high_outer.y, qmesh.high_inner.y);
   qmesh.high_outer.z = max(qmesh.high_outer.z, qmesh.high_inner.z);
-  RealType rinf = 4.0*max(    qmesh.high_outer.x - qmesh.low_outer.x,
+  double rinf = 4.0*max(    qmesh.high_outer.x - qmesh.low_outer.x,
                           max(qmesh.high_outer.y - qmesh.low_outer.y,
                               qmesh.high_outer.z - qmesh.low_outer.z));
   const RealPoint centroid_outer = (qmesh.low_outer + qmesh.high_outer)/2;

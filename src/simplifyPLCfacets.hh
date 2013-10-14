@@ -22,6 +22,8 @@ template<typename RealType>
 ReducedPLC<3, RealType>
 simplifyPLCfacets(const PLC<3, RealType>& plc,
                   const std::vector<RealType>& points,
+                  const RealType* xmin,
+                  const RealType* xmax,
                   const RealType tol) {
   typedef Point3<RealType> PointType;
   typedef std::pair<int, int> EdgeHash;
@@ -30,8 +32,12 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   // Reduce to the set of unique points.
   std::vector<RealType> newpoints;
   std::vector<unsigned> old2new;
-  geometry::uniquePoints<3, RealType>(points, result.points, old2new);
-  const unsigned nnewpoints = result.points.size();
+  geometry::uniquePoints<3, RealType>(points, xmin, xmax, tol, result.points, old2new);
+  const unsigned nnewpoints = result.points.size()/3;
+  std::cerr << "Unique points: " << std::endl;
+  for (unsigned i = 0; i != nnewpoints; ++i) {
+    std::cerr << "    " << i << " : (" << result.points[3*i] << " " << result.points[3*i+1] << " " << result.points[3*i+2] << ")" << std::endl;
+  }
 
   // Build a map of the old facets attached to each unique point.
   const unsigned noldfacets = plc.facets.size();
@@ -46,29 +52,39 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
     nodeFacets[i].erase(std::unique(nodeFacets[i].begin(), nodeFacets[i].end()), nodeFacets[i].end());
   }
 
-  // Find the normals for each starting facet.
+  // Find the normals for each starting facet.  It's possible we may have degenerate (zero area)
+  // facets here, so screen those out and flag them as "used".
   std::vector<PointType> facetNormals(noldfacets);
+  std::vector<unsigned> facetUsed(noldfacets, 0);
   for (unsigned i = 0; i != noldfacets; ++i) {
     POLY_ASSERT(plc.facets[i].size() >= 3);
-    unsigned k1 = plc.facets[i][0], k2 = plc.facets[i][1], k3;
-    POLY_ASSERT((geometry::distance<3, RealType>(&points[3*k1], &points[3*k2]) > tol));
-    unsigned j = 2;
+    unsigned k1 = plc.facets[i][0], k2, k3;
+    unsigned j = 1;
     while (j < plc.facets[i].size() and 
-           geometry::collinear<3, RealType>(&points[3*k1], &points[3*k2], &points[3*plc.facets[i][j]], tol)) ++j;
-    POLY_ASSERT(j < plc.facets.size());
-    k3 = plc.facets[i][j];
-    RealType a[3] = {points[3*k3  ] - points[3*k1  ],
-                     points[3*k3+1] - points[3*k1+1],
-                     points[3*k3+2] - points[3*k1+2]},
-             b[3] = {points[3*k2  ] - points[3*k1  ],
-                     points[3*k2+1] - points[3*k1+1],
-                     points[3*k2+2] - points[3*k1+2]};
-    geometry::cross<3, RealType>(a, b, &facetNormals[i].x);
-    geometry::unitVector<3, RealType>(&facetNormals[i].x);
+           (geometry::distance<3, RealType>(&points[3*k1], &points[3*plc.facets[i][j]]) < tol)) ++j;
+    if (j == plc.facets[i].size()) {
+      facetUsed[i] = 1;
+    } else {
+      k2 = plc.facets[i][j++];
+      while (j < plc.facets[i].size() and 
+             geometry::collinear<3, RealType>(&points[3*k1], &points[3*k2], &points[3*plc.facets[i][j]], tol)) ++j;
+      if (j == plc.facets[i].size()) {
+        facetUsed[i] = 1;
+      } else {
+        k3 = plc.facets[i][j];
+        RealType a[3] = {points[3*k3  ] - points[3*k1  ],
+                         points[3*k3+1] - points[3*k1+1],
+                         points[3*k3+2] - points[3*k1+2]},
+                 b[3] = {points[3*k2  ] - points[3*k1  ],
+                         points[3*k2+1] - points[3*k1+1],
+                         points[3*k2+2] - points[3*k1+2]};
+          geometry::cross<3, RealType>(a, b, &facetNormals[i].x);
+          geometry::unitVector<3, RealType>(&facetNormals[i].x);
+      }
+    }
   }
 
-  // Walk each facet of the input PLC.
-  std::vector<unsigned> facetUsed(noldfacets, 0);
+  // Walk each (valid) facet of the input PLC.
   for (unsigned i = 0; i != noldfacets; ++i) {
     if (facetUsed[i] == 0) {
       facetUsed[i] = 1;
@@ -79,6 +95,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::set<unsigned> oldfacets, nodes2check;
       std::map<unsigned, unsigned> nodeFacetUsedCount;
       oldfacets.insert(i);
+      std::cerr << " gluing together old facets : " << i;
       for (std::vector<int>::const_iterator nodeItr = plc.facets[i].begin();
            nodeItr != plc.facets[i].end();
            ++nodeItr) nodes2check.insert(old2new[*nodeItr]);
@@ -90,6 +107,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
              ++otherFacetItr) {
           if ((*otherFacetItr != i) and (facetUsed[*otherFacetItr] == 0) and
               (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0) < tol)) {
+            std::cerr << " " << *otherFacetItr;
             facetUsed[*otherFacetItr] = 1;
             oldfacets.insert(*otherFacetItr);
             for (std::vector<int>::const_iterator otherNodeItr = plc.facets[*otherFacetItr].begin();
@@ -98,6 +116,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           }
         }
       }
+      std::cerr << std::endl;
 
       // oldfacets now contains all the facets we're going to glue together into a single new one.
       // Walk the edges of each facet.  Any edges we walk only once is one we're keeping.
@@ -114,10 +133,17 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           ++edgeCount[ehash];
         }
       }
+      std::cerr << "edges: " << std::endl;;
       for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCount.begin();
            itr != edgeCount.end();
            ++itr) {
         if (itr->second == 1) edges.push_back(itr->first);
+        const EdgeHash ehash = itr->first;
+        std::cerr << "  --> " << itr->second 
+                  << " [" << ehash.first << " " << ehash.second << "] : ("
+                  << result.points[3*ehash.first] << " " << result.points[3*ehash.first+1] << " " << result.points[3*ehash.first+2] << ") (" 
+                  << result.points[3*ehash.second] << " " << result.points[3*ehash.second+1] << " " << result.points[3*ehash.second+2] << ") "
+                  << std::endl;
       }
       POLY_ASSERT(edges.size() >= 3);
 

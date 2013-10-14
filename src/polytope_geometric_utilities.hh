@@ -59,11 +59,12 @@ template<typename RealType> struct Hasher<2, RealType> {
   static uint64_t qyval(const uint64_t val) { return (val & ymask()) >> 31; }
 
   // Hash a 2 position
-  static uint64_t hashPosition(RealType* pos,
-                               RealType* xlow_inner,
-                               RealType* xhigh_inner,
-                               RealType* xlow_outer,
-                               RealType* xhigh_outer) {
+  static uint64_t hashPosition(const RealType* pos,
+                               const RealType* xlow_inner,
+                               const RealType* xhigh_inner,
+                               const RealType* xlow_outer,
+                               const RealType* xhigh_outer,
+                               const RealType minTol = 0) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
@@ -90,8 +91,8 @@ template<typename RealType> struct Hasher<2, RealType> {
     }
 
     // Quantize away.
-    const RealType dx[2] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const RealType dx[2] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
                 (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 31));
     return result;
@@ -99,11 +100,12 @@ template<typename RealType> struct Hasher<2, RealType> {
 
   // Unhash a 2 position.
   static void unhashPosition(RealType* pos,
-                             RealType* xlow_inner,
-                             RealType* xhigh_inner,
-                             RealType* xlow_outer,
-                             RealType* xhigh_outer,
-                             uint64_t hashedPosition) {
+                             const RealType* xlow_inner,
+                             const RealType* xhigh_inner,
+                             const RealType* xlow_outer,
+                             const RealType* xhigh_outer,
+                             const uint64_t hashedPosition,
+                             const RealType minTol = 0) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
@@ -114,7 +116,7 @@ template<typename RealType> struct Hasher<2, RealType> {
                 pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1]);
 
     // Decide the bounding box we're using.
-    RealType *xlow, *xhigh;
+    const RealType *xlow, *xhigh;
     if (hashedPosition >= (1ULL << 63)) {
       xlow = xlow_outer;
       xhigh = xhigh_outer;
@@ -124,12 +126,12 @@ template<typename RealType> struct Hasher<2, RealType> {
     }
 
     // Extract the position (for the center of the cell).
-    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     const uint64_t xmask = (1ULL << 31) - 1ULL,
                    ymask = xmask << 31;
-    pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
-    pos[1] = xlow[1] + (((hashedPosition & ymask) >> 31) + 0.5)*dx[1];
+    pos[0] = std::max(xlow[0], std::min(xhigh[0], xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0]));
+    pos[1] = std::max(xlow[1], std::min(xhigh[1], xlow[1] + (((hashedPosition & ymask) >> 31) + 0.5)*dx[1]));
 
     // Post-conditions.
     POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
@@ -152,11 +154,12 @@ template<typename RealType> struct Hasher<3, RealType> {
   static uint64_t qzval(const uint64_t val) { return (val & zmask()) >> 42; }
 
   // Hash a 3 position
-  static uint64_t hashPosition(RealType* pos,
-                               RealType* xlow_inner,
-                               RealType* xhigh_inner,
-                               RealType* xlow_outer,
-                               RealType* xhigh_outer) {
+  static uint64_t hashPosition(const RealType* pos,
+                               const RealType* xlow_inner,
+                               const RealType* xhigh_inner,
+                               const RealType* xlow_outer,
+                               const RealType* xhigh_outer,
+                               const RealType minTol = 0.0) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1] and
                 xlow_outer[2] <= xlow_inner[2]);
@@ -175,7 +178,7 @@ template<typename RealType> struct Hasher<3, RealType> {
 
     // Decide the bounding box we're using.
     uint64_t result = 0ULL;
-    RealType *xlow, *xhigh;
+    const RealType *xlow, *xhigh;
     if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
         pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
         pos[2] < xlow_inner[2] or pos[2] > xhigh_inner[2]) {
@@ -188,22 +191,23 @@ template<typename RealType> struct Hasher<3, RealType> {
     }
 
     // Quantize away.
-    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::max(std::numeric_limits<RealType>::epsilon(), minTol)),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::max(std::numeric_limits<RealType>::epsilon(), minTol)),
+                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::max(std::numeric_limits<RealType>::epsilon(), minTol))};
     result += ( uint64_t((pos[0] - xlow[0])/dx[0] + 0.5) +
-                (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
-                (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
+               (uint64_t((pos[1] - xlow[1])/dx[1] + 0.5) << 21) +
+               (uint64_t((pos[2] - xlow[2])/dx[2] + 0.5) << 42));
     return result;
   }
 
   // Unhash a 3 position.
   static void unhashPosition(RealType* pos,
-                             RealType* xlow_inner,
-                             RealType* xhigh_inner,
-                             RealType* xlow_outer,
-                             RealType* xhigh_outer,
-                             uint64_t hashedPosition) {
+                             const RealType* xlow_inner,
+                             const RealType* xhigh_inner,
+                             const RealType* xlow_outer,
+                             const RealType* xhigh_outer,
+                             const uint64_t hashedPosition,
+                             const RealType minTol = 0) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1] and
                 xlow_outer[2] <= xlow_inner[2]);
@@ -218,7 +222,7 @@ template<typename RealType> struct Hasher<3, RealType> {
                 pos[2] >= xlow_outer[2] and pos[2] <= xhigh_outer[2]);
 
     // Decide the bounding box we're using.
-    RealType *xlow, *xhigh;
+    const RealType *xlow, *xhigh;
     if (hashedPosition >= (1ULL << 63)) {
       xlow = xlow_outer;
       xhigh = xhigh_outer;
@@ -228,15 +232,15 @@ template<typename RealType> struct Hasher<3, RealType> {
     }
 
     // Extract the position (for the center of the cell).
-    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::numeric_limits<RealType>::epsilon()),
-                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::numeric_limits<RealType>::epsilon())};
+    const RealType dx[3] = {std::max((xhigh[0] - xlow[0])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+                            std::max((xhigh[1] - xlow[1])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+                            std::max((xhigh[2] - xlow[2])/(1 << 21), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     const uint64_t xmask = (1ULL << 21) - 1ULL,
                    ymask = xmask << 21,
                    zmask = ymask << 21;
-    pos[0] = xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0];
-    pos[1] = xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1];
-    pos[2] = xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2];
+    pos[0] = std::max(xlow[0], std::min(xhigh[0], xlow[0] + ((hashedPosition & xmask)         + 0.5)*dx[0]));
+    pos[1] = std::max(xlow[1], std::min(xhigh[1], xlow[1] + (((hashedPosition & ymask) >> 21) + 0.5)*dx[1]));
+    pos[2] = std::max(xlow[2], std::min(xhigh[2], xlow[2] + (((hashedPosition & zmask) >> 42) + 0.5)*dx[2]));
 
     // Post-conditions.
     POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
@@ -1251,26 +1255,31 @@ template<int Dimension, typename RealType>
 inline
 void
 uniquePoints(const std::vector<RealType>& points,
+             const RealType* xmin,
+             const RealType* xmax,
+             const RealType tol,
              std::vector<RealType>& uniquePointSet,
              std::vector<unsigned>& indexMap) {
   POLY_ASSERT(points.size() % Dimension == 0);
+  typedef geometry::Hasher<Dimension, RealType> HasherType;
 
-  // Compute the bounding box.
-  RealType xmin[Dimension], xmax[Dimension];
-  computeBoundingBox<Dimension, RealType>(points, true, xmin, xmax);
+  // // Compute the bounding box.
+  // RealType xmin[Dimension], xmax[Dimension];
+  // computeBoundingBox<Dimension, RealType>(points, true, xmin, xmax);
 
   const unsigned n = points.size()/Dimension;
   std::map<uint64_t, unsigned> uniqueHashes;
   uniquePointSet = std::vector<RealType>();
   indexMap = std::vector<unsigned>();
   unsigned j = 0;
+  RealType pos[Dimension];
   for (unsigned i = 0; i != n; ++i) {
-    const uint64_t hashi = geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&points[Dimension*i]),
-                                                                               xmin, xmax, xmin, xmax);
+    const uint64_t hashi = HasherType::hashPosition(&points[Dimension*i], xmin, xmax, xmin, xmax, tol);
     std::map<uint64_t, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
     if (itr == uniqueHashes.end()) {
       uniqueHashes[hashi] = j;
-      std::copy(&points[Dimension*i], &points[Dimension*(i+1)], std::back_inserter(uniquePointSet));
+      HasherType::unhashPosition(pos, xmin, xmax, xmin, xmax, hashi, tol);
+      std::copy(pos, pos + Dimension, std::back_inserter(uniquePointSet));
       indexMap.push_back(j++);
     } else {
       indexMap.push_back(itr->second);

@@ -298,10 +298,14 @@ convexHull_3d(const std::vector<RealType>& points,
   // Pre-conditions.
   POLY_ASSERT(points.size() % 3 == 0);
 
+  // Compute the bounding box.
+  RealType xmin[3], xmax[3];
+  geometry::computeBoundingBox<3, RealType>(points, true, xmin, xmax);
+
   // Reduce to the unique set of input points.
   std::vector<RealType> upoints;
   std::vector<unsigned> pointMap;
-  geometry::uniquePoints<3, RealType>(points, upoints, pointMap);
+  geometry::uniquePoints<3, RealType>(points, xmin, xmax, dx, upoints, pointMap);
   const unsigned nunique = upoints.size()/3;
   POLY_ASSERT(nunique >= 4);
   std::vector<PointType> ps(nunique);

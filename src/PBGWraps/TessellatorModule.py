@@ -135,18 +135,21 @@ class Tessellator:
 
         x.add_method("tessellateDegenerate", "vector_of_unsigned", 
                      [constrefparam("vector_of_double", "points"),
+                      param("double", "tol"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
         x.add_method("tessellateDegenerate", "vector_of_unsigned", 
                      [constrefparam("vector_of_double", "points"),
                       param("double *", "low"),
                       param("double *", "high"),
+                      param("double", "tol"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
         x.add_method("tessellateDegenerate", "vector_of_unsigned",
                      [constrefparam("vector_of_double", "points"),
                       constrefparam("vector_of_double", "PLCpoints"),
                       constrefparam(PLC, "geometry"),
+                      param("double", "tol"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
 
