@@ -39,7 +39,7 @@ template<typename RealType> ReducedPLC<3, RealType> csg_subtract (const ReducedP
 //------------------------------------------------------------------------------
 namespace CSG_internal {
 template<typename RealType> Point3<RealType> lerp(const Point3<RealType>& a, const Point3<RealType>& b, const RealType v) { return a + (b - a) * v; }
-template<typename RealType> RealType         length(const Point3<RealType>& a) { return sqrt(a.x*a.x + a.y*a.y + a.z*a.z); }
+template<typename RealType> RealType         length2(const Point3<RealType>& a) { return a.x*a.x + a.y*a.y + a.z*a.z; }
 template<typename RealType> Point3<RealType> unit(const Point3<RealType>& a) { Point3<RealType> result(a); geometry::unitVector<3, RealType>(&result.x); return result; }
 template<typename RealType> RealType         dot(const Point3<RealType>& a, const Point3<RealType>& b) { return geometry::dot<3, RealType>(&a.x, &b.x); }
 template<typename RealType> Point3<RealType> cross(const Point3<RealType>& a, const Point3<RealType>& b) { Point3<RealType> result; geometry::cross<3, RealType>(&a.x, &b.x, &result.x); return result; }
@@ -86,8 +86,8 @@ struct Plane {
   Plane(const PointType& a, const PointType& b, const PointType& c): 
     normal(unit(cross(b - a, c - a))),
     w(dot(normal, a)) {}
-  bool ok() const { return length(this->normal) > 0.0; }
-  void flip() { normal = -normal; w *= -1.0; }
+  bool ok() const { return length2(this->normal) > 0.0; }
+  void flip() { normal = -normal; w *= -1; }
   void splitPolygon(const Polygon<RealType> & polygon,
                     std::vector<Polygon<RealType> > & coplanarFront,
                     std::vector<Polygon<RealType> > & coplanarBack,
