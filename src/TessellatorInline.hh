@@ -32,145 +32,6 @@ boundingBox(std::vector<RealType>& points) const
   return boundingBox(Min, Max, points);
 }
 
-
-//------------------------------------------------------------------------------
-//! This helper method creates a piecewise linear complex (PLC) 
-//! representing the bounding box with the given "low" and "high"
-//! corners, and adds these corners as generator points to \a points.
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-inline
-ReducedPLC<Dimension, RealType>
-Tessellator<Dimension, RealType>::
-boundingBox(RealType* low, RealType* high) const
-{
-  ReducedPLC<Dimension, RealType> box;
-  if (Dimension == 2)
-  {
-    // Add the new generators to points.
-    box.points.push_back(low[0]);
-    box.points.push_back(low[1]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(low[1]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(high[1]);
-
-    box.points.push_back(low[0]);
-    box.points.push_back(high[1]);
-
-    // Construct the box.
-    box.facets.resize(4);
-
-    // -y face.
-    box.facets[0].resize(2);
-    box.facets[0][0] = 0;
-    box.facets[0][1] = 1;
-
-    // +x face.
-    box.facets[1].resize(2);
-    box.facets[1][0] = 1;
-    box.facets[1][1] = 2;
-
-    // +y face.
-    box.facets[2].resize(2);
-    box.facets[2][0] = 2;
-    box.facets[2][1] = 3;
-
-    // -x face.
-    box.facets[3].resize(2);
-    box.facets[3][0] = 3;
-    box.facets[3][1] = 0;
-
-    return box;
-  }
-  else
-  {
-    POLY_ASSERT(Dimension == 3);
-
-    // Add the new generators to points.
-    box.points.push_back(low[0]);
-    box.points.push_back(low[1]);
-    box.points.push_back(low[2]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(low[1]);
-    box.points.push_back(low[2]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(high[1]);
-    box.points.push_back(low[2]);
-
-    box.points.push_back(low[0]);
-    box.points.push_back(high[1]);
-    box.points.push_back(low[2]);
-
-    box.points.push_back(low[0]);
-    box.points.push_back(low[1]);
-    box.points.push_back(high[2]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(low[1]);
-    box.points.push_back(high[2]);
-
-    box.points.push_back(high[0]);
-    box.points.push_back(high[1]);
-    box.points.push_back(high[2]);
-
-    box.points.push_back(low[0]);
-    box.points.push_back(high[1]);
-    box.points.push_back(high[2]);
-
-    // Construct the box.
-    box.facets.resize(6);
-
-    // -z face.
-    box.facets[0].resize(4);
-    box.facets[0][0] = box.points.size()/3 - 8;
-    box.facets[0][1] = box.points.size()/3 - 7;
-    box.facets[0][2] = box.points.size()/3 - 6;
-    box.facets[0][3] = box.points.size()/3 - 5;
-
-    // +z face.
-    box.facets[1].resize(4);
-    box.facets[1][0] = box.points.size()/3 - 4;
-    box.facets[1][1] = box.points.size()/3 - 3;
-    box.facets[1][2] = box.points.size()/3 - 2;
-    box.facets[1][3] = box.points.size()/3 - 1;
-
-    // -x face.
-    box.facets[2].resize(4);
-    box.facets[2][0] = box.points.size()/3 - 8;
-    box.facets[2][1] = box.points.size()/3 - 4;
-    box.facets[2][2] = box.points.size()/3 - 1;
-    box.facets[2][1] = box.points.size()/3 - 5;
-
-    // +x face.
-    box.facets[3].resize(4);
-    box.facets[3][0] = box.points.size()/3 - 7;
-    box.facets[3][1] = box.points.size()/3 - 3;
-    box.facets[3][2] = box.points.size()/3 - 2;
-    box.facets[3][3] = box.points.size()/3 - 6;
-
-    // -y face.
-    box.facets[4].resize(4);
-    box.facets[4][0] = box.points.size()/3 - 8;
-    box.facets[4][1] = box.points.size()/3 - 7;
-    box.facets[4][2] = box.points.size()/3 - 3;
-    box.facets[4][3] = box.points.size()/3 - 4;
-
-    // -y face.
-    box.facets[5].resize(4);
-    box.facets[5][0] = box.points.size()/3 - 6;
-    box.facets[5][1] = box.points.size()/3 - 2;
-    box.facets[5][2] = box.points.size()/3 - 1;
-    box.facets[5][3] = box.points.size()/3 - 5;
-
-    return box;
-  }
-}
-
 //------------------------------------------------------------------------------
 //! Return a normalized set of coordinates, also returning the bounding low/high points.
 //------------------------------------------------------------------------------
@@ -223,12 +84,17 @@ inline
 std::vector<unsigned>
 Tessellator<Dimension, RealType>::
 tessellateDegenerate(const std::vector<RealType>& points,
+                     const RealType tol,
                      Tessellation<Dimension, RealType>& mesh) const {
+
+  // Compute the bounding box.
+  RealType xmin[Dimension], xmax[Dimension];
+  geometry::computeBoundingBox<Dimension, RealType>(points, true, xmin, xmax);
 
   // Hash the input generators to a unique set.
   std::vector<RealType> uniquePoints;
   std::vector<unsigned> result;
-  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+  geometry::uniquePoints<Dimension, RealType>(points, xmin, xmax, tol, uniquePoints, result);
 
   // Tessellate the unique set, and return the mapping.
   this->tessellate(uniquePoints, mesh);
@@ -246,12 +112,13 @@ Tessellator<Dimension, RealType>::
 tessellateDegenerate(const std::vector<RealType>& points,
                      RealType* low,
                      RealType* high,
+                     const RealType tol,
                      Tessellation<Dimension, RealType>& mesh) const {
 
   // Hash the input generators to a unique set.
   std::vector<RealType> uniquePoints;
   std::vector<unsigned> result;
-  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+  geometry::uniquePoints<Dimension, RealType>(points, low, high, tol, uniquePoints, result);
 
   // Tessellate the unique set, and return the mapping.
   this->tessellate(uniquePoints, low, high, mesh);
@@ -269,12 +136,17 @@ Tessellator<Dimension, RealType>::
 tessellateDegenerate(const std::vector<RealType>& points,
                      const std::vector<RealType>& PLCpoints,
                      const PLC<Dimension, RealType>& geometry,
+                     const RealType tol,
                      Tessellation<Dimension, RealType>& mesh) const {
+
+  // Compute the bounding box.
+  RealType xmin[Dimension], xmax[Dimension];
+  geometry::computeBoundingBox<Dimension, RealType>(PLCpoints, true, xmin, xmax);
 
   // Hash the input generators to a unique set.
   std::vector<RealType> uniquePoints;
   std::vector<unsigned> result;
-  geometry::uniquePoints<Dimension, RealType>(points, uniquePoints, result);
+  geometry::uniquePoints<Dimension, RealType>(points, xmin, xmax, tol, uniquePoints, result);
 
   // Tessellate the unique set, and return the mapping.
   this->tessellate(uniquePoints, PLCpoints, geometry, mesh);

@@ -139,6 +139,8 @@ int main(int argc, char** argv) {
     // escapePod("box", box_hull, points);
     polytope::ReducedPLC<3, double> simple_box_hull = simplifyPLCfacets(box_hull,
                                                                         points,
+                                                                        low,
+                                                                        high,
                                                                         1.0e-10);
     // escapePod("simple_box", simple_box_hull, points);
   }
@@ -184,6 +186,8 @@ int main(int argc, char** argv) {
     // escapePod("random", hull, points);
     polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
                                                                            points,
+                                                                           low,
+                                                                           high,
                                                                            1.0e-10);
     cerr << "Simplified random hull has (nverts, nfacets) = (" << simple_random_hull.points.size()/3 <<  ", " << simple_random_hull.facets.size() << ")" << endl;
     // escapePod("simple_random", simple_random_hull, simple_random_hull.points);

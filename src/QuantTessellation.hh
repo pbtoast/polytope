@@ -48,14 +48,15 @@ public:
   PointHash hashPosition(const RealPoint& p) const {
     return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
                                                                const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x));
+                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
+                                                               degeneracy);
   }
   RealPoint unhashPosition(const PointHash ip) const {
     RealPoint result;
     geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
                                                           const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
                                                           const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
-                                                          ip);
+                                                          ip, degeneracy);
     return result;
   }
 

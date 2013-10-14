@@ -19,6 +19,7 @@
 #include "within.hh"
 #include "nearestPoint.hh"
 #include "intersect.hh"
+#include "polytope_plc_canned_geometries.hh"
 
 // Fast predicate for determining colinearity of points.
 extern double orient2d(double* pa, double* pb, double* pc);
@@ -141,7 +142,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
   
   // Build a PLC with the bounding box, and then use the PLC method.
-  ReducedPLC<2, RealType> box = this->boundingBox(low, high);
+  ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
   this->tessellate(points, box.points, box, mesh);
 }
 //------------------------------------------------------------------------------

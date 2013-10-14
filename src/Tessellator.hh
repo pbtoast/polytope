@@ -91,12 +91,14 @@ public:
   //! Unbounded case.
   virtual std::vector<unsigned>
   tessellateDegenerate(const std::vector<RealType>& points,
+                       const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
   //! Bounded by a box.
   virtual std::vector<unsigned>
   tessellateDegenerate(const std::vector<RealType>& points,
                        RealType* low,
                        RealType* high,
+                       const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
 
   //! Bounded by a PLC.
@@ -104,6 +106,7 @@ public:
   tessellateDegenerate(const std::vector<RealType>& points,
                        const std::vector<RealType>& PLCpoints,
                        const PLC<Dimension, RealType>& geometry,
+                       const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
 
   //! Override this method to return true if this Tessellator supports 
@@ -132,11 +135,6 @@ public:
   //! representing the bounding box containing the given points and 
   //! adds the corners of the bounding box to \a points.
   PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const;
-
-  //! This helper method creates a piecewise linear complex (PLC) 
-  //! representing the bounding box with the given "low" and "high"
-  //! corners, and adds these corners as generator points to \a points.
-  ReducedPLC<Dimension, RealType> boundingBox(RealType* low, RealType* high) const;
 
   //! Return a normalized set of coordinates, also returning the bounding low/high points.
   std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,
