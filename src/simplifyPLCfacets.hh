@@ -34,6 +34,10 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   std::vector<unsigned> old2new;
   geometry::uniquePoints<3, RealType>(points, xmin, xmax, tol, result.points, old2new);
   const unsigned nnewpoints = result.points.size()/3;
+  std::cerr << "Original points: " << std::endl;
+  for (unsigned i = 0; i != points.size()/3; ++i) {
+    std::cerr << "    " << i << " : (" << points[3*i] << " " << points[3*i+1] << " " << points[3*i+2] << ")" << std::endl;
+  }
   std::cerr << "Unique points: " << std::endl;
   for (unsigned i = 0; i != nnewpoints; ++i) {
     std::cerr << "    " << i << " : (" << result.points[3*i] << " " << result.points[3*i+1] << " " << result.points[3*i+2] << ")" << std::endl;
@@ -55,6 +59,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   // Find the normals for each starting facet.  It's possible we may have degenerate (zero area)
   // facets here, so screen those out and flag them as "used".
   std::vector<PointType> facetNormals(noldfacets);
+  std::vector<double> facetNormalMag(noldfacets);
   std::vector<unsigned> facetUsed(noldfacets, 0);
   for (unsigned i = 0; i != noldfacets; ++i) {
     POLY_ASSERT(plc.facets[i].size() >= 3);
@@ -79,7 +84,8 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
                          points[3*k2+1] - points[3*k1+1],
                          points[3*k2+2] - points[3*k1+2]};
           geometry::cross<3, RealType>(a, b, &facetNormals[i].x);
-          geometry::unitVector<3, RealType>(&facetNormals[i].x);
+          facetNormalMag[i] = sqrt(double(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[i].x)));
+          // geometry::unitVector<3, RealType>(&facetNormals[i].x);
       }
     }
   }
@@ -106,7 +112,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
              otherFacetItr != nodeFacets[*nodeItr].end();
              ++otherFacetItr) {
           if ((*otherFacetItr != i) and (facetUsed[*otherFacetItr] == 0) and
-              (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - 1.0) < tol)) {
+              (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - facetNormalMag[i]*facetNormalMag[*otherFacetItr]) < tol)) {
             std::cerr << " " << *otherFacetItr;
             facetUsed[*otherFacetItr] = 1;
             oldfacets.insert(*otherFacetItr);
@@ -168,9 +174,9 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
                        result.points[3*ek.second+2] - result.points[3*ek.first+2]);
         jhat *= geometry::sgn(jorder);
         khat *= geometry::sgn(korder);
-        geometry::unitVector<3, RealType>(&jhat.x);
-        geometry::unitVector<3, RealType>(&khat.x);
-        if (1.0 - std::abs(geometry::dot<3, RealType>(&jhat.x, &khat.x)) > tol) {
+        const double jmag = sqrt(double(geometry::dot<3, RealType>(&jhat.x, &jhat.x))), 
+                     kmag = sqrt(double(geometry::dot<3, RealType>(&khat.x, &khat.x)));
+        if (jmag*kmag - std::abs(geometry::dot<3, RealType>(&jhat.x, &khat.x)) > tol) {
           newfacet.push_back(korder < 0 ? ek.second : ek.first);
         }
       }
@@ -190,7 +196,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       PointType oldnorm, newnorm;
       geometry::cross<3, RealType>(&ab0.x, &ac0.x, &oldnorm.x);
       geometry::cross<3, RealType>(&ab1.x, &ac1.x, &newnorm.x);
-      if (geometry::dot<3, RealType>(&oldnorm.x, &newnorm.x) < 0.0) std::reverse(newfacet.begin(), newfacet.end());
+      if (geometry::dot<3, RealType>(&oldnorm.x, &newnorm.x) < 0) std::reverse(newfacet.begin(), newfacet.end());
     }
   }
   POLY_ASSERT(result.facets.size() >= 4);
