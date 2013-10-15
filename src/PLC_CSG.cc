@@ -7,9 +7,9 @@
 namespace polytope {
   namespace CSG {
     namespace CSG_internal {
-      template<> float  Plane<float>::EPSILON  = 1.0e-8f;
+      template<> double Plane<float>::EPSILON = 1.0e-8;
       template<> double Plane<double>::EPSILON = 1.0e-10;
-      template<> int64_t Plane<int64_t>::EPSILON = 2;
+      template<> double Plane<int64_t>::EPSILON = 1.0e-8;
     }
   }
 }

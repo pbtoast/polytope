@@ -38,24 +38,28 @@ template<typename RealType> ReducedPLC<3, RealType> csg_subtract (const ReducedP
 // PointType vector methods.
 //------------------------------------------------------------------------------
 namespace CSG_internal {
-template<typename RealType> Point3<RealType> lerp(const Point3<RealType>& a, const Point3<RealType>& b, const RealType v) { return a + (b - a) * v; }
+template<typename RealType> Point3<RealType> lerp(const Point3<RealType>& a, const Point3<RealType>& b, const double v) { 
+  const Point3<double> ra(a.x, a.y, a.z), 
+                       rb(b.x, b.y, b.z),
+                       rc = ra + (rb - ra)*v;
+  return Point3<RealType>(RealType(rc.x), RealType(rc.y), RealType(rc.z));
+}
+
+// template<typename RealType> Point3<RealType> lerp(const Point3<RealType>& a, const Point3<RealType>& b, const double v) { return a + (b - a) * v; }
 template<typename RealType> RealType         length2(const Point3<RealType>& a) { return a.x*a.x + a.y*a.y + a.z*a.z; }
-template<typename RealType> Point3<RealType> unit(const Point3<RealType>& a) { Point3<RealType> result(a); geometry::unitVector<3, RealType>(&result.x); return result; }
+// template<typename RealType> Point3<RealType> unit(const Point3<RealType>& a) { Point3<RealType> result(a); geometry::unitVector<3, RealType>(&result.x); return result; }
 template<typename RealType> RealType         dot(const Point3<RealType>& a, const Point3<RealType>& b) { return geometry::dot<3, RealType>(&a.x, &b.x); }
 template<typename RealType> Point3<RealType> cross(const Point3<RealType>& a, const Point3<RealType>& b) { Point3<RealType> result; geometry::cross<3, RealType>(&a.x, &b.x, &result.x); return result; }
 
 //------------------------------------------------------------------------------
 // Represents a vertex of a polygon. 
-// This class provides normal so convenience functions like sphere() can 
-// return a smooth vertex normal, but normal is not used anywhere else.
 //------------------------------------------------------------------------------
 template<typename RealType>
 struct Vertex {
   typedef Point3<RealType> PointType;
   PointType pos;
-  PointType normal;
-  Vertex(): pos(), normal() {}
-  Vertex(const PointType& posi, const PointType& normali): pos(posi), normal(normali) {}
+  Vertex(): pos() {}
+  Vertex(const PointType& posi): pos(posi) {}
 };
 
 //------------------------------------------------------------------------------
@@ -79,12 +83,12 @@ template<typename RealType>
 struct Plane {
   typedef Point3<RealType> PointType;
   PointType normal;
-  RealType w;
-  static RealType EPSILON;
+  double w;
+  static double EPSILON;
 
   Plane(): normal(), w(0.0) {}
   Plane(const PointType& a, const PointType& b, const PointType& c): 
-    normal(unit(cross(b - a, c - a))),
+    normal(cross(b - a, c - a)),
     w(dot(normal, a)) {}
   bool ok() const { return length2(this->normal) > 0.0; }
   void flip() { normal = -normal; w *= -1; }
@@ -106,7 +110,6 @@ struct Polygon {
 
   void flip() {
     std::reverse(vertices.begin(), vertices.end());
-    for (size_t i = 0; i < vertices.size(); i++) vertices[i].normal *= -1;
     plane.flip();
   }
 
@@ -145,18 +148,16 @@ struct Node {
 //------------------------------------------------------------------------------
 // Vertex implementation
 //------------------------------------------------------------------------------
-// Invert all orientation-specific data (e.g. vertex normal). Called when the
-// orientation of a polygon is flipped.
-template<typename RealType> Vertex<RealType> flip(const Vertex<RealType>& v) { return Vertex<RealType>(v.pos, -v.normal); }
+// Invert all orientation-specific data. Called when the orientation of a polygon is flipped.
+template<typename RealType> Vertex<RealType> flip(const Vertex<RealType>& v) { return v; }
 
 // Create a new vertex between this vertex and `other` by linearly
 // interpolating all properties using a parameter of `t`. Subclasses should
 // override this to interpolate additional properties.
 template<typename RealType>
-Vertex<RealType> interpolate(const Vertex<RealType>& a, const Vertex<RealType>& b, RealType t) {
+Vertex<RealType> interpolate(const Vertex<RealType>& a, const Vertex<RealType>& b, double t) {
   Vertex<RealType> ret;
   ret.pos = lerp(a.pos, b.pos, t);
-  ret.normal = lerp(a.normal, b.normal, t);
   return ret;
 }
 
@@ -187,7 +188,7 @@ void Plane<RealType>::splitPolygon(const Polygon<RealType>& polygon,
   std::vector<int> types;
 
   for (size_t i = 0; i < polygon.vertices.size(); i++) {
-    RealType t = dot(this->normal, polygon.vertices[i].pos) - this->w;
+    double t = dot(this->normal, polygon.vertices[i].pos) - this->w;
     int type = (t < -EPSILON) ? BACK : ((t > EPSILON) ? FRONT : COPLANAR);
     polygonType |= type;
     types.push_back(type);
@@ -223,7 +224,7 @@ void Plane<RealType>::splitPolygon(const Polygon<RealType>& polygon,
         if (ti != BACK) f.push_back(vi);
         if (ti != FRONT) b.push_back(vi);
         if ((ti | tj) == SPANNING) {
-          RealType t = (this->w - dot(this->normal, vi.pos)) / dot(this->normal, vj.pos - vi.pos);
+          double t = (this->w - dot(this->normal, vi.pos)) / dot(this->normal, vj.pos - vi.pos);
           Vertex<RealType> v = interpolate(vi, vj, t);
           f.push_back(v);
           b.push_back(v);
@@ -400,23 +401,13 @@ ReducedPLCtoPolygons(const ReducedPLC<3, RealType>& model) {
   for (size_t i = 0; i != nfacets; ++i) {
     const unsigned n = model.facets[i].size();
     POLY_ASSERT(n >= 3);
-    PointType normal;
     const unsigned k1 = model.facets[i][0];
     for (size_t j = 1; j != n-1; ++j) {
       const unsigned k2 = model.facets[i][j],
                      k3 = model.facets[i][(j + 1) % n];
-      if (j == 1) {
-        PointType a(coords[3*k2    ] - coords[3*k1    ],
-                    coords[3*k2 + 1] - coords[3*k1 + 1],
-                    coords[3*k2 + 2] - coords[3*k1 + 2]),
-                  b(coords[3*k3    ] - coords[3*k1    ],
-                    coords[3*k3 + 1] - coords[3*k1 + 1],
-                    coords[3*k3 + 2] - coords[3*k1 + 2]);
-        geometry::cross<3, RealType>(&a.x, &b.x, &normal.x);
-      }
-      triangle[0] = Vertex<RealType>(PointType(coords[3*k1], coords[3*k1 + 1], coords[3*k1 + 2]), normal);
-      triangle[1] = Vertex<RealType>(PointType(coords[3*k2], coords[3*k2 + 1], coords[3*k2 + 2]), normal);
-      triangle[2] = Vertex<RealType>(PointType(coords[3*k3], coords[3*k3 + 1], coords[3*k3 + 2]), normal);
+      triangle[0] = Vertex<RealType>(PointType(coords[3*k1], coords[3*k1 + 1], coords[3*k1 + 2]));
+      triangle[1] = Vertex<RealType>(PointType(coords[3*k2], coords[3*k2 + 1], coords[3*k2 + 2]));
+      triangle[2] = Vertex<RealType>(PointType(coords[3*k3], coords[3*k3 + 1], coords[3*k3 + 2]));
       list.push_back(Polygon<RealType>(triangle));
     }
   }
