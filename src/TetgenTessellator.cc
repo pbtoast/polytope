@@ -9,7 +9,7 @@
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
-#include "PLC_CSG.hh"
+#include "PLC_CSG_3d.hh"
 #include "simplifyPLCfacets.hh"
 #include "polytope_write_OOGL.hh"
 #include "polytope_plc_canned_geometries.hh"

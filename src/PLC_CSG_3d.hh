@@ -37,7 +37,7 @@ template<typename RealType> ReducedPLC<3, RealType> csg_subtract (const ReducedP
 //
 // PointType vector methods.
 //------------------------------------------------------------------------------
-namespace CSG_internal {
+namespace CSG_internal_3d {
 template<typename RealType> Point3<RealType> lerp(const Point3<RealType>& a, const Point3<RealType>& b, const double v) { 
   const Point3<double> ra(a.x, a.y, a.z), 
                        rb(b.x, b.y, b.z),
@@ -447,8 +447,9 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polygons) {
 // Public interface implementation
 //------------------------------------------------------------------------------
 template<typename RealType>
-ReducedPLC<3, RealType> csg_union(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
-  using namespace CSG_internal;
+ReducedPLC<3, RealType> csg_union(const ReducedPLC<3, RealType>& a,
+                                  const ReducedPLC<3, RealType>& b) {
+  using namespace CSG_internal_3d;
   Node<RealType>* A = new Node<RealType>(ReducedPLCtoPolygons(a));
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoPolygons(b));
   Node<RealType>* AB = csg_union(A, B);                                  // <-- only difference
@@ -460,8 +461,9 @@ ReducedPLC<3, RealType> csg_union(const ReducedPLC<3, RealType>& a, const Reduce
 }
 
 template<typename RealType>
-ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
-  using namespace CSG_internal;
+ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a,
+                                      const ReducedPLC<3, RealType>& b) {
+  using namespace CSG_internal_3d;
   Node<RealType>* A = new Node<RealType>(ReducedPLCtoPolygons(a));
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoPolygons(b));
   Node<RealType>* AB = csg_intersect(A, B);                           // <-- only difference
@@ -473,8 +475,9 @@ ReducedPLC<3, RealType> csg_intersect(const ReducedPLC<3, RealType>& a, const Re
 }
 
 template<typename RealType>
-ReducedPLC<3, RealType> csg_subtract(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
-  using namespace CSG_internal;
+ReducedPLC<3, RealType> csg_subtract(const ReducedPLC<3, RealType>& a,
+                                     const ReducedPLC<3, RealType>& b) {
+  using namespace CSG_internal_3d;
   Node<RealType>* A = new Node<RealType>(ReducedPLCtoPolygons(a));
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoPolygons(b));
   Node<RealType>* AB = csg_subtract(A, B);                            // <-- only difference
