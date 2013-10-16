@@ -63,15 +63,8 @@ struct Vertex {
 };
 
 //------------------------------------------------------------------------------
-// The CSG model.  Basically a collection of polygon facets -- similar to a PLC.
-//------------------------------------------------------------------------------
-template<typename RealType>
-struct csgjs_model {
-  std::vector<Vertex<RealType> > vertices;
-  std::vector<int> indices;
-};
-
 // Forward declarations.
+//------------------------------------------------------------------------------
 template<typename RealType> struct Plane;
 template<typename RealType> struct Polygon;
 template<typename RealType> struct Node;
