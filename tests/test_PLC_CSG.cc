@@ -6,7 +6,7 @@
 #include <ctime>
 
 #include "polytope.hh"
-#include "PLC_CSG.hh"
+#include "PLC_CSG_3d.hh"
 #include "simplifyPLCfacets.hh"
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
@@ -72,14 +72,14 @@ int main(int argc, char** argv) {
 #endif
 
   // //----------------------------------------------------------------------
-  // // Convert from PLC->CSG_internal::Polygons->PLC
+  // // Convert from PLC->CSG_internal_3d::Polygons->PLC
   // //----------------------------------------------------------------------
   // {
   //   double low[3] = {0.0, 0.0, 0.0}, high[3] = {1.0, 1.0, 1.0};
   //   const ReducedPLC<3, double> box1 = plc_box<3, double>(low, high);
-  //   const std::vector<CSG::CSG_internal::Polygon<double> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
+  //   const std::vector<CSG::CSG_internal_3d::Polygon<double> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
   //   POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
-  //   const ReducedPLC<3, double> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
+  //   const ReducedPLC<3, double> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
   //   const ReducedPLC<3, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
   //   POLY_CHECK(box3.facets.size() == 6);
   //   POLY_CHECK(box3.points.size() == 3*8);
@@ -135,14 +135,14 @@ int main(int argc, char** argv) {
   // ********************************************************************************
   // Repeat above tests for int types.
   //----------------------------------------------------------------------
-  // Convert from PLC->CSG_internal::Polygons->PLC
+  // Convert from PLC->CSG_internal_3d::Polygons->PLC
   //----------------------------------------------------------------------
   {
     int64_t low[3] = {0, 0, 0}, high[3] = {1 << 10, 1 << 10, 1 << 10};
     const ReducedPLC<3, int64_t> box1 = plc_box<3, int64_t>(low, high);
-    const std::vector<CSG::CSG_internal::Polygon<int64_t> > polys = CSG::CSG_internal::ReducedPLCtoPolygons(box1);
+    const std::vector<CSG::CSG_internal_3d::Polygon<int64_t> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
     POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
-    const ReducedPLC<3, int64_t> box2 = CSG::CSG_internal::ReducedPLCfromPolygons(polys);
+    const ReducedPLC<3, int64_t> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
     const ReducedPLC<3, int64_t> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, int64_t(1));
     POLY_CHECK(box3.facets.size() == 6);
     POLY_CHECK(box3.points.size() == 3*8);
