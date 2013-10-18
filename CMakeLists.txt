@@ -250,8 +250,10 @@ if (${TESTING} EQUAL 1)
 endif()
   
 # Polytope C library.
-include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-add_subdirectory(polytope_c)
+if (BUILD_C_INTERFACE EQUAL 1)
+  include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+  add_subdirectory(polytope_c)
+endif()
 
 # Python bindings.
 if(HAVE_PYTHON)
