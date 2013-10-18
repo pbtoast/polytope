@@ -11,8 +11,8 @@
 // Perhaps we could similarly produce the 2D version to provide an option to
 // Boost.Geometry?
 //------------------------------------------------------------------------------
-#ifndef __Polytope_PLC_CSG__
-#define __Polytope_PLC_CSG__
+#ifndef __Polytope_PLC_CSG_3d__
+#define __Polytope_PLC_CSG_3d__
 
 #include <map>
 #include <vector>
