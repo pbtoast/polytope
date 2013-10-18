@@ -30,7 +30,7 @@ void writePLCtoOFF(const PLC<2, RealType>& plc,
   outfile.open(filename.c_str(), std::ios::out);
 
   // Count the numbers of elements we have.
-  const unsigned npoints = coords.size()/3, nfacets = plc.facets.size();
+  const unsigned npoints = coords.size()/2, nfacets = plc.facets.size();
   std::set<EdgeHash> edges;
   for (unsigned i = 0; i != plc.facets.size(); ++i) {
     POLY_ASSERT(plc.facets[i].size() == 2);

@@ -110,9 +110,9 @@ int main(int argc, char** argv) {
     box1.facets[2].push_back(2); box1.facets[2].push_back(3);
     box1.facets[3].push_back(3); box1.facets[3].push_back(4);
     box1.facets[4].push_back(4); box1.facets[4].push_back(5);
-    box1.facets[4].push_back(5); box1.facets[4].push_back(6);
-    box1.facets[4].push_back(6); box1.facets[4].push_back(7);
-    box1.facets[4].push_back(7); box1.facets[4].push_back(0);
+    box1.facets[5].push_back(5); box1.facets[5].push_back(6);
+    box1.facets[6].push_back(6); box1.facets[6].push_back(7);
+    box1.facets[7].push_back(7); box1.facets[7].push_back(0);
     const std::vector<CSG::CSG_internal_2d::Segment<double> > segments = CSG::CSG_internal_2d::ReducedPLCtoSegments(box1);
     POLY_CHECK2(segments.size() == 8, "Num segments = " << segments.size() << ", expected 8.");
     const ReducedPLC<2, double> box2 = CSG::CSG_internal_2d::ReducedPLCfromSegments(segments);
@@ -121,6 +121,44 @@ int main(int argc, char** argv) {
     const ReducedPLC<2, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
     POLY_CHECK(box3.facets.size() == 4);
     POLY_CHECK(box3.points.size() == 2*4);
+  }
+
+  //----------------------------------------------------------------------
+  // Operate on two boxes offset in x.
+  //----------------------------------------------------------------------
+  {
+    double low1[2] = {0.0, 0.0}, high1[2] = {1.0, 1.0},
+           low2[2] = {0.5, 0.0}, high2[2] = {1.5, 1.0};
+    const ReducedPLC<2, double> box1 = plc_box<2, double>(low1, high1),
+                                box2 = plc_box<2, double>(low2, high2);
+    const ReducedPLC<2, double> box_union = CSG::csg_union(box1, box2);
+    POLY_CHECK(box_union.points.size() % 2 == 0);
+    const ReducedPLC<2, double> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, 1.0e-10);
+    const ReducedPLC<2, double> box_intersect = CSG::csg_intersect(box1, box2);
+    const ReducedPLC<2, double> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, low1, high2, 1.0e-10);
+    POLY_CHECK(box_intersect_simplify.facets.size() == 4);
+    POLY_CHECK(box_intersect_simplify.points.size() == 2*4);
+  }
+
+  //----------------------------------------------------------------------
+  // Various combinations of a box and circle.
+  //----------------------------------------------------------------------
+  {
+    const Point2<double> low(0.0, 0.0), high(1.0, 1.0), high2(2.0, 2.0);
+    const ReducedPLC<2, double> square = plc_box<2, double>(&low.x, &high.x),
+                                circle = plc_circle<double>(high, 0.5, 20);
+    const ReducedPLC<2, double> sc_union = CSG::csg_union(square, circle),
+                       sc_union_simplify = polytope::simplifyPLCfacets(sc_union, sc_union.points, &low.x, &high2.x, 1.0e-10);
+    escapePod("square_circle_union", sc_union);
+    escapePod("square_circle_union_simplify", sc_union_simplify);
+    const ReducedPLC<2, double> sc_intersect = CSG::csg_intersect(square, circle),
+                       sc_intersect_simplify = polytope::simplifyPLCfacets(sc_intersect, sc_intersect.points, &low.x, &high2.x, 1.0e-10);
+    escapePod("square_circle_intersect", sc_intersect);
+    escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
+    const ReducedPLC<2, double> sc_subtract = CSG::csg_subtract(square, circle),
+                       sc_subtract_simplify = polytope::simplifyPLCfacets(sc_subtract, sc_subtract.points, &low.x, &high2.x, 1.0e-10);
+    escapePod("square_circle_subtract", sc_subtract);
+    escapePod("square_circle_subtract_simplify", sc_subtract_simplify);
   }
 
   // //----------------------------------------------------------------------
