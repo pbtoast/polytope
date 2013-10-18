@@ -1,5 +1,8 @@
 // Generator file for polytope_c.h. Modify this file, not polytope_c.h.
 
+#ifndef POLYTOPE_C_H
+#define POLYTOPE_C_H
+
 // Version numbers
 #define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
 #define POLYTOPE_VERSION_MINOR @POLYTOPE_VERSION_MINOR@
@@ -23,4 +26,20 @@
 #include "polytope_tessellator.h"
 #include "polytope_read_silo.h"
 #include "polytope_write_silo.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// An error handler function for polytope.
+typedef void (*polytope_error_handler)(const char*, int);
+
+// Set the error handler function called by polytope under error conditions.
+void polytope_set_error_handler(polytope_error_handler handler);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
 
