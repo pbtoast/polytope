@@ -37,22 +37,22 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
   std::vector<unsigned> old2new;
   geometry::uniquePoints<2, RealType>(points, xmin, xmax, tol, result.points, old2new);
   const unsigned nnewpoints = result.points.size()/2;
-  std::cerr << "Original points: " << std::endl;
-  for (unsigned i = 0; i != points.size()/2; ++i) {
-    std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
-  }
-  std::cerr << "Unique points: " << std::endl;
-  for (unsigned i = 0; i != nnewpoints; ++i) {
-    std::cerr << "    " << i << " : (" << result.points[2*i] << " " << result.points[2*i+1] << ")" << std::endl;
-  }
+  // std::cerr << "Original points: " << std::endl;
+  // for (unsigned i = 0; i != points.size()/2; ++i) {
+  //   std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
+  // }
+  // std::cerr << "Unique points: " << std::endl;
+  // for (unsigned i = 0; i != nnewpoints; ++i) {
+  //   std::cerr << "    " << i << " : (" << result.points[2*i] << " " << result.points[2*i+1] << ")" << std::endl;
+  // }
 
   // Sort the edges around input PLC so they're in order.
   const unsigned noldfacets = plc.facets.size();
   std::vector<EdgeHash> inputEdges(noldfacets);
   for (unsigned i = 0; i != noldfacets; ++i) {
     POLY_ASSERT(plc.facets[i].size() == 2);
-    inputEdges.push_back(internal::hashEdge(old2new[plc.facets[i][0]], 
-                                            old2new[plc.facets[i][1]]));
+    inputEdges[i] = internal::hashEdge(old2new[plc.facets[i][0]], 
+                                       old2new[plc.facets[i][1]]);
   }
   std::vector<int> inputEdgeOrder;
   internal::computeSortedFaceEdges(inputEdges, inputEdgeOrder);
@@ -65,13 +65,23 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
                            EdgeHash(inputEdges[k].second, inputEdges[k].first) :
                            inputEdges[k]);
   }
+  POLY_ASSERT(orderedEdges.size() == noldfacets);
+
+  // {
+  //   std::cerr << "input edges : ";
+  //   for (unsigned i = 0; i != noldfacets; ++i) std::cerr << " (" << inputEdges[i].first << " " << inputEdges[i].second << ")";
+  //   std::cerr << std::endl
+  //             << "ordered edges : ";
+  //   for (unsigned i = 0; i != noldfacets; ++i) std::cerr << " (" << orderedEdges[i].first << " " << orderedEdges[i].second << ")";
+  //   std::cerr << std::endl;
+  // }
 
   // Find the first edge not collinear with previous one.
   int istart = 0;
   while (istart != noldfacets and 
          geometry::collinear<2, RealType>(&result.points[2*orderedEdges[istart].first],
                                           &result.points[2*orderedEdges[istart].second],
-                                          &result.points[2*orderedEdges[(istart - 1) % noldfacets].second],
+                                          &result.points[2*orderedEdges[(istart + noldfacets - 1) % noldfacets].first],
                                           tol)) ++istart;
   POLY_ASSERT(istart != noldfacets);
 
@@ -88,6 +98,7 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
     result.facets.push_back(std::vector<int>());
     result.facets.back().push_back(orderedEdges[iedge1].first);
     result.facets.back().push_back(orderedEdges[iedge2].second);
+    nwalked += ncoll + 1;
   }
   POLY_ASSERT(result.facets.size() > 2);
 

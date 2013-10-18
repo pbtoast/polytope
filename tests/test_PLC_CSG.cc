@@ -49,10 +49,10 @@ rotatePoints(std::vector<RealType>& points,
 //------------------------------------------------------------------------------
 // Emergency dump.
 //------------------------------------------------------------------------------
-template<typename RealType>
+template<typename PLCType>
 std::string
 escapePod(const std::string nameEnd,
-          const ReducedPLC<3, RealType>& plc) {
+          const PLCType& plc) {
     std::stringstream os;
     os << "test_PLC_CSG_" << nameEnd;
     writePLCtoOFF(plc, plc.points, os.str());
@@ -84,8 +84,43 @@ int main(int argc, char** argv) {
     POLY_CHECK(box2.facets.size() == 4);
     POLY_CHECK(box2.points.size() == 2*8);
     const ReducedPLC<2, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
-    POLY_CHECK(box3.facets.size() == 6);
-    POLY_CHECK(box3.points.size() == 3*8);
+    POLY_CHECK(box3.facets.size() == 4);
+    POLY_CHECK(box3.points.size() == 2*4);
+  }
+
+  //----------------------------------------------------------------------
+  // Same as above, but force the creation of collinear edges and make
+  // sure they're removed in the end.
+  // Convert from PLC->CSG_internal_2d::Segments->PLC
+  //----------------------------------------------------------------------
+  {
+    double low[2] = {0.0, 0.0}, high[2] = {1.0, 1.0};
+    ReducedPLC<2, double> box1;
+    box1.points.push_back(low[0]);                 box1.points.push_back(low[1]);
+    box1.points.push_back(0.5*(low[0] + high[0])); box1.points.push_back(low[1]);
+    box1.points.push_back(high[0]);                box1.points.push_back(low[1]);
+    box1.points.push_back(high[0]);                box1.points.push_back(0.5*(low[1] + high[1]));
+    box1.points.push_back(high[0]);                box1.points.push_back(high[1]);
+    box1.points.push_back(0.5*(low[0] + high[0])); box1.points.push_back(high[1]);
+    box1.points.push_back(low[0]);                 box1.points.push_back(high[1]);
+    box1.points.push_back(low[0]);                 box1.points.push_back(0.5*(low[1] + high[1]));
+    box1.facets.resize(8);
+    box1.facets[0].push_back(0); box1.facets[0].push_back(1);
+    box1.facets[1].push_back(1); box1.facets[1].push_back(2);
+    box1.facets[2].push_back(2); box1.facets[2].push_back(3);
+    box1.facets[3].push_back(3); box1.facets[3].push_back(4);
+    box1.facets[4].push_back(4); box1.facets[4].push_back(5);
+    box1.facets[4].push_back(5); box1.facets[4].push_back(6);
+    box1.facets[4].push_back(6); box1.facets[4].push_back(7);
+    box1.facets[4].push_back(7); box1.facets[4].push_back(0);
+    const std::vector<CSG::CSG_internal_2d::Segment<double> > segments = CSG::CSG_internal_2d::ReducedPLCtoSegments(box1);
+    POLY_CHECK2(segments.size() == 8, "Num segments = " << segments.size() << ", expected 8.");
+    const ReducedPLC<2, double> box2 = CSG::CSG_internal_2d::ReducedPLCfromSegments(segments);
+    POLY_CHECK(box2.facets.size() == 8);
+    POLY_CHECK(box2.points.size() == 2*16);
+    const ReducedPLC<2, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
+    POLY_CHECK(box3.facets.size() == 4);
+    POLY_CHECK(box3.points.size() == 2*4);
   }
 
   // //----------------------------------------------------------------------

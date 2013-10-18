@@ -10,6 +10,7 @@ prefix         = not-set
 boost_root     = not-set
 use_silo       = 1
 use_python     = 0
+use_C          = 1
 python_exe     = not-set
 python_version = not-set
 build_tests    = 1
@@ -99,6 +100,9 @@ endif
 
 # Choose to build python bindings with pybindgen
 CONFIG_FLAGS += -DUSE_PYTHON=$(use_python)
+
+# Choose if we're building the C interface
+CONFIG_FLAGS += -DBUILD_C_INTERFACE=$(use_C)
 
 # real number type for C library
 CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
