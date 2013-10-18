@@ -95,7 +95,7 @@ struct Segment {
   Line<RealType> line;
 
   void flip() {
-    std::swap(vertices.first, vertices.second);
+    std::swap(vertices[0], vertices[1]);
     line.flip();
   }
 
