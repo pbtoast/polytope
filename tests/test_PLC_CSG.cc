@@ -149,14 +149,35 @@ int main(int argc, char** argv) {
                                 circle = plc_circle<double>(high, 0.5, 20);
     const ReducedPLC<2, double> sc_union = CSG::csg_union(square, circle),
                        sc_union_simplify = polytope::simplifyPLCfacets(sc_union, sc_union.points, &low.x, &high2.x, 1.0e-10);
-    escapePod("square_circle_union", sc_union);
-    escapePod("square_circle_union_simplify", sc_union_simplify);
+    // escapePod("square_circle_union", sc_union);
+    // escapePod("square_circle_union_simplify", sc_union_simplify);
     const ReducedPLC<2, double> sc_intersect = CSG::csg_intersect(square, circle),
                        sc_intersect_simplify = polytope::simplifyPLCfacets(sc_intersect, sc_intersect.points, &low.x, &high2.x, 1.0e-10);
-    escapePod("square_circle_intersect", sc_intersect);
-    escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
+    // escapePod("square_circle_intersect", sc_intersect);
+    // escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
     const ReducedPLC<2, double> sc_subtract = CSG::csg_subtract(square, circle),
                        sc_subtract_simplify = polytope::simplifyPLCfacets(sc_subtract, sc_subtract.points, &low.x, &high2.x, 1.0e-10);
+    // escapePod("square_circle_subtract", sc_subtract);
+    // escapePod("square_circle_subtract_simplify", sc_subtract_simplify);
+  }
+
+  //----------------------------------------------------------------------
+  // Various combinations of a box and circle (int64 versions).
+  //----------------------------------------------------------------------
+  {
+    const Point2<int64_t> low(0, 0), high(1 << 10, 1 << 10), high2(1 << 11, 1 << 11);
+    const ReducedPLC<2, int64_t> square = plc_box<2, int64_t>(&low.x, &high.x),
+                                 circle = plc_circle<int64_t>(high, (1 << 9), 20);
+    const ReducedPLC<2, int64_t> sc_union = CSG::csg_union(square, circle),
+                        sc_union_simplify = polytope::simplifyPLCfacets(sc_union, sc_union.points, &low.x, &high2.x, int64_t(1));
+    escapePod("square_circle_union", sc_union);
+    escapePod("square_circle_union_simplify", sc_union_simplify);
+    const ReducedPLC<2, int64_t> sc_intersect = CSG::csg_intersect(square, circle),
+                       sc_intersect_simplify = polytope::simplifyPLCfacets(sc_intersect, sc_intersect.points, &low.x, &high2.x, int64_t(1));
+    escapePod("square_circle_intersect", sc_intersect);
+    escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
+    const ReducedPLC<2, int64_t> sc_subtract = CSG::csg_subtract(square, circle),
+                       sc_subtract_simplify = polytope::simplifyPLCfacets(sc_subtract, sc_subtract.points, &low.x, &high2.x, int64_t(1));
     escapePod("square_circle_subtract", sc_subtract);
     escapePod("square_circle_subtract_simplify", sc_subtract_simplify);
   }
