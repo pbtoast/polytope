@@ -18,6 +18,113 @@
 
 namespace polytope {
 
+//------------------------------------------------------------------------------
+// 2D
+//------------------------------------------------------------------------------
+template<typename RealType>
+ReducedPLC<2, RealType>
+simplifyPLCfacets(const PLC<2, RealType>& plc,
+                  const std::vector<RealType>& points,
+                  const RealType* xmin,
+                  const RealType* xmax,
+                  const RealType tol) {
+  typedef Point2<RealType> PointType;
+  typedef std::pair<int, int> EdgeHash;
+  ReducedPLC<2, RealType> result;
+  
+  // Reduce to the set of unique points.
+  std::vector<RealType> newpoints;
+  std::vector<unsigned> old2new;
+  geometry::uniquePoints<2, RealType>(points, xmin, xmax, tol, result.points, old2new);
+  const unsigned nnewpoints = result.points.size()/2;
+  std::cerr << "Original points: " << std::endl;
+  for (unsigned i = 0; i != points.size()/2; ++i) {
+    std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
+  }
+  std::cerr << "Unique points: " << std::endl;
+  for (unsigned i = 0; i != nnewpoints; ++i) {
+    std::cerr << "    " << i << " : (" << result.points[2*i] << " " << result.points[2*i+1] << ")" << std::endl;
+  }
+
+  // Sort the edges around input PLC so they're in order.
+  const unsigned noldfacets = plc.facets.size();
+  std::vector<EdgeHash> inputEdges(noldfacets);
+  for (unsigned i = 0; i != noldfacets; ++i) {
+    POLY_ASSERT(plc.facets[i].size() == 2);
+    inputEdges.push_back(internal::hashEdge(old2new[plc.facets[i][0]], 
+                                            old2new[plc.facets[i][1]]));
+  }
+  std::vector<int> inputEdgeOrder;
+  internal::computeSortedFaceEdges(inputEdges, inputEdgeOrder);
+  POLY_ASSERT(inputEdges.size() == noldfacets);
+  std::vector<EdgeHash> orderedEdges;
+  for (unsigned i = 0; i != noldfacets; ++i) {
+    int j = inputEdgeOrder[i];
+    int k = j < 0 ? ~j : j;
+    orderedEdges.push_back(j < 0 ? 
+                           EdgeHash(inputEdges[k].second, inputEdges[k].first) :
+                           inputEdges[k]);
+  }
+
+  // Find the first edge not collinear with previous one.
+  int istart = 0;
+  while (istart != noldfacets and 
+         geometry::collinear<2, RealType>(&result.points[2*orderedEdges[istart].first],
+                                          &result.points[2*orderedEdges[istart].second],
+                                          &result.points[2*orderedEdges[(istart - 1) % noldfacets].second],
+                                          tol)) ++istart;
+  POLY_ASSERT(istart != noldfacets);
+
+  // Now walk the edges and build up the new result, removing any sequential 
+  // collinear edges.
+  int nwalked = 0;
+  while (nwalked < noldfacets) {
+    int iedge1 = (istart + nwalked) % noldfacets, ncoll = 0;
+    while (geometry::collinear<2, RealType>(&result.points[2*orderedEdges[iedge1].first],
+                                            &result.points[2*orderedEdges[iedge1].second],
+                                            &result.points[2*orderedEdges[(iedge1 + ncoll + 1) % noldfacets].second],
+                                            tol)) ++ncoll;
+    int iedge2 = (iedge1 + ncoll) % noldfacets;
+    result.facets.push_back(std::vector<int>());
+    result.facets.back().push_back(orderedEdges[iedge1].first);
+    result.facets.back().push_back(orderedEdges[iedge2].second);
+  }
+  POLY_ASSERT(result.facets.size() > 2);
+
+  // Make a final pass and remove any points we're not actually using.
+  std::vector<int> mask(result.points.size()/2, -1);
+  for (unsigned i = 0; i != result.facets.size(); ++i) {
+    for (unsigned j = 0; j != result.facets[i].size(); ++j) {
+      mask[result.facets[i][j]] = 1;
+    }
+  }
+  unsigned n = 0;
+  for (unsigned i = 0; i != mask.size(); ++i) {
+    if (mask[i] == 1) mask[i] = n++;
+  }
+  for (unsigned i = 0; i != mask.size(); ++i) {
+    if (mask[i] != -1) {
+      POLY_ASSERT(mask[i] <= i);
+      result.points[2*mask[i]]   = result.points[2*i];
+      result.points[2*mask[i]+1] = result.points[2*i+1];
+    }
+  }
+  result.points.resize(2*n);
+  for (unsigned i = 0; i != result.facets.size(); ++i) {
+    for (unsigned j = 0; j != result.facets[i].size(); ++j) {
+      const unsigned k = result.facets[i][j];
+      POLY_ASSERT(mask[k] != -1);
+      result.facets[i][j] = mask[k];
+    }
+  }
+
+  // That's it.
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// 3D
+//------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<3, RealType>
 simplifyPLCfacets(const PLC<3, RealType>& plc,

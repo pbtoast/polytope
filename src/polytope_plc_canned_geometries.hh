@@ -10,6 +10,32 @@
 namespace polytope {
 
 //------------------------------------------------------------------------------
+// Create a PLC representation of a circle.
+//------------------------------------------------------------------------------
+template<typename RealType>
+ReducedPLC<2, RealType>
+plc_circle(const Point2<RealType>& center,
+           const RealType radius,
+           const unsigned ntheta) {
+  POLY_ASSERT(ntheta > 2);
+
+  // Prepare the result.
+  ReducedPLC<2, RealType> result;
+
+  // Put a bunch of points on the sphere.
+  const double dtheta = 2.0*M_PI/ntheta;
+  result.facets.resize(ntheta);
+  for (unsigned itheta = 0; itheta != ntheta; ++itheta) {
+    result.facets[itheta].push_back(itheta);
+    result.facets[itheta].push_back((itheta + 1) % ntheta);
+    const double theta = (itheta + 0.5)*dtheta;
+    result.points.push_back(center.x + radius*cos(theta));
+    result.points.push_back(center.y + radius*sin(theta));
+  }
+  return result;
+}
+
+//------------------------------------------------------------------------------
 // Create a PLC representation of a sphere.
 //------------------------------------------------------------------------------
 template<typename RealType>
