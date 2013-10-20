@@ -41,6 +41,7 @@ POLYTOPE_ADD_TEST( "within_2d"       "" )
 POLYTOPE_ADD_TEST( "intersect_2d"    "" )
 POLYTOPE_ADD_TEST( "convexIntersect" "" )
 POLYTOPE_ADD_TEST( "PLC_CSG"         "" )
+POLYTOPE_ADD_TEST( "hash"            "" )
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests
