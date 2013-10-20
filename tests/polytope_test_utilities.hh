@@ -21,8 +21,8 @@ namespace polytope {
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
 //------------------------------------------------------------------------------
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
-#define POLY_CHECK2(x, msg) if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); }
+#define POLY_CHECK(x) { if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); } }
+#define POLY_CHECK2(x, msg) { if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); } }
 
 #if Boost_FOUND
 namespace BG = boost::geometry;
