@@ -92,7 +92,7 @@ template<typename RealType> struct Hasher<2, RealType> {
     }
 
     // Quantize away.
-    const RealType dx[3] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+    const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     result += (uint64_t(std::min(coordMax(), uint64_t((pos[0] - xlow[0])/dx[0] + 0.5))) +
                uint64_t(std::min(coordMax(), uint64_t((pos[1] - xlow[1])/dx[1] + 0.5)) << 31));
@@ -125,7 +125,7 @@ template<typename RealType> struct Hasher<2, RealType> {
     }
 
     // Extract the position (for the center of the cell).
-    const RealType dx[3] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
+    const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + ( (hashedPosition & xmask())        + 0.5)*dx[0])));
     pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + (((hashedPosition & ymask()) >> 31) + 0.5)*dx[1])));
