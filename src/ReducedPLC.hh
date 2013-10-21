@@ -56,6 +56,30 @@ public:
     }
   }
 
+  // Assignment.
+  ReducedPLC& operator=(const ReducedPLC& rhs)
+  {
+    if (this != &rhs)
+    {
+      PLC<Dimension, RealType>::operator=(rhs);
+      points = rhs.points;
+    }
+  }
+
+  //! output operator.
+  friend std::ostream& operator<<(std::ostream& s, const ReducedPLC& plc)
+  {
+    s << dynamic_cast<const PLC<Dimension, RealType>&>(plc) << std::endl
+      << "PLC points : " << std::endl;
+    const unsigned n = plc.points.size()/Dimension;
+    for (unsigned i = 0; i != n; ++i)
+    {
+      s << "  ( ";
+      for (unsigned j = 0; j != Dimension; ++j) s << plc.points[Dimension*i+j] << " ";
+      s << ")" << std::endl;
+    }
+    return s;
+  }
 };
 
 }
