@@ -429,9 +429,9 @@ ReducedPLC<2, RealType> csg_union(const ReducedPLC<2, RealType>& a,
   Node<RealType>* B = new Node<RealType>(ReducedPLCtoSegments(b));
   Node<RealType>* AB = csg_union(A, B);                                  // <-- only difference
   std::vector<Segment<RealType> > segments = AB->allSegments();
-  delete A; A = 0;
-  delete B; B = 0;
-  delete AB; AB = 0;
+  // delete A; A = 0;
+  // delete B; B = 0;
+  // delete AB; AB = 0;
   return ReducedPLCfromSegments(segments);
 }
 

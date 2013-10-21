@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
   // Convert from PLC->CSG_internal_2d::Segments->PLC
   //----------------------------------------------------------------------
   {
+    cout << "2D PLC <-> Segments test." << endl;
     double low[2] = {0.0, 0.0}, high[2] = {1.0, 1.0};
     const ReducedPLC<2, double> box1 = plc_box<2, double>(low, high);
     const std::vector<CSG::CSG_internal_2d::Segment<double> > segments = CSG::CSG_internal_2d::ReducedPLCtoSegments(box1);
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
   // Convert from PLC->CSG_internal_2d::Segments->PLC
   //----------------------------------------------------------------------
   {
+    cout << "2D PLC <-> Segments test with collinear points." << endl;
     double low[2] = {0.0, 0.0}, high[2] = {1.0, 1.0};
     ReducedPLC<2, double> box1;
     box1.points.push_back(low[0]);                 box1.points.push_back(low[1]);
@@ -127,6 +129,7 @@ int main(int argc, char** argv) {
   // Operate on two boxes offset in x.
   //----------------------------------------------------------------------
   {
+    cout << "2D box interactions test." << endl;
     double low1[2] = {0.0, 0.0}, high1[2] = {1.0, 1.0},
            low2[2] = {0.5, 0.0}, high2[2] = {1.5, 1.0};
     const ReducedPLC<2, double> box1 = plc_box<2, double>(low1, high1),
@@ -144,6 +147,7 @@ int main(int argc, char** argv) {
   // Various combinations of a box and circle.
   //----------------------------------------------------------------------
   {
+    cout << "2D box-circle interactions test." << endl;
     const Point2<double> low(0.0, 0.0), high(1.0, 1.0), high2(2.0, 2.0);
     const ReducedPLC<2, double> square = plc_box<2, double>(&low.x, &high.x),
                                 circle = plc_circle<double>(high, 0.5, 20);
@@ -165,122 +169,128 @@ int main(int argc, char** argv) {
   // Various combinations of a box and circle (int64 versions).
   //----------------------------------------------------------------------
   {
+    cout << "2D box-circle interactions test (int64_t based)." << endl;
     const Point2<int64_t> low(0, 0), high(1 << 10, 1 << 10), high2(1 << 11, 1 << 11);
     const ReducedPLC<2, int64_t> square = plc_box<2, int64_t>(&low.x, &high.x),
                                  circle = plc_circle<int64_t>(high, (1 << 9), 20);
     const ReducedPLC<2, int64_t> sc_union = CSG::csg_union(square, circle),
                         sc_union_simplify = polytope::simplifyPLCfacets(sc_union, sc_union.points, &low.x, &high2.x, int64_t(1));
-    escapePod("square_circle_union", sc_union);
-    escapePod("square_circle_union_simplify", sc_union_simplify);
+    // escapePod("square_circle_union", sc_union);
+    // escapePod("square_circle_union_simplify", sc_union_simplify);
     const ReducedPLC<2, int64_t> sc_intersect = CSG::csg_intersect(square, circle),
                        sc_intersect_simplify = polytope::simplifyPLCfacets(sc_intersect, sc_intersect.points, &low.x, &high2.x, int64_t(1));
-    escapePod("square_circle_intersect", sc_intersect);
-    escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
+    // escapePod("square_circle_intersect", sc_intersect);
+    // escapePod("square_circle_intersect_simplify", sc_intersect_simplify);
     const ReducedPLC<2, int64_t> sc_subtract = CSG::csg_subtract(square, circle),
                        sc_subtract_simplify = polytope::simplifyPLCfacets(sc_subtract, sc_subtract.points, &low.x, &high2.x, int64_t(1));
-    escapePod("square_circle_subtract", sc_subtract);
-    escapePod("square_circle_subtract_simplify", sc_subtract_simplify);
+    // escapePod("square_circle_subtract", sc_subtract);
+    // escapePod("square_circle_subtract_simplify", sc_subtract_simplify);
   }
 
-  // //----------------------------------------------------------------------
-  // // Convert from PLC->CSG_internal_3d::Polygons->PLC
-  // //----------------------------------------------------------------------
-  // {
-  //   double low[3] = {0.0, 0.0, 0.0}, high[3] = {1.0, 1.0, 1.0};
-  //   const ReducedPLC<3, double> box1 = plc_box<3, double>(low, high);
-  //   const std::vector<CSG::CSG_internal_3d::Polygon<double> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
-  //   POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
-  //   const ReducedPLC<3, double> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
-  //   const ReducedPLC<3, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
-  //   POLY_CHECK(box3.facets.size() == 6);
-  //   POLY_CHECK(box3.points.size() == 3*8);
-  // }
+  //----------------------------------------------------------------------
+  // Convert from PLC->CSG_internal_3d::Polygons->PLC
+  //----------------------------------------------------------------------
+  {
+    cout << "3D PLC <-> Polygons test." << endl;
+    double low[3] = {0.0, 0.0, 0.0}, high[3] = {1.0, 1.0, 1.0};
+    const ReducedPLC<3, double> box1 = plc_box<3, double>(low, high);
+    const std::vector<CSG::CSG_internal_3d::Polygon<double> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
+    POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
+    const ReducedPLC<3, double> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
+    const ReducedPLC<3, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
+    POLY_CHECK(box3.facets.size() == 6);
+    POLY_CHECK(box3.points.size() == 3*8);
+  }
 
-  // //----------------------------------------------------------------------
-  // // Operate on two boxes offset in x.
-  // //----------------------------------------------------------------------
-  // {
-  //   double low1[3] = {0.0, 0.0, 0.0}, high1[3] = {1.0, 1.0, 1.0},
-  //          low2[3] = {0.5, 0.0, 0.0}, high2[3] = {1.5, 1.0, 1.0};
-  //   const ReducedPLC<3, double> box1 = plc_box<3, double>(low1, high1),
-  //                               box2 = plc_box<3, double>(low2, high2);
-  //   const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
-  //   POLY_CHECK(box_union.points.size() % 3 == 0);
-  //   // escapePod("box1", box1);
-  //   // escapePod("box2", box2);
-  //   // cerr << escapePod("box_union_test", box_union) << endl;
-  //   const ReducedPLC<3, double> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, 1.0e-10);
-  //   cerr << escapePod("box_union_test_simplify", box_union_simplify) << endl;
-  //   const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);
-  //   // cerr << escapePod("box_intersect_test", box_intersect) << endl;
-  //   const ReducedPLC<3, double> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, low1, high2, 1.0e-10);
-  //   // cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
-  //   POLY_CHECK(box_intersect_simplify.facets.size() == 6);
-  //   POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
-  // }
+  //----------------------------------------------------------------------
+  // Operate on two boxes offset in x.
+  //----------------------------------------------------------------------
+  {
+    cout << "3D box interactions test." << endl;
+    double low1[3] = {0.0, 0.0, 0.0}, high1[3] = {1.0, 1.0, 1.0},
+           low2[3] = {0.5, 0.0, 0.0}, high2[3] = {1.5, 1.0, 1.0};
+    const ReducedPLC<3, double> box1 = plc_box<3, double>(low1, high1),
+                                box2 = plc_box<3, double>(low2, high2);
+    const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
+    POLY_CHECK(box_union.points.size() % 3 == 0);
+    // escapePod("box1", box1);
+    // escapePod("box2", box2);
+    // cerr << escapePod("box_union_test", box_union) << endl;
+    const ReducedPLC<3, double> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, 1.0e-10);
+    cerr << escapePod("box_union_test_simplify", box_union_simplify) << endl;
+    const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);
+    // cerr << escapePod("box_intersect_test", box_intersect) << endl;
+    const ReducedPLC<3, double> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, low1, high2, 1.0e-10);
+    // cerr << escapePod("box_intersect_test_simplify", box_intersect_simplify) << endl;
+    POLY_CHECK(box_intersect_simplify.facets.size() == 6);
+    POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
+  }
 
-  // //----------------------------------------------------------------------
-  // // Generate a complicated sphere with holes cut out of it.
-  // //----------------------------------------------------------------------
-  // {
-  //   const PointType origin(0.0, 0.0, 0.0);
-  //   const unsigned nphi = 20;
-  //   clock_t t0 = clock();
-  //   double low[3] = {-1.0, -1.0, -1.0}, high[3] = {1.0, 1.0, 1.0};
-  //   const ReducedPLC<3, double> a = plc_box<3, double>(low, high),
-  //                               b = plc_sphere<double>(origin, 1.35, nphi),
-  //                               c = plc_cylinder(origin, 0.7, 2.0, nphi);
-  //   ReducedPLC<3, double> d(c), e(c);
-  //   rotatePoints(d.points, 0.0, M_PI/2.0, 0.0);
-  //   rotatePoints(e.points, 0.0, M_PI/2.0, M_PI/2.0);
-  //   clock_t t1 = clock();
-  //   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to generate input PLCs." << endl;
-  //   t0 = clock();
-  //   const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(CSG::csg_intersect(a, b), 
-  //                                                                CSG::csg_union(CSG::csg_union(c, d), e));
-  //   t1 = clock();
-  //   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to perform CSG operations." << endl;
-  //   escapePod("holey_sphere", holey_sphere);
-  // }
+  //----------------------------------------------------------------------
+  // Generate a complicated sphere with holes cut out of it.
+  //----------------------------------------------------------------------
+  {
+    cout << "3D sphere-cylinder interactions test." << endl;
+    const PointType origin(0.0, 0.0, 0.0);
+    const unsigned nphi = 20;
+    clock_t t0 = clock();
+    double low[3] = {-1.0, -1.0, -1.0}, high[3] = {1.0, 1.0, 1.0};
+    const ReducedPLC<3, double> a = plc_box<3, double>(low, high),
+                                b = plc_sphere<double>(origin, 1.35, nphi),
+                                c = plc_cylinder(origin, 0.7, 2.0, nphi);
+    ReducedPLC<3, double> d(c), e(c);
+    rotatePoints(d.points, 0.0, M_PI/2.0, 0.0);
+    rotatePoints(e.points, 0.0, M_PI/2.0, M_PI/2.0);
+    clock_t t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to generate input PLCs." << endl;
+    t0 = clock();
+    const ReducedPLC<3, double> holey_sphere = CSG::csg_subtract(CSG::csg_intersect(a, b), 
+                                                                 CSG::csg_union(CSG::csg_union(c, d), e));
+    t1 = clock();
+    cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds to perform CSG operations." << endl;
+    escapePod("holey_sphere", holey_sphere);
+  }
 
-  // // ********************************************************************************
-  // // Repeat above tests for int types.
-  // //----------------------------------------------------------------------
-  // // Convert from PLC->CSG_internal_3d::Polygons->PLC
-  // //----------------------------------------------------------------------
-  // {
-  //   int64_t low[3] = {0, 0, 0}, high[3] = {1 << 10, 1 << 10, 1 << 10};
-  //   const ReducedPLC<3, int64_t> box1 = plc_box<3, int64_t>(low, high);
-  //   const std::vector<CSG::CSG_internal_3d::Polygon<int64_t> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
-  //   POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
-  //   const ReducedPLC<3, int64_t> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
-  //   const ReducedPLC<3, int64_t> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, int64_t(1));
-  //   POLY_CHECK(box3.facets.size() == 6);
-  //   POLY_CHECK(box3.points.size() == 3*8);
-  // }
+  // ********************************************************************************
+  // Repeat above tests for int types.
+  //----------------------------------------------------------------------
+  // Convert from PLC->CSG_internal_3d::Polygons->PLC
+  //----------------------------------------------------------------------
+  {
+    cout << "3D PLC <-> Polygons test (in64_t)." << endl;
+    int64_t low[3] = {0, 0, 0}, high[3] = {1 << 10, 1 << 10, 1 << 10};
+    const ReducedPLC<3, int64_t> box1 = plc_box<3, int64_t>(low, high);
+    const std::vector<CSG::CSG_internal_3d::Polygon<int64_t> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
+    POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
+    const ReducedPLC<3, int64_t> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
+    const ReducedPLC<3, int64_t> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, int64_t(1));
+    POLY_CHECK(box3.facets.size() == 6);
+    POLY_CHECK(box3.points.size() == 3*8);
+  }
 
-  // //----------------------------------------------------------------------
-  // // Operate on two boxes offset in x.
-  // //----------------------------------------------------------------------
-  // {
-  //   int64_t low1[3] = {0, 0, 0},          high1[3] = {1 << 10, 1 << 10, 1 << 10},
-  //           low2[3] = {high1[0]/2, 0, 0}, high2[3] = {low2[0] + high1[0], high1[1], high1[2]};
-  //   const ReducedPLC<3, int64_t> box1 = plc_box<3, int64_t>(low1, high1),
-  //                                box2 = plc_box<3, int64_t>(low2, high2);
-  //   const ReducedPLC<3, int64_t> box_union = CSG::csg_union(box1, box2);
-  //   POLY_CHECK(box_union.points.size() % 3 == 0);
-  //   escapePod("box1_int", box1);
-  //   escapePod("box2_int", box2);
-  //   cerr << escapePod("box_union_test_int", box_union) << endl;
-  //   const ReducedPLC<3, int64_t> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, int64_t(1));
-  //   cerr << escapePod("box_union_test_simplify_int", box_union_simplify) << endl;
-  //   const ReducedPLC<3, int64_t> box_intersect = CSG::csg_intersect(box1, box2);
-  //   cerr << escapePod("box_intersect_test_int", box_intersect) << endl;
-  //   const ReducedPLC<3, int64_t> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, low1, high2, int64_t(1));
-  //   cerr << escapePod("box_intersect_test_simplify_int", box_intersect_simplify) << endl;
-  //   POLY_CHECK(box_intersect_simplify.facets.size() == 6);
-  //   POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
-  // }
+  //----------------------------------------------------------------------
+  // Operate on two boxes offset in x.
+  //----------------------------------------------------------------------
+  {
+    cout << "3D box interactions test (int64_t)." << endl;
+    int64_t low1[3] = {0, 0, 0},          high1[3] = {1 << 10, 1 << 10, 1 << 10},
+            low2[3] = {high1[0]/2, 0, 0}, high2[3] = {low2[0] + high1[0], high1[1], high1[2]};
+    const ReducedPLC<3, int64_t> box1 = plc_box<3, int64_t>(low1, high1),
+                                 box2 = plc_box<3, int64_t>(low2, high2);
+    const ReducedPLC<3, int64_t> box_union = CSG::csg_union(box1, box2);
+    POLY_CHECK(box_union.points.size() % 3 == 0);
+    escapePod("box1_int", box1);
+    escapePod("box2_int", box2);
+    cerr << escapePod("box_union_test_int", box_union) << endl;
+    const ReducedPLC<3, int64_t> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, int64_t(1));
+    cerr << escapePod("box_union_test_simplify_int", box_union_simplify) << endl;
+    const ReducedPLC<3, int64_t> box_intersect = CSG::csg_intersect(box1, box2);
+    cerr << escapePod("box_intersect_test_int", box_intersect) << endl;
+    const ReducedPLC<3, int64_t> box_intersect_simplify = polytope::simplifyPLCfacets(box_intersect, box_intersect.points, low1, high2, int64_t(1));
+    cerr << escapePod("box_intersect_test_simplify_int", box_intersect_simplify) << endl;
+    POLY_CHECK(box_intersect_simplify.facets.size() == 6);
+    POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
+  }
 
   cout << "PASS" << endl;
 
