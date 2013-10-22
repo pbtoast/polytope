@@ -152,14 +152,14 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
   std::vector<unsigned> old2new;
   geometry::uniquePoints<3, RealType>(points, xmin, xmax, tol, result.points, old2new);
   const unsigned nnewpoints = result.points.size()/3;
-  std::cerr << "Original points: " << std::endl;
-  for (unsigned i = 0; i != points.size()/3; ++i) {
-    std::cerr << "    " << i << " : (" << points[3*i] << " " << points[3*i+1] << " " << points[3*i+2] << ")" << std::endl;
-  }
-  std::cerr << "Unique points: " << std::endl;
-  for (unsigned i = 0; i != nnewpoints; ++i) {
-    std::cerr << "    " << i << " : (" << result.points[3*i] << " " << result.points[3*i+1] << " " << result.points[3*i+2] << ")" << std::endl;
-  }
+  // std::cerr << "Original points: " << std::endl;
+  // for (unsigned i = 0; i != points.size()/3; ++i) {
+  //   std::cerr << "    " << i << " : (" << points[3*i] << " " << points[3*i+1] << " " << points[3*i+2] << ")" << std::endl;
+  // }
+  // std::cerr << "Unique points: " << std::endl;
+  // for (unsigned i = 0; i != nnewpoints; ++i) {
+  //   std::cerr << "    " << i << " : (" << result.points[3*i] << " " << result.points[3*i+1] << " " << result.points[3*i+2] << ")" << std::endl;
+  // }
 
   // Build a map of the old facets attached to each unique point.
   const unsigned noldfacets = plc.facets.size();

@@ -463,7 +463,7 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polys) {
   POLY_ASSERT((point2id.size() == points.size()) and (result.points.size() == 3*points.size()));
   POLY_ASSERT(result.facets.size() == npolys);
     
-  // Now look for any vertices that are between the vertices of one of input triangles.
+  // Now look for any vertices that are between the vertices of one of the input triangles.
   // We will augment that facet with such points.
   for (unsigned i = 0; i != npolys; ++i) {
     std::vector<int> newfacet;
@@ -474,7 +474,12 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polys) {
       newfacet.push_back(a);
       for (unsigned v = 0; v != points.size(); ++v) {
         if (geometry::between<3, RealType>(&result.points[3*a], &result.points[3*b], &result.points[3*v], tol) and
-            (points[v] != points[a]) and points[v] != points[b]) newfacet.push_back(v);
+            (points[v] != points[a]) and points[v] != points[b]) {
+          // std::cerr << " --> (" << result.points[3*v] << " " << result.points[3*v+1] << " " << result.points[3*v+2] << ") in [("
+          //           << result.points[3*a] << " " << result.points[3*a+1] << " " << result.points[3*a+2] << ") ("
+          //           << result.points[3*b] << " " << result.points[3*b+1] << " " << result.points[3*b+2] << ")" << std::endl;
+          newfacet.push_back(v);
+        }
       }
     }
     POLY_ASSERT(newfacet.size() >= result.facets[i].size());
