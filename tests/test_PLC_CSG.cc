@@ -192,11 +192,46 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------------------
   {
     cout << "3D PLC <-> Polygons test." << endl;
+    typedef Point3<double> RealPoint;
     double low[3] = {0.0, 0.0, 0.0}, high[3] = {1.0, 1.0, 1.0};
     const ReducedPLC<3, double> box1 = plc_box<3, double>(low, high);
-    const std::vector<CSG::CSG_internal_3d::Polygon<double> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
+    std::vector<CSG::CSG_internal_3d::Polygon<double> > polys = CSG::CSG_internal_3d::ReducedPLCtoPolygons(box1);
     POLY_CHECK2(polys.size() == 12, "Num polys = " << polys.size() << ", expected 12.");
+
+    // Deliberately split one triangle facet into three, creating some inconsistent hanging nodes.
+    std::vector<CSG::CSG_internal_3d::Vertex<double> > triangle(3);
+    polys.pop_back(); polys.pop_back();  // Pop off the last two triangles.
+    POLY_ASSERT(box1.facets.back().size() == 4);
+    const unsigned k1 = box1.facets.back()[0],
+                   k2 = box1.facets.back()[1],
+                   k3 = box1.facets.back()[2],
+                   k4 = box1.facets.back()[3];
+    triangle[0] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k1], box1.points[3*k1+1], box1.points[3*k1+2]));
+    triangle[1] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k2], box1.points[3*k2+1], box1.points[3*k2+2]));
+    triangle[2] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k3], box1.points[3*k3+1], box1.points[3*k3+2]));
+    polys.push_back(triangle);
+    RealPoint diag1((box1.points[3*k1  ] + 2.0*box1.points[3*k3  ])/3.0,
+                    (box1.points[3*k1+1] + 2.0*box1.points[3*k3+1])/3.0,
+                    (box1.points[3*k1+2] + 2.0*box1.points[3*k3+2])/3.0),
+              diag2((2.0*box1.points[3*k1  ] + box1.points[3*k3  ])/3.0,
+                    (2.0*box1.points[3*k1+1] + box1.points[3*k3+1])/3.0,
+                    (2.0*box1.points[3*k1+2] + box1.points[3*k3+2])/3.0);
+    triangle[0] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k3], box1.points[3*k3+1], box1.points[3*k3+2]));
+    triangle[1] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k4], box1.points[3*k4+1], box1.points[3*k4+2]));
+    triangle[2] = CSG::CSG_internal_3d::Vertex<double>(diag1);
+    polys.push_back(triangle);
+    triangle[0] = CSG::CSG_internal_3d::Vertex<double>(diag1);
+    triangle[1] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k4], box1.points[3*k4+1], box1.points[3*k4+2]));
+    triangle[2] = CSG::CSG_internal_3d::Vertex<double>(diag2);
+    polys.push_back(triangle);
+    triangle[0] = CSG::CSG_internal_3d::Vertex<double>(diag2);
+    triangle[1] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k4], box1.points[3*k4+1], box1.points[3*k4+2]));
+    triangle[2] = CSG::CSG_internal_3d::Vertex<double>(RealPoint(box1.points[3*k1], box1.points[3*k1+1], box1.points[3*k1+2]));
+    polys.push_back(triangle);
+
     const ReducedPLC<3, double> box2 = CSG::CSG_internal_3d::ReducedPLCfromPolygons(polys);
+    std::cerr << "box2 : " << box2 << std::endl;
+    POLY_CHECK(box2.facets.size() == 14);
     const ReducedPLC<3, double> box3 = polytope::simplifyPLCfacets(box2, box2.points, low, high, 1.0e-10);
     POLY_CHECK(box3.facets.size() == 6);
     POLY_CHECK(box3.points.size() == 3*8);

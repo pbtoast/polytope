@@ -433,7 +433,7 @@ between(const RealType* a, const RealType* b, const RealType* c, const RealType 
 
   // The points are distinct.
   const RealType thpt = dot<Dimension, RealType>(ab, ac);
-  return (std::abs(thpt*thpt - ab_mag2*ac_mag2) < tol) and (ac_mag2 <= ab_mag2);
+  return (thpt > 0) and (std::abs(thpt*thpt - ab_mag2*ac_mag2) < tol) and (ac_mag2 <= ab_mag2);
 }
 
 //------------------------------------------------------------------------------
