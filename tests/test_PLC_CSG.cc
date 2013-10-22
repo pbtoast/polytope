@@ -213,9 +213,9 @@ int main(int argc, char** argv) {
                                 box2 = plc_box<3, double>(low2, high2);
     const ReducedPLC<3, double> box_union = CSG::csg_union(box1, box2);
     POLY_CHECK(box_union.points.size() % 3 == 0);
-    // escapePod("box1", box1);
-    // escapePod("box2", box2);
-    // cerr << escapePod("box_union_test", box_union) << endl;
+    escapePod("box1", box1);
+    escapePod("box2", box2);
+    cerr << escapePod("box_union_test", box_union) << endl;
     const ReducedPLC<3, double> box_union_simplify = polytope::simplifyPLCfacets(box_union, box_union.points, low1, high2, 1.0e-10);
     cerr << escapePod("box_union_test_simplify", box_union_simplify) << endl;
     const ReducedPLC<3, double> box_intersect = CSG::csg_intersect(box1, box2);

@@ -56,16 +56,6 @@ public:
     }
   }
 
-  // Assignment.
-  ReducedPLC& operator=(const ReducedPLC& rhs)
-  {
-    if (this != &rhs)
-    {
-      PLC<Dimension, RealType>::operator=(rhs);
-      points = rhs.points;
-    }
-  }
-
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const ReducedPLC& plc)
   {

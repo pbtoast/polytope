@@ -408,35 +408,77 @@ ReducedPLCtoPolygons(const ReducedPLC<3, RealType>& model) {
 }
 
 // Convert a set of polygons to a ReducedPLC.
-// Note we do not remove degeneracies here, so it's up to the caller
-// to do with that as they will!
+// We do some extra work here to remove all degeneracies.  The CSG methods
+// can return triangles with inconsistent edges between the triangles,
+// so we remove that degeneracy here to make what polytope considers valid
+// PLCs.  We don't combine coplanar facets however, that's up to the caller
+// if desired.
 template<typename RealType>
 ReducedPLC<3, RealType>
-ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polygons) {
+ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polys) {
   typedef Point3<RealType> PointType;
-  ReducedPLC<3, RealType> result;
-  const unsigned nfacets = polygons.size();
-  POLY_ASSERT(nfacets >= 4);
-  for (size_t i = 0; i != nfacets; ++i) {
-    // std::cerr << "Polygon " << i << " : " << polygons[i].vertices[0].pos << " " << polygons[i].vertices[1].pos;
-    const unsigned n = polygons[i].vertices.size();
-    for (size_t j = 2; j < n; ++j) {
-      // std::cerr << " " << polygons[i].vertices[j].pos;
-      result.facets.push_back(std::vector<int>());
-      result.facets.back().push_back(result.points.size()/3);
-      result.points.push_back(polygons[i].vertices[0].pos.x);
-      result.points.push_back(polygons[i].vertices[0].pos.y);
-      result.points.push_back(polygons[i].vertices[0].pos.z);
-      result.facets.back().push_back(result.points.size()/3);
-      result.points.push_back(polygons[i].vertices[j - 1].pos.x);
-      result.points.push_back(polygons[i].vertices[j - 1].pos.y);
-      result.points.push_back(polygons[i].vertices[j - 1].pos.z);
-      result.facets.back().push_back(result.points.size()/3);
-      result.points.push_back(polygons[i].vertices[j].pos.x);
-      result.points.push_back(polygons[i].vertices[j].pos.y);
-      result.points.push_back(polygons[i].vertices[j].pos.z);
+  typedef geometry::Hasher<3, RealType> HasherType;
+  typedef uint64_t PointHash;
+  const RealType tol = Plane<RealType>::EPSILON;
+
+  // Find the bounding box for the vertex coordinates.
+  const unsigned npolys = polys.size();
+  POLY_ASSERT(npolys >= 4);
+  PointType xmin = polys[0].vertices[0].pos, xmax = xmin;
+  for (unsigned i = 0; i != npolys; ++i) {
+    const unsigned n = polys[i].vertices.size();
+    POLY_ASSERT(n >= 3);
+    for (unsigned j = 0; j != n; ++j) {
+      xmin.x = std::min(xmin.x, polys[i].vertices[j].pos.x);
+      xmin.y = std::min(xmin.y, polys[i].vertices[j].pos.y);
+      xmin.z = std::min(xmin.z, polys[i].vertices[j].pos.z);
+      xmax.x = std::max(xmax.x, polys[i].vertices[j].pos.x);
+      xmax.y = std::max(xmax.y, polys[i].vertices[j].pos.y);
+      xmax.z = std::max(xmax.z, polys[i].vertices[j].pos.z);
     }
-    // std::cerr << std::endl;
+  }
+  POLY_ASSERT(xmin.x < xmax.x and xmin.y < xmax.y and xmin.z < xmax.z);
+
+  // Make a first pass, creating the facets as triangles.
+  std::map<PointHash, int> point2id;
+  std::vector<PointHash> points;
+  ReducedPLC<3, RealType> result;
+  for (unsigned i = 0; i != npolys; ++i) {
+    result.facets.push_back(std::vector<int>());
+    for (unsigned j = 0; j != polys[i].vertices.size(); ++j) {
+      PointHash hashi = HasherType::hashPosition(&polys[i].vertices[j].pos.x, &xmin.x, &xmax.x, &xmin.x, &xmax.x, tol);
+      unsigned oldsize = point2id.size();
+      unsigned k = internal::addKeyToMap(hashi, point2id);
+      if (k == oldsize) {
+        points.push_back(hashi);
+        RealType pos[3];
+        HasherType::unhashPosition(pos, &xmin.x, &xmax.x, &xmin.x, &xmax.x, hashi, tol);
+        result.points.push_back(pos[0]);
+        result.points.push_back(pos[1]);
+        result.points.push_back(pos[2]);
+      }
+      result.facets.back().push_back(k);
+    }
+  }
+  POLY_ASSERT((point2id.size() == points.size()) and (result.points.size() == 3*points.size()));
+  POLY_ASSERT(result.facets.size() == npolys);
+    
+  // Now look for any vertices that are between the vertices of one of input triangles.
+  // We will augment that facet with such points.
+  for (unsigned i = 0; i != npolys; ++i) {
+    std::vector<int> newfacet;
+    const unsigned n = result.facets[i].size();
+    for (unsigned j = 0; j != n; ++j) {
+      unsigned k = (j + 1) % n;
+      const unsigned a = result.facets[i][j], b = result.facets[i][k];
+      newfacet.push_back(a);
+      for (unsigned v = 0; v != points.size(); ++v) {
+        if (geometry::between<3, RealType>(&result.points[3*a], &result.points[3*b], &result.points[3*v], tol) and
+            (points[v] != points[a]) and points[v] != points[b]) newfacet.push_back(v);
+      }
+    }
+    POLY_ASSERT(newfacet.size() >= result.facets[i].size());
+    if (newfacet.size() > result.facets[i].size()) result.facets[i] = newfacet;
   }
   return result;
 }
