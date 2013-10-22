@@ -37,14 +37,14 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
   std::vector<unsigned> old2new;
   geometry::uniquePoints<2, RealType>(points, xmin, xmax, tol, result.points, old2new);
   const unsigned nnewpoints = result.points.size()/2;
-  std::cerr << "Original points: " << std::endl;
-  for (unsigned i = 0; i != points.size()/2; ++i) {
-    std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
-  }
-  std::cerr << "Unique points: " << std::endl;
-  for (unsigned i = 0; i != nnewpoints; ++i) {
-    std::cerr << "    " << i << " : (" << result.points[2*i] << " " << result.points[2*i+1] << ")" << std::endl;
-  }
+  // std::cerr << "Original points: " << std::endl;
+  // for (unsigned i = 0; i != points.size()/2; ++i) {
+  //   std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
+  // }
+  // std::cerr << "Unique points: " << std::endl;
+  // for (unsigned i = 0; i != nnewpoints; ++i) {
+  //   std::cerr << "    " << i << " : (" << result.points[2*i] << " " << result.points[2*i+1] << ")" << std::endl;
+  // }
 
   // Sort the edges around input PLC so they're in order.
   const unsigned noldfacets = plc.facets.size();
@@ -242,70 +242,60 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::cerr << std::endl;
 
       // oldfacets now contains all the facets we're going to glue together into a single new one.
-      // Project to a 2D plane and use the 2D method to combine the triangles.
-      bool flipFacet;
-      unsigned ix, iy;
-      if (std::abs(facetNormals[i].x) >= std::max(std::abs(facetNormals[i].y), std::abs(facetNormals[i].z))) {
-        ix = 1; iy = 2; flipFacet = (facetNormals[i].x < 0 ? true : false);
-      } else if (std::abs(facetNormals[i].y) >= std::max(std::abs(facetNormals[i].x), std::abs(facetNormals[i].z))) {
-        ix = 2; iy = 0; flipFacet = (facetNormals[i].y < 0 ? true : false);
-      } else {
-        POLY_ASSERT(std::abs(facetNormals[i].z) >= std::max(std::abs(facetNormals[i].x), std::abs(facetNormals[i].y)));
-        ix = 0; iy = 1; flipFacet = (facetNormals[i].z < 0 ? true : false);
-      }
-      RealType xmin2d[2] = {xmin[ix], xmin[iy]}, xmax2d[2] = {xmax[ix], xmax[iy]};
-      std::map<uint64_t, int> point2dindex;
-      std::vector<RealType> newpoints2d(2*nnewpoints);
-      for (unsigned j = 0; j != nnewpoints; ++j) {
-        newpoints2d[2*j]     = result.points[3*j + ix];
-        newpoints2d[2*j + 1] = result.points[3*j + iy];
-      }
-      ReducedPLC<2, RealType> facet2d;
+      // Walk the edges of each facet.  Any edges we walk only once is one we're keeping.
+      std::vector<EdgeHash> edges;
+      internal::CounterMap<EdgeHash> edgeCount;
       for (std::set<unsigned>::const_iterator facetItr = oldfacets.begin();
            facetItr != oldfacets.end();
            ++facetItr) {
-        ReducedPLC<2, RealType> partialfacet2d;
         const std::vector<int>& facetNodes = plc.facets[*facetItr];
         const unsigned n = facetNodes.size();
-        partialfacet2d.facets.resize(n);
         for (unsigned j = 0; j != n; ++j) {
-          const unsigned i1 = old2new[facetNodes[j]],
-                         i2 = old2new[facetNodes[(j + 1) % n]];
-          const uint64_t hash1 = HasherType2d::hashPosition(&newpoints2d[2*i1], xmin2d, xmax2d, xmin2d, xmax2d, tol),
-                         hash2 = HasherType2d::hashPosition(&newpoints2d[2*i2], xmin2d, xmax2d, xmin2d, xmax2d, tol);
-          point2dindex[hash1] = i1;
-          point2dindex[hash2] = i2;
-          if (flipFacet) {
-            partialfacet2d.facets[j].push_back(i2);
-            partialfacet2d.facets[j].push_back(i1);
-          } else {
-            partialfacet2d.facets[j].push_back(i1);
-            partialfacet2d.facets[j].push_back(i2);
-          }
+          const EdgeHash ehash = internal::hashEdge(old2new[facetNodes[j]],
+                                                    old2new[facetNodes[(j + 1) % n]]);
+          ++edgeCount[ehash];
         }
-        if (flipFacet) std::reverse(partialfacet2d.facets.begin(), partialfacet2d.facets.end());
-        partialfacet2d.points = newpoints2d;
-        std::cerr << "  partial facet : " << partialfacet2d << std::endl;
-        if (facet2d.points.size() == 0) {
-          facet2d = partialfacet2d;
-        } else {
-          facet2d = CSG::csg_union<RealType>(facet2d, partialfacet2d);
-        }
-        std::cerr << "Facet so far: " << facet2d << std::endl;
       }
-      facet2d = simplifyPLCfacets(facet2d, facet2d.points, xmin2d, xmax2d, tol);
+      std::cerr << "edges: " << std::endl;;
+      for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCount.begin();
+           itr != edgeCount.end();
+           ++itr) {
+        if (itr->second == 1) edges.push_back(itr->first);
+        const EdgeHash ehash = itr->first;
+        std::cerr << "  --> " << itr->second 
+                  << " [" << ehash.first << " " << ehash.second << "] : ("
+                  << result.points[3*ehash.first] << " " << result.points[3*ehash.first+1] << " " << result.points[3*ehash.first+2] << ") (" 
+                  << result.points[3*ehash.second] << " " << result.points[3*ehash.second+1] << " " << result.points[3*ehash.second+2] << ") "
+                  << std::endl;
+      }
+      POLY_ASSERT(edges.size() >= 3);
 
-      // Explode the 2d reduced facet back to the full 3d.
-      std::cerr << "Exploding back to 3d." << std::endl;
-      const unsigned nfacetnodes = facet2d.facets.size();
-      result.facets.push_back(std::vector<int>(nfacetnodes));
+      // Sort the edges around the face.
+      std::vector<int> edgeOrder;
+      bool hangingNodes = internal::computeSortedFaceEdges(edges, edgeOrder);
+      POLY_ASSERT(!hangingNodes);
+
+      // Remove any sequential edges that are collinear.
+      result.facets.push_back(std::vector<int>());
       std::vector<int>& newfacet = result.facets.back();
-      for (unsigned j = 0; j != nfacetnodes; ++j) {
-        const unsigned k = facet2d.facets[j][0];
-        std::cerr << j << " " << k << " " << " (" << facet2d.points[2*k] << " " << facet2d.points[2*k+1] << ") " << HasherType2d::hashPosition(&facet2d.points[2*k], xmin2d, xmax2d, xmin2d, xmax2d, tol) << std::endl;
-        std::map<uint64_t, int>::const_iterator itr = point2dindex.find(HasherType2d::hashPosition(&facet2d.points[2*k], xmin2d, xmax2d, xmin2d, xmax2d, tol));
-        POLY_ASSERT(itr != point2dindex.end());
-        newfacet[j] = itr->second;
+      for (unsigned j = 0; j != edges.size(); ++j) {
+        const unsigned k = (j + 1) % edges.size();
+        const int jorder = edgeOrder[j], korder = edgeOrder[k];
+        const EdgeHash ej = edges[internal::positiveID(jorder)], ek = edges[internal::positiveID(korder)];
+        POLY_ASSERT((jorder < 0 ? ej.first : ej.second) == (korder < 0 ? ek.second : ek.first));
+        PointType jhat(result.points[3*ej.second  ] - result.points[3*ej.first  ],
+                       result.points[3*ej.second+1] - result.points[3*ej.first+1],
+                       result.points[3*ej.second+2] - result.points[3*ej.first+2]),
+                  khat(result.points[3*ek.second  ] - result.points[3*ek.first  ],
+                       result.points[3*ek.second+1] - result.points[3*ek.first+1],
+                       result.points[3*ek.second+2] - result.points[3*ek.first+2]);
+        jhat *= geometry::sgn(jorder);
+        khat *= geometry::sgn(korder);
+        const double jmag = sqrt(double(geometry::dot<3, RealType>(&jhat.x, &jhat.x))), 
+                     kmag = sqrt(double(geometry::dot<3, RealType>(&khat.x, &khat.x)));
+        if (jmag*kmag - std::abs(geometry::dot<3, RealType>(&jhat.x, &khat.x)) > tol) {
+          newfacet.push_back(korder < 0 ? ek.second : ek.first);
+        }
       }
       POLY_ASSERT(newfacet.size() >= 3);
 

@@ -34,17 +34,6 @@ class PLC
     facets.clear(); holes.clear();
   }
 
-  // Assignment.
-  PLC& operator=(const PLC& rhs)
-  {
-    if (this != &rhs)
-    {
-      facets = rhs.facets;
-      holes = rhs.holes;
-    }
-    return *this;
-  }
-
   //! Returns true if this PLC is empty, false otherwise.
   bool empty() const
   {

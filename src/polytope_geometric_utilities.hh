@@ -407,7 +407,33 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ac[j] /= acmag;
   }
   return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
-  // return      abs(     abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;  
+}
+
+//------------------------------------------------------------------------------
+// Test if point c is between a & b.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+bool
+between(const RealType* a, const RealType* b, const RealType* c, const RealType tol) {
+
+  // If c is equal to either endpoint, we count that as between.
+  RealType ab[Dimension], ac[Dimension], bc[Dimension], ac_mag2 = 0, bc_mag2 = 0, ab_mag2 = 0;
+  for (unsigned j = 0; j != Dimension; ++j) {
+    ab[j] = b[j] - a[j];
+    ac[j] = c[j] - a[j];
+    bc[j] = c[j] - b[j];
+    ab_mag2 += ab[j]*ab[j];
+    ac_mag2 += ac[j]*ac[j];
+    bc_mag2 += bc[j]*bc[j];
+  }
+  if ((ac_mag2 <= tol) or (bc_mag2 <= tol)) return true;
+
+  // If a & b are the same point, but not c it's outside.
+  if (ab_mag2 <= tol) return false;
+
+  // The points are distinct.
+  const RealType thpt = dot<Dimension, RealType>(ab, ac);
+  return (std::abs(thpt*thpt - ab_mag2*ac_mag2) < tol) and (ac_mag2 <= ab_mag2);
 }
 
 //------------------------------------------------------------------------------
