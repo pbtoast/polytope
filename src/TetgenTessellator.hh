@@ -17,6 +17,7 @@
 #include "Tessellator.hh"
 #include "Point.hh"
 #include "QuantTessellation.hh"
+#include "ReducedPLC.hh"
 
 namespace polytope {
 
@@ -39,14 +40,19 @@ public:
                   RealType* high,
                   Tessellation<3, RealType>& mesh) const;
 
-  // // Tessellate obeying the given boundaries.
-  // void tessellate(const std::vector<RealType>& points,
-  //                 const std::vector<RealType>& PLCpoints,
-  //                 const PLC<3, RealType>& geometry,
-  //                 Tessellation<3, RealType>& mesh) const;
+  // Tessellate obeying the given boundaries.
+  void tessellate(const std::vector<RealType>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<3, RealType>& geometry,
+                  Tessellation<3, RealType>& mesh) const;
+
+  // Tessellate obeying the given boundaries expressed as a ReducedPLC.
+  void tessellate(const std::vector<RealType>& points,
+                  const ReducedPLC<3, RealType>& geometry,
+                  Tessellation<3, RealType>& mesh) const;
 
   // This Tessellator handles PLCs!
-  bool handlesPLCs() const { return false; }
+  bool handlesPLCs() const { return true; }
 
   // Return the name of this tessellator
   std::string name() const { return "TetgenTessellator"; }

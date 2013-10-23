@@ -30,9 +30,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SYS_FLAGS}")
 
 # General compiler flags.
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -ansi")
-endif ()
-if (CMAKE_CXX_COMPILER_ID STREQUAL "XL")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -ansi -fPIC")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "XL")
   set(USING_XLC true)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qPIC")
 else ()
@@ -241,10 +242,6 @@ add_subdirectory(voro_3d)
 include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
-# Polytope C library -- not soup yet.
-include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-add_subdirectory(polytope_c)
-
 # Tests directory
 if (${TESTING} EQUAL 1)
   enable_testing()
@@ -252,6 +249,12 @@ if (${TESTING} EQUAL 1)
   include (CTest)
 endif()
   
+# Polytope C library.
+if (BUILD_C_INTERFACE EQUAL 1)
+  include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+  add_subdirectory(polytope_c)
+endif()
+
 # Python bindings.
 if(HAVE_PYTHON)
   include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
@@ -268,6 +271,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
                "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
+               "${PROJECT_SOURCE_DIR}/src/simplifyPLCfacets.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
                "${PROJECT_SOURCE_DIR}/src/QuantTessellation.hh" 
 	       "${PROJECT_SOURCE_DIR}/src/QuantizedCoordinates.hh"
@@ -288,8 +292,10 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
          DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.

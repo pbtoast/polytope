@@ -16,6 +16,7 @@
 #include "nearestPoint.hh"
 #include "within.hh"
 #include "intersect.hh"
+#include "polytope_plc_canned_geometries.hh"
 
 // Since triangle isn't built to work out-of-the-box with C++, we 
 // slurp in its source here, bracketing it with the necessary dressing.
@@ -783,7 +784,7 @@ tessellate(const vector<RealType>& points,
   // // BLAGO!
 
   // Build a PLC with the bounding box, and then use the PLC method.
-  ReducedPLC<2, RealType> box = this->boundingBox(low, high);
+  ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
   this->tessellate(points, box.points, box, mesh);
 }
 //------------------------------------------------------------------------------
