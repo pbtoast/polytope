@@ -485,12 +485,14 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polys) {
       }
     }
     n = newfacet.size();
-    for (unsigned j = 0; j != n; ++j) {
-      unsigned k = (j + 1) % n;
-      neighbors[newfacet[j]].insert(newfacet[k]);
-      neighbors[newfacet[k]].insert(newfacet[j]);
+    if (n >= 3) {
+      result.facets.push_back(newfacet);
+      for (unsigned j = 0; j != n; ++j) {
+        unsigned k = (j + 1) % n;
+        neighbors[newfacet[j]].insert(newfacet[k]);
+        neighbors[newfacet[k]].insert(newfacet[j]);
+      }
     }
-    if (n >= 3) result.facets.push_back(newfacet);
   }
   POLY_ASSERT((point2id.size() == points.size()) and (result.points.size() == 3*points.size()));
   POLY_ASSERT(result.facets.size() <= npolys);
