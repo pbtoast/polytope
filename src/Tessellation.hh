@@ -74,7 +74,7 @@ class Tessellation
   //! viewed from the "positive" (outside) direction. 
   std::vector<std::vector<unsigned> > faces;
 
-  //! Arry of node indices: 0 for interior nodes and 1 for nodes at
+  //! Array of node indices: 0 for interior nodes and 1 for nodes at
   //! "infinity" if this is an unbounded tessellation. The infinite node
   //! is the termination point on a spherical surface of a ray going
   //! out to infinity.

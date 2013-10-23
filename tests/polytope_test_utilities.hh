@@ -4,6 +4,7 @@
 #ifndef __polytope_test_utilities__
 #define __polytope_test_utilities__
 
+#include <sstream>
 #include "polytope.hh"
 #include "polytope_geometric_utilities.hh"
 

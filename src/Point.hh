@@ -50,10 +50,11 @@ struct Point2 {
   Point2& operator-=(const Point2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
   Point2& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; return *this; }
   Point2& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; return *this; }
-  Point2 operator+(const Point2& rhs) { Point2 result(*this); result += rhs; return result; }
-  Point2 operator-(const Point2& rhs) { Point2 result(*this); result -= rhs; return result; }
-  Point2 operator*(const UintType& rhs) { Point2 result(*this); result *= rhs; return result; }
-  Point2 operator/(const UintType& rhs) { Point2 result(*this); result /= rhs; return result; }
+  Point2 operator+(const Point2& rhs) const { Point2 result(*this); result += rhs; return result; }
+  Point2 operator-(const Point2& rhs) const { Point2 result(*this); result -= rhs; return result; }
+  Point2 operator*(const UintType& rhs) const { Point2 result(*this); result *= rhs; return result; }
+  Point2 operator/(const UintType& rhs) const { Point2 result(*this); result /= rhs; return result; }
+  Point2 operator-() const { return Point2(-x, -y); }
   UintType  operator[](const size_t i) const { POLY_ASSERT(i < 2); return *(&x + i); }
   UintType& operator[](const size_t i)       { POLY_ASSERT(i < 2); return *(&x + i); }
 };
@@ -127,10 +128,11 @@ struct Point3 {
   Point3& operator-=(const Point3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
   Point3& operator*=(const UintType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
   Point3& operator/=(const UintType& rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
-  Point3 operator+(const Point3& rhs) { Point3 result(*this); result += rhs; return result; }
-  Point3 operator-(const Point3& rhs) { Point3 result(*this); result -= rhs; return result; }
-  Point3 operator*(const UintType& rhs) { Point3 result(*this); result *= rhs; return result; }
-  Point3 operator/(const UintType& rhs) { Point3 result(*this); result /= rhs; return result; }
+  Point3 operator+(const Point3& rhs) const { Point3 result(*this); result += rhs; return result; }
+  Point3 operator-(const Point3& rhs) const { Point3 result(*this); result -= rhs; return result; }
+  Point3 operator*(const UintType& rhs) const { Point3 result(*this); result *= rhs; return result; }
+  Point3 operator/(const UintType& rhs) const { Point3 result(*this); result /= rhs; return result; }
+  Point3 operator-() const { return Point3(-x, -y, -z); }
   UintType  operator[](const size_t i) const { POLY_ASSERT(i < 3); return *(&x + i); }
   UintType& operator[](const size_t i)       { POLY_ASSERT(i < 3); return *(&x + i); }
 };

@@ -30,7 +30,7 @@ public:
   //! \param degeneracy The tolerance for merging nodes in a cell.
   VoroPP_2d(const unsigned nx = 20,
             const unsigned ny = 20,
-            const RealType degeneracy = 1.0e-12);
+            const RealType degeneracy = RealType(1.0e-12));
   ~VoroPP_2d();
 
   //! Generate a Voronoi tessellation for the given set of generator points
