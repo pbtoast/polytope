@@ -32,17 +32,19 @@ void hashSlingingSlasher(const RealType* xmin,
   typedef polytope::geometry::Hasher<Dimension, RealType> HasherType;
   const unsigned n = coords.size() / Dimension;
   std::map<uint64_t, std::vector<unsigned> > hash2ids;
-  RealType pos[2];
+  RealType pos[Dimension];
   for (unsigned i = 0; i != n; ++i) {
     for (unsigned j = 0; j != Dimension; ++j) {
-      POLY_CHECK(coords[Dimension*i + j] >= xmin[j] and coords[2*i + j] <= xmax[j]);
+      POLY_CHECK(coords[Dimension*i + j] >= xmin[j] and coords[Dimension*i + j] <= xmax[j]);
     }
     const uint64_t hashi = HasherType::hashPosition(&coords[Dimension*i], xmin, xmax, xmin, xmax, tol);
     hash2ids[hashi].push_back(i);
     for (std::vector<unsigned>::const_iterator itr = hash2ids[hashi].begin();
          itr != hash2ids[hashi].end();
          ++itr) {
-      POLY_CHECK((geometry::distance<Dimension, RealType>(&coords[Dimension*i], &coords[Dimension*(*itr)]) <= tol));
+      POLY_CHECK2((geometry::distance<Dimension, RealType>(&coords[Dimension*i], &coords[Dimension*(*itr)]) <= 2*tol),
+                  i << " and " << (*itr) << " hashed to same position, but not!  "
+                  << (geometry::distance<Dimension, RealType>(&coords[Dimension*i], &coords[Dimension*(*itr)])));
     }
     HasherType::unhashPosition(pos, xmin, xmax, xmin, xmax, hashi, tol);
     POLY_CHECK2((geometry::distance<Dimension, RealType>(&coords[Dimension*i], pos) <= tol),

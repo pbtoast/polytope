@@ -21,6 +21,7 @@
 #include "ReducedPLC.hh"
 #include "Point.hh"
 #include "polytope_geometric_utilities.hh"
+#include "polytope_internal.hh"
 
 namespace polytope {
 namespace CSG {
@@ -407,6 +408,19 @@ ReducedPLCtoPolygons(const ReducedPLC<3, RealType>& model) {
   return list;
 }
 
+// A local comparator to sort point indices by distance from a fixed point.
+// Useful for sorting new points along an existing edge.
+namespace {
+  template<typename RealType> struct _EdgePointComparator3d {
+    const int iorigin;
+    const std::vector<RealType>& coords;
+    _EdgePointComparator3d(const int i, const std::vector<RealType>& c): iorigin(i), coords(c) {};
+    bool operator()(const int a, const int b) const {
+      return (geometry::distance<3, RealType>(&coords[3*a], &coords[3*iorigin]) < geometry::distance<3, RealType>(&coords[3*b], &coords[3*iorigin]));
+    }
+  };
+}
+
 // Convert a set of polygons to a ReducedPLC.
 // We do some extra work here to remove all degeneracies.  The CSG methods
 // can return triangles with inconsistent edges between the triangles,
@@ -440,47 +454,81 @@ ReducedPLCfromPolygons(const std::vector<Polygon<RealType> >& polys) {
   POLY_ASSERT(xmin.x < xmax.x and xmin.y < xmax.y and xmin.z < xmax.z);
 
   // Make a first pass, creating the facets as triangles.
+  // We also build up a map of immediate neighbor nodes for each node.
+  ReducedPLC<3, RealType> result;
   std::map<PointHash, int> point2id;
   std::vector<PointHash> points;
-  ReducedPLC<3, RealType> result;
+  std::map<int, std::set<int> > neighbors;
   for (unsigned i = 0; i != npolys; ++i) {
-    result.facets.push_back(std::vector<int>());
-    for (unsigned j = 0; j != polys[i].vertices.size(); ++j) {
-      PointHash hashi = HasherType::hashPosition(&polys[i].vertices[j].pos.x, &xmin.x, &xmax.x, &xmin.x, &xmax.x, tol);
-      unsigned oldsize = point2id.size();
-      unsigned k = internal::addKeyToMap(hashi, point2id);
-      if (k == oldsize) {
-        points.push_back(hashi);
-        RealType pos[3];
-        HasherType::unhashPosition(pos, &xmin.x, &xmax.x, &xmin.x, &xmax.x, hashi, tol);
-        result.points.push_back(pos[0]);
-        result.points.push_back(pos[1]);
-        result.points.push_back(pos[2]);
+    std::vector<int> newfacet;
+    unsigned n = polys[i].vertices.size();
+    for (unsigned j = 0; j != n; ++j) {
+      const unsigned k = (j + 1) % n;
+      const PointHash hashj = HasherType::hashPosition(&polys[i].vertices[j].pos.x, &xmin.x, &xmax.x, &xmin.x, &xmax.x, tol),
+                      hashk = HasherType::hashPosition(&polys[i].vertices[k].pos.x, &xmin.x, &xmax.x, &xmin.x, &xmax.x, tol);
+      if (hashj != hashk) {
+        unsigned oldsize = point2id.size();
+        unsigned id = internal::addKeyToMap(hashj, point2id);
+        if (id == oldsize) {
+          points.push_back(hashj);
+          PointType pos;
+          HasherType::unhashPosition(&pos.x, &xmin.x, &xmax.x, &xmin.x, &xmax.x, hashj, tol);
+          POLY_ASSERT2((geometry::distance<3, RealType>(&pos.x, &polys[i].vertices[j].pos.x) < 4.0*tol),
+                       "Unhashing problem : " << pos << " " << polys[i].vertices[j].pos << " : "
+                       << (geometry::distance<3, RealType>(&pos.x, &polys[i].vertices[j].pos.x)));
+          pos = polys[i].vertices[j].pos;
+          result.points.push_back(pos.x);
+          result.points.push_back(pos.y);
+          result.points.push_back(pos.z);
+        }
+        newfacet.push_back(id);
       }
-      result.facets.back().push_back(k);
     }
+    n = newfacet.size();
+    for (unsigned j = 0; j != n; ++j) {
+      unsigned k = (j + 1) % n;
+      neighbors[newfacet[j]].insert(newfacet[k]);
+      neighbors[newfacet[k]].insert(newfacet[j]);
+    }
+    if (n >= 3) result.facets.push_back(newfacet);
   }
   POLY_ASSERT((point2id.size() == points.size()) and (result.points.size() == 3*points.size()));
-  POLY_ASSERT(result.facets.size() == npolys);
+  POLY_ASSERT(result.facets.size() <= npolys);
     
   // Now look for any vertices that are between the vertices of one of the input triangles.
   // We will augment that facet with such points.
-  for (unsigned i = 0; i != npolys; ++i) {
+  for (unsigned i = 0; i != result.facets.size(); ++i) {
     std::vector<int> newfacet;
     const unsigned n = result.facets[i].size();
     for (unsigned j = 0; j != n; ++j) {
       unsigned k = (j + 1) % n;
       const unsigned a = result.facets[i][j], b = result.facets[i][k];
       newfacet.push_back(a);
-      for (unsigned v = 0; v != points.size(); ++v) {
-        if (geometry::between<3, RealType>(&result.points[3*a], &result.points[3*b], &result.points[3*v], tol) and
-            (points[v] != points[a]) and points[v] != points[b]) {
-          // std::cerr << " --> (" << result.points[3*v] << " " << result.points[3*v+1] << " " << result.points[3*v+2] << ") in [("
-          //           << result.points[3*a] << " " << result.points[3*a+1] << " " << result.points[3*a+2] << ") ("
-          //           << result.points[3*b] << " " << result.points[3*b+1] << " " << result.points[3*b+2] << ")" << std::endl;
-          newfacet.push_back(v);
+      std::set<int> checkNeighbors, usedNeighbors;
+      // for (unsigned v = 0; v != result.points.size()/3; ++v) checkNeighbors.insert(b);
+      std::set_union(neighbors[a].begin(), neighbors[a].end(), neighbors[b].begin(), neighbors[b].end(), std::inserter(checkNeighbors, checkNeighbors.end()));
+      checkNeighbors.erase(a); checkNeighbors.erase(b);
+      usedNeighbors.insert(a); usedNeighbors.insert(b);
+      while (!checkNeighbors.empty()) {
+        std::set<int> newNeighbors;
+        for (std::set<int>::const_iterator itr = checkNeighbors.begin(); 
+             itr != checkNeighbors.end();
+             ++itr) {
+          const unsigned v = *itr;
+          usedNeighbors.insert(v);
+          if (geometry::between<3, RealType>(&result.points[3*a], &result.points[3*b], &result.points[3*v], tol) and
+              (points[v] != points[a]) and points[v] != points[b]) {
+            // std::cerr << " --> (" << result.points[3*v] << " " << result.points[3*v+1] << " " << result.points[3*v+2] << ") in [("
+            //           << result.points[3*a] << " " << result.points[3*a+1] << " " << result.points[3*a+2] << ") ("
+            //           << result.points[3*b] << " " << result.points[3*b+1] << " " << result.points[3*b+2] << ")" << std::endl;
+            newfacet.push_back(v);
+            std::copy(neighbors[v].begin(), neighbors[v].end(), std::inserter(newNeighbors, newNeighbors.end()));
+          }
         }
+        checkNeighbors = std::set<int>();
+        std::set_difference(newNeighbors.begin(), newNeighbors.end(), usedNeighbors.begin(), usedNeighbors.end(), std::inserter(checkNeighbors, checkNeighbors.end()));
       }
+      std::sort(newfacet.begin() + j + 1, newfacet.end(), _EdgePointComparator3d<RealType>(a, result.points));
     }
     POLY_ASSERT(newfacet.size() >= result.facets[i].size());
     if (newfacet.size() > result.facets[i].size()) result.facets[i] = newfacet;
