@@ -100,22 +100,22 @@ void writePLCtoOFF(const PLC<3, RealType>& plc,
   // Count the numbers of elements we have.
   const unsigned npoints = coords.size()/3, nfacets = plc.facets.size();
   std::set<EdgeHash> edges;
-  for (unsigned i = 0; i != plc.facets.size(); ++i) {
-    const unsigned n = plc.facets[i].size();
-    for (unsigned j = 0; j != n; ++j) {
-      const unsigned k = (j + 1) % n;
-      edges.insert(internal::hashEdge(plc.facets[i][j], plc.facets[i][k]));
-    }
-  }
-  for (unsigned ihole = 0; ihole != plc.holes.size(); ++ihole) {
-    for (unsigned i = 0; i != plc.holes[ihole].size(); ++i) {
-      const unsigned n = plc.holes[ihole][i].size();
-      for (unsigned j = 0; j != n; ++j) {
-        const unsigned k = (j + 1) % n;
-        edges.insert(internal::hashEdge(plc.holes[ihole][i][j], plc.holes[ihole][i][k]));
-      }
-    }
-  }
+  // for (unsigned i = 0; i != plc.facets.size(); ++i) {
+  //   const unsigned n = plc.facets[i].size();
+  //   for (unsigned j = 0; j != n; ++j) {
+  //     const unsigned k = (j + 1) % n;
+  //     edges.insert(internal::hashEdge(plc.facets[i][j], plc.facets[i][k]));
+  //   }
+  // }
+  // for (unsigned ihole = 0; ihole != plc.holes.size(); ++ihole) {
+  //   for (unsigned i = 0; i != plc.holes[ihole].size(); ++i) {
+  //     const unsigned n = plc.holes[ihole][i].size();
+  //     for (unsigned j = 0; j != n; ++j) {
+  //       const unsigned k = (j + 1) % n;
+  //       edges.insert(internal::hashEdge(plc.holes[ihole][i][j], plc.holes[ihole][i][k]));
+  //     }
+  //   }
+  // }
   const unsigned nedges = edges.size();
 
   // Write the header.
