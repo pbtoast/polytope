@@ -22,7 +22,8 @@ template<typename RealType>
 void writePLCtoOFF(const PLC<2, RealType>& plc,
                    const std::vector<RealType>& coords,
                    const std::string filename) {
-   
+  
+  typedef std::pair<int, int> EdgeHash;
   POLY_ASSERT(coords.size() % 2 == 0);
 
   // Ope the file for output.
@@ -90,7 +91,8 @@ template<typename RealType>
 void writePLCtoOFF(const PLC<3, RealType>& plc,
                    const std::vector<RealType>& coords,
                    const std::string filename) {
-   
+
+  typedef std::pair<int, int> EdgeHash;
   POLY_ASSERT(coords.size() % 3 == 0);
 
   // Ope the file for output.
