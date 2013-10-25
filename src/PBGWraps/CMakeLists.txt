@@ -31,17 +31,20 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
 
-# The Python library of wrapped Polytope methods
-#add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
-#add_library(PolytopeModules STATIC ${PYBINDGEN_GENERATED_SOURCE})
-add_library(PolytopeModules MODULE ${PYBINDGEN_GENERATED_SOURCE})
+
+SET(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
+
+
+# The static Python library of wrapped methods
+add_library(PolytopeModules-static STATIC ${PYBINDGEN_GENERATED_SOURCE})
+set_target_properties(PolytopeModules-static PROPERTIES OUTPUT_NAME PolytopeModules)
+target_link_libraries(PolytopeModules-static 
+  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
+
+# The dynamic Python library of wrapped methods
+add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
-  ${POLYTOPE_STATIC_LIB} 
-  ${TETGEN_STATIC_LIB}
-  ${SILO_LIBRARIES}
-#  ${HDF5_LIBRARIES}
-#  ${PYTHON_STATIC_LIB}
-)
+  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
 
 # Remove the "lib" prefix convention from the library
 # NOTE: "init<modulename>" is not defined properly if it begins with "lib"
@@ -51,4 +54,6 @@ set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
 
 # Library install targets
-install (TARGETS PolytopeModules DESTINATION lib)
+#install (TARGETS PolytopeModules DESTINATION lib)
+install (TARGETS PolytopeModules DESTINATION lib OPTIONAL)
+#install (TARGETS PolytopeModules-static DESTINATION lib OPTIONAL)

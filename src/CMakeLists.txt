@@ -4,11 +4,11 @@ if (SILO_FOUND)
 endif()
 
 # By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc convexHull_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc)
+set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc convexHull_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc MeshEditor.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (HAVE_BOOST)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc MeshEditor.cc)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc)
 endif()
 
 if (TRIANGLE_FOUND)

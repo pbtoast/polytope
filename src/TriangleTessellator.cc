@@ -2,7 +2,6 @@
 // TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
-// #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <set>
