@@ -23,18 +23,18 @@ namespace polytope {
 template<typename T>
 struct Serializer {
 
-  static void serializeImpl(const T& value, 
+  static void serializeImpl(const T& val, 
                             std::vector<char>& buffer) {
     const unsigned n = sizeof(T);
-    const char* data = reinterpret_cast<const char*>(&value);
+    const char* data = reinterpret_cast<const char*>(&val);
     std::copy(data, data + n, std::back_inserter(buffer));
   }
 
-  static void deserializeImpl(T& value, 
+  static void deserializeImpl(T& val, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
     const unsigned n = sizeof(T);
-    char* data = reinterpret_cast<char*>(&value);
+    char* data = reinterpret_cast<char*>(&val);
     POLY_ASSERT(bufItr + n <= endItr);
     std::copy(bufItr, bufItr + n, data);
     bufItr += n;

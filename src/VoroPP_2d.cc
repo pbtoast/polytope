@@ -297,6 +297,6 @@ tessellate(const vector<RealType>& points,
 // Explicit instantiation.
 //------------------------------------------------------------------------------
 template class VoroPP_2d<double>;
-template class VoroPP_2d<float>;
+//template class VoroPP_2d<float>;
 
 }

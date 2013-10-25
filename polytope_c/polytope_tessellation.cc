@@ -129,7 +129,6 @@ void polytope_tessellation_snprintf(polytope_tessellation_t* tessellation, char*
 {
   POLY_ASSERT(tessellation != NULL);
 
-  int dim = tessellation->dimension;
   char fmt[128];
   snprintf(fmt, 128, "Tessellation (%d)", sizeof(str) - strlen(str) - 1);
   strncat(str, fmt, sizeof(str) - strlen(str));

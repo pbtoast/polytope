@@ -304,7 +304,7 @@ write(const Tessellation<3, RealType>& mesh,
   const int numCells = mesh.cells.size();
   vector<int> cellFaceCounts, allCellFaces;
   cellFaceCounts.reserve(numCells);
-  int i, j, n;
+  int n;
   for (int icell = 0; icell != numCells; ++icell)
   {
     n = mesh.cells[icell].size();

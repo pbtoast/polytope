@@ -27,10 +27,6 @@ struct edgeCompare {
   }
 };
 
-// // // Boost bimap to handle edge ID assignment
-// // typedef boost::bimap< boost::bimaps::set_of<EdgeType, edgeCompare>, unsigned> EdgeMap;
-    
-
 
 template<int Dimension, typename RealType>
 class MeshEditor {

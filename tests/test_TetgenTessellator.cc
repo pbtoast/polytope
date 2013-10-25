@@ -111,10 +111,11 @@ void boxBoundedTessellation(const unsigned nx,
   double low[3]  = {x1, y1, z1};
   double high[3] = {x2, y2, z2};
   tetgen.tessellate(generators, low, high, mesh);
+  escapePod(nx, generators, mesh);
 
   // Check for validity.
   const unsigned nx1 = nx + 1;
-  POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1);
+  // POLY_CHECK(mesh.nodes.size()/3 == nx1*nx1*nx1);
   POLY_CHECK(mesh.cells.size() == nx*nx*nx);
   POLY_CHECK(mesh.infNodes.size() == 0);
   POLY_CHECK(mesh.infFaces.size() == 0);
