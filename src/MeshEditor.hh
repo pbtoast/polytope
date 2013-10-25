@@ -1,12 +1,10 @@
 #ifndef POLYTOPE_MESHEDITOR_HH
 #define POLYTOPE_MESHEDITOR_HH
 
-#if HAVE_BOOST
-
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
-#include "boost/bimap.hpp"
 #include "polytope.hh"
 
 namespace polytope {
@@ -17,7 +15,7 @@ namespace polytope {
 // for a face, and nodeNumber is the n-th node in the face array. The edge is
 // then the segment connecting node n and n+1 (modulo numNodes) on that face.
 // For 2D tessellation, nodeNumber is always 0, as faces and edges are equivalent
-typedef std::pair<unsigned, unsigned> EdgeType;
+typedef std::pair<int, int> EdgeType;
 
 
 // Comparison operator for Polytope edges
@@ -29,8 +27,8 @@ struct edgeCompare {
   }
 };
 
-// Boost bimap to handle edge ID assignment
-typedef boost::bimap< boost::bimaps::set_of<EdgeType, edgeCompare>, unsigned> EdgeMap;
+// // // Boost bimap to handle edge ID assignment
+// // typedef boost::bimap< boost::bimaps::set_of<EdgeType, edgeCompare>, unsigned> EdgeMap;
     
 
 
@@ -99,5 +97,4 @@ private:
 
 }// end polytope namespace
 
-#endif
 #endif

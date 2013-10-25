@@ -204,13 +204,15 @@ flagEdgesForCleaning(const RealType edgeTol,
 
   // Map edges to a mesh ID, compute maximum edge lengths per cell, and map cells
   // to edges
-  EdgeMap edgeToID;
+  // //EdgeMap edgeToID;
+  map<EdgeType, int> edgeToIndex;
+  map<int, EdgeType> indexToEdge;
   map<unsigned, vector<unsigned> > cellToEdges, borderNodesToBorderFaces;
   set<unsigned> borderNodes;
   vector<RealType> edgeLength;
   RealType length;
   unsigned inode0, inode1;
-  int edgeCount = 0;
+  // //int edgeCount = 0;
   for (unsigned icell = 0; icell != ncells0; ++icell) {
     vector<unsigned> cellEdgeIDs;
     for (vector<int>::const_iterator itr = mMesh.cells[icell].begin();
@@ -236,26 +238,37 @@ flagEdgesForCleaning(const RealType edgeTol,
         POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
                     inode1 < mMesh.nodes.size()/Dimension);
         const EdgeType edge = internal::hashEdge(inode0, inode1);
-        //make_pair(iface, inode);
-	
-        typename EdgeMap::left_const_iterator lItr = edgeToID.left.find(edge);
-	if (lItr == edgeToID.left.end()) {
-	  edgeToID.insert(typename EdgeMap::value_type(edge, edgeCount));
-	  length = geometry::distance<Dimension, RealType>
-	    (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
-	  edgeLength.push_back(length);
-	  cellEdgeIDs.push_back(edgeCount);
-	  ++edgeCount;
-	} else {
-	  cellEdgeIDs.push_back(lItr->second);
-	}
+        const unsigned nedges = edgeToIndex.size();
+        // const int iedge = internal::addKeyToMap<EdgeType,internal::pairCompare<unsigned, unsigned> >(edge, edgeToIndex);
+        const int iedge = internal::addKeyToMap(edge, edgeToIndex);
+        if (iedge == nedges) {
+           indexToEdge[iedge] = edge;
+           length = geometry::distance<Dimension, RealType>
+              (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
+           edgeLength.push_back(length);
+        }
+        cellEdgeIDs.push_back(iedge);
+
+        // // typename EdgeMap::left_const_iterator lItr = edgeToID.left.find(edge);
+	// // if (lItr == edgeToID.left.end()) {
+	// //   edgeToID.insert(typename EdgeMap::value_type(edge, edgeCount));
+	// //   length = geometry::distance<Dimension, RealType>
+	// //     (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
+	// //   edgeLength.push_back(length);
+	// //   cellEdgeIDs.push_back(edgeCount);
+	// //   ++edgeCount;
+	// // } else {
+	// //   cellEdgeIDs.push_back(lItr->second);
+	// // }
       }
     }
     cellToEdges[icell] = cellEdgeIDs;
   }
-  POLY_ASSERT(edgeCount == edgeLength.size());
+  POLY_ASSERT(edgeToIndex.size() == edgeLength.size());
   POLY_ASSERT(cellToEdges.size() == ncells0);
-  const unsigned nedges0 = edgeCount;
+  POLY_ASSERT(edgeToIndex.size() == indexToEdge.size());
+  // const unsigned nedges0 = edgeCount;
+  const unsigned nedges0 = edgeToIndex.size();
 
   // Create a simple lookup for the border nodes. Also create a lookup
   // for corner nodes: nodes corresponding to 
@@ -308,9 +321,13 @@ flagEdgesForCleaning(const RealType edgeTol,
   mNodeMask = vector<unsigned>(nnodes0, 1);
   for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
   for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
-    typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
-    POLY_ASSERT(itr != edgeToID.right.end());
-    edge = itr->second;
+    POLY_ASSERT(indexToEdge.find(iedge) != indexToEdge.end());
+    edge = indexToEdge[iedge];
+
+    // // typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
+    // // POLY_ASSERT(itr != edgeToID.right.end());
+    // // edge = itr->second;
+
     inode0 = edge.first;
     inode1 = edge.second;
     const bool cleanTest = edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
@@ -380,8 +397,13 @@ flagEdgesForCleaning(const RealType edgeTol,
       domainNodeMaps[ineighbor] = nodeIndexToSharePosition;
 
       // Consider all edges on this domain. The shared ones consist of two shared nodes.
-      for (typename EdgeMap::left_const_iterator edgeItr = edgeToID.left.begin();
-           edgeItr != edgeToID.left.end(); ++edgeItr) {
+      for (typename map<EdgeType, int>::const_iterator edgeItr = edgeToIndex.begin();
+           edgeItr != edgeToIndex.end();
+           ++edgeItr) {
+
+      // // for (typename EdgeMap::left_const_iterator edgeItr = edgeToID.left.begin();
+      // //      edgeItr != edgeToID.left.end(); ++edgeItr) {
+
         const EdgeType edge  = edgeItr->first;
         const unsigned iedge = edgeItr->second;
         inode0 = edge.first;
@@ -431,8 +453,13 @@ flagEdgesForCleaning(const RealType edgeTol,
         POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
                     inode1 < mMesh.nodes.size()/Dimension);
         const EdgeType edge = internal::hashEdge(inode0, inode1);
-        typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
-        POLY_ASSERT(itr != edgeToID.left.end());
+
+        typename map<EdgeType, int>::const_iterator itr = edgeToIndex.find(edge);
+        POLY_ASSERT(itr != edgeToIndex.end());
+        
+        // // typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
+        // // POLY_ASSERT(itr != edgeToID.left.end());
+
         const unsigned iedge = itr->second;
         POLY_ASSERT(iedge < nedges0);
         sharedEdgeMask[ineighbor][edgeCount] = edgeMask[iedge];
@@ -498,8 +525,12 @@ flagEdgesForCleaning(const RealType edgeTol,
         POLY_ASSERT(inode0 < mMesh.nodes.size()/Dimension and
                     inode1 < mMesh.nodes.size()/Dimension);
         const EdgeType edge = internal::hashEdge(inode0, inode1);
-        typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
-        POLY_ASSERT(itr != edgeToID.left.end());
+        typename map<EdgeType, int>::const_iterator itr = edgeToIndex.find(edge);
+        POLY_ASSERT(itr != edgeToIndex.end());
+
+        // // typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
+        // // POLY_ASSERT(itr != edgeToID.left.end());
+
         const unsigned iedge = itr->second;
         POLY_ASSERT(iedge < nedges0);
         //POLY_ASSERT(edgeCount < neighborEdgeMasks[i].size());
@@ -517,8 +548,12 @@ flagEdgesForCleaning(const RealType edgeTol,
     if (!edgesClean) {
       for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
       for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
-        typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
-        POLY_ASSERT(itr != edgeToID.right.end());
+        typename map<int, EdgeType>::const_iterator itr = indexToEdge.find(iedge);
+        POLY_ASSERT(itr != indexToEdge.end());
+
+        // // typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
+        // // POLY_ASSERT(itr != edgeToID.right.end());
+
         if (edgeMask[iedge] == 0) {
           const EdgeType edge = itr->second;
           const bool isShared = (sharedEdgeReverse[iedge].size() == 0) ? false : true;
@@ -558,50 +593,6 @@ flagEdgesForCleaning(const RealType edgeTol,
 
   } // Done with the multi-processor stuff
 #endif
-
-      
-
-
-  // // // We coalesce mesh nodes by keeping the n1 index and mapping the n2 index to n1
-  // // vector<unsigned> edgeMask(nedges0, 1);
-  // // mNodeMask = std::vector<unsigned>(nnodes0, 1);
-  // // vector<unsigned> nodeCollapse(nnodes0);
-  // // unsigned n1, n2, iface;
-  // // for (unsigned i = 0; i != nnodes0; ++i) nodeCollapse[i] = i;
-  // // for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
-  // //   typename EdgeMap::right_const_iterator itr = edgeToID.right.find(iedge);
-  // //   POLY_ASSERT(itr != edgeToID.right.end());
-  // //   edge = itr->second;
-  // //   iface = edge.first;
-  // //   // // Blago!
-  // //   // cerr << "Edge " << iedge << ": " 
-  // //   //      << "(" << edge.first << "," << edge.second << ")\t"  
-  // //   //      << "Length = " << edgeLength[iedge] << "\t"
-  // //   //      << "maxLength = " << maxCellEdgeLength[iedge] << endl;
-  // //   // // Blago!
-  // //   n1 = mMesh.faces[iface][edge.second];
-  // //   n2 = mMesh.faces[iface][(edge.second+1) % mMesh.faces[iface].size()];
-  // //   POLY_ASSERT(n1 != n2);
-  // //   POLY_ASSERT(n1 < nnodes0 and n2 < nnodes0);
-  // //   if (edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
-  // //       mNodeMask[n1] == 1 and mNodeMask[n2] == 1) {
-  // //     edgesClean = false;
-  // //     edgeMask[iedge] = 0;
-  // //     mNodeMask[n1] = 2;
-  // //     mNodeMask[n2] = 0;
-  // //     nodeCollapse[n2] = n1;
-  // //   }
-  // // }
-  // // replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
-  
-  // // Blago!
-  // cerr << "Are the edges clean? " << (edgesClean ? "yes" : "no") << endl;
-  // if (!edgesClean) {
-  //    for (unsigned iedge = 0; iedge != nedges0; ++iedge) {
-  //       if (edgeMask[iedge] == 0) cerr << iedge << endl;
-  //    }
-  // }
-  // // Blago!
   
   // Check if there are any faces that need to be removed (for 3D meshes).
   mFaceMask = std::vector<unsigned>(nfaces0, 1);
@@ -614,8 +605,12 @@ flagEdgesForCleaning(const RealType edgeTol,
         inode0 = mMesh.faces[iface][inode];
         inode1 = mMesh.faces[iface][(inode+1) % mMesh.faces[iface].size()];
         const EdgeType edge = internal::hashEdge(inode0, inode1);
-	typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
-	POLY_ASSERT(itr != edgeToID.left.end());
+        typename map<EdgeType, int>::const_iterator itr = edgeToIndex.find(edge);
+        POLY_ASSERT(itr != edgeToIndex.end());
+
+	// // typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
+	// // POLY_ASSERT(itr != edgeToID.left.end());
+
 	numActiveEdges += edgeMask[itr->second];
       }
 
