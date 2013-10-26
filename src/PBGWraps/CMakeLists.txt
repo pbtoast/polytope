@@ -32,7 +32,7 @@ endif()
 configure_file(TessellatorModule.py.in  ${PYBINDGEN_DIR}/TessellatorModule.py)
 
 # Call the PyBindGen macros to create the C bindings
-PYBINDGEN_GENERATE_BINDINGS(${PYTHONPKGS})
+PYBINDGEN_GENERATE_BINDINGS("${PYTHONPKGS}")
 
 # libpolytope location
 set(POLYTOPE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libpolytope.a")
@@ -76,5 +76,6 @@ set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
 
 # Library install targets
-install (TARGETS PolytopeModules DESTINATION lib OPTIONAL)
+install (TARGETS PolytopeModules DESTINATION lib)
+#install (TARGETS PolytopeModules DESTINATION lib OPTIONAL)
 #install (TARGETS PolytopeModules-static DESTINATION lib OPTIONAL)
