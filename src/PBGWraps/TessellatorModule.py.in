@@ -39,7 +39,7 @@ class Tessellator:
             exec "self.objs.append(self.%s)" % name
         
         # --- The distributed tessellators
-        if "@HAVE_MPI@" == "True":
+        if "@HAVE_MPI@" == "true":
             self.DistributedTessellator2d = addObject(polytope,
                                                       "DistributedTessellator2d",
                                                       parent=self.Tessellator2d,
@@ -74,31 +74,6 @@ class Tessellator:
             baseName = fullName[:-2]
             dim      = fullName[ -2]
             exec "self.generate%sBindings(self.%s, %s)" % (baseName, fullName, dim)
-
-
-        '''
-        self.generateTessellatorBindings(self.Tessellator2d, 2)
-        self.generateTessellatorBindings(self.Tessellator3d, 3)
-
-        if (mod.have_triangle):
-            self.generateTriangleTessellatorBindings(self.TriangleTessellator2d, 2)
-
-        if (mod.have_boost_voronoi):
-            self.generateBoostTessellatorBindings(self.BoostTessellator2d, 2)
-
-        if (mod.have_tetgen):
-            self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
-        
-        if (mod.have_mpi):
-            self.generateDistributedTessellatorBindings(self.DistributedTessellator2d, 2)
-            self.generateDistributedTessellatorBindings(self.DistributedTessellator3d, 3)
-            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator2d, 2)
-            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator3d, 3)
-        '''
-
-
-        # self.generateVoroTessellatorBindings(self.VoroTessellator2d, 2)
-        # self.generateVoroTessellatorBindings(self.VoroTessellator3d, 3)
 
         return
 
