@@ -56,7 +56,30 @@ class SiloReader<2, RealType>
   }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
-  //! cell-centered fields to a SILO file in the given directory.
+  //! fields and tags from a SILO file in the given directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
+  static void read(Tessellation<2, RealType>& mesh, 
+                   std::map<std::string, std::vector<RealType> >& fields,
+                   std::map<std::string, std::vector<int> >& nodeTags,
+                   std::map<std::string, std::vector<int> >& edgeTags,
+                   std::map<std::string, std::vector<int> >& faceTags,
+                   std::map<std::string, std::vector<int> >& cellTags,
+                   const std::string& filePrefix,
+                   const std::string& directory,
+                   int cycle,
+                   RealType& time,
+                   MPI_Comm comm = MPI_COMM_WORLD,
+                   int numFiles = -1,
+                   int mpiTag = 0);
+
+  //! Read an arbitrary polygonal mesh and an associated set of 
+  //! fields from a SILO file in the given directory.
   //! \param fields A map that will store arrays of field data read in from 
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error 
@@ -72,10 +95,15 @@ class SiloReader<2, RealType>
                    RealType& time,
                    MPI_Comm comm = MPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0);
+                   int mpiTag = 0)
+  {
+    std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
+    read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
+         cycle, time, comm, numFiles, mpiTag);
+  }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
-  //! cell-centered fields to a SILO file. This version generates a 
+  //! fields from a SILO file. This version generates a 
   //! directory name automatically. For parallel runs, the directory 
   //! name is filePrefix-nproc. For serial runs, the directory is 
   //! the current working directory.
@@ -146,7 +174,30 @@ class SiloReader<3, RealType>
   }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
-  //! cell-centered fields to a SILO file in the given directory.
+  //! fields and tags from a SILO file in the given directory.
+  //! \param fields A map that will store arrays of field data read in from 
+  //!               the file. If \a fields contains keys, only those fields
+  //!               with those keys will be read from the file, and an error 
+  //!               will occur if any of the keys are not found. If \a fields 
+  //!               is empty, all data will be read in from the file.
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
+  static void read(Tessellation<3, RealType>& mesh, 
+                   std::map<std::string, std::vector<RealType> >& fields,
+                   std::map<std::string, std::vector<int> >& nodeTags,
+                   std::map<std::string, std::vector<int> >& edgeTags,
+                   std::map<std::string, std::vector<int> >& faceTags,
+                   std::map<std::string, std::vector<int> >& cellTags,
+                   const std::string& filePrefix,
+                   const std::string& directory,
+                   int cycle,
+                   RealType& time,
+                   MPI_Comm comm = MPI_COMM_WORLD,
+                   int numFiles = -1,
+                   int mpiTag = 0);
+
+  //! Read an arbitrary polyhedral mesh and an associated set of 
+  //! fields from a SILO file in the given directory.
   //! \param fields A map that will store arrays of field data read in from 
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error 
@@ -162,10 +213,15 @@ class SiloReader<3, RealType>
                    RealType& time,
                    MPI_Comm comm = MPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0);
+                   int mpiTag = 0)
+  {
+    std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
+    read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
+         cycle, time, comm, numFiles, mpiTag);
+  }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
-  //! cell-centered fields to a SILO file. This version generates a 
+  //! fields from a SILO file. This version generates a 
   //! directory name automatically. For parallel runs, the directory 
   //! name is filePrefix-nproc. For serial runs, the directory is 
   //! the current working directory.
