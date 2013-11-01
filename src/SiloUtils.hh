@@ -1,13 +1,23 @@
 // A collection of low-level utilities to help with silo file input/output.
 
+#include <string>
+#include <vector>
+#include <map>
+#include "silo.h"
+
 namespace polytope {
 
+void
+writeTagsToFile(const std::map<std::string, std::vector<int>*>& tags,
+                DBfile* file,
+                int centering);
+                
 template <typename RealType>
 void
 writeFieldsToFile(const std::map<std::string, RealType*>& fields,
                   DBfile* file,
                   const int numElements,
-                  const int dataType,
+                  const int centering,
                   DBoptlist* optlist) {
   for (typename std::map<std::string, RealType*>::const_iterator iter = fields.begin();
        iter != fields.end(); 
@@ -21,7 +31,7 @@ writeFieldsToFile(const std::map<std::string, RealType*>& fields,
                  0, 
                  0,
                  DB_DOUBLE,
-                 dataType,
+                 centering,
                  optlist);
   }
 }

@@ -145,9 +145,13 @@ void
 SiloWriter<3, RealType>::
 write(const Tessellation<3, RealType>& mesh, 
       const std::map<std::string, RealType*>& nodeFields,
+      const std::map<std::string, std::vector<int>*>& nodeTags,
       const std::map<std::string, RealType*>& edgeFields,
+      const std::map<std::string, std::vector<int>*>& edgeTags,
       const std::map<std::string, RealType*>& faceFields,
+      const std::map<std::string, std::vector<int>*>& faceTags,
       const std::map<std::string, RealType*>& cellFields,
+      const std::map<std::string, std::vector<int>*>& cellTags,
       const string& filePrefix,
       const string& directory,
       int cycle,
@@ -380,9 +384,14 @@ write(const Tessellation<3, RealType>& mesh,
   free(elemnames[1]);
   free(elemnames[2]);
 
-  // Write out the cell-centered mesh data.
+  // Write out tag information.
+  writeTagsToFile(nodeTags, file, DB_NODECENT);
+  writeTagsToFile(edgeTags, file, DB_EDGECENT);
+  writeTagsToFile(faceTags, file, DB_FACECENT);
+  writeTagsToFile(cellTags, file, DB_ZONECENT);
 
   // Write out the field mesh data.
+  // FIXME: We really should try to use the number of edges for edge fields.
   writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
   writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
   writeFieldsToFile<RealType>(faceFields, file, numFaces, DB_FACECENT, optlist);
