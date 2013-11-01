@@ -57,6 +57,12 @@ boost_root=<path>
 	      Boost 1.52.0. This is a known bug in Boost and has been
 	      addressed in later versions.
 
+silo_root=<path>
+	Optional path to help cmake find silo library and include path
+
+hdf5_root=<path>
+	Optional path to help cmake find hdf5 library and include path
+
 header_only=0
 	Choose to build as a collection of headers installed into local
 	include directory (1) or build the whole shebang (0).
