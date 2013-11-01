@@ -35,6 +35,28 @@ class SiloWriter<2, RealType>
 {
   public:
 
+  //! Write an arbitrary polygonal mesh, an associated set of 
+  //! (node, edge, face, cell)-centered fields, and a corresponding set of 
+  //! tags, to a SILO file in the given directory.
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
+  static void write(const Tessellation<2, RealType>& mesh, 
+                    const std::map<std::string, RealType*>& nodeFields,
+                    const std::map<std::string, std::vector<int>*>& nodeTags,
+                    const std::map<std::string, RealType*>& edgeFields,
+                    const std::map<std::string, std::vector<int>*>& edgeTags,
+                    const std::map<std::string, RealType*>& faceFields,
+                    const std::map<std::string, std::vector<int>*>& faceTags,
+                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, std::vector<int>*>& cellTags,
+                    const std::string& filePrefix,
+                    const std::string& directory,
+                    int cycle,
+                    RealType time,
+                    MPI_Comm comm = MPI_COMM_WORLD,
+                    int numFiles = -1,
+                    int mpiTag = 0);
+
   //! Write an arbitrary polygonal mesh and an associated set of 
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
@@ -50,7 +72,13 @@ class SiloWriter<2, RealType>
                     RealType time,
                     MPI_Comm comm = MPI_COMM_WORLD,
                     int numFiles = -1,
-                    int mpiTag = 0);
+                    int mpiTag = 0)
+  {
+    // Just call the general function with no tags.
+    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
+    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
+          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
+  }
 
   //! Write an arbitrary polygonal mesh and an associated set of 
   //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a 
@@ -114,6 +142,28 @@ class SiloWriter<3, RealType>
 {
   public:
 
+  //! Write an arbitrary polygonal mesh, an associated set of 
+  //! (node, edge, face, cell)-centered fields, and a corresponding set of 
+  //! tags, to a SILO file in the given directory.
+  //! \param numFiles The number of files that will be written. If this 
+  //!                 is set to -1, one file will be written for each process.
+  static void write(const Tessellation<3, RealType>& mesh, 
+                    const std::map<std::string, RealType*>& nodeFields,
+                    const std::map<std::string, std::vector<int>*>& nodeTags,
+                    const std::map<std::string, RealType*>& edgeFields,
+                    const std::map<std::string, std::vector<int>*>& edgeTags,
+                    const std::map<std::string, RealType*>& faceFields,
+                    const std::map<std::string, std::vector<int>*>& faceTags,
+                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, std::vector<int>*>& cellTags,
+                    const std::string& filePrefix,
+                    const std::string& directory,
+                    int cycle,
+                    RealType time,
+                    MPI_Comm comm = MPI_COMM_WORLD,
+                    int numFiles = -1,
+                    int mpiTag = 0);
+
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
@@ -129,7 +179,13 @@ class SiloWriter<3, RealType>
                     RealType time,
                     MPI_Comm comm = MPI_COMM_WORLD,
                     int numFiles = -1,
-                    int mpiTag = 0);
+                    int mpiTag = 0)
+  {
+    // Just call the general function with no tags.
+    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
+    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
+          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
+  }
 
   //! Write an arbitrary polyhedral mesh and an associated set of 
   //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a 

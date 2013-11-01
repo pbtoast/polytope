@@ -119,17 +119,21 @@ template <typename RealType>
 void 
 SiloWriter<2, RealType>::
 write(const Tessellation<2, RealType>& mesh, 
-      const std::map<std::string, RealType*>& nodeFields,
-      const std::map<std::string, RealType*>& edgeFields,
-      const std::map<std::string, RealType*>& faceFields,
-      const std::map<std::string, RealType*>& cellFields,
-      const string& filePrefix,
-      const string& directory,
-      int cycle,
-      RealType time,
-      MPI_Comm comm,
-      int numFiles,
-      int mpiTag)
+     const map<string, RealType*>& nodeFields,
+     const map<string, vector<int>*>& nodeTags,
+     const map<string, RealType*>& edgeFields,
+     const map<string, vector<int>*>& edgeTags,
+     const map<string, RealType*>& faceFields,
+     const map<string, vector<int>*>& faceTags,
+     const map<string, RealType*>& cellFields,
+     const map<string, vector<int>*>& cellTags,
+     const string& filePrefix,
+     const string& directory,
+     int cycle,
+     RealType time,
+     MPI_Comm comm,
+     int numFiles,
+     int mpiTag)
 {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
@@ -174,10 +178,10 @@ write(const Tessellation<2, RealType>& mesh,
 
   // Initialize poor man's I/O and figure out group ranks.
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
-                                    &PMPIO_createFile, 
-                                    &PMPIO_openFile, 
-                                    &PMPIO_closeFile,
-                                    0);
+      &PMPIO_createFile, 
+      &PMPIO_openFile, 
+      &PMPIO_closeFile,
+      0);
   int groupRank = PMPIO_GroupRank(baton, rank);
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
@@ -250,18 +254,18 @@ write(const Tessellation<2, RealType>& mesh,
   // All zones are polygonal.
   int numCells = mesh.cells.size();
   vector<int> shapesize(numCells, 0),
-              shapetype(numCells, DB_ZONETYPE_POLYGON),
-              shapecount(numCells, 1),
-              nodeList;
+    shapetype(numCells, DB_ZONETYPE_POLYGON),
+    shapecount(numCells, 1),
+    nodeList;
   for (int i = 0; i < numCells; ++i)
   {
     // Gather the nodes from this cell in traversal order.
     vector<int> cellNodes;
     traverseNodes(mesh, i, cellNodes);
-// cout << "cell " << i << ": ";
-// for (int j = 0; j < cellNodes.size(); ++j)
-// cout << cellNodes[j] << " ";
-// cout << endl;
+    // cout << "cell " << i << ": ";
+    // for (int j = 0; j < cellNodes.size(); ++j)
+    // cout << cellNodes[j] << " ";
+    // cout << endl;
     // Insert the cell's node connectivity into the node list.
     nodeList.push_back(cellNodes.size());
     nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
@@ -269,12 +273,12 @@ write(const Tessellation<2, RealType>& mesh,
 
   // Write out the 2D polygonal mesh.
   DBPutUcdmesh(file, (char*)"mesh", 2, coordnames, coords,
-               numNodes, numCells, 
-               (char *)"mesh_zonelist", 0, DB_DOUBLE, optlist); 
+      numNodes, numCells, 
+      (char *)"mesh_zonelist", 0, DB_DOUBLE, optlist); 
   DBPutZonelist2(file, (char*)"mesh_zonelist", numCells,
-                 2, &nodeList[0], nodeList.size(), 0, 0, 0,
-                 &shapetype[0], &shapesize[0], &shapecount[0],
-                 numCells, optlist);
+      2, &nodeList[0], nodeList.size(), 0, 0, 0,
+      &shapetype[0], &shapesize[0], &shapecount[0],
+      numCells, optlist);
 
   // Write out the cell-face connectivity data.
   vector<int> conn(numCells);
@@ -299,7 +303,7 @@ write(const Tessellation<2, RealType>& mesh,
   elemnames[1] = strdup("cellfaces");
   elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
   DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3, 
-                     (void*)&conn[0], conn.size(), DB_INT, 0);
+      (void*)&conn[0], conn.size(), DB_INT, 0);
   free(elemnames[0]);
   free(elemnames[1]);
   free(elemnames[2]);
@@ -319,12 +323,19 @@ write(const Tessellation<2, RealType>& mesh,
   elemnames[2] = strdup("facetnodes");
   elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
   DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3, 
-                     (void*)&hull[0], hull.size(), DB_INT, 0);
+      (void*)&hull[0], hull.size(), DB_INT, 0);
   free(elemnames[0]);
   free(elemnames[1]);
   free(elemnames[2]);
 
+  // Write out tag information.
+  writeTagsToFile(nodeTags, file, DB_NODECENT);
+  writeTagsToFile(edgeTags, file, DB_EDGECENT);
+  writeTagsToFile(faceTags, file, DB_FACECENT);
+  writeTagsToFile(cellTags, file, DB_ZONECENT);
+
   // Write out the field mesh data.
+  // FIXME: We really should try to use the number of edges for edge fields.
   const int numFaces = mesh.faces.size();
   writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
   writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
@@ -338,12 +349,12 @@ write(const Tessellation<2, RealType>& mesh,
     char* compNames[2];
     compNames[0] = new char[1024];
     compNames[1] = new char[1024];
-    for (typename map<string, Vector<2>*>::const_iterator iter = vectorFields.begin();
-         iter != vectorFields.end(); ++iter)
+    for (typename map<string, vector<2>*>::const_iterator iter = vectorFields.begin();
+        iter != vectorFields.end(); ++iter)
     {
       snprintf(compNames[0], 1024, "%s_x" , iter->first.c_str());
       snprintf(compNames[1], 1024, "%s_y" , iter->first.c_str());
-      Vector<2>* data = iter->second;
+      vector<2>* data = iter->second;
       for (int i = 0; i < mesh.numCells(); ++i)
       {
         xdata[i] = data[i][0];
@@ -353,8 +364,8 @@ write(const Tessellation<2, RealType>& mesh,
       vardata[0] = (void*)&xdata[0];
       vardata[1] = (void*)&ydata[0];
       DBPutUcdvar(file, (char*)iter->first.c_str(), (char*)"mesh",
-                  2, compNames, vardata, mesh.numCells(), 0, 0,
-                  DB_DOUBLE, DB_ZONECENT, optlist);
+          2, compNames, vardata, mesh.numCells(), 0, 0,
+          DB_DOUBLE, DB_ZONECENT, optlist);
     }
     delete [] compNames[0];
     delete [] compNames[1];
@@ -372,9 +383,9 @@ write(const Tessellation<2, RealType>& mesh,
     vector<char*> meshNames(numChunks);
     vector<int> meshTypes(numChunks, DB_UCDMESH);
     vector<vector<char*> > varNames(nodeFields.size() +
-                                    edgeFields.size() +
-                                    faceFields.size() +
-                                    cellFields.size());
+        edgeFields.size() +
+        faceFields.size() +
+        cellFields.size());
     vector<int> varTypes(numChunks, DB_UCDVAR);
     for (int i = 0; i < numChunks; ++i)
     {
@@ -402,7 +413,7 @@ write(const Tessellation<2, RealType>& mesh,
     // Write the mesh and variable data.
     DBSetDir(file, "/");
     DBPutMultimesh(file, "mesh", numChunks, &meshNames[0], 
-                   &meshTypes[0], optlist);
+        &meshTypes[0], optlist);
     int fieldIndex = 0;
     putMultivarInFile<RealType>(nodeFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
     putMultivarInFile<RealType>(edgeFields, fieldIndex, varNames, varTypes, file, numChunks, optlist);
@@ -436,9 +447,9 @@ write(const Tessellation<2, RealType>& mesh,
     vector<char*> meshNames(numFiles*numChunks);
     vector<int> meshTypes(numFiles*numChunks, DB_UCDMESH);
     vector<vector<char*> > varNames(nodeFields.size() +
-                                    edgeFields.size() +
-                                    faceFields.size() +
-                                    cellFields.size());
+        edgeFields.size() +
+        faceFields.size() +
+        cellFields.size());
     vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
     for (int i = 0; i < numFiles; ++i)
     {
@@ -470,7 +481,7 @@ write(const Tessellation<2, RealType>& mesh,
 
     // Write the multimesh and variable data, and close the file.
     DBPutMultimesh(file, "mesh", numFiles*numChunks, &meshNames[0], 
-                   &meshTypes[0], optlist);
+        &meshTypes[0], optlist);
     int fieldIndex = 0;
     putMultivarInFile<RealType>(nodeFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
     putMultivarInFile<RealType>(edgeFields, fieldIndex, varNames, varTypes, file, numFiles*numChunks, optlist);
