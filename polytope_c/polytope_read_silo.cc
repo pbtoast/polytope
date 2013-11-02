@@ -44,7 +44,7 @@ void polytope_read_silo_with_tags(polytope_tessellation_t* mesh,
                                   const char* file_prefix,
                                   const char* directory,
                                   int cycle,
-                                  polytope_real_t time,
+                                  polytope_real_t* time,
                                   MPI_Comm comm,
                                   int num_files,
                                   int mpi_tag)
@@ -61,7 +61,7 @@ void polytope_read_silo_with_tags(polytope_tessellation_t* mesh,
     SiloReader<2, polytope_real_t>::read(cxxMesh, cxxFields, 
                                          cxxNodeTags, cxxEdgeTags, cxxFaceTags, cxxCellTags,
                                          cxxPrefix, cxxDir,
-                                         cycle, time, comm, num_files, mpi_tag);
+                                         cycle, *time, comm, num_files, mpi_tag);
     fill_tessellation(cxxMesh, mesh);                                           
   }
   else
@@ -71,7 +71,7 @@ void polytope_read_silo_with_tags(polytope_tessellation_t* mesh,
     SiloReader<3, polytope_real_t>::read(cxxMesh, cxxFields, 
                                          cxxNodeTags, cxxEdgeTags, cxxFaceTags, cxxCellTags,
                                          cxxPrefix, cxxDir,
-                                         cycle, time, comm, num_files, mpi_tag);
+                                         cycle, *time, comm, num_files, mpi_tag);
     fill_tessellation(cxxMesh, mesh);                                           
   }
 
@@ -180,7 +180,7 @@ void polytope_read_silo(polytope_tessellation_t* mesh,
                         const char* file_prefix,
                         const char* directory,
                         int cycle,
-                        polytope_real_t time,
+                        polytope_real_t* time,
                         MPI_Comm comm,
                         int num_files,
                         int mpi_tag)
