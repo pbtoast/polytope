@@ -7,6 +7,10 @@
 
 namespace polytope {
 
+// strdup isn't part of the C standard, so we can't rely on its existence.
+// We keep our own handy.
+char* strDup(const char* s);
+
 void
 writeTagsToFile(const std::map<std::string, std::vector<int>*>& tags,
                 DBfile* file,
@@ -50,7 +54,7 @@ appendFieldNames(const std::map<std::string, RealType*>& fields,
   {
     char varName[1024];
     snprintf(varName, 1024, "domain_%d/%s", ichunk, iter->first.c_str());
-    varNames[fieldIndex].push_back(strdup(varName));
+    varNames[fieldIndex].push_back(strDup(varName));
   }
 }
 //-------------------------------------------------------------------
@@ -73,7 +77,7 @@ appendFieldNames(const std::map<std::string, RealType*>& fields,
       snprintf(varName, 1024, "%d/%s-%d.silo:/domain_%d/%s", ifile, prefix.c_str(), cycle, ichunk, iter->first.c_str());
     else
       snprintf(varName, 1024, "%d/%s.silo:/domain_%d/%s", ifile, prefix.c_str(), ichunk, iter->first.c_str());
-    varNames[fieldIndex].push_back(strdup(varName));
+    varNames[fieldIndex].push_back(strDup(varName));
   }
 }
 //-------------------------------------------------------------------
