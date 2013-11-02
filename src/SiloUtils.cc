@@ -1,6 +1,7 @@
 // A collection of low-level utilities to help with silo file input/output.
 
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include "polytope_internal.hh"
 #include "SiloUtils.hh"
@@ -8,6 +9,15 @@
 using namespace std;
 
 namespace polytope {
+
+char* strDup(const char* s)
+{
+  if (s == NULL)
+    return NULL;
+  char* dup = (char*)malloc(sizeof(char) * (strlen(s) + 1));
+  strcpy(dup, s);
+  return dup;
+}
 
 void
 writeTagsToFile(const map<string, vector<int>*>& tags,
@@ -28,7 +38,7 @@ writeTagsToFile(const map<string, vector<int>*>& tags,
     vector<int>& tag = *iter->second;
     elemLengths.push_back(static_cast<int>(tag.size()));
     string tagName;
-    elemNames.push_back(strdup(tagName.c_str()));
+    elemNames.push_back(strDup(tagName.c_str()));
     for (size_t i = 0; i < tag.size(); ++i)
       tagData.push_back(tag[i]);
   }
