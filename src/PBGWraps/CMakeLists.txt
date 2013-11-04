@@ -73,7 +73,8 @@ target_link_libraries(PolytopeModules
 set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 
 # Allow rpath linkage to the Module
-#set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
+set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH false)
+
 
 # Library install targets
 install (TARGETS PolytopeModules DESTINATION lib)
