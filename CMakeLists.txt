@@ -176,7 +176,7 @@ if (${USE_SILO} EQUAL 1)
     include_directories("${HDF5_INCLUDE_DIRS}")
 #         FIXME: For now, we assume libsiloh5 lives with libhdf5.
 #         link_directories("${SILO_LIBRARY_DIRS}")
-    link_directories("${HDF5_LIBRARY_DIRS}")
+    ####link_directories("${HDF5_LIBRARY_DIRS}")
   else()
     message("-- Did not find both Silo and hdf5 files. Skipping.")
     set(HAVE_SILO false)
