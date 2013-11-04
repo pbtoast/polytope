@@ -5,6 +5,7 @@
 #include "polytope.hh"
 
 #include "PLC.hh"
+#include "ReducedPLC.hh"
 #include "Tessellation.hh"
 #include "Tessellator.hh"
 #include "TriangleTessellator.hh"
@@ -28,6 +29,9 @@ namespace polytope {
 //------------------------------------------------------------------------------
 typedef PLC<2, double> PLC2d;
 typedef PLC<3, double> PLC3d;
+
+typedef ReducedPLC<2, double> ReducedPLC2d;
+typedef ReducedPLC<3, double> ReducedPLC3d;
 
 //------------------------------------------------------------------------------
 // Tessellation names
@@ -91,6 +95,20 @@ template<int Dimension, typename RealType>
 void setholes( PLC<Dimension, RealType>& self, 
                std::vector<std::vector<std::vector<int> > >* holesIn )
 { self.holes = *holesIn; }
+
+
+//------------------------------------------------------------------------------
+// ReducedPLC Getters and Setters
+//------------------------------------------------------------------------------
+
+// --- points
+template<int Dimension, typename RealType>
+std::vector<RealType>* getpoints( ReducedPLC<Dimension, RealType>& self )
+{ return &self.points; }
+template<int Dimension, typename RealType>
+void setpoints( ReducedPLC<Dimension, RealType>& self, 
+                std::vector<RealType>* pointsIn )
+{ self.points = *pointsIn; }
 
 
 //------------------------------------------------------------------------------
