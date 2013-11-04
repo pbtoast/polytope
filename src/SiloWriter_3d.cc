@@ -145,9 +145,13 @@ void
 SiloWriter<3, RealType>::
 write(const Tessellation<3, RealType>& mesh, 
       const std::map<std::string, RealType*>& nodeFields,
+      const std::map<std::string, std::vector<int>*>& nodeTags,
       const std::map<std::string, RealType*>& edgeFields,
+      const std::map<std::string, std::vector<int>*>& edgeTags,
       const std::map<std::string, RealType*>& faceFields,
+      const std::map<std::string, std::vector<int>*>& faceTags,
       const std::map<std::string, RealType*>& cellFields,
+      const std::map<std::string, std::vector<int>*>& cellTags,
       const string& filePrefix,
       const string& directory,
       int cycle,
@@ -348,11 +352,11 @@ write(const Tessellation<3, RealType>& mesh,
     conn.push_back(mesh.faceCells[f][0]);
     conn.push_back(mesh.faceCells[f][0]);
   }
-  elemnames[0] = strdup("ncellfaces");
+  elemnames[0] = strDup("ncellfaces");
   elemlengths[0] = numCells;
-  elemnames[2] = strdup("facecells");
+  elemnames[2] = strDup("facecells");
   elemlengths[2] = conn.size() - 2*mesh.faces.size();
-  elemnames[1] = strdup("cellfaces");
+  elemnames[1] = strDup("cellfaces");
   elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
   DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3, 
                      (void*)&conn[0], conn.size(), DB_INT, 0);
@@ -368,11 +372,11 @@ write(const Tessellation<3, RealType>& mesh,
   for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
     for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
       hull.push_back(mesh.convexHull.facets[f][n]);
-  elemnames[0] = strdup("nfacets");
+  elemnames[0] = strDup("nfacets");
   elemlengths[0] = 1;
-  elemnames[1] = strdup("nfacetnodes");
+  elemnames[1] = strDup("nfacetnodes");
   elemlengths[1] = mesh.convexHull.facets.size();
-  elemnames[2] = strdup("facetnodes");
+  elemnames[2] = strDup("facetnodes");
   elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
   DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3, 
                      (void*)&hull[0], hull.size(), DB_INT, 0);
@@ -380,9 +384,14 @@ write(const Tessellation<3, RealType>& mesh,
   free(elemnames[1]);
   free(elemnames[2]);
 
-  // Write out the cell-centered mesh data.
+  // Write out tag information.
+  writeTagsToFile(nodeTags, file, DB_NODECENT);
+  writeTagsToFile(edgeTags, file, DB_EDGECENT);
+  writeTagsToFile(faceTags, file, DB_FACECENT);
+  writeTagsToFile(cellTags, file, DB_ZONECENT);
 
   // Write out the field mesh data.
+  // FIXME: We really should try to use the number of edges for edge fields.
   writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
   writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
   writeFieldsToFile<RealType>(faceFields, file, numFaces, DB_FACECENT, optlist);
@@ -444,7 +453,7 @@ write(const Tessellation<3, RealType>& mesh,
       // Mesh.
       char meshName[1024];
       snprintf(meshName, 1024, "domain_%d/mesh", i);
-      meshNames[i] = strdup(meshName);
+      meshNames[i] = strDup(meshName);
 
       // Field data.
       int fieldIndex = 0;
@@ -513,7 +522,7 @@ write(const Tessellation<3, RealType>& mesh,
           snprintf(meshName, 1024, "%d/%s-%d.silo:/domain_%d/mesh", i, prefix.c_str(), cycle, c);
         else
           snprintf(meshName, 1024, "%d/%s.silo:/domain_%d/mesh", i, prefix.c_str(), c);
-        meshNames[i*numChunks+c] = strdup(meshName);
+        meshNames[i*numChunks+c] = strDup(meshName);
 
         // Field data.
         int fieldIndex = 0;
