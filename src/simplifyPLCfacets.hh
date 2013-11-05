@@ -218,7 +218,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       std::set<unsigned> oldfacets, nodes2check;
       std::map<unsigned, unsigned> nodeFacetUsedCount;
       oldfacets.insert(i);
-      std::cerr << " gluing together old facets : " << i;
+      // std::cerr << " gluing together old facets : " << i;
       for (std::vector<int>::const_iterator nodeItr = plc.facets[i].begin();
            nodeItr != plc.facets[i].end();
            ++nodeItr) nodes2check.insert(old2new[*nodeItr]);
@@ -230,7 +230,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
              ++otherFacetItr) {
           if ((*otherFacetItr != i) and (facetUsed[*otherFacetItr] == 0) and
               (std::abs(geometry::dot<3, RealType>(&facetNormals[i].x, &facetNormals[*otherFacetItr].x) - facetNormalMag[i]*facetNormalMag[*otherFacetItr]) < tol)) {
-            std::cerr << " " << *otherFacetItr;
+            // std::cerr << " " << *otherFacetItr;
             facetUsed[*otherFacetItr] = 1;
             oldfacets.insert(*otherFacetItr);
             for (std::vector<int>::const_iterator otherNodeItr = plc.facets[*otherFacetItr].begin();
@@ -239,7 +239,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           }
         }
       }
-      std::cerr << std::endl;
+      // std::cerr << std::endl;
 
       // oldfacets now contains all the facets we're going to glue together into a single new one.
       // Walk the edges of each facet.  Any edges we walk only once is one we're keeping.
@@ -256,17 +256,17 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
           ++edgeCount[ehash];
         }
       }
-      std::cerr << "edges: " << std::endl;;
+      // std::cerr << "edges: " << std::endl;;
       for (typename internal::CounterMap<EdgeHash>::const_iterator itr = edgeCount.begin();
            itr != edgeCount.end();
            ++itr) {
         if (itr->second == 1) edges.push_back(itr->first);
         const EdgeHash ehash = itr->first;
-        std::cerr << "  --> " << itr->second 
-                  << " [" << ehash.first << " " << ehash.second << "] : ("
-                  << result.points[3*ehash.first] << " " << result.points[3*ehash.first+1] << " " << result.points[3*ehash.first+2] << ") (" 
-                  << result.points[3*ehash.second] << " " << result.points[3*ehash.second+1] << " " << result.points[3*ehash.second+2] << ") "
-                  << std::endl;
+        // std::cerr << "  --> " << itr->second 
+        //           << " [" << ehash.first << " " << ehash.second << "] : ("
+        //           << result.points[3*ehash.first] << " " << result.points[3*ehash.first+1] << " " << result.points[3*ehash.first+2] << ") (" 
+        //           << result.points[3*ehash.second] << " " << result.points[3*ehash.second+1] << " " << result.points[3*ehash.second+2] << ") "
+        //           << std::endl;
       }
       POLY_ASSERT(edges.size() >= 3);
 

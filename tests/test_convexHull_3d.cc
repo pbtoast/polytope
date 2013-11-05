@@ -83,6 +83,7 @@ convexContains(const polytope::PLC<3, RealType>& surface,
            << "Facet point    : " << points[3*i] << " " << points[3*i + 1] << " " << points[3*i + 2] << endl
            << "Facet normal   : " << xn << " " << yn << " " << zn << endl
            << "Test point     : " << p[0] << " " << p[1] << " " << p[2] << endl;
+      return ifacet;
     }
   }
 
@@ -131,17 +132,17 @@ int main(int argc, char** argv) {
     // Get the hull.
     cout << "Generating convex hull... ";
     clock_t t0 = clock();
-    const double tolerance = 1.0e-10;
+    const double tolerance = 1.0e-5;
     polytope::PLC<3, double> box_hull = polytope::convexHull_3d(points, low, tolerance);
     clock_t t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
     // escapePod("box", box_hull, points);
-    polytope::ReducedPLC<3, double> simple_box_hull = simplifyPLCfacets(box_hull,
-                                                                        points,
-                                                                        low,
-                                                                        high,
-                                                                        1.0e-10);
+    // polytope::ReducedPLC<3, double> simple_box_hull = simplifyPLCfacets(box_hull,
+    //                                                                     points,
+    //                                                                     low,
+    //                                                                     high,
+    //                                                                     1.0e-10);
     // escapePod("simple_box", simple_box_hull, points);
   }
 
@@ -165,7 +166,7 @@ int main(int argc, char** argv) {
     // Get the hull.
     cout << "Generating convex hull... ";
     t0 = clock();
-    const double tolerance = 1.0e-10;
+    const double tolerance = 1.0e-5;
     polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
     t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
@@ -184,12 +185,12 @@ int main(int argc, char** argv) {
 
     cerr << "Initial random hull has (nverts, nfacets) = (" << points.size()/3 <<  ", " << hull.facets.size() << ")" << endl;
     // escapePod("random", hull, points);
-    polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
-                                                                           points,
-                                                                           low,
-                                                                           high,
-                                                                           1.0e-10);
-    cerr << "Simplified random hull has (nverts, nfacets) = (" << simple_random_hull.points.size()/3 <<  ", " << simple_random_hull.facets.size() << ")" << endl;
+    // polytope::ReducedPLC<3, double> simple_random_hull = simplifyPLCfacets(hull,
+    //                                                                        points,
+    //                                                                        low,
+    //                                                                        high,
+    //                                                                        1.0e-10);
+    // cerr << "Simplified random hull has (nverts, nfacets) = (" << simple_random_hull.points.size()/3 <<  ", " << simple_random_hull.facets.size() << ")" << endl;
     // escapePod("simple_random", simple_random_hull, simple_random_hull.points);
   }
 
