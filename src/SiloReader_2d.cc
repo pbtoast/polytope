@@ -79,7 +79,11 @@ template <typename RealType>
 void 
 SiloReader<2, RealType>::
 read(Tessellation<2, RealType>& mesh, 
-     map<string, vector<RealType> >& fields,
+     map<vector<RealType> >& fields,
+     map<string, vector<int> >& nodeTags,
+     map<string, vector<int> >& edgeTags,
+     map<string, vector<int> >& faceTags,
+     map<string, vector<int> >& cellTags,
      const string& filePrefix,
      const string& directory,
      int cycle,
@@ -267,6 +271,52 @@ read(Tessellation<2, RealType>& mesh,
   }
 
   // FIXME: Check for hole data?
+
+  // Read any tag data.
+  DBcompoundarray* tags = DBGetCompoundarray(file, "node_tags");
+  if (tags != 0)
+  {
+    for (int i = 0; i < tags->nelems; ++i)
+    {
+      std::vector<int>& tags = nodeTags[tags->elemnames[i]];
+      tags.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+    }
+    DBFreeCompoundarray(tags);
+  }
+  tags = DBGetCompoundarray(file, "edge_tags");
+  if (tags != 0)
+  {
+    for (int i = 0; i < tags->nelems; ++i)
+    {
+      std::vector<int>& tags = edgeTags[tags->elemnames[i]];
+      tags.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+    }
+    DBFreeCompoundarray(tags);
+  }
+  tags = DBGetCompoundarray(file, "face_tags");
+  if (tags != 0)
+  {
+    for (int i = 0; i < tags->nelems; ++i)
+    {
+      std::vector<int>& tags = faceTags[tags->elemnames[i]];
+      tags.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+    }
+    DBFreeCompoundarray(tags);
+  }
+  tags = DBGetCompoundarray(file, "cell_tags");
+  if (tags != 0)
+  {
+    for (int i = 0; i < tags->nelems; ++i)
+    {
+      std::vector<int>& tags = cellTags[tags->elemnames[i]];
+      tags.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+    }
+    DBFreeCompoundarray(tags);
+  }
 
   // Make a list of the desired fields.
   vector<string> fieldNames;
