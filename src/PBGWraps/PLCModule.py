@@ -24,7 +24,11 @@ class PLC:
         self.PLC2d = addObject(polytope, "PLC2d")
         self.PLC3d = addObject(polytope, "PLC3d")
 
-        self.objs = [self.PLC2d, self.PLC3d]
+        self.ReducedPLC2d = addObject(polytope, "ReducedPLC2d", parent=self.PLC2d)
+        self.ReducedPLC3d = addObject(polytope, "ReducedPLC3d", parent=self.PLC3d)
+
+        self.objs = [self.PLC2d, self.PLC3d,
+                     self.ReducedPLC2d, self.ReducedPLC3d]
 
         return
     
@@ -55,6 +59,36 @@ class PLC:
         attributes = ["facets", "holes"]
         returnvals = ["vector_of_vector_of_int*",
                       "vector_of_vector_of_vector_of_int*"]
+
+        for i,(att,ret) in enumerate(zip(attributes,returnvals)):
+            x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
+                                            getter="polytope::get"+att,
+                                            setter="polytope::set"+att,
+                                            getter_template_parameters=[str(ndim),"double"], 
+                                            setter_template_parameters=[str(ndim),"double"])
+        
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (ReducedPLC)
+    #---------------------------------------------------------------------------
+    def generateReducedPLCBindings(self, x, ndim):
+        
+        plc = "polytope::PLC%id" % ndim
+
+        # Constructors
+        x.add_constructor([])
+        x.add_constructor([param(plc, "plc"),
+                           param("vector_of_double", "allpoints")])
+        
+        # Methods
+        x.add_method("clear", None, [])
+        x.add_method("empty", retval("bool"), [], is_const=True)
+        x.add_method("valid", retval("bool"), [], is_const=True)
+        
+        # Attributes
+        attributes = ["points"]
+        returnvals = ["vector_of_vector_of_double*"]
 
         for i,(att,ret) in enumerate(zip(attributes,returnvals)):
             x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),

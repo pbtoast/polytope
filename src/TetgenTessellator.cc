@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <limits>
+#include <sstream>
 
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
