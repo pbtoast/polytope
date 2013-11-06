@@ -2,7 +2,6 @@
 // TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
-// #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <set>
@@ -56,57 +55,6 @@ using std::abs;
 //------------------------------------------------------------------------
 
 namespace {
-
-// //------------------------------------------------------------------------------
-// // Compute the intersection of a line segment and a PLC. Returns number of
-// // intersections, intersected facet(s) along PLC, and intersection point(s)
-// //------------------------------------------------------------------------------
-// template<typename RealType>
-// inline
-// unsigned intersectBoundingBox(const RealType* point1,
-// 			      const RealType* point2,
-// 			      const unsigned numVertices,
-// 			      const RealType* vertices,
-// 			      const std::vector<std::vector<int> >& facets,
-// 			      std::vector<int>& facetIntersections,
-// 			      std::vector<RealType>& result) {
-//   unsigned i, j, numIntersections=0;
-//   RealType intersectionPoint[2];
-//   bool intersects, addPoint;
-//   const unsigned numFacets = facets.size();
-//   for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
-//     POLY_ASSERT(facets[ifacet].size() == 2);
-//     i = facets[ifacet][0];
-//     j = facets[ifacet][1];
-//     POLY_ASSERT(i >= 0 and i < numVertices);
-//     POLY_ASSERT(j >= 0 and j < numVertices);
-//     intersects = geometry::segmentIntersection2D(point1, point2,
-// 						 &vertices[2*i], &vertices[2*j],
-// 						 intersectionPoint);
-//     addPoint = false;
-//     if (intersects) {
-//       if (numIntersections == 0) addPoint = true;
-//       else {
-//         if (intersectionPoint[0] != result.back() - 1 and
-//             intersectionPoint[1] != result.back() ) addPoint = true;
-//         else addPoint = false;
-//       }
-//     }
-//      
-//     if (addPoint) {
-//       RealType p[2];
-//       p[(ifacet+1)%2] = vertices[2*ifacet + (ifacet+1)%2];
-//       p[ ifacet   %2] = intersectionPoint[ifacet%2];
-//       ++numIntersections;
-//       result.push_back(p[0]);
-//       result.push_back(p[1]);
-//       facetIntersections.push_back(ifacet);
-//     }
-//   }
-//   POLY_ASSERT(numIntersections == result.size()/2);
-//   return numIntersections;
-// }
-  
 
 //------------------------------------------------------------------------------
 // Given an array of 3 integers and 2 unique values, find the other one.
@@ -175,6 +123,115 @@ computeEdgeUnitVector(RealType* p1,
     result[1] *= -1.0;
   }
 }
+
+
+//------------------------------------------------------------------------------
+// Sort a set of edges around a face so that sequential edges share nodes.
+// We allow for one break in the chain (representing on unbounded surface).
+// In such a situation we insert the new edge at the beginning of the chain, and
+// return "true" indicating that a new edge was created.
+//------------------------------------------------------------------------------
+bool
+computeSortedEdgeNodes(std::vector<std::pair<int, int> >& edges,
+                       std::vector<int>& result) {
+  typedef std::pair<int, int> EdgeHash;
+
+  unsigned nedges = edges.size();
+  POLY_ASSERT(nedges >= 2);
+
+  // Invert the mapping, from nodes to edges.
+  std::map<int, std::set<unsigned> > nodes2edges;
+  internal::CounterMap<int> nodeUseCount;
+  unsigned i;
+  for (i = 0; i != nedges; ++i) {
+    nodes2edges[edges[i].first].insert(i);
+    nodes2edges[edges[i].second].insert(i);
+    ++nodeUseCount[edges[i].first];
+    ++nodeUseCount[edges[i].second];
+  }
+
+  // Look for any edges with one node in the set.  There can be at most
+  // two such edges, representing the two ends of the chain.  We introduce a
+  // new edge hooking those hanging nodes together, and off we go.
+  int lastNode;
+  vector<int> hangingNodes;
+  for (i = 0; i != nedges; ++i) {
+    if (nodeUseCount[edges[i].first] == 1 or
+        nodeUseCount[edges[i].second] == 1) {
+      POLY_ASSERT((nodeUseCount[edges[i].first] == 1 and nodeUseCount[edges[i].second] == 2) or
+                  (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1));
+      result.push_back(i);
+      nodes2edges[edges[i].first].erase(i);
+      nodes2edges[edges[i].second].erase(i);
+      lastNode = (nodeUseCount[edges[i].first] == 1 ? edges[i].first : edges[i].second);
+      hangingNodes.push_back(lastNode);
+    }
+  }
+  POLY_ASSERT(result.size() == 0 or (hangingNodes.size() == 2 and result.size() == 2));
+
+  // If needed create that new edge and put it in the set.
+  if (hangingNodes.size() == 2) {
+    result.insert(result.begin() + 1, edges.size());
+    edges.push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
+    ++nedges;
+    POLY_ASSERT(result.size() == 3);
+  }
+  POLY_ASSERT(edges.size() == nedges);
+
+  // Pick a node to start the chain.
+  if (hangingNodes.size() == 2) {
+    POLY_ASSERT(nodeUseCount[edges[result.back()].first] == 2 or
+                nodeUseCount[edges[result.back()].second] == 2);
+    lastNode = (nodeUseCount[edges[result.back()].first] == 2 ? 
+                edges[result.back()].first :
+                edges[result.back()].second);
+  } else {
+    lastNode = edges[0].first;
+  }
+
+  // Walk the remaining edges
+  EdgeHash ehash;
+  while (result.size() != nedges) {
+    POLY_ASSERT(nodes2edges[lastNode].size() > 0);
+    result.push_back(*nodes2edges[lastNode].begin());
+    ehash = edges[result.back()];
+    nodes2edges[ehash.first].erase(result.back());
+    nodes2edges[ehash.second].erase(result.back());
+    lastNode = (ehash.first == lastNode ? ehash.second : ehash.first);
+  }
+  
+  // Set the orientation for the ordered edges.
+  lastNode = (edges[result[0]].first == edges[result[1]].first ? edges[result[0]].first : edges[result[0]].second);
+  for (i = 1; i != nedges; ++i) {
+    POLY_ASSERT(edges[result[i]].first == lastNode or edges[result[i]].second == lastNode);
+    if (edges[result[i]].first == lastNode) {
+      lastNode = edges[result[i]].second;
+    } else {
+      lastNode = edges[result[i]].first;
+      result[i] = ~result[i];
+    }
+  }
+
+  // That's it.
+  POLY_BEGIN_CONTRACT_SCOPE;
+  {
+    POLY_ASSERT(edges.size() == result.size());
+    for (int i = 0; i != edges.size(); ++i) {
+      const int j = (i + 1) % edges.size();
+      const int ii = result[i];
+      const int jj = result[j];
+      POLY_ASSERT((ii >= 0 ? ii : ~ii) < edges.size());
+      POLY_ASSERT((jj >= 0 ? jj : ~jj) < edges.size());
+      POLY_ASSERT(((ii >= 0 and jj >= 0) and edges[ii].second == edges[jj].first) or
+                  ((ii >= 0 and jj <  0) and edges[ii].second == edges[~jj].second) or
+                  ((ii <  0 and jj >= 0) and edges[~ii].first == edges[jj].first) or
+                  ((ii <  0 and jj <  0) and edges[~ii].first == edges[~jj].second));
+    }
+  }
+  POLY_END_CONTRACT_SCOPE;
+  return !(hangingNodes.empty());
+}
+
 
 
 //------------------------------------------------------------------------------
@@ -276,6 +333,37 @@ computeSortedFaceNodes(const std::vector<std::pair<int, int> >& edges) {
 }
 
 
+//------------------------------------------------------------------------------
+// Build a ReducedPLC representation of a 2D cell.
+//------------------------------------------------------------------------------
+template<typename RealType>
+ReducedPLC<2, typename internal::QuantTessellation<2, RealType>::PointHash>
+plcOfCell(const internal::QuantTessellation<2, RealType>& qmesh,
+	  const unsigned icell) {
+  typedef typename internal::QuantTessellation<3, RealType>::PointHash PointHash;
+  ReducedPLC<2, PointHash> result;
+  POLY_ASSERT(icell < qmesh.cells.size());
+  const unsigned nFaces = qmesh.cells[icell].size();
+  result.facets.resize(nFaces, vector<int>(2))
+  for (unsigned i = 0; i != nFaces; ++i) {
+    const bool flip = qmesh.cells[icell][i] < 0;
+    const unsigned iface = flip ? ~qmesh.cells[icell][i] : qmesh.cells[icell][i];
+    POLY_ASSERT(iface < qmesh.faces.size());
+    POLY_ASSERT(qmesh.faces[iface].size() == 1);
+    const int iedge = qmesh.faces[iface][0];
+    const int ip = iedge < 0 ? qmesh.edges[~iedge].first : qmesh.edges[iedge].second;
+    POLY_ASSERT(ip >= 0);
+    POLY_ASSERT(ip < qmesh.points.size());    
+    result.points.push_back(qmesh.points[ip]);
+    result.facets[i][0] = i;
+    result.facets[i][1] = (i+1)%nFaces;
+  }
+  POLY_ASSERT(result.points.size() == nFaces);
+  return result;
+}
+
+
+
 } // end anonymous namespace
 
 
@@ -294,6 +382,365 @@ TriangleTessellator<RealType>::
 ~TriangleTessellator() {
 }
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Unbounded tessellation
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+TriangleTessellator<RealType>::
+tessellate(const vector<RealType>& points,
+           Tessellation<2, RealType>& mesh) const {
+  POLY_ASSERT(mesh.empty());
+  POLY_ASSERT(not points.empty());
+  POLY_ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(points.size() > 2 );
+  
+  // Generate the internal quantized tessellation.
+  internal::QuantTessellation<2, RealType> qmesh;
+  vector<RealType> nonGeneratingPoints;
+  this->computeUnboundedQuantizedTessellation(points, nonGeneratingPoints, qmesh);
+
+  // Convert to output tessellation.
+  qmesh.tessellation(mesh);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Internal method that returns an intermediated quantized representation
+// of the unbounded tessellation.
+//------------------------------------------------------------------------------
+void
+TriangleTessellator<RealType>::
+computeUnboundedQuantizedTessellation(const vector<double>& points,
+                                      const vector<double>& nonGeneratingPoints,
+                                      internal::QuantTessellation<3, double>& qmesh) const {
+
+  typedef internal::QuantTessellation<2, RealType>::PointHash PointHash;
+  typedef internal::QuantTessellation<2, RealType>::EdgeHash EdgeHash;
+  typedef Point2<RealType> RealPoint;
+
+  qmesh.degeneracy = mDegeneracy;
+
+  // Check for collinearity and use the appropriate routine
+  const unsigned numGenerators = points.size()/2;
+  bool isCollinear = geometry::collinear<2,RealType>(points, 1.0e-10);
+
+  // Call a special routine to build up the quantized tessellation if the
+  // input points are really 1D. This routine is purely geometric and is
+  // independent of tessellator.
+  if (isCollinear) {
+    POLY_ASSERT2(false, "Need to write the special 1D tessellation routine "
+		 << "for collinear 2D points for the QuantTessellation.");
+    computeUnboundedQuantizedTessellationCollinear(points, nonGeneratingPoints, qmesh);
+  } 
+
+  // It's a fully-2D problem. Do the tessellator-specific stuff
+  else {
+    
+    // Normalize the input generators
+    const unsigned numGenerators = points.size()/2;
+    unsigned i, j, k;
+    qmesh.generators = this->computeNormalizedPoints(points, 
+						     nonGeneratingPoints, 
+						     true, 
+						     &qmesh.low_labframe.x, 
+						     &qmesh.high_labframe.x);
+    
+    // Compute the triangularization
+    triangulateio delaunay;
+    computeDelaunay(qmesh.generators, delaunay);
+    
+    // Find the circumcenters of each triangle, and build the set of triangles
+    // associated with each generator.
+    qmesh.low_inner  = RealPoint(0.0, 0.0, 0.0);
+    qmesh.high_inner = RealPoint(1.0, 1.0, 1.0);
+    qmesh.low_outer  = RealPoint( numeric_limits<RealType>::max(),
+				  numeric_limits<RealType>::max(),
+				  numeric_limits<RealType>::max());
+    qmesh.high_outer = RealPoint(inumeric_limits<RealType>::max(),
+				 inumeric_limits<RealType>::max(),
+				 inumeric_limits<RealType>::max());
+    vector<RealPoint> circumcenters(delaunay.numberoftriangles);
+    int p, q, r;
+    EdgeHash pq, pr, qr;
+    map<EdgeHash, vector<unsigned> > edge2tris;
+    map<int, set<unsigned> > gen2tri;
+    for (i = 0; i != delaunay.numberoftriangles; ++i) {
+      p  = delaunay.trianglelist[3*i  ];
+      q  = delaunay.trianglelist[3*i+1];
+      r  = delaunay.trianglelist[3*i+2];
+      POLY_ASSERT(p < numGenerators and q < numGenerators and r < numGenerators);
+      geometry::computeCircumcenter(&delaunay.pointlist[2*p],
+				    &delaunay.pointlist[2*q],
+				    &delaunay.pointlist[2*r],
+				    &circumcenters[i].x);
+      pq = internal::hashEdge(pindex, qindex);
+      pr = internal::hashEdge(pindex, rindex);
+      qr = internal::hashEdge(qindex, rindex);
+      POLY_ASSERT(orient2d(&delaunay.pointlist[2*pindex],
+                           &delaunay.pointlist[2*qindex],
+                           &delaunay.pointlist[2*rindex]) != 0);
+      edge2tris[pq].push_back(i);
+      edge2tris[pr].push_back(i);
+      edge2tris[qr].push_back(i);
+      gen2tri[p].insert(i);
+      gen2tri[q].insert(i);
+      gen2tri[r].insert(i);
+      qmesh.low_outer.x  = min(qmesh.low_outer.x , circumcenters[i].x);
+      qmesh.low_outer.y  = min(qmesh.low_outer.y , circumcenters[i].y);
+      qmesh.high_outer.x = max(qmesh.high_outer.x, circumcenters[i].x);
+      qmesh.high_outer.y = max(qmesh.high_outer.y, circumcenters[i].y);
+    }
+    POLY_ASSERT(circumcenters.size() == delaunay.numberoftriangles);
+    POLY_BEGIN_CONTRACT_SCOPE;
+    {
+      for (map<EdgeHash, vector<unsigned> >::const_iterator itr = edge2tris.begin();
+  	 itr != edge2tris.end();
+  	 ++itr) POLY_ASSERT(itr->second.size() == 1 or itr->second.size() == 2);
+      for (map<int, set<unsigned> >::const_iterator itr = gen2tri.begin();
+  	 itr != gen2tri.end();
+  	 ++itr) POLY_ASSERT(itr->second.size() >= 1);
+      POLY_ASSERT(qmesh.low_outer.x <= qmesh.high_outer.x and
+  		qmesh.low_outer.y <= qmesh.high_outer.y);
+    }
+    POLY_END_CONTRACT_SCOPE;
+  
+    // Expand the outer bounding box and choose infinite sphere radius
+    qmesh.low_outer.x  = min(qmesh.low_outer.x , qmesh.low_inner.x );
+    qmesh.low_outer.y  = min(qmesh.low_outer.y , qmesh.low_inner.y );
+    qmesh.high_outer.x = max(qmesh.high_outer.x, qmesh.high_inner.x);
+    qmesh.high_outer.y = max(qmesh.high_outer.y, qmesh.high_inner.y);
+    RealType rinf = 4.0*max(qmesh.high_outer.x - qmesh.low_outer.x,
+			    qmesh.high_outer.y - qmesh.low_outer.y);
+    const RealPoint centroid_outer = (qmesh.low_outer + qmesh.high_outer)/2;
+    qmesh.low_outer.x  = centroid_outer.x - 1.05*rinf;
+    qmesh.low_outer.y  = centroid_outer.y - 1.05*rinf;
+    qmesh.high_outer.x = centroid_outer.x + 1.05*rinf;
+    qmesh.high_outer.y = centroid_outer.y + 1.05*rinf;
+  
+    // Quantize circumcenters and add map them to unique IDs
+    map<int, unsigned> tri2id;
+    for (i = 0; i != delaunay.numberoftriangles; ++i) {
+      tri2id[i] = qmesh.addNewNode(circumcenters[i]);
+    }
+    POLY_ASSERT(tri2id.size() == delaunay.numberoftriangles);
+  
+    // The exterior edges of the triangularization have "unbounded" rays, originating
+    // at the circumcenter of the corresponding triangle and passing perpendicular to
+    // the edge. Find those surface edges and project unbounded rays through them.
+    bool test;
+    RealPoint ehat, pinf, tricent;
+    map<EdgeHash, unsigned> projEdge2id;
+    int i1, i2, ivert;
+    qmesh.infNodes = vector<unsigned>();
+    for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tris.begin();
+         edgeItr != edge2tris.end();
+         ++edgeItr) {
+      const EdgeHash& edge = edgeItr->first;
+      const vector<unsigned>& tris = edgeItr->second;
+      if (tris.size() == 1) {
+        i = tris[0];
+        POLY_ASSERT(i < delaunay.numberoftriangles);
+        i1 = edge.first;
+        i2 = edge.second;
+        findOtherTriIndex(&delaunay.trianglelist[3*i], i1, i2, ivert);
+        computeEdgeUnitVector(&delaunay.pointlist[2*i1],
+			      &delaunay.pointlist[2*i2],
+			      &delaunay.pointlist[2*ivert],
+			      &ehat.x);
+        
+        // Compute the intersection of the infinite edge with the inf sphere
+        test = geometry::rayCircleIntersection(&circumcenters[i].x,
+					       &ehat.x,
+					       &centroid_outer.x,
+					       rinf,
+					       1.0e-10,
+					       &pinf.x);
+        POLY_ASSERT(test);
+  
+        // Add the projected point to the quantized tessellation
+        k = qmesh.point2id.size();
+        j = qmesh.addNewNode(pinf);
+        POLY_ASSERT(projEdge2id.find(edge) == projEdge2id.end());
+        projEdge2id[edge] = j;
+        if (k != qmesh.point2id.size()) qmesh.infNodes.push_back(j);
+      }
+    }
+  
+    // The faces corresponding to each triangle edge
+    qmesh.faces.reserve(edge2tris.size());
+    qmesh.cells = vector<vector<int> >(numGenerators);
+    int iedge, iface;
+    unsigned ii, jj;
+    RealType vol;
+    RealPoint e0, e1;
+    vector<vector<EdgeHash> > cellInfEdges(numGenerators);
+    for (map<int, set<unsigned> >::const_iterator genItr = gen2tri.begin();
+         genItr != gen2tri.end(); 
+         ++genItr) {
+      p = genItr->first;
+      const set<unsigned>& tris = genItr->second;
+      POLY_ASSERT(p < numGenerators);
+      vector<EdgeHash> meshEdges;
+      for (set<unsigned>::const_iterator triItr = tris.begin();
+           triItr != tris.end(); 
+  	 ++triItr){
+        i = *triItr;
+        POLY_ASSERT(i < delaunay.numberoftriangles);
+        POLY_ASSERT(tri2id.find(i) != tri2id.end());
+        ii = tri2id[i];
+        
+        // Get the other indices for this triangle, given one of its vertices pindex
+        findOtherTriIndices(&delaunay.trianglelist[3*i], p, q, r);
+        pq = internal::hashEdge(p,q);
+        pr = internal::hashEdge(p,r);
+        
+        // Is pq a surface edge?
+        if (edge2tris[pq].size() == 1){
+          POLY_ASSERT(edge2tris[pq][0] == i);
+          POLY_ASSERT(projEdge2id.find(pq) != projEdge2id.end());
+          jj = projEdge2id[pq];
+	  POLY_ASSERT(jj != ii);
+	  meshEdges.push_back(internal::hashEdge(ii,jj));
+        } else {
+	  POLY_ASSERT((edge2tris[pq].size() == 2 and edge2tris[pq][0] == i)
+		      or edge2tris[pq][1] == i);
+          k = (edge2tris[pq][0] == i ? edge2tris[pq][1] : edge2tris[pq][0]);
+	  POLY_ASSERT(tri2id.find(k) != tri2id.end());
+          jj = tri2id[k];
+	  if (jj != ii) meshEdges.push_back(internal::hashEdge(ii,jj));
+        }
+        
+        // Is pr a surface edge?
+        if (edge2tris[pr].size() == 1){
+          POLY_ASSERT(edge2tris[pr][0] == i);
+          POLY_ASSERT(projEdge2id.find(pr) != projEdge2id.end());
+          jj = projEdge2id[pr];
+	  POLY_ASSERT(ii != jj);
+          meshEdges.push_back(internal::hashEdge(ii,jj));
+        } else {
+	  POLY_ASSERT((edge2tris[pr].size() == 2 and edge2tris[pr][0] == i)
+		      or edge2tris[pr][1] == i);
+          k = (edge2tris[pr][0] == i ? edge2tris[pr][1] : edge2tris[pr][0]);
+	  POLY_ASSERT(tri2id.find(k) != tri2id.end());
+          jj = tri2id[k];
+	  if (jj != ii) meshEdges.push_back(internal::hashEdge(ii,jj));
+        }
+      }
+  
+      // Arrange the edges in the corectly sorted and sign oriented order
+      sort(meshEdges.begin(), meshEdges.end());
+      meshEdges.erase(unique(meshEdges.begin(), meshEdges.end()), meshEdges.end());
+      if (meshEdges.size() > 1) {
+        vector<int> edgeOrder;
+        const bool infEdge = computeSortedEdgeNodes(meshEdges, edgeOrder);
+        if (meshEdges.size() > 2) {
+  	
+  	// Add the edges and faces to the quantized mesh. (They are equal in 2D.)
+  	for (vector<int>::const_iterator itr = edgeOrder.begin();
+  	     itr != edgeOrder.end();
+  	     ++itr) {
+  	  const bool flip = (*itr < 0);
+  	  k = (flip ? ~(*itr) : *itr);
+  	  iedge = qmesh.addNewEdge(meshEdges[k]);
+  	  int edgePair[2] = {meshEdges[k].first, meshEdge[k].second};
+  	  vector<int> face(edgePair, edgePair+2);
+  	  iface = qmesh.addNewFace(face);
+  	  POLY_ASSERT(iface == qmesh.faces.size() - 1);
+  	  POLY_ASSERT(iedge == iface);
+  
+  	  // Determine the orientation of the face with respect to the cell
+  	  n0 = qmesh.nodePosition(meshEdges[k].first);
+  	  n1 = qmesh.nodePosition(meshEdges[i].second);
+  	  vol = geometry::triangleVolume(&qmesh.generators[2*p], &n1.x, &n0.x);
+  	  POLY_ASSERT(vol != 0.0);
+  	  if (vol > 0.0) {
+  	    qmesh.cells[p].push_back(iface);
+  	  } else {
+  	    qmesh.cells[p].push_back(~iface);
+  	  }
+  	}
+  		
+  	// Did we create a new infEdge? If so we know it was the second element
+  	// in the ordered list.
+  	if (infEdge) {
+  	  k = internal::positiveID(edgeOrder[1]);
+  	  iedge = qmesh.edge2id[meshEdges[k]];
+  	  qmesh.infEdges.push_back(iedge);
+  	  cellInfEdges[p].push_back(meshEdges[k]);
+  	  int edgePair[2] = {meshEdges[k].first, meshEdge[k].second};
+  	  vector<int> face(edgePair, edgePair+2);
+  	  iface = qmesh.face2id[face];
+  	  POLY_ASSERT(iface == iedge);
+  	  qmesh.infFaces.push_back(iface);
+  	}
+        }
+      }
+      
+      // How does meshEdges only have one element?
+      else {
+        cerr << "BLAGO!" << endl 
+  	   << p << " " << tris.size() << " " << meshEdges[0] << endl;
+      }
+      POLY_ASSERT(meshEdges.size() > 1);
+    }
+    
+    // All infFaces have been stored in the quantized mesh at this point.
+    // Two complications may still exist for an infinite cell:
+    //
+    // 1. Projected edges may intersect
+    // This can occur when a generator on the boundary has two surface triangles
+    // that are nearly flat, but the two triangle edges on the surface are not
+    // collinear. There is a critical threshold in which Triangle does
+    // recognize the edges as collinear, but projecting rays orthogonal to the 
+    // edges creates an intersection if the inf sphere is sufficiently large.
+    // The internal floating point precision of Triangle creates this error. If
+    // Triangle could recognize the edges as not being exactly collinear, it would
+    // add a third triangle with circumcenter at the position of the ray intersection.
+    // In this instance, the two original triangles are no longer on the surface,
+    // and the generator is now internal.
+    //
+    // 2. Infinite face may intersect domain again
+    // If projected edges are nearly collinear, then the inf face connecting their
+    // projected nodes could intersect the internal bounding box (or PLC boundary,
+    // if it exists). An additional node will have to be projected in this instance
+    // in between the previous two. Two infinite faces will be constructed for this
+    // cell in this case. The existing infEdge and infFace data in qmesh will need
+    // to be modified.
+    //
+    // This is where to do it at some point...
+  
+////   for (i = 0; i != numGenerators; ++i) {
+////     POLY_ASSERT(cellInfEdges[i].size() == 0 or cellInfEdges[i].size() == 1);
+////     if (cellInfEdges[i].size() == 1) {
+////     }
+////   }
+  
+    // Post-conditions
+    qmesh.assertValid();
+  
+    // Clean up.
+    trifree((VOID*)delaunay.pointlist);
+    trifree((VOID*)delaunay.pointmarkerlist);
+    trifree((VOID*)delaunay.trianglelist);
+    trifree((VOID*)delaunay.edgelist);
+    trifree((VOID*)delaunay.edgemarkerlist);
+    trifree((VOID*)delaunay.segmentlist);
+    trifree((VOID*)delaunay.segmentmarkerlist);
+  }
+}  
+//------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -398,7 +845,7 @@ computeCellNodes(const vector<RealType>& points,
   // associated with each generator.
   vector<RealPoint> circumcenters(delaunay.numberoftriangles);
   vector<unsigned> triMask(delaunay.numberoftriangles, 0);
-  map<EdgeHash, vector<unsigned> > edge2tri;
+  map<EdgeHash, vector<unsigned> > edge2tris;
   map<int, set<unsigned> > gen2tri;
   int pindex, qindex, rindex, i, j, triCount = 0;
   EdgeHash pq, pr, qr;
@@ -441,9 +888,9 @@ computeCellNodes(const vector<RealType>& points,
       gen2tri[pindex].insert(i);
       gen2tri[qindex].insert(i);
       gen2tri[rindex].insert(i);
-      edge2tri[pq].push_back(i);
-      edge2tri[pr].push_back(i);
-      edge2tri[qr].push_back(i);
+      edge2tris[pq].push_back(i);
+      edge2tris[pr].push_back(i);
+      edge2tris[qr].push_back(i);
       lowc [0] = min(lowc [0], circumcenters[i].x);
       lowc [1] = min(lowc [1], circumcenters[i].y);
       highc[0] = max(highc[0], circumcenters[i].x);
@@ -496,8 +943,8 @@ computeCellNodes(const vector<RealType>& points,
   map<EdgeHash, unsigned> edge2id;
   int i1, i2, ivert, k;
   infNodes = vector<unsigned>(circ2id.size());
-  for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tri.begin();
-       edgeItr != edge2tri.end(); ++edgeItr){
+  for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tris.begin();
+       edgeItr != edge2tris.end(); ++edgeItr){
     const EdgeHash& edge = edgeItr->first;
     const vector<unsigned>& tris = edgeItr->second;
     if (tris.size() == 1){
@@ -571,29 +1018,29 @@ computeCellNodes(const vector<RealType>& points,
       pr = internal::hashEdge(pindex,rindex);
       
       // Is pq a surface edge?
-      if (edge2tri[pq].size() == 1){
-        POLY_ASSERT(edge2tri[pq][0] == i);
+      if (edge2tris[pq].size() == 1){
+        POLY_ASSERT(edge2tris[pq][0] == i);
         POLY_ASSERT(edge2id.find(pq) != edge2id.end());
         jj = edge2id[pq];
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }else{
-         POLY_ASSERT((edge2tri[pq].size() == 2 and edge2tri[pq][0] == i)
-                     or edge2tri[pq][1] == i);
-        k = (edge2tri[pq][0] == i ? edge2tri[pq][1] : edge2tri[pq][0]);
+         POLY_ASSERT((edge2tris[pq].size() == 2 and edge2tris[pq][0] == i)
+                     or edge2tris[pq][1] == i);
+        k = (edge2tris[pq][0] == i ? edge2tris[pq][1] : edge2tris[pq][0]);
         jj = tri2id[k];
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }
       
       // Is pr a surface edge?
-      if (edge2tri[pr].size() == 1){
-        POLY_ASSERT(edge2tri[pr][0] == i);
+      if (edge2tris[pr].size() == 1){
+        POLY_ASSERT(edge2tris[pr][0] == i);
         POLY_ASSERT(edge2id.find(pr) != edge2id.end());
         jj = edge2id[pr];
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }else{
-         POLY_ASSERT((edge2tri[pr].size() == 2 and edge2tri[pr][0] == i)
-                     or edge2tri[pr][1] == i);
-        k = (edge2tri[pr][0] == i ? edge2tri[pr][1] : edge2tri[pr][0]);
+         POLY_ASSERT((edge2tris[pr].size() == 2 and edge2tris[pr][0] == i)
+                     or edge2tris[pr][1] == i);
+        k = (edge2tris[pr][0] == i ? edge2tris[pr][1] : edge2tris[pr][0]);
         jj = tri2id[k];
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }
