@@ -1,0 +1,15 @@
+The included tarball contains the LaTeX source for an article outlining the
+capabilities of Polytope. This is not meant as a guide for using Polytope but 
+rather a description of the algorithms implemented and motivations for the
+code's underlying design decisions.
+
+To unpack the tarball run
+tar -xzf PolytopeOverview.tar.gz
+
+We recommend using pdflatex to compile the .tex source
+
+
+Authors:
+David Starinshak
+J. Michael Owen
+Jeffrey Johnson
