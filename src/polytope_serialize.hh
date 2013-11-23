@@ -45,20 +45,20 @@ struct Serializer {
 template<typename T>
 struct Serializer<std::vector<T> > {
 
-  static void serializeImpl(const std::vector<T>& value, 
+  static void serializeImpl(const std::vector<T>& val, 
                             std::vector<char>& buffer) {
-    const unsigned n = value.size();
+    const unsigned n = val.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(value[i], buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::serializeImpl(val[i], buffer);
   }
 
-  static void deserializeImpl(std::vector<T>& value, 
+  static void deserializeImpl(std::vector<T>& val, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n, n0 = value.size();
+    unsigned n, n0 = val.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n0 + n);
-    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(value[n0 + i], bufItr, endItr);
+    val.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<T>::deserializeImpl(val[n0 + i], bufItr, endItr);
   }
 };
 
@@ -66,20 +66,20 @@ struct Serializer<std::vector<T> > {
 template<typename T>
 struct Serializer<std::vector<std::vector<T> > > {
 
-  static void serializeImpl(const std::vector<std::vector<T> >& value, 
+  static void serializeImpl(const std::vector<std::vector<T> >& val, 
                             std::vector<char>& buffer) {
-    unsigned n = value.size();
+    unsigned n = val.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::serializeImpl(value[i], buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::serializeImpl(val[i], buffer);
   }
 
-  static void deserializeImpl(std::vector<std::vector<T> >& value, 
+  static void deserializeImpl(std::vector<std::vector<T> >& val, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n, n0 = value.size();
+    unsigned n, n0 = val.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n0 + n);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(value[n0 + i], bufItr, endItr);
+    val.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<T> >::deserializeImpl(val[n0 + i], bufItr, endItr);
   }
 };
 
@@ -87,20 +87,20 @@ struct Serializer<std::vector<std::vector<T> > > {
 template<typename T>
 struct Serializer<std::vector<std::vector<std::vector<T> > > > {
 
-  static void serializeImpl(const std::vector<std::vector<std::vector<T> > >& value, 
+  static void serializeImpl(const std::vector<std::vector<std::vector<T> > >& val, 
                             std::vector<char>& buffer) {
-    const unsigned n = value.size();
+    const unsigned n = val.size();
     Serializer<unsigned>::serializeImpl(n, buffer);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::serializeImpl(value[i], buffer);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::serializeImpl(val[i], buffer);
   }
 
-  static void deserializeImpl(std::vector<std::vector<std::vector<T> > >& value, 
+  static void deserializeImpl(std::vector<std::vector<std::vector<T> > >& val, 
                               std::vector<char>::const_iterator& bufItr, 
                               const std::vector<char>::const_iterator& endItr) {
-    unsigned n, n0 = value.size();
+    unsigned n, n0 = val.size();
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
-    value.resize(n0 + n);
-    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::deserializeImpl(value[n0 + i], bufItr, endItr);
+    val.resize(n0 + n);
+    for (unsigned i = 0; i != n; ++i) Serializer<std::vector<std::vector<T> > >::deserializeImpl(val[n0 + i], bufItr, endItr);
   }
 };
 
@@ -108,16 +108,16 @@ struct Serializer<std::vector<std::vector<std::vector<T> > > > {
 // Dispatch to the functors!
 //------------------------------------------------------------------------------
 template<typename T>
-void serialize(const T& value, 
+void serialize(const T& val, 
                std::vector<char>& buffer) {
-  Serializer<T>::serializeImpl(value, buffer);
+  Serializer<T>::serializeImpl(val, buffer);
 }
 
 template<typename T>
-void deserialize(T& value,
+void deserialize(T& val,
                  std::vector<char>::const_iterator& bufItr,
                  const std::vector<char>::const_iterator& endItr) {
-  Serializer<T>::deserializeImpl(value, bufItr, endItr);
+  Serializer<T>::deserializeImpl(val, bufItr, endItr);
 }
 
 //------------------------------------------------------------------------------
@@ -127,17 +127,17 @@ template<int Dimension, typename RealType>
 struct Serializer<PLC<Dimension, RealType> >
 {
 
-  static void serializeImpl(const PLC<Dimension, RealType>& value,
+  static void serializeImpl(const PLC<Dimension, RealType>& val,
                             std::vector<char>& buffer) {
-    serialize(value.facets, buffer);
-    serialize(value.holes, buffer);
+    serialize(val.facets, buffer);
+    serialize(val.holes, buffer);
   }
 
-  static void deserializeImpl(PLC<Dimension, RealType>& value,
+  static void deserializeImpl(PLC<Dimension, RealType>& val,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator& endItr) {
-    deserialize(value.facets, bufItr, endItr);
-    deserialize(value.holes, bufItr, endItr);
+    deserialize(val.facets, bufItr, endItr);
+    deserialize(val.holes, bufItr, endItr);
   }
 };
 
@@ -147,24 +147,24 @@ struct Serializer<PLC<Dimension, RealType> >
 template<int Dimension, typename RealType>
 struct Serializer<ReducedPLC<Dimension, RealType> > {
 
-  static void serializeImpl(const ReducedPLC<Dimension, RealType>& value,
+  static void serializeImpl(const ReducedPLC<Dimension, RealType>& val,
                             std::vector<char>& buffer) {
-    const unsigned nf = value.facets.size();
+    const unsigned nf = val.facets.size();
     serialize(nf, buffer);
-    for (unsigned i = 0; i != nf; ++i) serialize(value.facets[i], buffer);
-    serialize(value.holes, buffer);
-    serialize(value.points, buffer);
+    for (unsigned i = 0; i != nf; ++i) serialize(val.facets[i], buffer);
+    serialize(val.holes, buffer);
+    serialize(val.points, buffer);
   }
 
-  static void deserializeImpl(ReducedPLC<Dimension, RealType>& value,
+  static void deserializeImpl(ReducedPLC<Dimension, RealType>& val,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator& endItr) {
     unsigned nf;
     deserialize(nf, bufItr, endItr);
-    value.facets.resize(nf);
-    for (unsigned i = 0; i != nf; ++i) deserialize(value.facets[i], bufItr, endItr);
-    deserialize(value.holes, bufItr, endItr);
-    deserialize(value.points, bufItr, endItr);
+    val.facets.resize(nf);
+    for (unsigned i = 0; i != nf; ++i) deserialize(val.facets[i], bufItr, endItr);
+    deserialize(val.holes, bufItr, endItr);
+    deserialize(val.points, bufItr, endItr);
   }
 };
 
