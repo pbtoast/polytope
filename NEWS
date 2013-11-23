@@ -1,3 +1,16 @@
+Release 0.5.18
+
+changeset:
+  456:07b59ff8b7c6
+
+Changes:
+
+- Updates to build on latest Mac OSX (10.9) using Xcode 5.0.2.  We are also
+  building with cmake 2.8.12, and it looks like our old HDF5 cmake rules were
+  broken with this version.  I have removed internal HDF5 cmake rules and all
+  seems good with the cmake default version.
+
+--------------------------------------------------------------------------------
 Release 0.5.17
 
 changeset:
