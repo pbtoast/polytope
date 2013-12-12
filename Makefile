@@ -8,6 +8,8 @@ CC             = not-set
 CXX            = not-set
 prefix         = not-set
 boost_root     = not-set
+hdf5_root      = not-set
+header_only    = 0
 use_silo       = 1
 use_python     = 0
 use_C          = 1
@@ -81,8 +83,10 @@ endif
 # Choose to build silo or not if available
 CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
 
-# Choose to build the test set or not
-CONFIG_FLAGS += -DTESTING=$(build_tests)
+# Explicit HDF5 path
+ifneq ($(hdf5_root), not-set)
+  CONFIG_FLAGS += -DHDF5_ROOT=$(hdf5_root)
+endif
 
 # Explicit path for PyBindGen
 ifeq ($(use_python), 1)
@@ -101,11 +105,19 @@ endif
 # Choose to build python bindings with pybindgen
 CONFIG_FLAGS += -DUSE_PYTHON=$(use_python)
 
-# Choose if we're building the C interface
-CONFIG_FLAGS += -DBUILD_C_INTERFACE=$(use_C)
+# Flag to build Polytope as a header-only library
+CONFIG_FLAGS += -DHEADER_ONLY=$(header_only)
 
-# real number type for C library
-CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
+ifeq ($(header_only), 0)
+  # Choose if we're building the C interface
+  CONFIG_FLAGS += -DBUILD_C_INTERFACE=$(use_C)
+
+  # real number type for C library
+  CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
+
+  # Choose to build the test set or not
+  CONFIG_FLAGS += -DTESTING=$(build_tests)
+endif
 
 # Special considerations for specific systems.
 ifeq ($(systype), Darwin)

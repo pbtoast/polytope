@@ -1,0 +1,58 @@
+# -*- mode: python -*-
+#-------------------------------------------------------------------------------
+# Master PolytopeModules file for generating the Polytope python bindings.
+#-------------------------------------------------------------------------------
+import os, sys
+from pybindgen import *
+from PolytopeMultiSectionFactory import PolytopeMultiSectionFactory
+from PBGutils import generateSWIGBindings
+
+# A few useful global pybindgen settings.
+settings.allow_subclassing = True
+settings.deprecated_virtuals = False
+
+# The set packages we're going to process.
+pkgs_string = "@PYTHONPKGS@"
+pkgs = pkgs_string.split(";")
+
+# Extract the desired output files.
+outfile = "PolytopeModules.C"
+print "Parsing pybindgen packages: ", pkgs
+
+#-------------------------------------------------------------------------------
+# Create the PolytopeModules module.
+#-------------------------------------------------------------------------------
+mod = Module("PolytopeModules")
+
+# Go through each package and add its stuff to the module.
+for p in pkgs:
+    print "Generating types for %s" % p
+    modname = "%sModule" % p
+    exec("import %s" % modname)
+    mod.begin_section("PolytopeModules_%s" % p)
+    exec("%s = %s.%s(mod)" % (p, modname, p))
+    mod.end_section("PolytopeModules_%s" % p)
+
+# Now bind methods to the objects.
+for p in pkgs:
+    print "Binding methods for objects in %s" % p
+    mod.begin_section("PolytopeModules_%s" % p)
+    exec("%s.generateBindings(mod)" % p)
+    mod.end_section("PolytopeModules_%s" % p)
+
+#-------------------------------------------------------------------------------
+# Generate the C code.
+#-------------------------------------------------------------------------------
+if __name__ == "__main__":
+    print "Generating C code."
+    out = PolytopeMultiSectionFactory(outfile, pkgs)
+    print "Section sinks:  ", out.section_sinks
+
+    mod.generate(out, "PolytopeModules")
+
+    for p in pkgs:
+        sink = out.get_section_code_sink("PolytopeModules_%s" % p)
+        for obj in eval(p).objs:
+            generateSWIGBindings(obj, sink)
+
+    out.close()

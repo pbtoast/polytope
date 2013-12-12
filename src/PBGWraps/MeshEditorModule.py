@@ -21,10 +21,12 @@ class MeshEditor:
         polytope = mod.add_cpp_namespace("polytope")
 
         # Expose types
+        self.objs = []
+
         self.MeshEditor2d = addObject(polytope, "MeshEditor2d")
         self.MeshEditor3d = addObject(polytope, "MeshEditor3d")
-
-        self.objs = [self.MeshEditor2d, self.MeshEditor3d]
+        self.objs.append(self.MeshEditor2d)
+        self.objs.append(self.MeshEditor3d)
 
         return
     
@@ -32,10 +34,10 @@ class MeshEditor:
     # Generate bindings.
     #---------------------------------------------------------------------------
     def generateBindings(self, mod):
-                       
-        for (obj, dim) in ((self.MeshEditor2d, 2),
-                           (self.MeshEditor3d, 3)):
-            self.generateMeshEditorBindings(obj, dim)
+        
+        dims = [2,3]
+        for i,obj in enumerate(self.objs):
+            self.generateMeshEditorBindings(obj, dims[i])
 
         return
 

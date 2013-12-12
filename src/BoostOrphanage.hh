@@ -59,13 +59,6 @@ public:
                     const QuantizedCoordinates<2, RealType>& coords,
                     std::vector<BGring>& cellRings,
                     std::vector<BGring>& orphans) const;
-
-// protected:
-//   void callPrivateTessellate(const std::vector<RealType>& points,
-//                              const std::vector<CoordHash>& IntPLCpoints,
-//                              const PLC<2, RealType>& geometry,
-//                              const QuantizedCoordinates<2, RealType>& coords,
-//                              Tessellation<2, RealType>& mesh) const;
 };
 
 } //end polytope namespace

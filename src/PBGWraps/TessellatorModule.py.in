@@ -21,58 +21,44 @@ class Tessellator:
         polytope = mod.add_cpp_namespace("polytope")
 
         # Expose types
-        self.objs = []
-        
-        # --- Base Tessellators
+
+        # --- The base tessellators
         self.Tessellator2d = addObject(polytope, 
                                        "Tessellator2d", 
                                        allow_subclassing=True)
         self.Tessellator3d = addObject(polytope, 
                                        "Tessellator3d", 
                                        allow_subclassing=True)
-        self.objs.append(self.Tessellator2d)
-        self.objs.append(self.Tessellator3d)
+        self.objs = [self.Tessellator2d, self.Tessellator3d]
 
-        # --- The Triangle Tessellator
-        if (mod.have_triangle):
-            self.TriangleTessellator2d = addObject(polytope, 
-                                                   "TriangleTessellator2d", 
-                                                   parent=self.Tessellator2d)
-            self.objs.append(self.TriangleTessellator2d)
-
-        # --- The Boost.Voronoi Tessellator
-        if (mod.have_boost_voronoi):
-            self.BoostTessellator2d = addObject(polytope, 
-                                                "BoostTessellator2d", 
-                                                parent=self.Tessellator2d)
-            self.objs.append(self.BoostTessellator2d)
-
-        # --- The Tetgen Tessellator
-        if (mod.have_tetgen):
-            self.TetgenTessellator3d = addObject(polytope, 
-                                                 "TetgenTessellator3d", 
-                                                 parent=self.Tessellator3d)
-            self.objs.append(self.TetgenTessellator3d)
+        # --- The serial tessellators
+        tessellator_string = "@SERIAL_TESSELLATORS@"
+        serialTessellators = tessellator_string.split(";")
+        for name in serialTessellators:
+            exec "self.%s = addObject(polytope, '%s', parent=self.Tessellator%s)" % (name, name, name[-2:])
+            exec "self.objs.append(self.%s)" % name
         
-        # --- The Distributed and Serial-Distributed Tessellators
-        if (mod.have_mpi):
+        # --- The distributed tessellators
+        if "@HAVE_MPI@" == "true":
             self.DistributedTessellator2d = addObject(polytope,
                                                       "DistributedTessellator2d",
                                                       parent=self.Tessellator2d,
                                                       allow_subclassing=True)
+            self.objs.append(self.DistributedTessellator2d)
             self.DistributedTessellator3d = addObject(polytope,
                                                       "DistributedTessellator3d",
                                                       parent=self.Tessellator3d,
                                                       allow_subclassing=True)
+            self.objs.append(self.DistributedTessellator3d)
             self.SerialDistributedTessellator2d = addObject(polytope,
                                                             "SerialDistributedTessellator2d",
                                                             parent=self.DistributedTessellator2d)
+            self.objs.append(self.SerialDistributedTessellator2d)
             self.SerialDistributedTessellator3d = addObject(polytope,
                                                             "SerialDistributedTessellator3d",
                                                             parent=self.DistributedTessellator3d)
-            
-
-
+            self.objs.append(self.SerialDistributedTessellator3d)
+        
         # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
         # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
         
@@ -83,26 +69,11 @@ class Tessellator:
     #---------------------------------------------------------------------------
     def generateBindings(self, mod):
                        
-        self.generateTessellatorBindings(self.Tessellator2d, 2)
-        self.generateTessellatorBindings(self.Tessellator3d, 3)
-
-        if (mod.have_triangle):
-            self.generateTriangleTessellatorBindings(self.TriangleTessellator2d, 2)
-
-        if (mod.have_boost_voronoi):
-            self.generateBoostTessellatorBindings(self.BoostTessellator2d, 2)
-
-        if (mod.have_tetgen):
-            self.generateTetgenTessellatorBindings(self.TetgenTessellator3d, 3)
-        
-        if (mod.have_mpi):
-            self.generateDistributedTessellatorBindings(self.DistributedTessellator2d, 2)
-            self.generateDistributedTessellatorBindings(self.DistributedTessellator3d, 3)
-            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator2d, 2)
-            self.generateSerialDistributedTessellatorBindings(self.SerialDistributedTessellator3d, 3)
-
-        # self.generateVoroTessellatorBindings(self.VoroTessellator2d, 2)
-        # self.generateVoroTessellatorBindings(self.VoroTessellator3d, 3)
+        for obj in self.objs:
+            fullName = obj.name
+            baseName = fullName[:-2]
+            dim      = fullName[ -2]
+            exec "self.generate%sBindings(self.%s, %s)" % (baseName, fullName, dim)
 
         return
 

@@ -137,6 +137,7 @@ endif()
 #Check for HDF5 and Silo
 if (${USE_SILO} EQUAL 1)
   # Find HDF5.
+  set(ENV{HDF5_ROOT} ${HDF5_ROOT})
   set(HDF5_USE_STATIC_LIBRARIES true)
   find_package(HDF5)
   if (${HDF5_FOUND})
@@ -175,7 +176,7 @@ if (${USE_SILO} EQUAL 1)
     include_directories("${HDF5_INCLUDE_DIRS}")
 #         FIXME: For now, we assume libsiloh5 lives with libhdf5.
 #         link_directories("${SILO_LIBRARY_DIRS}")
-    link_directories("${HDF5_LIBRARY_DIRS}")
+    ####link_directories("${HDF5_LIBRARY_DIRS}")
   else()
     message("-- Did not find both Silo and hdf5 files. Skipping.")
     set(HAVE_SILO false)
@@ -221,45 +222,43 @@ configure_file(
   "${PROJECT_BINARY_DIR}/polytope.hh"
 )
 
-# Turn on testing support.
-#if (${TESTING} EQUAL 1)
-#  enable_testing()
-#endif()
 
-# Include the binary directory in the header file search path.
-include_directories("${PROJECT_BINARY_DIR}")
-include_directories("${PROJECT_SOURCE_DIR}/src")
+if (HEADER_ONLY EQUAL 0)
+  # Include the binary directory in the header file search path.
+  include_directories("${PROJECT_BINARY_DIR}")
+  include_directories("${PROJECT_SOURCE_DIR}/src")
 
-# Libraries
+  # Libraries
 
-# Voro 2d/3d libraries.
-include_directories(voro_2d)
-add_subdirectory(voro_2d)
-include_directories(voro_3d)
-add_subdirectory(voro_3d)
+  # Voro 2d/3d libraries.
+  include_directories(voro_2d)
+  add_subdirectory(voro_2d)
+  include_directories(voro_3d)
+  add_subdirectory(voro_3d)
 
-# Polytope proper.
-include_directories("${PROJECT_SOURCE_DIR}/src/")
-add_subdirectory(src)
+  # Polytope proper.
+  include_directories("${PROJECT_SOURCE_DIR}/src/")
+  add_subdirectory(src)
 
-# Tests directory
-if (${TESTING} EQUAL 1)
-  enable_testing()
-  add_subdirectory(tests)
-  include (CTest)
-endif()
+  # Tests directory
+  if (${TESTING} EQUAL 1)
+    enable_testing()
+    add_subdirectory(tests)
+    include(CTest)
+  endif()
   
-# Polytope C library.
-if (BUILD_C_INTERFACE EQUAL 1)
-  include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-  add_subdirectory(polytope_c)
-endif()
+  # Polytope C library.
+  if (BUILD_C_INTERFACE EQUAL 1)
+    include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+    add_subdirectory(polytope_c)
+  endif()
 
-# Python bindings.
-if(HAVE_PYTHON)
-  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
-  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
-  add_subdirectory(src/PBGWraps)
+  # Python bindings.
+  if(HAVE_PYTHON)
+    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
+    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
+    add_subdirectory(src/PBGWraps)
+  endif()
 endif()
 
 # Library install targets
@@ -270,6 +269,8 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
                "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
                "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
                "${PROJECT_SOURCE_DIR}/src/simplifyPLCfacets.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
@@ -280,9 +281,17 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh"
 	       "${PROJECT_SOURCE_DIR}/src/BoostTessellator.hh"
                "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh"
+	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
+	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
 	       "${PROJECT_SOURCE_DIR}/src/OrphanageBase.hh"
 	       "${PROJECT_SOURCE_DIR}/src/BoostOrphanage.hh"
 	       "${PROJECT_SOURCE_DIR}/src/Clipper2d.hh"
+               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_3d.hh" 
                "${PROJECT_SOURCE_DIR}/src/Point.hh" 
