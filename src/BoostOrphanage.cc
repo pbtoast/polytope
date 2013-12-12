@@ -134,6 +134,14 @@ adoptOrphans(const vector<RealType>& points,
     POLY_ASSERT2(!boost::geometry::intersects(orphan),
                  "Unioning orphans has produced self-intersections");
     
+    // // Blago!
+    // std::cerr << "Orphan " << i << ":" << std::endl;
+    // for (typename BGring::const_iterator itr = orphan.begin();
+    //      itr != orphan.end(); 
+    //      ++itr)  std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
+    // std::cerr << std::endl;
+    // // Blago!
+
     // Construct map from node points to neighboring cells
     std::map<IntPoint, std::set<int> > point2neighbors;
     for (j = 0; j != cellRings.size(); ++j) {
@@ -146,9 +154,11 @@ adoptOrphans(const vector<RealType>& points,
     // Determine neighbors
     std::set<int> orphanNeighbors;
     for (typename BGring::const_iterator pointItr = orphan.begin();
-         pointItr != orphan.end()-1; ++pointItr) {
-      std::map<IntPoint, std::set<int> >::iterator it = point2neighbors.find(*pointItr);
-      if (it != point2neighbors.end()){
+         pointItr != orphan.end()-1; 
+         ++pointItr) {
+      std::map<IntPoint, std::set<int> >::iterator it = 
+         point2neighbors.find(*pointItr);
+      if (it != point2neighbors.end()) {
         std::set<int> neighborSet = it->second;
         orphanNeighbors.insert(neighborSet.begin(), neighborSet.end());
       }
@@ -162,13 +172,22 @@ adoptOrphans(const vector<RealType>& points,
       
       // Union the orphan and its neighbors to get a bounded polygon
       BGmulti_polygon neighborCells;
-      createBGUnion(orphan,neighborCells);
+      createBGUnion(orphan, neighborCells);
       POLY_ASSERT(neighborCells.size() == 1);
       
+      // // Blago!
+      // std::cerr << "Initial union polygon" << std::endl;
+      // for (typename BGring::const_iterator itr = neighborCells[0].outer().begin();
+      //      itr != neighborCells[0].outer().end(); 
+      //      ++itr)  std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
+      // std::cerr << std::endl;
+      // // Blago!
+
       // Collect the neighboring generators
       std::vector<RealType> subpoints;
       for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
-           nbItr != orphanNeighbors.end(); ++nbItr){
+           nbItr != orphanNeighbors.end(); 
+           ++nbItr){
         subpoints.push_back( points[2*(*nbItr)  ] );
         subpoints.push_back( points[2*(*nbItr)+1] );
         createBGUnion(cellRings[*nbItr],neighborCells);
@@ -188,6 +207,14 @@ adoptOrphans(const vector<RealType>& points,
           POLY_ASSERT(false);
         }
       }
+
+      // // Blago!
+      // std::cerr << "Bounding Union Polygon" << std::endl;
+      // for (typename BGring::const_iterator itr = neighborCells[0].outer().begin();
+      //      itr != neighborCells[0].outer().end(); 
+      //      ++itr)  std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
+      // std::cerr << std::endl;
+      // // Blago!
       
 #ifndef NDEBUG
       for (typename BGring::const_iterator itr = neighborCells[0].outer().begin();
@@ -257,7 +284,7 @@ adoptOrphans(const vector<RealType>& points,
       //   std::cerr << "  Cell " << ii << std::endl;
       //   for (typename BGring::const_iterator itr = subCellRings[ii].begin();
       //        itr != subCellRings[ii].end(); 
-      //        ++itr)   std::cerr << (*itr) << coords.dequantize(*itr) << std::endl;
+      //        ++itr)   std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
       //   std::cerr << std::endl;
       // }
       // // Blago!

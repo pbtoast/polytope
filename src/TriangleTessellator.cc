@@ -323,17 +323,6 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   
-  // // BLAGO!
-  // std::ofstream dumpfile;
-  // dumpfile.open("generators.txt");
-  // const unsigned n = points.size()/2;
-  // std::cerr << "HERE WE GO : " << n << std::endl;
-  // for (unsigned i = 0; i != n; ++i) {
-  //   dumpfile << points[2*i] << " " << points[2*i+1] << std::endl;
-  // }
-  // dumpfile.close();
-  // // BLAGO!
-
   // Build a PLC with the bounding box, and then use the PLC method.
   ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
   this->tessellate(points, box.points, box, mesh);
@@ -632,13 +621,13 @@ computeCellNodes(const vector<RealType>& points,
       // points with the intersection point
       if (intersects) {
 	
-	// Blago!
-	cerr << "Self-intersection detected:" << endl
-	     << "  Cell " << pindex << endl
-	     << "  " << rp11 << "  " << rp12 << endl
-	     << "  " << rp21 << "  " << rp22 << endl
-	     << "  Intersection pt = " << result << endl;
-	// Blago!
+	// // Blago!
+	// cerr << "Self-intersection detected:" << endl
+	//      << "  Cell " << pindex << endl
+	//      << "  " << rp11 << "  " << rp12 << endl
+	//      << "  " << rp21 << "  " << rp22 << endl
+	//      << "  Intersection pt = " << result << endl;
+	// // Blago!
 
 	nodeList[n11] = RealPoint(0.95*result.x + 0.05*rp12.x,
 				  0.95*result.y + 0.05*rp12.y);
@@ -665,18 +654,18 @@ computeCellNodes(const vector<RealType>& points,
         RealPoint newNode = mCoords.projectPoint(&p.x, &rperp.x);
         unsigned newNodeIndex = nodeList.size();
 
-         // Blago!
-	cerr << "Bounding box intersection detected:" << endl
-	     << "  Cell " << pindex << " at " << p << endl
-	     << "  " << rp11 << "  " << rp12 << endl
-             << "  " << rp21 << "  " << rp22 << endl
-             << "  New node = " << newNode << endl;
-        for (unsigned ii = 0; ii != nintersect; ++ii) {
-           cerr << "  Intersect Pt " << ii << ": "
-                << results[2*ii] << " " << results[2*ii+1] << endl;
-        }
-        cerr << endl;
-	// Blago!
+        //  // Blago!
+	// cerr << "Bounding box intersection detected:" << endl
+	//      << "  Cell " << pindex << " at " << p << endl
+	//      << "  " << rp11 << "  " << rp12 << endl
+        //      << "  " << rp21 << "  " << rp22 << endl
+        //      << "  New node = " << newNode << endl;
+        // for (unsigned ii = 0; ii != nintersect; ++ii) {
+        //    cerr << "  Intersect Pt " << ii << ": "
+        //         << results[2*ii] << " " << results[2*ii+1] << endl;
+        // }
+        // cerr << endl;
+	// // Blago!
 
         nodeList.push_back(newNode);
         vector<unsigned>::iterator it = cellNodes[pindex].begin() + 1;
