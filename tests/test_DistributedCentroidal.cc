@@ -195,13 +195,13 @@ int main(int argc, char** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
    
-// #if HAVE_TRIANGLE
-//   {
-//     cout << "\nTriangle Tessellator:\n" << endl;
-//     DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
-//     lloydTestDistributed(tessellator);
-//   }
-// #endif   
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
+    lloydTestDistributed(tessellator);
+  }
+#endif   
 
 #if HAVE_BOOST_VORONOI
   {

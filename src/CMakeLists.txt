@@ -4,14 +4,15 @@ if (SILO_FOUND)
 endif()
 
 # By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc)
+set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc MeshEditor.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Check if we can include each of the serial tessellators:
 if (HAVE_BOOST)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc MeshEditor.cc)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc)
 endif()
 
-if (TRIANGLE_FOUND)
+if (HAVE_TRIANGLE)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TriangleTessellator.cc)
 endif()
 
@@ -19,7 +20,7 @@ if (HAVE_BOOST_VORONOI)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostTessellator.cc)
 endif ()
 
-if (TETGEN_FOUND)
+if (HAVE_TETGEN)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
   add_library(tetgen tetgen.cxx predicates.cc)
   set(TETGEN_LIB tetgen)
@@ -28,11 +29,13 @@ else ()
   set(TETGEN_LIB "")
 endif ()
 
-if (USE_MPI EQUAL 1)
+# Check if we can incude the distributed tessellators:
+if (HAVE_MPI)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} DistributedTessellator.cc 
                                                  SerialDistributedTessellator.cc)
 endif()
 
+# The Polytope library:
 add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
 target_link_libraries(polytope voro_2d voro_3d ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
 
