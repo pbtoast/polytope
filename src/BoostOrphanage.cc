@@ -49,6 +49,7 @@ cleanRingEdges(boost::geometry::model::ring<Point2<int64_t>,false>& ring) {
 
   // Initialize the temporary ring
   typedef boost::geometry::model::ring<Point2<int64_t>,false> BGring;
+  typedef int64_t CoordHash;
   BGring tmpRing;
   
   // Check collinearity on the middle points
