@@ -8,6 +8,7 @@ CC             = not-set
 CXX            = not-set
 prefix         = not-set
 boost_root     = not-set
+hdf5_root      = not-set
 use_silo       = 1
 use_python     = 0
 use_C          = 1
@@ -80,6 +81,11 @@ endif
 
 # Choose to build silo or not if available
 CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
+
+# Explicit HDF5 path
+ifneq ($(hdf5_root), not-set)
+  CONFIG_FLAGS += -DHDF5_ROOT=$(hdf5_root)
+endif
 
 # Choose to build the test set or not
 CONFIG_FLAGS += -DTESTING=$(build_tests)
