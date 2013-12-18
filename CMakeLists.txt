@@ -136,14 +136,25 @@ endif()
 
 #Check for HDF5 and Silo
 if (${USE_SILO} EQUAL 1)
+
   # Find HDF5.
   set(ENV{HDF5_ROOT} ${HDF5_ROOT})
+#       NOTE: Default to using static hdf5
   set(HDF5_USE_STATIC_LIBRARIES true)
-  find_package(HDF5)
+  find_package(HDF5)  
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
     list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
+
+    # Get rid of duplicates
+    # NOTE: Taken from Will Dicharry's FindHDF5.cmake module. This ensures
+    #       duplicates are removed from the beginning of the list so as
+    #       not to mess with the unresolved symbols search at linking.
+    list(REVERSE HDF5_LIBRARIES)
+    list(REMOVE_DUPLICATES HDF5_LIBRARIES)
+    list(REVERSE HDF5_LIBRARIES)
+
     message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
     
     # Do we have parallel HDF5?
@@ -176,12 +187,7 @@ if (${USE_SILO} EQUAL 1)
     include_directories("${HDF5_INCLUDE_DIRS}")
 #         FIXME: For now, we assume libsiloh5 lives with libhdf5.
 #         link_directories("${SILO_LIBRARY_DIRS}")
-    message("++ HDF5_LIBRARIES: ${HDF5_LIBRARIES}")
-    message("++ SILO_LIBRARIES: ${SILO_LIBRARIES}")
-    message("++ HDF5_LIBRARY_DIRS: ${HDF5_LIBRARY_DIRS}")
-    message("++ SILO_LIBRARY_DIRS: ${SILO_LIBRARY_DIRS}")
     link_directories("${HDF5_LIBRARY_DIRS}")
-    link_directories("${SILO_LIBRARIES}")
   else()
     message("-- Did not find both Silo and hdf5 files. Skipping.")
     set(HAVE_SILO false)
@@ -226,11 +232,6 @@ configure_file(
   "${PROJECT_SOURCE_DIR}/src/polytope.hh.in"
   "${PROJECT_BINARY_DIR}/polytope.hh"
 )
-
-# Turn on testing support.
-#if (${TESTING} EQUAL 1)
-#  enable_testing()
-#endif()
 
 # Include the binary directory in the header file search path.
 include_directories("${PROJECT_BINARY_DIR}")
