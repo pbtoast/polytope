@@ -57,6 +57,12 @@ boost_root=<path>
 	      Boost 1.52.0. This is a known bug in Boost and has been
 	      addressed in later versions.
               
+hdf5_root=<path>
+	Optional path to help cmake find hdf5 library and include dirs
+	NOTE: Specifying the hdf5_root currently causes Polytope to link
+              against all of the hdf5 libraries that cmake finds when
+	      building its Python bindings. If Python bindings are not
+	      built, this is not an issue.
 
 use_silo=0
         Choose to build with silo file capability (1) or without (0).
