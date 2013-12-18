@@ -111,7 +111,9 @@ CONFIG_FLAGS += -DUSE_PYTHON=$(use_python)
 CONFIG_FLAGS += -DBUILD_C_INTERFACE=$(use_C)
 
 # real number type for C library
-CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
+ifeq ($(use_C), 1)
+  CONFIG_FLAGS += -DC_REAL_TYPE=$(c_real_type)
+endif
 
 # Special considerations for specific systems.
 ifeq ($(systype), Darwin)
