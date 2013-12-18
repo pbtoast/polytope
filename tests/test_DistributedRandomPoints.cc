@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
 #if HAVE_TRIANGLE
   {
     if (rank == 0) cout << "\nTriangle Tessellator:\n" << endl;
-    DistributedTessellator<2, double> tessellator
+    SerialDistributedTessellator<2, double> tessellator
        (new TriangleTessellator<double>(), true, true);
     testAllBoundaries(tessellator);
   }

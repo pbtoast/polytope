@@ -93,6 +93,7 @@ void test(Tessellator<2,double>& tessellator)
     generators.cartesianPoints(nxny);         // reset locations
     generators.perturb(epsilon);              // perturb
     Tessellation<2,double> mesh;
+    //tessellator.tessellate(generators.mPoints, mesh);
     tessellator.tessellate(generators.mPoints, 
                            boundary.mPLCpoints, 
                            boundary.mPLC, 

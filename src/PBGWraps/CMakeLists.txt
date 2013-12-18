@@ -1,7 +1,14 @@
-# ------------------------------------------------------------------#
-# Change this list to add/remove modules wrapped by PyBindGen:      #
-# ------------------------------------------------------------------#
-set(LIST_OF_WRAPPED_CLASSES 
+# ----------------------------------------------------------------------------------
+# CMake file for Polytope's Python bindings
+#   -Auto-generates the pybindgen script PolytopeModulesBindings.py
+#   -Auto-generates TessellatorModules.py based on the top-level config
+#   -Builds and compiles the Python bindings according to UsePyBindGen cmake module
+#
+# NOTE: Modify the PYTHONPKGS variable to add/remove objects to the Python module
+# ----------------------------------------------------------------------------------
+
+# The objects we are adding to our Python module
+set(PYTHONPKGS 
   "CXXContainers" 
   "MeshEditor" 
   "PLC" 
@@ -10,21 +17,35 @@ set(LIST_OF_WRAPPED_CLASSES
   "Functions"
 )
 
+# Generate the PolytopeModulesBindings.py driver script
+configure_file(PolytopeModulesBindings.py.in  ${PYBINDGEN_DIR}/PolytopeModulesBindings.py)
 
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePyBindGen.cmake)
 
-# Additional args for Python execute
-set(PYBINDGEN_ADDITIONAL_ARGS ${HAVE_TRIANGLE} ${HAVE_TETGEN} ${HAVE_BOOST_VORONOI} ${HAVE_MPI})
+# The serial tessellators to be wrapped
+set(SERIAL_TESSELLATORS "")
+if(HAVE_TRIANGLE)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TriangleTessellator2d")
+endif()
+if(HAVE_BOOST_VORONOI)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "BoostTessellator2d")
+endif()
+if(HAVE_TETGEN)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TetgenTessellator3d")
+endif()
 
-# Call the PyBindGen macros
-PYBINDGEN_GENERATE_BINDINGS( "${LIST_OF_WRAPPED_CLASSES}" )
+# Generate the TessellatorModules input script
+configure_file(TessellatorModule.py.in  ${PYBINDGEN_DIR}/TessellatorModule.py)
+
+# Call the PyBindGen macros to create the C bindings
+PYBINDGEN_GENERATE_BINDINGS("${PYTHONPKGS}")
 
 # libpolytope location
 set(POLYTOPE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libpolytope.a")
 
 # libtetgen location
-if( TETGEN_FOUND )
+if(HAVE_TETGEN)
   set(TETGEN_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtetgen.a")
 endif()
 
@@ -39,7 +60,17 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
 
-# The Python library of wrapped Polytope methods
+
+set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
+
+
+# The static Python library of wrapped methods
+add_library(PolytopeModules-static STATIC ${PYBINDGEN_GENERATED_SOURCE})
+set_target_properties(PolytopeModules-static PROPERTIES OUTPUT_NAME PolytopeModules)
+target_link_libraries(PolytopeModules-static 
+  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
+
+# The dynamic Python library of wrapped methods
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 
 # Change .dylib suffix to .so on OSX and add additional python linking
@@ -80,3 +111,5 @@ target_link_libraries(PolytopeModules
 
 # Library install targets
 install (TARGETS PolytopeModules DESTINATION lib)
+#install (TARGETS PolytopeModules DESTINATION lib OPTIONAL)
+#install (TARGETS PolytopeModules-static DESTINATION lib OPTIONAL)
