@@ -407,6 +407,7 @@ convexHull_3d(const std::vector<RealType>& points,
 
     // Reduce to the new set of exterior points.
     const unsigned oldsize = remainingPoints.size();
+    POLY_CONTRACT_VAR(oldsize);
     exteriorPoints(remainingPoints, workingFacets, ps);
     POLY_ASSERT(remainingPoints.size() < oldsize);
 

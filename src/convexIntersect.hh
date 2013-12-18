@@ -125,6 +125,8 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
   const unsigned nvb = b.points.size() / 2;
   const unsigned nfa = a.facets.size();
   const unsigned nfb = b.facets.size();
+  POLY_CONTRACT_VAR(nva);
+  POLY_CONTRACT_VAR(nvb);
 
   bool outside = false;
   unsigned i, j, ifacet;
@@ -175,6 +177,8 @@ convexIntersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>&
   const unsigned nvb = b.points.size() / 3;
   const unsigned nfa = a.facets.size();
   const unsigned nfb = b.facets.size();
+  POLY_CONTRACT_VAR(nva);
+  POLY_CONTRACT_VAR(nvb);
 
   bool outside = false;
   unsigned i, j, k, n, ifacet;
