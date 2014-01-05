@@ -250,7 +250,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/")
 add_subdirectory(src)
 
 # Tests directory
-if (${TESTING} EQUAL 1)
+if (TESTING EQUAL 1)
   enable_testing()
   add_subdirectory(tests)
   include (CTest)
