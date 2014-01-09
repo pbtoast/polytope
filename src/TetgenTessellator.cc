@@ -525,7 +525,7 @@ tessellate(const vector<double>& points,
   typedef internal::QuantTessellation<3, double>::RealPoint RealPoint;
   typedef geometry::Hasher<3, double> HasherType;
 
-  const PointHash outerFlag = HasherType::outerFlag();
+  // const PointHash outerFlag = HasherType::outerFlag();
 
   escapePod("boundary", geometry, geometry.points);
 

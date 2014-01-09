@@ -41,9 +41,12 @@ void lloyd(Tessellation<2,double>& mesh,
 // lloydTest
 // -----------------------------------------------------------------------
 void lloydTest(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints = 1000;     // Number of generators
+  unsigned nPoints = 1000;     // Number of generators
+  const unsigned nx = 5;
   const unsigned nIter   = 100;      // Number of iterations
   const int btype = 2;
+  const bool latticeGenerators = false;
+  const bool perturbGenerator = false;
   
   string testName = "Centroidal_LloydTest_" + tessellator.name();
 
@@ -51,17 +54,32 @@ void lloydTest(Tessellator<2,double>& tessellator) {
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(btype);
   Generators<2,double> generators(boundary);
-  generators.randomPoints(nPoints);
+  if (latticeGenerators) {
+    vector<unsigned> nxny(2, nx);
+    generators.cartesianPoints(nxny);
+    nPoints = nx*nx;
+  } else {
+    generators.randomPoints(nPoints);
+  }
+
   std::vector<double> points;
   for (unsigned i = 0; i != nPoints; ++i) {
     if (boundary.testInside(&generators.mPoints[2*i])) {
-      std::copy(&generators.mPoints[2*i], &generators.mPoints[2*i+2], std::back_inserter(points));
+      std::copy(&generators.mPoints[2*i], 
+		&generators.mPoints[2*i+2], 
+		std::back_inserter(points));
     }
   }
-   
+
   // Initialize mesh and tessellator
   Tessellation<2,double> mesh;
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+
+  if (perturbGenerator) {
+    unsigned index = nPoints/2;
+    points[2*index  ] += (2.0e-2)*(random01() - 0.5);
+    points[2*index+1] += (2.0e-2)*(random01() - 0.5);
+  }
 
   unsigned iter = 0;
   outputMesh(mesh, testName, points, iter);
@@ -71,6 +89,7 @@ void lloydTest(Tessellator<2,double>& tessellator) {
     mesh.clear();
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, points, iter);
+    cout << iter << "/" << nIter << endl;
   }
 }
 
@@ -78,25 +97,43 @@ void lloydTest(Tessellator<2,double>& tessellator) {
 // cleaningTest
 // -----------------------------------------------------------------------
 void cleaningTest(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints = 100;     // Number of generators
+  unsigned nPoints = 100;           // Number of generators
+  const unsigned nx = 6;
   const unsigned nIter   = 100;     // Number of iterations
   const double edgeTol = 0.001;     // Relative small-edge tolerance
   const int btype = 3;
+  const bool latticeGenerators = false;
+  const bool perturbGenerator = false;
 
   string testName = "Centroidal_CleaningTest_" + tessellator.name();
 
   // Set up boundary and disperse random generator locations
   Boundary2D<double> boundary;
-  boundary.setDefaultBoundary(btype);  
+  boundary.setDefaultBoundary(btype); 
   Generators<2,double> generators(boundary);
-  generators.randomPoints(nPoints);
-  std::vector<double> points;
+  if (latticeGenerators) {
+    vector<unsigned> nxny(2, nx);
+    generators.cartesianPoints(nxny);
+    nPoints = nx*nx;
+  } else {
+    generators.randomPoints(nPoints);
+  }
+
+  vector<double> points;
   for (unsigned i = 0; i != nPoints; ++i) {
     if (boundary.testInside(&generators.mPoints[2*i])) {
-      std::copy(&generators.mPoints[2*i], &generators.mPoints[2*i+2], std::back_inserter(points));
+      std::copy(&generators.mPoints[2*i],
+		&generators.mPoints[2*i+2], 
+		std::back_inserter(points));
     }
   }
    
+  if (perturbGenerator) {
+    unsigned index = nPoints/2;
+    points[2*index  ] += (2.0e-6)*(random01() - 0.5);
+    points[2*index+1] += (2.0e-6)*(random01() - 0.5);
+  }
+
   // Initialize mesh and tessellator
   Tessellation<2,double> mesh;
   MeshEditor<2, double> meshEditor(mesh);
@@ -107,11 +144,12 @@ void cleaningTest(Tessellator<2,double>& tessellator) {
   while (iter != nIter) {
     meshEditor.cleanEdges(edgeTol);
     lloyd(mesh,points);
-    // meshEditor.cleanEdges(edgeTol);
+    meshEditor.cleanEdges(edgeTol);
     ++iter;
     mesh.clear();
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, points, iter);
+    cout << iter << "/" << nIter << endl;
   }
 }
 

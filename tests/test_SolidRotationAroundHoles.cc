@@ -59,6 +59,9 @@ void test(Tessellator<2,double>& tessellator) {
   const double theta0 = 2*M_PI/5;
   const double outerRadius = 0.75;
   const double innerRadius = outerRadius*(sin(theta0/4.0) / sin(3*theta0/4.0));
+
+  // Add star-shaped-hole points as generators
+  const bool addBoundaryGenerators = true;
   
   // Initialize a mask to determine if a generator will 
   // move CCW (1), CW(-1), or stay fixed (0)
@@ -86,6 +89,16 @@ void test(Tessellator<2,double>& tessellator) {
     }
   }
   
+  if (addBoundaryGenerators) {
+    for (unsigned j = 0; j != 5; ++j) {
+      unsigned index = boundary.mPLCpoints.size()/2 - 10 + 2*j;
+      points.push_back(boundary.mPLCpoints[2*index  ]);
+      points.push_back(boundary.mPLCpoints[2*index+1]);
+      velMask.push_back(0);
+      velMask.push_back(0);
+    }
+  }
+
   // Add additional generators that will remain fixed.
   double r = 0.5*(innerRadius + outerRadius);
   unsigned numFixed = 4;
@@ -154,7 +167,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    //test(tessellator);
+    test(tessellator);
   }
 #endif
 

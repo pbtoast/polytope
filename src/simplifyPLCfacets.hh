@@ -273,6 +273,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
       // Sort the edges around the face.
       std::vector<int> edgeOrder;
       bool hangingNodes = internal::computeSortedFaceEdges(edges, edgeOrder);
+      POLY_CONTRACT_VAR(hangingNodes);
       POLY_ASSERT(!hangingNodes);
 
       // Remove any sequential edges that are collinear.

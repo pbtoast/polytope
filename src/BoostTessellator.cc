@@ -395,16 +395,15 @@ computeCellRings(const vector<RealType>& points,
   const unsigned numPLCpoints = PLCpoints.size()/2;
   int i, j, k;
   
-  // // Quantize the PLC points
-  // const unsigned numPLCpoints = PLCpoints.size()/2;
-  // vector<PointType> IntPLCPoints(numPLCpoints);
-  // for (i = 0; i != numPLCpoints; ++i) {
-  //   IntPLCPoints[i] = PointType(PLCpoints[2*i], PLCpoints[2*i+1]);
-  // }
+  // Quantize the PLC points
+  vector<IntPoint> IntPLCPoints(numPLCpoints);
+  for (i = 0; i != numPLCpoints; ++i) {
+    IntPLCPoints[i] = mCoords.quantize(&PLCpoints[2*i]);
+  }
   
-  // // Generate the quantized boundary to handle Boost.Geometry intersections
-  // BGpolygon boundary;
-  // constructBoostBoundary(IntPLCPoints, geometry, boundary);
+  // Generate the quantized boundary to handle Boost.Geometry intersections
+  IntPolygon intBoundary;
+  constructBoostBoundary(IntPLCPoints, geometry, intBoundary);
   
   // // Initialize the object to handle cell intersections
   // Clipper2d<RealType> clipper(boundary);
@@ -509,6 +508,33 @@ computeCellRings(const vector<RealType>& points,
     orphanage.adoptOrphans(points, mCoords, cellRings, IntOrphans);
   }
   
+
+  // Mark any cell ring points coinciding with the bounding PLC
+  for (i = 0; i != numGenerators; ++i) {
+    if (boost::geometry::intersects(cellRings[i], intBoundary)) {
+      for (typename IntRing::iterator itr = cellRings[i].begin();
+	   itr != cellRings[i].end()-1; ++itr) {
+	for (typename IntRing::const_iterator oItr = intBoundary.outer().begin();
+	     oItr != intBoundary.outer().end();
+	     ++oItr) {
+	  if (*itr == *oItr)  itr->index = 1;
+	}
+	typename std::vector<IntRing>& holes = intBoundary.inners();
+	for (unsigned ihole = 0; ihole != holes.size(); ++ihole) {
+	  for (typename IntRing::const_iterator iItr = holes[ihole].begin();
+	       iItr != holes[ihole].end()-1;
+	       ++iItr) {
+	    if (*itr == *iItr)  itr->index = 1;
+	  }
+	}
+	// //Blago!
+	// if (itr->index == 1) std::cerr << (*itr) << std::endl;
+	// //Blago!
+      }
+    }
+  }
+
+
   // Post-conditions
   POLY_ASSERT(cellRings.size() == numGenerators);
 }
@@ -633,7 +659,7 @@ computeVoronoiBounded(const vector<RealType>& points,
                          cellNodes, clipper, cellRings, collinear, true);
 
   // Input nodes and construct the final mesh topology
-  constructBoundedMeshTopology(cellRings, points, mCoords, mesh);
+  constructBoundedMeshTopology(cellRings, points, PLCpoints, geometry, mCoords, mesh);
 }
 //------------------------------------------------------------------------------
 

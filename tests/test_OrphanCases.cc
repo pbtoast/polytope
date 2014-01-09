@@ -39,6 +39,46 @@ void printArea(Boundary2D<double>& boundary,
 }
 
 // -----------------------------------------------------------------------
+// checkNearestNode
+// -----------------------------------------------------------------------
+bool checkNearestNode(const Tessellation<2,double>& mesh,
+		      const double tol) {
+  set<unsigned> boundaryNodes;
+  for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
+    if (mesh.faceCells[iface].size() == 1) {
+      for (vector<unsigned>::const_iterator itr = mesh.faces[iface].begin();
+	   itr != mesh.faces[iface].end();
+	   ++itr )  boundaryNodes.insert(*itr);
+    }
+  }
+
+  vector<double> minDistList(mesh.nodes.size()/2);
+  double dist, minDist, mostMin = numeric_limits<double>::max();
+  for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
+    minDist = numeric_limits<double>::max();
+    for (unsigned j = 0; j != mesh.nodes.size()/2; ++j) {
+      if (i != j) {
+	dist = geometry::distance<2,double>(&mesh.nodes[2*i], &mesh.nodes[2*j]);
+	minDist = std::min(dist, minDist);
+      }
+    }
+    mostMin = std::min(mostMin, minDist);
+    minDistList[i] = minDist;
+  }
+
+  // cerr << "Boundary node distances:" << endl;
+  // for (set<unsigned>::const_iterator itr = boundaryNodes.begin();
+  //      itr != boundaryNodes.end();
+  //      ++itr ) cerr << "   " << "(" << mesh.nodes[2*(*itr)]
+  //       	    << "," << mesh.nodes[2*(*itr)+1] << "): "
+  //       	    << minDistList[*itr] << endl;
+
+  cerr << "Minimum node-node distance = " << mostMin << endl;
+  return (mostMin > tol) ? true : false;
+}
+
+
+// -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
@@ -54,6 +94,7 @@ void test(Tessellator<2,double>& tessellator) {
   boundary.setDefaultBoundary(bType);
   
   int i = 1;
+  const double dist = 1.0e-6;
   
   // Test 1: Cell parents multiple orphans
   {
@@ -65,6 +106,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
   
@@ -78,6 +121,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
   
@@ -91,6 +136,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
   
@@ -104,6 +151,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
   
@@ -117,6 +166,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
   
@@ -124,7 +175,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     cout << "\nTest 6: Nonconvex boundary with three internal generators" << endl;
     std::vector<double> points;
-    points.push_back(0.05); points.push_back(0.60);
+    points.push_back(0.00); points.push_back(0.60);
     points.push_back(0.40); points.push_back(0.10);
     points.push_back(0.60); points.push_back(0.50);
     std::vector<double> PLCpoints;
@@ -135,6 +186,11 @@ void test(Tessellator<2,double>& tessellator) {
     PLCpoints.push_back(1.0); PLCpoints.push_back(0.0);
     PLCpoints.push_back(1.0); PLCpoints.push_back(1.0);
     PLCpoints.push_back(0.0); PLCpoints.push_back(1.0);
+
+    for (unsigned k = 0; k != PLCpoints.size(); ++k) {
+      points.push_back(PLCpoints[k]);
+    }
+
     PLC<2,double> boundary;
     boundary.facets.resize(7, std::vector<int>(2));
     for (int j = 0; j < 7; ++j){
@@ -145,8 +201,8 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
     outputMesh(mesh, testName, points, i);
     ++i;
-  }  
-
+  }
+  
   // Test 7: Original 3x3 Test Case
   {
     cout << "\nTest 7: 3x3 Unit Test with 2 Orphans" << endl;
@@ -195,6 +251,8 @@ void test(Tessellator<2,double>& tessellator) {
         	<< "      Area = " << tessArea << endl
         	<< "     Error = " << trueArea - tessArea << endl
         	<< "Frac Error = " << fracerr);
+    bool result = checkNearestNode(mesh, dist);
+    POLY_ASSERT(result);
     ++i;
   }
 
@@ -208,9 +266,12 @@ void test(Tessellator<2,double>& tessellator) {
       generators.randomPoints(50);
       Tessellation<2,double> mesh;
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+      //tessellator.tessellate(generators.mPoints, mesh);
       outputMesh(mesh, testName, generators.mPoints, i+iter);
       cout << iter << endl;
       printArea(boundary,mesh);
+      bool result = checkNearestNode(mesh, dist);
+      POLY_ASSERT(result);
     }
     ++i;
   }

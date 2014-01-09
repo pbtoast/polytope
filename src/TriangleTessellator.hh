@@ -75,12 +75,15 @@ private:
   typedef boost::geometry::model::polygon<IntPoint,    // point type
                                           false>       // clockwise
     BGpolygon;
+  typedef boost::geometry::model::polygon<RealPoint,   // point type
+                                          false>       // clockwise
+    RealPolygon;
   typedef boost::geometry::model::ring<IntPoint,       // point type
                                        false>          // clockwise
     BGring;
-  typedef boost::geometry::model::polygon<RealPoint,   // point type
-                                          false>       // clockwise
-    realBGpolygon;
+  typedef boost::geometry::model::ring<RealPoint,
+                                       false>
+    RealRing;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
   // ------------------------------------------------- //
@@ -89,13 +92,15 @@ private:
 
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
-			std::map<IntPoint, std::pair<int,int> >& nodeMap,
+			std::vector<RealPoint>& nodeList,
+// 			std::map<IntPoint, std::pair<int,int> >& nodeMap,
 			std::vector<std::vector<unsigned> >& cellNodes,
 			std::vector<unsigned>& infNodes) const;
     
   // Compute bounded cell rings from collection of unbounded node locations
   void computeCellRings(const std::vector<RealType>& points,
-                        const std::map<IntPoint, std::pair<int,int> >& nodeMap,
+			const std::vector<RealPoint>& nodeList,
+//                      const std::map<IntPoint, std::pair<int,int> >& nodeMap,
 			std::vector<std::vector<unsigned> >& cellNodes,
                         Clipper2d<CoordHash>& clipper,
 			std::vector<BGring>& cellRings) const;
