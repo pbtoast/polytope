@@ -127,6 +127,7 @@ class Tessellator:
         x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_pure_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=True, is_const=True)
 
         return
 
@@ -142,6 +143,7 @@ class Tessellator:
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
         
         return
 
@@ -157,6 +159,7 @@ class Tessellator:
         x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
         
         return
 
