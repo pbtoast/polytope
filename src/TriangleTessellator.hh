@@ -22,8 +22,6 @@ struct triangulateio;
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
-typedef int64_t CoordHash;
-  
 namespace polytope 
 {
 
@@ -64,27 +62,24 @@ public:
   //! Should be returned appropriately for normalized coordinates, i.e., if all
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
-  virtual RealType degeneracy() const { return 1.0e-8; }
+  virtual RealType degeneracy() const { return mDegeneracy; }
+  void degeneracy(const RealType val) const { mDegeneracy = val; }
 
 private:
   //-------------------- Private interface ---------------------- //
-
+   
+  // Typedefs for coordinates, edges and points
+  typedef int64_t CoordHash;  
   typedef std::pair<int, int> EdgeHash;
   typedef Point2<CoordHash> IntPoint;
   typedef Point2<double> RealPoint;
-  typedef boost::geometry::model::polygon<IntPoint,    // point type
-                                          false>       // clockwise
-    BGpolygon;
-  typedef boost::geometry::model::polygon<RealPoint,   // point type
-                                          false>       // clockwise
-    RealPolygon;
-  typedef boost::geometry::model::ring<IntPoint,       // point type
-                                       false>          // clockwise
-    BGring;
-  typedef boost::geometry::model::ring<RealPoint,
-                                       false>
-    RealRing;
-  typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
+
+  // Typedefs for boost.geometry rings and polygons
+  // Template arguments are point_type and CW_orientation
+  typedef boost::geometry::model::polygon<IntPoint ,false> BGpolygon;
+  typedef boost::geometry::model::polygon<RealPoint,false> RealPolygon;
+  typedef boost::geometry::model::ring<IntPoint, false>    BGring;
+  typedef boost::geometry::model::ring<RealPoint,false>    RealRing;
 
   // ------------------------------------------------- //
   // Specialized tessellations based on the point set  //
@@ -93,14 +88,12 @@ private:
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
 			std::vector<RealPoint>& nodeList,
-// 			std::map<IntPoint, std::pair<int,int> >& nodeMap,
 			std::vector<std::vector<unsigned> >& cellNodes,
 			std::vector<unsigned>& infNodes) const;
     
   // Compute bounded cell rings from collection of unbounded node locations
   void computeCellRings(const std::vector<RealType>& points,
 			const std::vector<RealPoint>& nodeList,
-//                      const std::map<IntPoint, std::pair<int,int> >& nodeMap,
 			std::vector<std::vector<unsigned> >& cellNodes,
                         Clipper2d<CoordHash>& clipper,
 			std::vector<BGring>& cellRings) const;
@@ -135,7 +128,9 @@ private:
   // -------------------------- //
 
   // The quantized coordinates for this tessellator (inner and outer)
-  mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
+  static CoordHash coordMax;
+  static RealType mDegeneracy; 
+  mutable QuantizedCoordinates<2,RealType> mCoords; //, mOuterCoords;
 
   friend class BoostOrphanage<RealType>;
 };

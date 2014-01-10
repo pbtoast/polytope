@@ -305,7 +305,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
   POLY_ASSERT(points.size() > 2 );
   
-  mCoords.initialize(points);
+  mCoords.initialize(points, coordMax, mDegeneracy);
 
   this->computeVoronoiUnbounded(points, mesh);
 }
@@ -343,7 +343,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0 and PLCpoints.size() % 2 == 0);
   POLY_ASSERT(!geometry.facets.empty());
   
-  mCoords.initialize(points);
+  mCoords.initialize(points, coordMax, mDegeneracy);
   
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
 }
@@ -465,7 +465,8 @@ computeCellNodes(const vector<RealType>& points,
   int i1, i2, ivert;
   infNodes = vector<unsigned>(circ2id.size());
   for (map<EdgeHash, vector<unsigned> >::const_iterator edgeItr = edge2tri.begin();
-       edgeItr != edge2tri.end(); ++edgeItr){
+       edgeItr != edge2tri.end(); 
+       ++edgeItr){
     const EdgeHash& edge = edgeItr->first;
     const vector<unsigned>& tris = edgeItr->second;
     if (tris.size() == 1){
@@ -505,7 +506,8 @@ computeCellNodes(const vector<RealType>& points,
       // //Blago!
     }
   }
-  POLY_ASSERT(circ2id.size() == nodeData.size());
+  POLY_ASSERT(circ2id.size()  == nodeData.size());
+  POLY_ASSERT(infNodes.size() == nodeData.size());
 
   // Store the final collection of nodes in an ordered vector
   nodeList.resize(nodeData.size());
@@ -518,7 +520,8 @@ computeCellNodes(const vector<RealType>& points,
     RealPoint rp = mCoords.dequantize(&ip.x, (itr->second.second==1));
     nodeList[i] = rp;
   }
-  
+  POLY_ASSERT(infNodes.size() == nodeList.size());
+
   // The faces corresponding to each triangle edge
   unsigned ii, jj;
   bool unboundedCell;
@@ -532,7 +535,8 @@ computeCellNodes(const vector<RealType>& points,
     set<EdgeHash> meshEdges;
     unboundedCell = false;
     for (set<unsigned>::const_iterator triItr = tris.begin();
-         triItr != tris.end(); ++triItr){
+         triItr != tris.end(); 
+         ++triItr){
       i = *triItr;
       POLY_ASSERT(i < delaunay.numberoftriangles);
       POLY_ASSERT(tri2id.find(i) != tri2id.end());
@@ -571,8 +575,7 @@ computeCellNodes(const vector<RealType>& points,
         if (jj != ii) meshEdges.insert(internal::hashEdge(ii,jj));
       }
 
-      // If either of pq or pr has one triangle neighbor,
-      // this is an unbounded cell
+      // If either of pq or pr has one triangle neighbor, this is an unbounded cell
       unboundedCell += (edge2tri[pq].size() == 1 or edge2tri[pr].size() == 1);
     }
 
@@ -612,29 +615,32 @@ computeCellNodes(const vector<RealType>& points,
       // Compute cell self-intersections
       RealPoint result;
       bool intersects;
-      if (n12 == n21) intersects = false;
-      else            intersects = geometry::segmentIntersection2D(&rp11.x, &rp12.x,
-                                                                   &rp21.x, &rp22.x,
-                                                                   &result.x);
+      if   (n12  == n21 ) intersects = false;
+      else                intersects = geometry::segmentIntersection2D(&rp11.x, &rp12.x,
+                                                                       &rp21.x, &rp22.x,
+                                                                       &result.x,
+                                                                       mDegeneracy);
 
       // Self-intersecting cell ring: replace the offending projected
       // points with the intersection point
       if (intersects) {
-	
-	// // Blago!
-	// cerr << "Self-intersection detected:" << endl
-	//      << "  Cell " << pindex << endl
+         
+        // // Blago!
+        // cerr << "Self-intersection detected:" << endl
+        //      << "  Cell " << pindex << endl
 	//      << "  " << rp11 << "  " << rp12 << endl
 	//      << "  " << rp21 << "  " << rp22 << endl
 	//      << "  Intersection pt = " << result << endl;
 	// // Blago!
-
-	nodeList[n11] = RealPoint(0.95*result.x + 0.05*rp12.x,
-				  0.95*result.y + 0.05*rp12.y);
-	nodeList[n22] = RealPoint(0.95*result.x + 0.05*rp21.x,
-				  0.95*result.y + 0.05*rp21.y);
+        
+        if (geometry::distance<2,RealType>(&rp12.x, &result.x) > mDegeneracy and 
+            geometry::distance<2,RealType>(&rp21.x, &result.x) > mDegeneracy) {
+          nodeList[n11] = RealPoint(0.95*result.x + 0.05*rp12.x,
+                                    0.95*result.y + 0.05*rp12.y);
+          nodeList[n22] = RealPoint(0.95*result.x + 0.05*rp21.x,
+                                    0.95*result.y + 0.05*rp21.y);
+        }
       }
-
       
       // Compute intersection with bounding box
       vector<RealType> results;
@@ -654,7 +660,7 @@ computeCellNodes(const vector<RealType>& points,
         RealPoint newNode = mCoords.projectPoint(&p.x, &rperp.x);
         unsigned newNodeIndex = nodeList.size();
 
-        //  // Blago!
+        // // Blago!
 	// cerr << "Bounding box intersection detected:" << endl
 	//      << "  Cell " << pindex << " at " << p << endl
 	//      << "  " << rp11 << "  " << rp12 << endl
@@ -668,6 +674,7 @@ computeCellNodes(const vector<RealType>& points,
 	// // Blago!
 
         nodeList.push_back(newNode);
+        infNodes.push_back(1);
         vector<unsigned>::iterator it = cellNodes[pindex].begin() + 1;
         cellNodes[pindex].insert(it, newNodeIndex);
         // cellNodes[pindex].push_back(newNodeIndex);
@@ -1176,11 +1183,20 @@ tessellate(const vector<RealType>& points,
 //------------------------------------------------------------------------------
 // Explicit instantiation.
 //------------------------------------------------------------------------------
-
+template class TriangleTessellator<double>;
 
 //------------------------------------------------------------------------------
-template class TriangleTessellator<double>;
+// Static initializations.
+//------------------------------------------------------------------------------
+template<typename RealType> int64_t   TriangleTessellator<RealType>::coordMax = (1LL << 26);
+template<typename RealType> RealType  TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator<RealType>::coordMax;
+
+
 }
+
+
+
+
 
 
 

@@ -1137,9 +1137,9 @@ bool
 segmentIntersection2D(const RealType* a, 
 		      const RealType* b, 
 		      const RealType* c, 
-		      const RealType* d, 
-		      RealType* result) {
-   const RealType tol = 1.0e-8;
+		      const RealType* d,
+		      RealType* result,
+                      const RealType tol = 1.0e-8) {
    RealType r1[2] = {b[0]-a[0] , b[1]-a[1]};  //direction vector of first segment
    RealType r2[2] = {d[0]-c[0] , d[1]-c[1]};  //direction vector of second segment
    RealType ca[2] = {c[0]-a[0] , c[1]-a[1]};

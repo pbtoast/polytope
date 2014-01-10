@@ -88,12 +88,14 @@ public:
   //------------------------------------------------------------------------
   //! Initialize the coordinate system
   //------------------------------------------------------------------------
-  void initialize(const std::vector<RealType>& allPoints) {
+  void initialize(const std::vector<RealType>& allPoints,
+                  const CoordHash coordMax = (1LL << 26),
+                  const RealType degeneracy = 1.5e-8) {
     
     // Initialize degeneracy and coordMax
     if (!mCoordinatesModified) {
-      mDegeneracy = 1.5e-8;
-      mCoordMax   = (1LL << 26);
+      mDegeneracy = degeneracy;
+      mCoordMax   = coordMax;
     }
     low.clear(); high.clear(); center.clear();
     

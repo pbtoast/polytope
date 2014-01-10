@@ -151,7 +151,8 @@ public:
   //! Should be returned appropriately for normalized coordinates, i.e., if all
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
-  virtual RealType degeneracy() const { return 1.0e-8; }
+  virtual RealType degeneracy() const { return mDegeneracy; }
+  void degeneracy(const RealType val) const { mDegeneracy = val; }
 
 private:
   //-------------------- Private interface ---------------------- //
@@ -202,10 +203,11 @@ private:
   // -------------------------- //
 
   // The quantized coordinates for this tessellator (inner and outer)
+  static CoordHash coordMax;
+  static RealType mDegeneracy; 
   mutable QuantizedCoordinates<2,RealType> mCoords;
 
   friend class BoostOrphanage<RealType>;
-
 };
 
 } //end polytope namespace
