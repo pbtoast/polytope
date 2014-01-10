@@ -119,9 +119,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Initialize quantized coordinate system
-  // mCoords.setDegeneracy(2.5e-7);
-  // mCoords.setCoordMax  (1LL << 22);
-  mCoords.initialize(points);
+  mCoords.initialize(points, coordMax, mDegeneracy);
   
   this->computeVoronoiUnbounded(points, mesh);
 }
@@ -162,9 +160,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0 and PLCpoints.size() % 2 == 0);
 
   // Initialize quantized coordinate system
-  // mCoords.setDegeneracy(9.3e-10);
-  // mCoords.setCoordMax  (1LL << 30);
-  mCoords.initialize(PLCpoints);
+  mCoords.initialize(PLCpoints, coordMax, mDegeneracy);
 
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
 }
@@ -765,10 +761,12 @@ tessellate(const std::vector<RealType>& points,
 //------------------------------------------------------------------------------
 // Explicit instantiation.
 //------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
 template class BoostTessellator<double>;
 
+//------------------------------------------------------------------------------
+// Static initializations.
+//------------------------------------------------------------------------------
+template<typename RealType> int64_t   BoostTessellator<RealType>::coordMax = (1LL << 26);
+template<typename RealType> RealType  BoostTessellator<RealType>::mDegeneracy = 1.0/BoostTessellator<RealType>::coordMax;
 
 } //end polytope namespace

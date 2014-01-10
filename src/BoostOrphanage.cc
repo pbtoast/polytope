@@ -19,6 +19,8 @@ using namespace std;
 
 namespace {
 
+
+
 //------------------------------------------------------------------------
 // Union a Boost.Geometry ring with a Boost.Geometry multi_polygon.
 // The resulting multi_polygon is corrected to ensure it conforms to
@@ -177,7 +179,7 @@ adoptOrphans(const vector<RealType>& points,
       POLY_ASSERT(neighborCells.size() == 1);
       
       // // Blago!
-      // std::cerr << "Initial union polygon" << std::endl;
+      // std::cerr << "Initial union polygon (just the orphan):" << std::endl;
       // for (typename BGring::const_iterator itr = neighborCells[0].outer().begin();
       //      itr != neighborCells[0].outer().end(); 
       //      ++itr)  std::cerr << (*itr) << coords.dequantize(&(*itr).x) << std::endl;
@@ -188,12 +190,22 @@ adoptOrphans(const vector<RealType>& points,
       std::vector<RealType> subpoints;
       for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
            nbItr != orphanNeighbors.end(); 
-           ++nbItr){
+           ++nbItr) {
         subpoints.push_back( points[2*(*nbItr)  ] );
         subpoints.push_back( points[2*(*nbItr)+1] );
-        createBGUnion(cellRings[*nbItr],neighborCells);
+        createBGUnion(cellRings[*nbItr], neighborCells);
       }
+      POLY_ASSERT(neighborCells.size() == 1);
       POLY_ASSERT2( neighborCells.size() > 0, "Union produced empty set!" );
+
+      // As a fail-safe, union with the orphan one last time.
+      //
+      // NOTE: The order in which we union the orphan with each neighbor matters.
+      //       If the orphan and a neighboring cell only share a single node, and
+      //       that union is computed first, boost.geometry will return two 
+      //       polygons. The orphan ring may become lost in subsequent unions.
+      createBGUnion(orphan, neighborCells);
+      POLY_ASSERT(neighborCells.size() == 1);
 
       // std::cerr << "Number of neighbors = " << orphanNeighbors.size() << std::endl;
       

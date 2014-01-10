@@ -71,7 +71,22 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh,N,N+1,2*N,N,N);
-    if (!pass) howDidIDo.push_back(ntest);
+    
+    // int attempts = 1;
+    // while (not pass and attempts < 7) {
+    //    attempts++;
+    //    cout << "Attempt " << attempts << ":" << endl
+    //         << "Turning up the degeneracy" << endl
+    //         << "  original value = " << tessellator.degeneracy() << endl
+    //         << "  new value      = " << tessellator.degeneracy()*10 << endl;
+    //    tessellator.degeneracy(10*tessellator.degeneracy());
+    //    mesh.clear();
+    //    tessellator.tessellate(points, mesh);
+    //    outputMesh(mesh, testName, points, ntest);
+    //    pass = checkMesh(mesh,N,N+1,2*N,N,N);
+    // }
+
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -90,7 +105,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh,N,N+1,2*N,N,N);
-    if (!pass) howDidIDo.push_back(ntest);
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -106,8 +121,9 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    bool pass = checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N);
-    if (!pass) howDidIDo.push_back(ntest);
+    bool pass = (checkMesh(mesh, 2*N, 3*N-1, 5*N-2, 2*N, 2*N) or
+                 checkMesh(mesh, 2*N, 3*(N+1), 5*N+2, 2*N+4, 2*N+4));
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -136,8 +152,9 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
-    bool pass = checkMesh(mesh, 4, 5, 8, 4, 4);
-    if (!pass) howDidIDo.push_back(ntest);
+    bool pass = (checkMesh(mesh, 4, 5, 8 , 4, 4) or
+                 checkMesh(mesh, 4, 9, 12, 8, 8));
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -151,7 +168,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh, 2, 4, 5, 4, 4);
-    if (!pass) howDidIDo.push_back(ntest);
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -165,7 +182,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
-    if (!pass) howDidIDo.push_back(ntest);
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -179,7 +196,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);
-    if (!pass) howDidIDo.push_back(ntest);
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
 
@@ -194,7 +211,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
-    if (!pass) howDidIDo.push_back(ntest);
+    if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   } 
 

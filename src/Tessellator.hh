@@ -128,6 +128,7 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const = 0;
+  virtual void degeneracy(const RealType val) const {};
 
   protected:
 
