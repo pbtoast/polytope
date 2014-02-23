@@ -47,6 +47,8 @@ class PLC:
     #---------------------------------------------------------------------------
     def generatePLCBindings(self, x, ndim):
         
+        me = "PLC%id" % ndim
+
         # Constructors
         x.add_constructor([])
         
@@ -67,6 +69,12 @@ class PLC:
                                             getter_template_parameters=[str(ndim),"double"], 
                                             setter_template_parameters=[str(ndim),"double"])
         
+        # String representations.
+        x.add_function_as_method("PLC_repr", "std::string", [param(me, "self")],
+                                 template_parameters = [str(ndim), "double"],
+                                 custom_name = "__repr__")
+        x.add_output_stream_operator()
+
         return
 
     #---------------------------------------------------------------------------
