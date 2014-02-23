@@ -30,6 +30,15 @@ class Functions:
     def generateBindings(self, mod):
         polytope = mod.add_cpp_namespace("polytope")
                        
+        polytope.add_function("writePLCtoOFF",
+                              None,
+                              [constrefparam("polytope::PLC3d", "plc"),
+                               constrefparam("vector_of_double", "coords"),
+                               param("std::string", "filename")],
+                              template_parameters = ["double"],
+                              custom_name = "writePLCtoOFF",
+                              docstring = "writePLCtoOFF -- output a PLC to an OFF file for use with GeomView.")
+
         for dim in (2, 3):
             polytope.add_function("writeTessellation", 
                                   None,
