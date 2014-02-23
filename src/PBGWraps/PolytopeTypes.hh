@@ -15,6 +15,7 @@
 #include "TetgenTessellator.hh"
 #include "MeshEditor.hh"
 #include "SiloWriter.hh"
+#include "polytope_write_OOGL.hh"
 
 #if HAVE_MPI
 #include "DistributedTessellator.hh"
