@@ -1,3 +1,16 @@
+Release 0.5.19
+
+changeset:
+  468:a706804afbeb
+
+Changes:
+
+- Minor python changes (improved printing of PLCs, etc.)
+- Release LICENSE file now correct.
+- David added documentation in the "doc/" directory.
+- Assorted minor bug fixes.
+
+--------------------------------------------------------------------------------
 Release 0.5.18
 
 changeset:
