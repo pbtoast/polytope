@@ -20,6 +20,7 @@
 #include "nearestPoint.hh"
 #include "intersect.hh"
 #include "polytope_plc_canned_geometries.hh"
+#include "polytope_geometric_utilities.hh"
 
 // Fast predicate for determining colinearity of points.
 extern double orient2d(double* pa, double* pb, double* pc);
@@ -188,8 +189,23 @@ computeCellNodes(const vector<RealType>& points,
 
   // Convert point generators to Polytope integer points
   vector<pair<IntPoint, int> > generatorToIndex(numGenerators);
-  for (i = 0; i != numGenerators; ++i) {
-     generatorToIndex[i] = make_pair(mCoords.quantize(&points[2*i]), i);
+  {
+    IntPoint qpoint;
+    set<IntPoint> uniqueQuants;
+    for (i = 0; i != numGenerators; ++i) {
+      qpoint = mCoords.quantize(&points[2*i]);
+      uniqueQuants.insert(qpoint);
+      if (uniqueQuants.size() != i + 1) {
+        j = 0;
+        while (j != generatorToIndex.size() and generatorToIndex[j].first != qpoint) ++j;
+        cerr << "BoostTessellator ERROR: input generator points are not unique: degenerate indices are:" << endl
+             << "  " << j << " " << generatorToIndex[j].first << " (" << points[2*j] << " " << points[2*j+1] << ")" << endl
+             << "  " << i << " " << qpoint << " (" << points[2*i] << " " << points[2*j+i] << ")" << endl
+             << " distance = " << geometry::distance<2, RealType>(&points[2*i], &points[2*j]) << endl;
+      }
+      POLY_ASSERT(uniqueQuants.size() == i + 1);
+      generatorToIndex[i] = make_pair(qpoint, i);
+    }
   }
   
   // Sort the input points by the first element of the generator-index pair.
