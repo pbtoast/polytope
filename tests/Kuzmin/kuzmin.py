@@ -25,11 +25,13 @@ for i in xrange(4):
 print "Bounding PLC: ", plc
 
 # Build a 2D tessellator.
+degen = 0.1
 mesh = polytope.Tessellation2d()
 tes = polytope.TriangleTessellator2d()
 #tes = polytope.BoostTessellator2d()
 #tes.tessellate(coords, coords, plc, mesh)
-ind = tes.tessellateDegenerate(coords, coords, plc, 0.5, mesh)
+ind = tes.tessellateDegenerate(coords, coords, plc, degen, mesh)
+print "Found %i unique generator positions for tessellation." % max(ind)
 
 # Write out a viz file.
-polytope.writeTessellation2d(mesh, "Kuzmin_triangle", None, None, None, None)
+polytope.writeTessellation2d(mesh, "Kuzmin_triangle_%g" % degen, None, None, None, None)
