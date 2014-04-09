@@ -10,7 +10,7 @@
 
 #include "polytope.hh"    // Pulls in POLY_ASSERT and TriangleTessellator.hh.
 #include "PLC_CSG_2d.hh"
-#include "PLC_Boost_2d.hh"
+#include "PLC_CSG_Boost_2d.hh"
 #include "simplifyPLCfacets.hh"
 #include "polytope_plc_canned_geometries.hh"
 
