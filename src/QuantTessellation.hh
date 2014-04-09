@@ -1,6 +1,9 @@
 //------------------------------------------------------------------------------
 // An internal handy intermediate representation of a tessellation.
 //------------------------------------------------------------------------------
+#ifndef __Polytope_QuantTessellation__
+#define __Polytope_QuantTessellation__
+
 #include <algorithm>
 #include "polytope_internal.hh"
 #include "DimensionTraits.hh"
@@ -60,6 +63,12 @@ public:
     return result;
   }
 
+  IntPoint hashedPosition(const PointHash ip) const {
+    IntPoint result;
+    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
+    return result;
+  }
+
   //----------------------------------------------------------------------------
   // Add new elements, and return the unique index.
   //----------------------------------------------------------------------------
@@ -113,6 +122,14 @@ public:
     POLY_ASSERT(i < points.size());
     return unhashPosition(points[i]);
   }
+
+//   //----------------------------------------------------------------------------
+//   // Integer position for a point (normalized coordinates).
+//   //----------------------------------------------------------------------------
+//   IntPoint nodePosition(const unsigned i) {
+//     POLY_ASSERT(i < points.size());
+//     return hashedPosition(points[i]);
+//   }
 
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
@@ -204,15 +221,20 @@ public:
     mesh.faces.reserve(faces.size());
     for (unsigned i = 0; i != faces.size(); ++i) {
       mesh.faces.push_back(std::vector<unsigned>());
-      for (unsigned j = 0; j != faces[i].size(); ++j) {
-        if (faces[i][j] >= 0) {
-          mesh.faces[i].push_back(edges[faces[i][j]].first);
-        } else {
-          mesh.faces[i].push_back(edges[~faces[i][j]].second);
-        }
-        POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
+      if (faces[i].size() == 1) {
+	mesh.faces[i].push_back(edges[faces[i][0]].first);
+	mesh.faces[i].push_back(edges[faces[i][0]].second);
+      } else {
+	for (unsigned j = 0; j != faces[i].size(); ++j) {
+	  if (faces[i][j] >= 0) {
+	    mesh.faces[i].push_back(edges[faces[i][j]].first);
+	  } else {
+	    mesh.faces[i].push_back(edges[~faces[i][j]].second);
+	  }
+	  POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
+	}
+	POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
       }
-      POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
     }
 
     // Much of our data can simply be copied over wholesale.
@@ -321,3 +343,5 @@ public:
 
 }
 }
+
+#endif
