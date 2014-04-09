@@ -127,7 +127,7 @@ void test(Tessellator<2,double>& tessellator) {
 
   // Test 5: 2x2 Cartesian Generators
   {
-    cout << "\nTest 4: 2x2 Cartesian generators" << endl;
+    cout << "\nTest " << ntest << ": 2x2 Cartesian generators" << endl;
     vector<double> points;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
@@ -140,6 +140,18 @@ void test(Tessellator<2,double>& tessellator) {
     if (!pass) howDidIDo.push_back(ntest);
     ++ntest;
   }
+
+  {
+    const unsigned nPoints = 100;
+    vector<double> points;
+    for (unsigned i = 0; i != 2*nPoints; ++i) points.push_back(random01());
+    Tessellation<2,double> mesh;
+    tessellator.tessellate(points, mesh);
+    outputMesh(mesh, testName, points, ntest);
+    bool pass = true;
+    ++ntest;
+  }
+
 
   // Test 6: Two generators
   {
