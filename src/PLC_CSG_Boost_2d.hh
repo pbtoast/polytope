@@ -247,6 +247,9 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
     POLY_ASSERT(intersections[0].outer().front() == intersections[0].outer().back());
 //     POLY_ASSERT(not boost::geometry::intersects(intersections[0]));
 //     POLY_ASSERT(boost::geometry::covered_by(p, intersections[0]));
+    std::cerr << "Boost intersection: a = " << boost::geometry::dsv(ReducedPLCtoPolygon(a)) << std::endl
+              << "                    b = " << boost::geometry::dsv(ReducedPLCtoPolygon(b)) << std::endl
+              << "               result = " << boost::geometry::dsv(intersections[0]) << std::endl;
     return ReducedPLCfromPolygon(intersections[0]);
   }
   // The one geometry that contains point p is the returned intersection
