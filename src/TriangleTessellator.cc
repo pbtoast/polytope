@@ -407,10 +407,13 @@ plcOfCell(const internal::QuantTessellation<2, RealType>& qmesh,
     const unsigned iface = flip ? ~qmesh.cells[icell][i] : qmesh.cells[icell][i];
     POLY_ASSERT(iface < qmesh.faces.size());
     POLY_ASSERT(qmesh.faces[iface].size() == 1);
-    const int iedge = qmesh.faces[iface][0];
-    POLY_ASSERT(iedge >= 0);
-    const int ip = flip ? qmesh.edges[iedge].first : qmesh.edges[iedge].second;
-    POLY_ASSERT(ip >= 0);
+    POLY_ASSERT(qmesh.faces[iface][0] >= 0);
+    const unsigned iedge = qmesh.faces[iface][0];
+    POLY_ASSERT(iedge < qmesh.edges.size());
+    const unsigned ip = flip ? qmesh.edges[iedge].second : qmesh.edges[iedge].first;
+    // cerr << "Edge : " << iedge << " " << flip << " : (" << qmesh.edges[iedge].first << " " << qmesh.edges[iedge].second << ") : "
+    //      << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].first]) << " "
+    //      << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].second]) << endl;
     POLY_ASSERT(ip < qmesh.points.size());
     PointType p = qmesh.unhashPosition(qmesh.points[ip]);
     result.points.push_back(p.x);
@@ -632,6 +635,7 @@ tessellate(const vector<RealType>& points,
 			     IntCell,
 			     IntPoint(HasherType::qxval(pid), HasherType::qyval(pid)),
 			     orphans);
+    std::cerr << "Resulting PLC: " << IntCell << std::endl;
     std::cerr << "DONE!" << std::endl;
 
     // Blago!
