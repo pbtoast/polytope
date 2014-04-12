@@ -24,8 +24,6 @@ struct triangulateio;
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
-typedef int64_t CoordHash;
-  
 namespace polytope 
 {
 
@@ -34,6 +32,8 @@ class TriangleTessellator: public Tessellator<2, RealType>
 {
 public:
 
+  typedef int64_t CoordHash;
+  
   // Constructor, destructor.
   TriangleTessellator();
   ~TriangleTessellator();
