@@ -16,8 +16,8 @@
 
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
-#include "QuantizedCoordinates.hh"
 #include "polytope_tessellator_utilities.hh"
+
 struct triangulateio;
 
 // We use the Boost.Geometry library to handle polygon intersections and such.
@@ -90,49 +90,12 @@ private:
     realBGpolygon;
   typedef boost::geometry::model::multi_polygon<BGpolygon> BGmulti_polygon;
 
-  // ------------------------------------------------- //
-  // Specialized tessellations based on the point set  //
-  // ------------------------------------------------- //
-
-  // Compute node IDs around each generator and their quantized locations
-  void computeCellNodes(const std::vector<RealType>& points,
-			std::map<IntPoint, std::pair<int,int> >& nodeMap,
-			std::vector<std::vector<unsigned> >& cellNodes,
-			std::vector<unsigned>& infNodes) const;
-    
-  // Compute bounded cell rings from collection of unbounded node locations
-  void computeCellRings(const std::vector<RealType>& points,
-                        const std::map<IntPoint, std::pair<int,int> >& nodeMap,
-			std::vector<std::vector<unsigned> >& cellNodes,
-                        Clipper2d<CoordHash>& clipper,
-			std::vector<BGring>& cellRings) const;
-
-  // Computes the triangularization using Triangle
-  void computeDelaunay(const std::vector<RealType>& points,
-                       triangulateio& delaunay) const;
-
-  // Compute an unbounded tessellation
-  void computeVoronoiUnbounded(const std::vector<RealType>& points,
-			       Tessellation<2, RealType>& mesh) const;
-
-  // Compute a bounded tessellation
-  void computeVoronoiBounded(const std::vector<RealType>& points,
-			     const std::vector<RealType>& PLCpoints,
-			     const PLC<2, RealType>& geometry,
-			     Tessellation<2, RealType>& mesh) const;
-
   // ----------------------------------------------------- //
   // Private tessellate calls used by internal algorithms  //
   // ----------------------------------------------------- //
-
-
-  // Bounded tessellation with prescribed bounding box
-  void tessellate(const std::vector<RealType>& points,
-                  const std::vector<CoordHash>& IntPLCpoints,
-                  const PLC<2, RealType>& geometry,
-                  const QuantizedCoordinates<2, RealType>& coords,
-                  std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const;
-
+  // Computes the triangularization using Triangle
+  void computeDelaunay(const std::vector<RealType>& points,
+                       triangulateio& delaunay) const;
 
   // Internal method to compute the quantized tessellation.
   void
@@ -143,10 +106,6 @@ private:
   // -------------------------- //
   // Private member variables   //
   // -------------------------- //
-
-  // The quantized coordinates for this tessellator (inner and outer)
-  mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
-
   static CoordHash coordMax;
   static RealType mDegeneracy;
 
