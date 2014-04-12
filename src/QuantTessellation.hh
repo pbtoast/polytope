@@ -118,7 +118,7 @@ public:
   //----------------------------------------------------------------------------
   // Floating position for a point (normalized coordinates).
   //----------------------------------------------------------------------------
-  RealPoint nodePosition(const unsigned i) {
+  RealPoint nodePosition(const unsigned i) const {
     POLY_ASSERT(i < points.size());
     return unhashPosition(points[i]);
   }
@@ -126,7 +126,7 @@ public:
 //   //----------------------------------------------------------------------------
 //   // Integer position for a point (normalized coordinates).
 //   //----------------------------------------------------------------------------
-//   IntPoint nodePosition(const unsigned i) {
+//   IntPoint nodePosition(const unsigned i) const {
 //     POLY_ASSERT(i < points.size());
 //     return hashedPosition(points[i]);
 //   }
@@ -134,7 +134,7 @@ public:
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
   //----------------------------------------------------------------------------
-  RealPoint labNodePosition(const unsigned i) {
+  RealPoint labNodePosition(const unsigned i) const {
     POLY_ASSERT(i < points.size());
     RealPoint result = nodePosition(i);
     for (unsigned j = 0; j != Dimension; ++j) {
@@ -146,7 +146,7 @@ public:
   //----------------------------------------------------------------------------
   // Floating position for an edge.
   //----------------------------------------------------------------------------
-  RealPoint edgePosition(const EdgeHash& ehash) {
+  RealPoint edgePosition(const EdgeHash& ehash) const {
     RealPoint result = nodePosition(ehash.first) + nodePosition(ehash.second);
     result *= 0.5;
     return result;
