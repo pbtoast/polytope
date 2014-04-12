@@ -198,30 +198,38 @@ computeSortedCellEdges(const internal::QuantTessellation<2, RealType>& qmesh,
     result.insert(result.begin() + 1, edges.size());
     edges.push_back(internal::hashEdge(hangingNodes[0], hangingNodes[1]));
     ++nedges;
+    // // BLAGO
+    // for (unsigned kk = 0; kk != 3; ++kk) {
+    //   cerr << "Edge " << result[kk] << " nodes=(" << edges[result[kk]].first << " " << edges[result[kk]].second << ") pos=[" << qmesh.nodePosition(edges[result[kk]].first) << " " << qmesh.nodePosition(edges[result[kk]].second) << endl;
+    // }
+    // // BLAGO
+    const RealPoint n0 = (qmesh.nodePosition(edges[result[0]].first) +
+                          qmesh.nodePosition(edges[result[0]].second))*0.5,
+                    n1 = (qmesh.nodePosition(edges[result[1]].first) +
+                          qmesh.nodePosition(edges[result[1]].second))*0.5,
+                    n2 = (qmesh.nodePosition(edges[result[2]].first) +
+                          qmesh.nodePosition(edges[result[2]].second))*0.5;
+    if (geometry::triangleVolume2(&n0.x, &n1.x, &n2.x) > 0.0) swap(result[0], result[2]);
+    // cerr << "Initial vote : " << result[0] << " " << result[1] << " " << result[2] << endl;
     POLY_ASSERT(result.size() == 3);
   }
   POLY_ASSERT(edges.size() == nedges);
 
   // Pick a node to start the chain.
   if (hangingNodes.size() == 2) {
-    const RealPoint n0 = qmesh.nodePosition(edges[result[0]].first),
-                    n1 = qmesh.nodePosition(edges[result[0]].second),
-                    n2 = (qmesh.nodePosition(edges[result[1]].first) + 
-                          qmesh.nodePosition(edges[result[1]].second))*0.5;
-    if (geometry::triangleVolume2(&n0.x, &n1.x, &n2.x) < 0.0) swap(result[0], result[1]);
     POLY_ASSERT(nodeUseCount[edges[result.back()].first] == 2 or
                 nodeUseCount[edges[result.back()].second] == 2);
     lastNode = (nodeUseCount[edges[result.back()].first] == 2 ? 
-                edges[result.back()].first :
-                edges[result.back()].second);
+                edges[result.back()].second :
+                edges[result.back()].first);
   } else {
     const RealPoint n0 = qmesh.nodePosition(edges[0].first),
                     n1 = qmesh.nodePosition(edges[0].second),
                     n2 = (qmesh.nodePosition(edges[1].first) + 
                           qmesh.nodePosition(edges[1].second))*0.5;
     lastNode = (geometry::triangleVolume2(&n0.x, &n1.x, &n2.x) > 0.0 ?
-                edges[0].second :
-                edges[1].first);
+                edges[0].first :
+                edges[1].second);
   }
 
   // Walk the remaining edges
@@ -518,8 +526,7 @@ tessellate(const vector<RealType>& points,
   const unsigned numGenerators = points.size()/2;
   internal::QuantTessellation<2,RealType> qmesh0;
   this->computeUnboundedQuantizedTessellation(points, geometry.points, qmesh0);
-
-  std::cerr << "Computed unbounded quantized tessellation" << std::endl;
+  std::cerr << "Computed unbounded quantized tessellation" << qmesh0 << std::endl;
 
   // Create a new QuantTessellation.  This one will only use the single level of
   // quantization since we know the PLC is within this inner region.
@@ -860,7 +867,6 @@ computeUnboundedQuantizedTessellation(const vector<RealType>& points,
     unsigned ii, jj;
     RealType vol;
     RealPoint n0, n1;
-    vector<vector<EdgeHash> > cellInfEdges(numGenerators);
     for (map<int, set<unsigned> >::const_iterator genItr = gen2tri.begin();
          genItr != gen2tri.end(); 
          ++genItr) {
@@ -944,8 +950,6 @@ computeUnboundedQuantizedTessellation(const vector<RealType>& points,
             const bool flip = (*itr < 0);
             k = (flip ? ~(*itr) : *itr);
             iedge = qmesh.addNewEdge(meshEdges[k]);
-            //int edgePair[2] = {meshEdges[k].first, meshEdges[k].second};
-            //vector<int> face(edgePair, edgePair+2);
             vector<int> face(1, iedge);
             iface = qmesh.addNewFace(face);
             POLY_ASSERT(iedge == iface);
@@ -964,20 +968,11 @@ computeUnboundedQuantizedTessellation(const vector<RealType>& points,
   	
           // Did we create a new infEdge? If so we know it was the second element
           // in the ordered list.
-          if (0 and infEdge) {
-            k = internal::positiveID(edgeOrder[1]);
-            //   	  iedge = qmesh.edge2id[meshEdges[k]];
-            iedge = qmesh.addNewEdge(meshEdges[k]);
-            qmesh.infEdges.push_back(iedge);
-            cellInfEdges[p].push_back(meshEdges[k]);
-            //unsigned edgePair[2] = {meshEdges[k].first, meshEdges[k].second};
-            //vector<int> face(edgePair, edgePair+2);
-            vector<int> face(1, iedge);
-            iface = qmesh.addNewFace(face);
-            //   	  iface = qmesh.face2id[face];
-            POLY_ASSERT(iface == iedge);
-            qmesh.infFaces.push_back(iface);
-            qmesh.cells[p].push_back(iface);
+          if (infEdge) {
+            j = internal::positiveID(edgeOrder[1]);
+            k = qmesh.edge2id[meshEdges[j]];
+            qmesh.infEdges.push_back(k);
+            qmesh.infFaces.push_back(k);
           }
         }
       }

@@ -54,18 +54,13 @@ public:
                                                                const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
                                                                degeneracy);
   }
+
   RealPoint unhashPosition(const PointHash ip) const {
     RealPoint result;
     geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
                                                           const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
                                                           const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
                                                           ip, degeneracy);
-    return result;
-  }
-
-  IntPoint hashedPosition(const PointHash ip) const {
-    IntPoint result;
-    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
     return result;
   }
 
@@ -122,14 +117,6 @@ public:
     POLY_ASSERT(i < points.size());
     return unhashPosition(points[i]);
   }
-
-//   //----------------------------------------------------------------------------
-//   // Integer position for a point (normalized coordinates).
-//   //----------------------------------------------------------------------------
-//   IntPoint nodePosition(const unsigned i) const {
-//     POLY_ASSERT(i < points.size());
-//     return hashedPosition(points[i]);
-//   }
 
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
@@ -339,7 +326,93 @@ public:
     }
     POLY_END_CONTRACT_SCOPE;
   }
+
 };
+
+template<typename RealType>
+inline
+typename QuantTessellation<2, RealType>::IntPoint 
+intPosition(const QuantTessellation<2, RealType>& qmesh,
+            const typename QuantTessellation<2, RealType>::PointHash ip) {
+  return typename QuantTessellation<2, RealType>::IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
+                                                           geometry::Hasher<2, RealType>::qyval(ip));
+}
+
+template<typename RealType>
+inline
+typename QuantTessellation<3, RealType>::IntPoint 
+intPosition(const QuantTessellation<3, RealType>& qmesh,
+               const typename QuantTessellation<3, RealType>::PointHash ip) {
+  return typename QuantTessellation<2, RealType>::IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
+                                                           geometry::Hasher<2, RealType>::qyval(ip),
+                                                           geometry::Hasher<2, RealType>::qzval(ip));
+}
+
+//! output operator.
+template<int Dimension, typename RealType>
+std::ostream& operator<<(std::ostream& s, 
+                         const QuantTessellation<Dimension, RealType>& mesh) {
+  s << "QuantTessellation (" << Dimension << "D):" << std::endl;
+  s << mesh.points.size() << " nodes:" << std::endl;
+  for (unsigned n = 0; n < mesh.points.size(); ++n)
+  {
+    s << " " << n << ": " << mesh.points[n] << " "
+      << intPosition(mesh, mesh.points[n]) << " "
+      << mesh.unhashPosition(mesh.points[n]) << std::endl;
+  }
+  s << std::endl;
+
+  s << mesh.edges.size() << " edges:" << std::endl;
+  for (int e = 0; e < mesh.edges.size(); ++e)
+  {
+    s << " " << e << ": ("
+      << mesh.edges[e].first << ", "
+      << mesh.edges[e].second << ")" << std::endl;
+  }
+
+  s << mesh.faces.size() << " faces:" << std::endl;
+  for (int f = 0; f < mesh.faces.size(); ++f)
+  {
+    s << " " << f << ": (";
+    for (int e = 0; e < mesh.faces[f].size(); ++e)
+    {
+      if (e < mesh.faces[f].size()-1)
+        s << mesh.faces[f][e] << ", ";
+      else
+        s << mesh.faces[f][e];
+    }
+    s << ")" << std::endl;
+  }
+  s << std::endl;
+
+  s << mesh.cells.size() << " cells:" << std::endl;
+  for (int c = 0; c < mesh.cells.size(); ++c)
+  {
+    s << " " << c << ": (";
+    for (int f = 0; f < mesh.cells[c].size(); ++f)
+    {
+      if (f < mesh.cells[c].size()-1)
+        s << mesh.cells[c][f] << ", ";
+      else
+        s << mesh.cells[c][f];
+    }
+    s << ")" << std::endl;
+  }
+
+  s << mesh.infNodes.size() << " infinite surface nodes:" << std::endl;
+  for (int i = 0; i != mesh.infNodes.size(); ++i) s << " " << mesh.infNodes[i];
+  s << std::endl;
+
+  s << mesh.infEdges.size() << " infinite surface edges:" << std::endl;
+  for (int i = 0; i != mesh.infEdges.size(); ++i) s << " " << mesh.infEdges[i];
+  s << std::endl;
+
+  s << mesh.infFaces.size() << " infinite surface faces:" << std::endl;
+  for (int i = 0; i != mesh.infFaces.size(); ++i) s << " " << mesh.infFaces[i];
+  s << std::endl;
+
+  return s;
+}
 
 }
 }
