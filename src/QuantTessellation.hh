@@ -14,12 +14,12 @@ namespace internal {
 template<int Dimension, typename RealType>
 class QuantTessellation {
 public:
-  typedef uint64_t PointHash;
-  typedef std::pair<int, int> EdgeHash;
-  typedef std::vector<unsigned> FaceHash;
+  typedef uint64_t UCoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
+  typedef std::pair<int, int> EdgeHash;
+  typedef std::vector<unsigned> FaceHash;
 
   // The normalized generator coordinates.
   std::vector<RealType> generators;
@@ -55,18 +55,18 @@ public:
                                                                degeneracy);
   }
 
-  void unhashPosition(const PointHash ip, RealType* p) const {
-    geometry::Hasher<Dimension, RealType>::unhashPosition(p,
-                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
-                                                          ip, degeneracy);
-  }
-
   PointHash hashPosition(const RealPoint& p) const {
     return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
                                                                const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
                                                                const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
                                                                degeneracy);
+  }
+
+  void unhashPosition(const PointHash ip, RealType* p) const {
+    geometry::Hasher<Dimension, RealType>::unhashPosition(p,
+                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
+                                                          ip, degeneracy);
   }
 
   RealPoint unhashPosition(const PointHash ip) const {
@@ -77,6 +77,16 @@ public:
                                                           ip, degeneracy);
     return result;
   }
+
+  //----------------------------------------------------------------------------
+  // Convert to/from IntPoint representations.  Note these conversions can
+  // change the level of quantization currently, which may cause problems down
+  // the line.  The saving grace is we have a lot more bits per coordinate, so 
+  // usually we can probably use the outer bounding box at the finer 
+  // quantization.
+  //----------------------------------------------------------------------------
+  PointHash hashIntPoint(const IntPoint& p) const;
+  IntPoint intPoint(const PointHash ip) const;
 
   //----------------------------------------------------------------------------
   // Add new elements, and return the unique index.
@@ -100,7 +110,7 @@ public:
     return this->addNewNode(hashPosition(x));
   }
 
-  int addNewNode(const uint64_t x, const uint64_t y) {
+  int addNewNode(const UCoordHash x, const UCoordHash y) {
     return this->addNewNode(geometry::Hasher<Dimension, RealType>::hash(x, y));
   }
 
@@ -351,23 +361,57 @@ public:
 
 };
 
+//------------------------------------------------------------------------------
+// Hash an IntPoint.
+// Note currently these methods should only be used for a single level 
+// QuantTessellation -- no outer box!
+//------------------------------------------------------------------------------
+// 2D
 template<typename RealType>
 inline
-typename QuantTessellation<2, RealType>::IntPoint 
-intPosition(const QuantTessellation<2, RealType>& qmesh,
-            const typename QuantTessellation<2, RealType>::PointHash ip) {
-  return typename QuantTessellation<2, RealType>::IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
-                                                           geometry::Hasher<2, RealType>::qyval(ip));
+typename QuantTessellation<2, RealType>::PointHash
+QuantTessellation<2, RealType>::
+hashIntPoint(const typename QuantTessellation<2, RealType>::IntPoint& p) {
+  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
+  return geometry::Hasher<2, RealType>::hash(p.x, p.y);
 }
 
+// 3D
 template<typename RealType>
 inline
-typename QuantTessellation<3, RealType>::IntPoint 
-intPosition(const QuantTessellation<3, RealType>& qmesh,
-               const typename QuantTessellation<3, RealType>::PointHash ip) {
-  return typename QuantTessellation<2, RealType>::IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
-                                                           geometry::Hasher<2, RealType>::qyval(ip),
-                                                           geometry::Hasher<2, RealType>::qzval(ip));
+typename QuantTessellation<3, RealType>::PointHash
+QuantTessellation<3, RealType>::
+hashIntPoint(const typename QuantTessellation<3, RealType>::IntPoint& p) {
+  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
+  return geometry::Hasher<3, RealType>::hash(p.x, p.y, p.z);
+}
+
+//------------------------------------------------------------------------------
+// Return the IntPoint version of a hashed position.
+// Note currently these methods should only be used for a single level 
+// QuantTessellation -- no outer box!
+//------------------------------------------------------------------------------
+// 2D
+template<typename RealType>
+inline
+typename QuantTessellation<2, RealType>::IntPoint
+QuantTessellation<2, RealType>::
+hashIntPoint(const typename QuantTessellation<2, RealType>::PointHash ip) {
+  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
+  return IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
+                  geometry::Hasher<2, RealType>::qyval(ip));
+}
+
+// 3D
+template<typename RealType>
+inline
+typename QuantTessellation<3, RealType>::IntPoint
+QuantTessellation<3, RealType>::
+hashIntPoint(const typename QuantTessellation<3, RealType>::PointHash ip) {
+  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
+  return IntPoint(geometry::Hasher<3, RealType>::qxval(ip),
+                  geometry::Hasher<3, RealType>::qyval(ip),
+                  geometry::Hasher<3, RealType>::qzval(ip));
 }
 
 //! output operator.
