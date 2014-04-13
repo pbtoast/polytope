@@ -298,22 +298,13 @@ computeSortedCellEdges(const internal::QuantTessellation<2, RealType>& qmesh,
 template<typename RealType>
 ReducedPLC<2, int64_t>
 hashReducedPLC(const ReducedPLC<2, RealType>& plc,
-	       const RealType* xlow_inner,
-	       const RealType* xhigh_inner,
-	       const RealType* xlow_outer,
-	       const RealType* xhigh_outer,
-	       const RealType minTol) {
+               const internal::QuantTessellation<2, RealType>& qmesh) {
   typedef geometry::Hasher<2, RealType> HasherType;
   ReducedPLC<2, int64_t> result;
   result.facets = plc.facets;
   result.points.resize(plc.points.size());
   for (unsigned i = 0; i != plc.points.size()/2; ++i) {
-    const int64_t ip = HasherType::hashPosition(&plc.points[2*i],
-						xlow_inner,
-						xhigh_inner,
-						xlow_outer,
-						xhigh_outer,
-						minTol);
+    const int64_t ip = qmesh.hashPosition(&plc.points[2*i]);
     result.points[2*i  ] = HasherType::qxval(ip);
     result.points[2*i+1] = HasherType::qyval(ip);
   }
@@ -322,32 +313,19 @@ hashReducedPLC(const ReducedPLC<2, RealType>& plc,
 
 
 //------------------------------------------------------------------------------
-// Build a ReducedPLC representation of a 2D cell.
+// Build a Real ReducedPLC from a hashed int ReducedPLC.
 //------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<2, RealType>
 unhashReducedPLC(const ReducedPLC<2, int64_t>& plc,
-		 const RealType* xlow_inner,
-		 const RealType* xhigh_inner,
-		 const RealType* xlow_outer,
-		 const RealType* xhigh_outer,
-		 const RealType minTol) {
+                 const internal::QuantTessellation<2, RealType>& qmesh) {
   typedef geometry::Hasher<2, RealType> HasherType;
   ReducedPLC<2, RealType> result;
   result.facets = plc.facets;
   result.points.resize(plc.points.size());
   for (unsigned i = 0; i != plc.points.size()/2; ++i) {
-    RealType pos[2];
-    const uint64_t hashedPosition = plc.points[2*i] + (plc.points[2*i+1] << 31);
-    HasherType::unhashPosition(pos,
-			       xlow_inner,
-			       xhigh_inner,
-			       xlow_outer,
-			       xhigh_outer,
-			       hashedPosition,
-			       minTol);
-    result.points[2*i  ] = pos[0];
-    result.points[2*i+1] = pos[1];
+    const uint64_t ip = HasherType::hash(plc.points[2*i], plc.points[2*i+1]);
+    qmesh.unhashPosition(ip, &result.points[2*i]);
   }
   return result;
 }
@@ -357,12 +335,12 @@ unhashReducedPLC(const ReducedPLC<2, int64_t>& plc,
 // Build a ReducedPLC representation of a 2D cell.
 //------------------------------------------------------------------------------
 template<typename RealType>
-ReducedPLC<2, RealType>
+ReducedPLC<2, int64_t>
 plcOfCell(const internal::QuantTessellation<2, RealType>& qmesh,
 	  const unsigned icell) {
   POLY_ASSERT(icell < qmesh.cells.size());
-  typedef Point2<RealType> PointType;
-  ReducedPLC<2, RealType> result;
+  typedef Point2<int64_t> IntPoint;
+  ReducedPLC<2, int64_t> result;
   const unsigned nFaces = qmesh.cells[icell].size();
   result.facets.resize(nFaces, vector<int>(2));
   for (unsigned i = 0; i != nFaces; ++i) {
@@ -374,11 +352,11 @@ plcOfCell(const internal::QuantTessellation<2, RealType>& qmesh,
     const unsigned iedge = qmesh.faces[iface][0];
     POLY_ASSERT(iedge < qmesh.edges.size());
     const unsigned ip = flip ? qmesh.edges[iedge].second : qmesh.edges[iedge].first;
-    cerr << "Edge : " << iedge << " " << flip << " : (" << qmesh.edges[iedge].first << " " << qmesh.edges[iedge].second << ") : "
-         << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].first]) << " "
-         << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].second]) << endl;
+    // cerr << "Edge : " << iedge << " " << flip << " : (" << qmesh.edges[iedge].first << " " << qmesh.edges[iedge].second << ") : "
+    //      << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].first]) << " "
+    //      << qmesh.unhashPosition(qmesh.points[qmesh.edges[iedge].second]) << endl;
     POLY_ASSERT(ip < qmesh.points.size());
-    PointType p = qmesh.unhashPosition(qmesh.points[ip]);
+    const IntPoint p = intPosition(qmesh, qmesh.points[ip]);
     result.points.push_back(p.x);
     result.points.push_back(p.y);
     result.facets[i][0] = i;
@@ -541,21 +519,17 @@ tessellate(const vector<RealType>& points,
   qmesh1.degeneracy    = qmesh0.degeneracy;
 
 #if HAVE_BOOST
-  ReducedPLC<2, RealType> normalizedGeometry;
-  normalizedGeometry.facets = geometry.facets;
-  normalizedGeometry.holes  = geometry.holes;
-  normalizedGeometry.points = this->computeNormalizedPoints(geometry.points,
-							    geometry.points,
-							    false,
-							    &qmesh0.low_labframe.x,
-							    &qmesh0.high_labframe.x);
-  const ReducedPLC<2, CoordHash> IntGeometry = hashReducedPLC(normalizedGeometry,
-							      const_cast<RealType*>(&qmesh0.low_inner.x),
-							      const_cast<RealType*>(&qmesh0.high_inner.x),
-							      const_cast<RealType*>(&qmesh0.low_outer.x),
-							      const_cast<RealType*>(&qmesh0.high_outer.x),
-							      qmesh0.degeneracy);
-  std::cerr << "Normalized Geometry:\n" << normalizedGeometry << std::endl;
+  const ReducedPLC<2, CoordHash> IntGeometry = hashReducedPLC(geometry, qmesh1);
+  // ReducedPLC<2, RealType> normalizedGeometry;
+  // normalizedGeometry.facets = geometry.facets;
+  // normalizedGeometry.holes  = geometry.holes;
+  // normalizedGeometry.points = this->computeNormalizedPoints(geometry.points,
+  //       						    geometry.points,
+  //       						    false,
+  //       						    &qmesh0.low_labframe.x,
+  //       						    &qmesh0.high_labframe.x);
+  // const ReducedPLC<2, CoordHash> IntGeometry = hashReducedPLC(normalizedGeometry, qmesh0);
+  // std::cerr << "Normalized Geometry:\n" << normalizedGeometry << std::endl;
   std::cerr << "Hashed Geometry:\n" << IntGeometry << std::endl;
 #endif
 
@@ -568,52 +542,33 @@ tessellate(const vector<RealType>& points,
     // Otherwise, reduce to using CSG in floating point.
 
     // Build a ReducedPLC to represent the cell
-    ReducedPLC<2, RealType> cell = plcOfCell(qmesh0, icell);
+    ReducedPLC<2, CoordHash> cell = plcOfCell(qmesh0, icell);
 
     std::cerr << "\n------------------------------ Clipping cell " << icell << std::endl;
     std::cerr << "  \nPre-clipped cell:\n" << cell << std::endl;
     
 #if HAVE_BOOST
-    ReducedPLC<2, CoordHash> IntCell = hashReducedPLC(cell,
-						      const_cast<RealType*>(&qmesh0.low_inner.x),
-						      const_cast<RealType*>(&qmesh0.high_inner.x),
-						      const_cast<RealType*>(&qmesh0.low_outer.x),
-						      const_cast<RealType*>(&qmesh0.high_outer.x),
-						      qmesh0.degeneracy);
-    const CoordHash pid = HasherType::hashPosition(&qmesh0.generators[2*icell],
-						   const_cast<RealType*>(&qmesh0.low_inner.x),
-						   const_cast<RealType*>(&qmesh0.high_inner.x),
-						   const_cast<RealType*>(&qmesh0.low_outer.x),
-						   const_cast<RealType*>(&qmesh0.high_outer.x),
-						   qmesh0.degeneracy);
+    const CoordHash pid = qmesh1.hashPosition(&qmesh1.generators[2*icell]);
     std::cerr << "   Generator: (" << qmesh1.generators[2*icell] << "," << qmesh1.generators[2*icell+1] << ")"
 	      << " --> " << pid << " --> " << IntPoint(HasherType::qxval(pid), HasherType::qyval(pid)) << std::endl;
     std::vector<ReducedPLC<2, CoordHash> > orphans;
 
-    std::cerr << "  \nPre-clipped IntCell:\n" << IntCell << std::endl;
-
     std::cerr << "   Clip... ";
-    IntCell = BG::boost_clip(IntGeometry,
-			     IntCell,
-			     IntPoint(HasherType::qxval(pid), HasherType::qyval(pid)),
-			     orphans);
-    std::cerr << "Resulting PLC: " << IntCell << std::endl;
+    cell = BG::boost_clip(IntGeometry,
+                          cell,
+                          IntPoint(HasherType::qxval(pid), HasherType::qyval(pid)),
+                          orphans);
+    std::cerr << "Resulting PLC: " << cell << std::endl;
     std::cerr << "DONE!" << std::endl;
 
     // Blago!
     if (not orphans.empty())  cerr << "Orphans detected, but no actions taken" << endl;
     // Blago!
 
-    cell = unhashReducedPLC(IntCell,
-			    const_cast<RealType*>(&qmesh0.low_inner.x),
-			    const_cast<RealType*>(&qmesh0.high_inner.x),
-			    const_cast<RealType*>(&qmesh0.low_outer.x),
-			    const_cast<RealType*>(&qmesh0.high_outer.x),
-			    qmesh1.degeneracy);
-
-//     std::cerr << "  \nPost-clipped IntCell:\n" << IntCell << std::endl;
-//     std::cerr << "  \nPost-clipped cell:\n" << cell << std::endl;
-
+    std::cerr << "  \nPost-clipped cell:\n" << cell << std::endl
+              << "  real space point coordinates: " << std::endl;
+    for (unsigned i = 0; i != cell.points.size()/2; ++i) 
+      std::cerr << "    " << qmesh1.unhashPosition(geometry::Hasher<2, RealType>::hash(cell.points[2*i], cell.points[2*i+1])) << std::endl;
 
 #else
     cell = CSG::csg_intersect(geometry, cell);
@@ -629,12 +584,7 @@ tessellate(const vector<RealType>& points,
     vector<int> nodeIDs, edgeIDs, faceIDs;
     qmesh1.cells.push_back(vector<int>());
     for (unsigned i = 0; i != cell.points.size()/2; ++i) {
-      nodeIDs.push_back(qmesh1.addNewNode(HasherType::hashPosition(&cell.points[2*i],
-								   const_cast<RealType*>(&qmesh1.low_inner.x),
-								   const_cast<RealType*>(&qmesh1.high_inner.x),
-								   const_cast<RealType*>(&qmesh1.low_outer.x),
-								   const_cast<RealType*>(&qmesh1.high_outer.x),
-								   qmesh1.degeneracy)));
+      nodeIDs.push_back(qmesh1.addNewNode(cell.points[2*i], cell.points[2*i+1]));
     }
     for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
       const unsigned nnodes = cell.facets[iface].size();
@@ -657,6 +607,8 @@ tessellate(const vector<RealType>& points,
 
   // Check the validity of the quantized tessellation
   qmesh1.assertValid();
+
+  cerr << "Final clipped quantized tessellation:" << qmesh1 << endl;
 
   // Convert to output tessellation
   qmesh1.tessellation(mesh);
