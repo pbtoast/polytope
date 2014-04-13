@@ -46,8 +46,22 @@ public:
   std::vector<unsigned> infFaces;                 // Indices of faces projected to the infSphere
 
   //----------------------------------------------------------------------------
-  // Hash the given position.
+  // Hash/unhash the given position.
   //----------------------------------------------------------------------------
+  PointHash hashPosition(const RealType* p) const {
+    return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(p),
+                                                               const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
+                                                               degeneracy);
+  }
+
+  void unhashPosition(const PointHash ip, RealType* p) const {
+    geometry::Hasher<Dimension, RealType>::unhashPosition(p,
+                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
+                                                          ip, degeneracy);
+  }
+
   PointHash hashPosition(const RealPoint& p) const {
     return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
                                                                const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
@@ -80,6 +94,14 @@ public:
 
   int addNewNode(const RealPoint& x) {
     return this->addNewNode(hashPosition(x));
+  }
+
+  int addNewNode(const RealType* x) {
+    return this->addNewNode(hashPosition(x));
+  }
+
+  int addNewNode(const uint64_t x, const uint64_t y) {
+    return this->addNewNode(geometry::Hasher<Dimension, RealType>::hash(x, y));
   }
 
   // Edges.
