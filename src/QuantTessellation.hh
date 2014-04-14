@@ -264,6 +264,15 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  // Clip a completed QuantTessellation to the inner bounding box.  
+  // After this method:
+  //   - All points and geometry will be inside the inner bounding box.
+  //   - The outer bounding box is set equal to the inner.
+  //   - No infinite elements.
+  //----------------------------------------------------------------------------
+  void clipToInnerBoundingBox();
+
+  //----------------------------------------------------------------------------
   // A contract heavy validity check.
   //----------------------------------------------------------------------------
   void assertValid() const {
@@ -360,6 +369,12 @@ public:
   }
 
 };
+
+//------------------------------------------------------------------------------
+// Declare specializations.
+//------------------------------------------------------------------------------
+template<typename RealType> void QuantTessellation<2, RealType>::clipToInnerBoundingBox();
+template<typename RealType> void QuantTessellation<3, RealType>::clipToInnerBoundingBox();
 
 //------------------------------------------------------------------------------
 // Hash an IntPoint.
