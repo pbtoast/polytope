@@ -47,6 +47,10 @@ clipToInnerBoundingBox() {
   const std::vector<std::vector<unsigned> > nodes2edges = this->nodeEdges();
   std::vector<IntPoint> newPoints;
   std::vector<EdgeHash> newEdges;
+  const RealPoint c1 = low_inner, 
+                  c2 = RealPoint(high_inner.x, low_inner.y),
+                  c3 = high_inner.x,
+                  c4 = RealPoint(low_inner.x, high_inner.y);
   for (std::vector<unsigned>::iterator infItr = infNodes.begin();
        infItr != infNodes.end();
        ++infItr) {
@@ -61,7 +65,9 @@ clipToInnerBoundingBox() {
 
       // Does this edge have a non-infNode?  If so, it creates a new node.
       if (infNodeFlags[edges[ei].first] == 0 or infNodeFlags[edges[ei].second] == 0) {
-        newPoints.push_back(edgeIntersectBox(
+        newPoints.push_back(hashPosition(edgeIntersectRectangle(c1, c2, c3, c4,
+                                                                unhashPosition(points[edges[ei].first]),
+                                                                unhashPosition(points[edges[ei].second]))));
       }
     }
   }
