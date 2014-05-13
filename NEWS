@@ -1,3 +1,13 @@
+Release 0.5.20
+
+changeset:
+  490:bc5088adddb1
+
+Changes:
+
+- Adding a link flag for building the python extension module on Mac OSX.
+
+--------------------------------------------------------------------------------
 Release 0.5.19
 
 changeset:
