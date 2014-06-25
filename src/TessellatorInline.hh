@@ -53,7 +53,7 @@ computeNormalizedPoints(const std::vector<RealType>& points,
     for (unsigned j = 0; j != Dimension; ++j) {
       low[j] = std::min(low[j], low1[j]);
       high[j] = std::max(high[j], high1[j]);
-      POLY_ASSERT(low[j] < high[j]);
+      POLY_ASSERT(low[j] <= high[j]);
     }
     // Add a small safety factor.
     for (unsigned j = 0; j != Dimension; ++j) {
