@@ -141,7 +141,7 @@ if (${USE_SILO} EQUAL 1)
   set(ENV{HDF5_ROOT} ${HDF5_ROOT})
 #       NOTE: Default to using static hdf5
   set(HDF5_USE_STATIC_LIBRARIES true)
-  find_package(HDF5)  
+  find_package(HDF5)
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
@@ -201,6 +201,11 @@ else()
   set(SILO_LIBRARIES "")
   set(HDF5_LIBRARIES "")
   message("-- Not using SILO and HDF5.")
+endif()
+
+
+if(HDF5_LIBRARIES)
+  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
 endif()
 
 
@@ -300,8 +305,8 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_Boost_2d.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
