@@ -15,6 +15,7 @@ template<int Dimension, typename RealType>
 class QuantTessellation {
 public:
   typedef uint64_t UCoordHash;
+  typedef uint64_t PointHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
@@ -406,6 +407,13 @@ public:
   }
 
 };
+
+
+//------------------------------------------------------------------------------
+// Partially-specialized classes
+//------------------------------------------------------------------------------
+template<typename RealType> class QuantTessellation<2, RealType>;
+template<typename RealType> class QuantTessellation<3, RealType>;
 
 //------------------------------------------------------------------------------
 // Declare specializations.
