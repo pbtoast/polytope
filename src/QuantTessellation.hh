@@ -49,40 +49,13 @@ public:
   //----------------------------------------------------------------------------
   // Hash/unhash the given position.
   //----------------------------------------------------------------------------
-  PointHash hashPosition(const RealType* p) const {
-    return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(p),
-                                                               const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
-                                                               degeneracy);
-  }
+  PointHash hashPosition(const RealType* p) const;
+  PointHash hashPosition(const RealPoint& p) const;
 
-  PointHash hashPosition(const RealPoint& p) const {
-    return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
-                                                               const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
-                                                               degeneracy);
-  }
+  void unhashPosition(const PointHash ip, RealType* p) const;
+  RealPoint unhashPosition(const PointHash ip) const;
 
-  void unhashPosition(const PointHash ip, RealType* p) const {
-    geometry::Hasher<Dimension, RealType>::unhashPosition(p,
-                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
-                                                          ip, degeneracy);
-  }
-
-  RealPoint unhashPosition(const PointHash ip) const {
-    RealPoint result;
-    geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
-                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
-                                                          ip, degeneracy);
-    return result;
-  }
-  IntPoint hashedPosition(const PointHash ip) const {
-    IntPoint result;
-    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
-    return result;
-  }
+  IntPoint hashedPosition(const PointHash ip) const;
 
   //----------------------------------------------------------------------------
   // Convert to/from IntPoint representations.  Note these conversions can
@@ -97,209 +70,54 @@ public:
   //----------------------------------------------------------------------------
   // Add new elements, and return the unique index.
   //----------------------------------------------------------------------------
-  // Nodes
-  int addNewNode(const PointHash ix) {
-    const int k = point2id.size();
-    const int result = internal::addKeyToMap(ix, point2id);
-    if (result == k) {
-      points.push_back(ix);
-    }
-    POLY_ASSERT(points.size() == point2id.size());
-    return result;
-  }
+  int addNewNode(const PointHash ix);
+  int addNewNode(const RealPoint& x);
+  int addNewNode(const RealType* x);
+  int addNewNode(const UCoordHash x, const UCoordHash y);
 
-  int addNewNode(const RealPoint& x) {
-    return this->addNewNode(hashPosition(x));
-  }
+  int addNewEdge(const EdgeHash& x);
 
-  int addNewNode(const RealType* x) {
-    return this->addNewNode(hashPosition(x));
-  }
-
-  int addNewNode(const UCoordHash x, const UCoordHash y) {
-    return this->addNewNode(geometry::Hasher<Dimension, RealType>::hash(x, y));
-  }
-
-  // Edges.
-  int addNewEdge(const EdgeHash& x) {
-    const int k = edge2id.size();
-    const int result = internal::addKeyToMap(x, edge2id);
-    if (result == k) {
-      edges.push_back(x);
-    }
-    POLY_ASSERT(edges.size() == edge2id.size());
-    return result;
-  }
-
-  // Faces.
-  // Note this is a little different than above.  A FaceHash is not the same
-  // as the signed, oriented, and ordered list of edges that constitute a face!
-  // Rather a FaceHash is the sorted positive IDs of the edges in the face.
-  int addNewFace(const std::vector<int>& x) {
-    FaceHash fhash;
-    for (unsigned i = 0; i != x.size(); ++i) fhash.push_back(x[i] < 0 ? ~x[i] : x[i]);
-    std::sort(fhash.begin(), fhash.end());
-    const int k = face2id.size();
-    const int result = internal::addKeyToMap(fhash, face2id);
-    if (result == k) {
-      faces.push_back(x);
-    }
-    POLY_ASSERT(faces.size() == face2id.size());
-    return result;
-  }
+  int addNewFace(const std::vector<int>& x);
 
   //----------------------------------------------------------------------------
   // Floating position for a point (normalized coordinates).
   //----------------------------------------------------------------------------
-  RealPoint nodePosition(const unsigned i) const {
-    POLY_ASSERT(i < points.size());
-    return unhashPosition(points[i]);
-  }
-
-//   //----------------------------------------------------------------------------
-//   // Integer position for a point (normalized coordinates).
-//   //----------------------------------------------------------------------------
-//   IntPoint nodePosition(const unsigned i) {
-//     POLY_ASSERT(i < points.size());
-//     return hashedPosition(points[i]);
-//   }
+  RealPoint nodePosition(const unsigned i) const;
 
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
   //----------------------------------------------------------------------------
-  RealPoint labNodePosition(const unsigned i) const {
-    POLY_ASSERT(i < points.size());
-    RealPoint result = nodePosition(i);
-    for (unsigned j = 0; j != Dimension; ++j) {
-      result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
-    }
-    return result;
-  }
+  RealPoint labNodePosition(const unsigned i) const;
 
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
   //----------------------------------------------------------------------------
-  RealPoint labNodePositionCollinear(const unsigned i) {
-    POLY_ASSERT(i < points.size());
-    RealPoint result = nodePosition(i);
-    for (unsigned j = 0; j != Dimension; ++j) {
-      if (low_labframe[j] == high_labframe[j]) {
-	result[j] = result[j] + low_labframe[j];
-      } else {
-	result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
-      }
-    }
-    return result;
-  }
+  RealPoint labNodePositionCollinear(const unsigned i);
 
   //----------------------------------------------------------------------------
   // Floating position for an edge.
   //----------------------------------------------------------------------------
-  RealPoint edgePosition(const EdgeHash& ehash) const {
-    RealPoint result = nodePosition(ehash.first) + nodePosition(ehash.second);
-    result *= 0.5;
-    return result;
-  }
+  RealPoint edgePosition(const EdgeHash& ehash) const;
 
   //----------------------------------------------------------------------------
   // Compute the node->edge connectivity.
   //----------------------------------------------------------------------------
-  std::vector<std::vector<unsigned> > nodeEdges() const {
-    std::vector<std::vector<unsigned> > result(points.size());
-    for (unsigned iedge = 0; iedge != edges.size(); ++iedge) {
-      POLY_ASSERT(edges[iedge].first < points.size());
-      POLY_ASSERT(edges[iedge].second < points.size());
-      result[edges[iedge].first].push_back(iedge);
-      result[edges[iedge].second].push_back(iedge);
-    }
-    return result;
-  }
+  std::vector<std::vector<unsigned> > nodeEdges() const;
 
   //----------------------------------------------------------------------------
   // Compute the edge->face connectivity.
   //----------------------------------------------------------------------------
-  std::vector<std::vector<int> > edgeFaces() const {
-    std::vector<std::vector<int> > result(edges.size());
-    for (int iface = 0; iface != faces.size(); ++iface) {
-      for (unsigned k = 0; k != faces[iface].size(); ++k) {
-        if (faces[iface][k] < 0) {
-          POLY_ASSERT(~faces[iface][k] < edges.size());
-          result[~faces[iface][k]].push_back(~iface);
-        } else {
-          POLY_ASSERT(faces[iface][k] < edges.size());
-          result[faces[iface][k]].push_back(iface);
-        }
-      }
-    }
-    return result;
-  }
+  std::vector<std::vector<int> > edgeFaces() const;
 
   //----------------------------------------------------------------------------
   // Compute the face->cell connectivity.
   //----------------------------------------------------------------------------
-  std::vector<std::vector<int> > faceCells() const {
-    std::vector<std::vector<int> > result(faces.size());
-    for (int icell = 0; icell != cells.size(); ++icell) {
-      for (unsigned k = 0; k != cells[icell].size(); ++k) {
-        if (cells[icell][k] < 0) {
-          POLY_ASSERT(~cells[icell][k] < faces.size());
-          result[~cells[icell][k]].push_back(~icell);
-        } else {
-          POLY_ASSERT(cells[icell][k] < faces.size());
-          result[cells[icell][k]].push_back(icell);
-        }
-      }
-    }
-    return result;
-  }
+  std::vector<std::vector<int> > faceCells() const;
 
   //----------------------------------------------------------------------------
   // Convert our internal data to a standard polytope Tessellation.
   //----------------------------------------------------------------------------
-  void tessellation(Tessellation<Dimension, RealType>& mesh) {
-    mesh.clear();
-
-    // Nodes.
-    mesh.nodes.resize(Dimension*points.size());
-    if (low_labframe.x == high_labframe.x or
-	low_labframe.y == high_labframe.y) {
-      for (unsigned i = 0; i != points.size(); ++i) {
-	RealPoint p = labNodePositionCollinear(i);
-	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
-      }
-    } else {
-      for (unsigned i = 0; i != points.size(); ++i) {
-	RealPoint p = labNodePosition(i);
-	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
-      }
-    }
-
-    // Faces.
-    mesh.faces.reserve(faces.size());
-    for (unsigned i = 0; i != faces.size(); ++i) {
-      mesh.faces.push_back(std::vector<unsigned>());
-      if (faces[i].size() == 1) {
-	mesh.faces[i].push_back(edges[faces[i][0]].first);
-	mesh.faces[i].push_back(edges[faces[i][0]].second);
-      } else {
-	for (unsigned j = 0; j != faces[i].size(); ++j) {
-	  if (faces[i][j] >= 0) {
-	    mesh.faces[i].push_back(edges[faces[i][j]].first);
-	  } else {
-	    mesh.faces[i].push_back(edges[~faces[i][j]].second);
-	  }
-	  POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
-	}
-	POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
-      }
-    }
-
-    // Much of our data can simply be copied over wholesale.
-    mesh.cells = cells;
-    mesh.infNodes = infNodes;
-    mesh.infFaces = infFaces;
-    mesh.faceCells = this->faceCells();
-  }
+  void tessellation(Tessellation<Dimension, RealType>& mesh);
 
   //----------------------------------------------------------------------------
   // Clip a completed QuantTessellation to the inner bounding box.  
@@ -313,168 +131,426 @@ public:
   //----------------------------------------------------------------------------
   // A contract heavy validity check.
   //----------------------------------------------------------------------------
-  void assertValid() const {
-    POLY_BEGIN_CONTRACT_SCOPE;
-    {
-      if (Dimension == 3) {
-        const QuantTessellation<Dimension, RealType> qmesh = *this;
-        const unsigned numGenerators = qmesh.generators.size()/Dimension;
-        const std::vector<std::vector<unsigned> > nodeEdges = qmesh.nodeEdges();
-        const std::vector<std::vector<int> > edgeFaces = qmesh.edgeFaces();
-        const std::vector<std::vector<int> > faceCells = qmesh.faceCells();
-        POLY_ASSERT(qmesh.points.size() == qmesh.point2id.size());
-        POLY_ASSERT(qmesh.edges.size() == qmesh.edge2id.size());
-        POLY_ASSERT(qmesh.faces.size() == qmesh.face2id.size());
-        POLY_ASSERT(qmesh.cells.size() == numGenerators);
-        POLY_ASSERT(nodeEdges.size() == qmesh.point2id.size());
-        POLY_ASSERT(edgeFaces.size() == qmesh.edges.size());
-        POLY_ASSERT(faceCells.size() == qmesh.faces.size());
-        for (int i = 0; i != qmesh.points.size(); ++i) {
-          for (int j = 0; j != nodeEdges[i].size(); ++j) {
-            POLY_ASSERT(qmesh.edges[nodeEdges[i][j]].first == i or qmesh.edges[nodeEdges[i][j]].second == i);
+  void assertValid() const;
+};
+
+//------------------------------------------------------------------------------
+// Hash/unhash the given position.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::PointHash 
+QuantTessellation<Dimension, RealType>::
+hashPosition(const RealType* p) const {
+  return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(p),
+                                                             const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                             const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
+                                                             degeneracy);
+}
+
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::PointHash 
+QuantTessellation<Dimension, RealType>::
+hashPosition(const RealPoint& p) const {
+  return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
+                                                             const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                             const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
+                                                             degeneracy);
+}
+
+template<int Dimension, typename RealType>
+inline
+void
+QuantTessellation<Dimension, RealType>::
+unhashPosition(const PointHash ip, RealType* p) const {
+  geometry::Hasher<Dimension, RealType>::unhashPosition(p,
+                                                        const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                        const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
+                                                        ip, degeneracy);
+}
+
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::RealPoint
+QuantTessellation<Dimension, RealType>::
+unhashPosition(const PointHash ip) const {
+  RealPoint result;
+  geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
+                                                        const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
+                                                        const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
+                                                        ip, degeneracy);
+  return result;
+}
+
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::IntPoint
+QuantTessellation<Dimension, RealType>::
+hashedPosition(const PointHash ip) const {
+  IntPoint result;
+  geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Add new elements, and return the unique index.
+//----------------------------------------------------------------------------
+// Nodes
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewNode(const PointHash ix) {
+  const int k = point2id.size();
+  const int result = internal::addKeyToMap(ix, point2id);
+  if (result == k) {
+    points.push_back(ix);
+  }
+  POLY_ASSERT(points.size() == point2id.size());
+  return result;
+}
+
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewNode(const RealPoint& x) {
+  return this->addNewNode(hashPosition(x));
+}
+
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewNode(const RealType* x) {
+  return this->addNewNode(hashPosition(x));
+}
+
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewNode(const UCoordHash x, const UCoordHash y) {
+  return this->addNewNode(geometry::Hasher<Dimension, RealType>::hash(x, y));
+}
+
+// Edges.
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewEdge(const EdgeHash& x) {
+  const int k = edge2id.size();
+  const int result = internal::addKeyToMap(x, edge2id);
+  if (result == k) {
+    edges.push_back(x);
+  }
+  POLY_ASSERT(edges.size() == edge2id.size());
+  return result;
+}
+
+// Faces.
+// Note this is a little different than above.  A FaceHash is not the same
+// as the signed, oriented, and ordered list of edges that constitute a face!
+// Rather a FaceHash is the sorted positive IDs of the edges in the face.
+template<int Dimension, typename RealType>
+inline
+int
+QuantTessellation<Dimension, RealType>::
+addNewFace(const std::vector<int>& x) {
+  FaceHash fhash;
+  for (unsigned i = 0; i != x.size(); ++i) fhash.push_back(x[i] < 0 ? ~x[i] : x[i]);
+  std::sort(fhash.begin(), fhash.end());
+  const int k = face2id.size();
+  const int result = internal::addKeyToMap(fhash, face2id);
+  if (result == k) {
+    faces.push_back(x);
+  }
+  POLY_ASSERT(faces.size() == face2id.size());
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Floating position for a point (normalized coordinates).
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::RealPoint
+QuantTessellation<Dimension, RealType>::
+nodePosition(const unsigned i) const {
+  POLY_ASSERT(i < points.size());
+  return unhashPosition(points[i]);
+}
+
+//----------------------------------------------------------------------------
+// Floating position for a point (lab frame).
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::RealPoint
+QuantTessellation<Dimension, RealType>::
+labNodePosition(const unsigned i) const {
+  POLY_ASSERT(i < points.size());
+  RealPoint result = nodePosition(i);
+  for (unsigned j = 0; j != Dimension; ++j) {
+    result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+  }
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Floating position for a point (lab frame).
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::RealPoint
+QuantTessellation<Dimension, RealType>::
+labNodePositionCollinear(const unsigned i) {
+  POLY_ASSERT(i < points.size());
+  RealPoint result = nodePosition(i);
+  for (unsigned j = 0; j != Dimension; ++j) {
+    if (low_labframe[j] == high_labframe[j]) {
+      result[j] = result[j] + low_labframe[j];
+    } else {
+      result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+    }
+  }
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Floating position for an edge.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+typename QuantTessellation<Dimension, RealType>::RealPoint
+QuantTessellation<Dimension, RealType>::
+edgePosition(const EdgeHash& ehash) const {
+  RealPoint result = nodePosition(ehash.first) + nodePosition(ehash.second);
+  result *= 0.5;
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Compute the node->edge connectivity.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<std::vector<unsigned> > 
+QuantTessellation<Dimension, RealType>::
+nodeEdges() const {
+  std::vector<std::vector<unsigned> > result(points.size());
+  for (unsigned iedge = 0; iedge != edges.size(); ++iedge) {
+    POLY_ASSERT(edges[iedge].first < points.size());
+    POLY_ASSERT(edges[iedge].second < points.size());
+    result[edges[iedge].first].push_back(iedge);
+    result[edges[iedge].second].push_back(iedge);
+  }
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Compute the edge->face connectivity.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<std::vector<int> > 
+QuantTessellation<Dimension, RealType>::
+edgeFaces() const {
+  std::vector<std::vector<int> > result(edges.size());
+  for (int iface = 0; iface != faces.size(); ++iface) {
+    for (unsigned k = 0; k != faces[iface].size(); ++k) {
+      if (faces[iface][k] < 0) {
+        POLY_ASSERT(~faces[iface][k] < edges.size());
+        result[~faces[iface][k]].push_back(~iface);
+      } else {
+        POLY_ASSERT(faces[iface][k] < edges.size());
+        result[faces[iface][k]].push_back(iface);
+      }
+    }
+  }
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Compute the face->cell connectivity.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<std::vector<int> > 
+QuantTessellation<Dimension, RealType>::
+faceCells() const {
+  std::vector<std::vector<int> > result(faces.size());
+  for (int icell = 0; icell != cells.size(); ++icell) {
+    for (unsigned k = 0; k != cells[icell].size(); ++k) {
+      if (cells[icell][k] < 0) {
+        POLY_ASSERT(~cells[icell][k] < faces.size());
+        result[~cells[icell][k]].push_back(~icell);
+      } else {
+        POLY_ASSERT(cells[icell][k] < faces.size());
+        result[cells[icell][k]].push_back(icell);
+      }
+    }
+  }
+  return result;
+}
+
+//----------------------------------------------------------------------------
+// Convert our internal data to a standard polytope Tessellation.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+void
+QuantTessellation<Dimension, RealType>::
+tessellation(Tessellation<Dimension, RealType>& mesh) {
+  mesh.clear();
+
+  // Nodes.
+  mesh.nodes.resize(Dimension*points.size());
+  if (low_labframe.x == high_labframe.x or
+      low_labframe.y == high_labframe.y) {
+    for (unsigned i = 0; i != points.size(); ++i) {
+      RealPoint p = labNodePositionCollinear(i);
+      std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+    }
+  } else {
+    for (unsigned i = 0; i != points.size(); ++i) {
+      RealPoint p = labNodePosition(i);
+      std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+    }
+  }
+
+  // Faces.
+  mesh.faces.reserve(faces.size());
+  for (unsigned i = 0; i != faces.size(); ++i) {
+    mesh.faces.push_back(std::vector<unsigned>());
+    if (faces[i].size() == 1) {
+      mesh.faces[i].push_back(edges[faces[i][0]].first);
+      mesh.faces[i].push_back(edges[faces[i][0]].second);
+    } else {
+      for (unsigned j = 0; j != faces[i].size(); ++j) {
+        if (faces[i][j] >= 0) {
+          mesh.faces[i].push_back(edges[faces[i][j]].first);
+        } else {
+          mesh.faces[i].push_back(edges[~faces[i][j]].second);
+        }
+        POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
+      }
+      POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
+    }
+  }
+
+  // Much of our data can simply be copied over wholesale.
+  mesh.cells = cells;
+  mesh.infNodes = infNodes;
+  mesh.infFaces = infFaces;
+  mesh.faceCells = this->faceCells();
+}
+
+//----------------------------------------------------------------------------
+// A contract heavy validity check.
+//----------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+void
+QuantTessellation<Dimension, RealType>::
+assertValid() const {
+  POLY_BEGIN_CONTRACT_SCOPE;
+  {
+    if (Dimension == 3) {
+      const QuantTessellation<Dimension, RealType> qmesh = *this;
+      const unsigned numGenerators = qmesh.generators.size()/Dimension;
+      const std::vector<std::vector<unsigned> > nodeEdges = qmesh.nodeEdges();
+      const std::vector<std::vector<int> > edgeFaces = qmesh.edgeFaces();
+      const std::vector<std::vector<int> > faceCells = qmesh.faceCells();
+      POLY_ASSERT(qmesh.points.size() == qmesh.point2id.size());
+      POLY_ASSERT(qmesh.edges.size() == qmesh.edge2id.size());
+      POLY_ASSERT(qmesh.faces.size() == qmesh.face2id.size());
+      POLY_ASSERT(qmesh.cells.size() == numGenerators);
+      POLY_ASSERT(nodeEdges.size() == qmesh.point2id.size());
+      POLY_ASSERT(edgeFaces.size() == qmesh.edges.size());
+      POLY_ASSERT(faceCells.size() == qmesh.faces.size());
+      for (int i = 0; i != qmesh.points.size(); ++i) {
+        for (int j = 0; j != nodeEdges[i].size(); ++j) {
+          POLY_ASSERT(qmesh.edges[nodeEdges[i][j]].first == i or qmesh.edges[nodeEdges[i][j]].second == i);
+        }
+      }
+      for (int i = 0; i != qmesh.edges.size(); ++i) {
+        POLY_ASSERT(qmesh.edges[i].first < qmesh.points.size());
+        POLY_ASSERT(qmesh.edges[i].second < qmesh.points.size());
+        POLY_ASSERT(count(nodeEdges[qmesh.edges[i].first].begin(),
+                          nodeEdges[qmesh.edges[i].first].end(), 
+                          i) == 1);
+        POLY_ASSERT(count(nodeEdges[qmesh.edges[i].second].begin(),
+                          nodeEdges[qmesh.edges[i].second].end(), 
+                          i) == 1);
+        for (int j = 0; j != edgeFaces[i].size(); ++j) {
+          const int iface = edgeFaces[i][j];
+          POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
+          if (iface < 0) {
+            POLY_ASSERT(count(qmesh.faces[~iface].begin(), qmesh.faces[~iface].end(), ~i) == 1);
+          } else {
+            POLY_ASSERT(count(qmesh.faces[iface].begin(), qmesh.faces[iface].end(), i) == 1);
           }
         }
-        for (int i = 0; i != qmesh.edges.size(); ++i) {
-          POLY_ASSERT(qmesh.edges[i].first < qmesh.points.size());
-          POLY_ASSERT(qmesh.edges[i].second < qmesh.points.size());
-          POLY_ASSERT(count(nodeEdges[qmesh.edges[i].first].begin(),
-                            nodeEdges[qmesh.edges[i].first].end(), 
-                            i) == 1);
-          POLY_ASSERT(count(nodeEdges[qmesh.edges[i].second].begin(),
-                            nodeEdges[qmesh.edges[i].second].end(), 
-                            i) == 1);
-          for (int j = 0; j != edgeFaces[i].size(); ++j) {
-            const int iface = edgeFaces[i][j];
-            POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
-            if (iface < 0) {
-              POLY_ASSERT(count(qmesh.faces[~iface].begin(), qmesh.faces[~iface].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(qmesh.faces[iface].begin(), qmesh.faces[iface].end(), i) == 1);
-            }
+      }
+      for (int i = 0; i != qmesh.faces.size(); ++i) {
+        const unsigned nedges = qmesh.faces[i].size();
+        POLY_ASSERT(nedges >= 3);
+        for (int j = 0; j != nedges; ++j) {
+          const int k = (j + 1) % nedges;
+          const int iedge1 = qmesh.faces[i][j];
+          const int iedge2 = qmesh.faces[i][k];
+          POLY_ASSERT(internal::positiveID(iedge1) < qmesh.edges.size());
+          POLY_ASSERT(internal::positiveID(iedge2) < qmesh.edges.size());
+          if (iedge1 >= 0 and iedge2 >= 0) {
+            POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[iedge2].first);
+          } else if (iedge1 >= 0 and iedge2 < 0) {
+            POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[~iedge2].second);
+          } else if (iedge1 < 0 and iedge2 >= 0) {
+            POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[iedge2].first);
+          } else {
+            POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[~iedge2].second);
+          }
+          if (iedge1 < 0) {
+            POLY_ASSERT(count(edgeFaces[~iedge1].begin(), edgeFaces[~iedge1].end(), ~i) == 1);
+          } else {
+            POLY_ASSERT(count(edgeFaces[iedge1].begin(), edgeFaces[iedge1].end(), i) == 1);
           }
         }
-        for (int i = 0; i != qmesh.faces.size(); ++i) {
-          const unsigned nedges = qmesh.faces[i].size();
-          POLY_ASSERT(nedges >= 3);
-          for (int j = 0; j != nedges; ++j) {
-            const int k = (j + 1) % nedges;
-            const int iedge1 = qmesh.faces[i][j];
-            const int iedge2 = qmesh.faces[i][k];
-            POLY_ASSERT(internal::positiveID(iedge1) < qmesh.edges.size());
-            POLY_ASSERT(internal::positiveID(iedge2) < qmesh.edges.size());
-            if (iedge1 >= 0 and iedge2 >= 0) {
-              POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[iedge2].first);
-            } else if (iedge1 >= 0 and iedge2 < 0) {
-              POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[~iedge2].second);
-            } else if (iedge1 < 0 and iedge2 >= 0) {
-              POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[iedge2].first);
-            } else {
-              POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[~iedge2].second);
-            }
-            if (iedge1 < 0) {
-              POLY_ASSERT(count(edgeFaces[~iedge1].begin(), edgeFaces[~iedge1].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(edgeFaces[iedge1].begin(), edgeFaces[iedge1].end(), i) == 1);
-            }
-          }
-          POLY_ASSERT(faceCells[i].size() == 1 or faceCells[i].size() == 2);
-          for (int j = 0; j != faceCells[i].size(); ++ j) {
-            const int icell = faceCells[i][j];
-            POLY_ASSERT(internal::positiveID(icell) < numGenerators);
-            if (icell < 0) {
-              POLY_ASSERT(count(qmesh.cells[~icell].begin(), qmesh.cells[~icell].begin(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(qmesh.cells[icell].begin(), qmesh.cells[icell].begin(), i) == 1);
-            }
+        POLY_ASSERT(faceCells[i].size() == 1 or faceCells[i].size() == 2);
+        for (int j = 0; j != faceCells[i].size(); ++ j) {
+          const int icell = faceCells[i][j];
+          POLY_ASSERT(internal::positiveID(icell) < numGenerators);
+          if (icell < 0) {
+            POLY_ASSERT(count(qmesh.cells[~icell].begin(), qmesh.cells[~icell].begin(), ~i) == 1);
+          } else {
+            POLY_ASSERT(count(qmesh.cells[icell].begin(), qmesh.cells[icell].begin(), i) == 1);
           }
         }
-        for (int i = 0; i != numGenerators; ++i) {
-          const unsigned nfaces = qmesh.cells[i].size();
-          POLY_ASSERT(nfaces >= 4);
-          for (int j = 0; j != nfaces; ++j) {
-            const int iface = qmesh.cells[i][j];
-            POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
-            if (iface < 0) {
-              POLY_ASSERT(count(faceCells[~iface].begin(), faceCells[~iface].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(faceCells[iface].begin(), faceCells[iface].end(), i) == 1);
-            }
+      }
+      for (int i = 0; i != numGenerators; ++i) {
+        const unsigned nfaces = qmesh.cells[i].size();
+        POLY_ASSERT(nfaces >= 4);
+        for (int j = 0; j != nfaces; ++j) {
+          const int iface = qmesh.cells[i][j];
+          POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
+          if (iface < 0) {
+            POLY_ASSERT(count(faceCells[~iface].begin(), faceCells[~iface].end(), ~i) == 1);
+          } else {
+            POLY_ASSERT(count(faceCells[iface].begin(), faceCells[iface].end(), i) == 1);
           }
         }
       }
     }
-    POLY_END_CONTRACT_SCOPE;
   }
-
-};
-
-
-//------------------------------------------------------------------------------
-// Partially-specialized classes
-//------------------------------------------------------------------------------
-template<typename RealType> class QuantTessellation<2, RealType>;
-template<typename RealType> class QuantTessellation<3, RealType>;
-
-//------------------------------------------------------------------------------
-// Declare specializations.
-//------------------------------------------------------------------------------
-template<typename RealType> void QuantTessellation<2, RealType>::clipToInnerBoundingBox();
-template<typename RealType> void QuantTessellation<3, RealType>::clipToInnerBoundingBox();
-
-//------------------------------------------------------------------------------
-// Hash an IntPoint.
-// Note currently these methods should only be used for a single level 
-// QuantTessellation -- no outer box!
-//------------------------------------------------------------------------------
-// 2D
-template<typename RealType>
-inline
-typename QuantTessellation<2, RealType>::PointHash
-QuantTessellation<2, RealType>::
-hashIntPoint(const typename QuantTessellation<2, RealType>::IntPoint& p) {
-  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
-  return geometry::Hasher<2, RealType>::hash(p.x, p.y);
-}
-
-// 3D
-template<typename RealType>
-inline
-typename QuantTessellation<3, RealType>::PointHash
-QuantTessellation<3, RealType>::
-hashIntPoint(const typename QuantTessellation<3, RealType>::IntPoint& p) {
-  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
-  return geometry::Hasher<3, RealType>::hash(p.x, p.y, p.z);
+  POLY_END_CONTRACT_SCOPE;
 }
 
 //------------------------------------------------------------------------------
-// Return the IntPoint version of a hashed position.
-// Note currently these methods should only be used for a single level 
-// QuantTessellation -- no outer box!
-//------------------------------------------------------------------------------
-// 2D
-template<typename RealType>
-inline
-typename QuantTessellation<2, RealType>::IntPoint
-QuantTessellation<2, RealType>::
-hashIntPoint(const typename QuantTessellation<2, RealType>::PointHash ip) {
-  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
-  return IntPoint(geometry::Hasher<2, RealType>::qxval(ip),
-                  geometry::Hasher<2, RealType>::qyval(ip));
-}
-
-// 3D
-template<typename RealType>
-inline
-typename QuantTessellation<3, RealType>::IntPoint
-QuantTessellation<3, RealType>::
-hashIntPoint(const typename QuantTessellation<3, RealType>::PointHash ip) {
-  POLY_ASSERT(low_innner == low_outer and high_inner == high_outer);
-  return IntPoint(geometry::Hasher<3, RealType>::qxval(ip),
-                  geometry::Hasher<3, RealType>::qyval(ip),
-                  geometry::Hasher<3, RealType>::qzval(ip));
-}
-
 //! output operator.
+//------------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 std::ostream& operator<<(std::ostream& s, 
                          const QuantTessellation<Dimension, RealType>& mesh) {
