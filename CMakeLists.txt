@@ -192,6 +192,11 @@ else()
 endif()
 
 
+if(HDF5_LIBRARIES)
+  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
+endif()
+
+
 # Enable Triangle if triangle.h and triangle.c are found.
 # We disable this on IBM xlC since Boost.Geometry does not compile correctly there for now.
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
@@ -292,7 +297,9 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 

@@ -11,10 +11,12 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "Point.hh"
+#include "QuantTessellation.hh"
+
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "QuantizedCoordinates.hh"
-#include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
 struct triangulateio;
 
@@ -53,6 +55,11 @@ public:
                   const std::vector<RealType>& PLCpoints,
                   const PLC<2, RealType>& geometry,
                   Tessellation<2, RealType>& mesh) const;
+
+  // Tessellate obeying the given reducedPLC boundary.
+  void tessellate(const std::vector<RealType>& points,
+		  const ReducedPLC<2, RealType>& geometry,
+		  Tessellation<2, RealType>& mesh) const;
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
@@ -118,12 +125,35 @@ private:
   // Private tessellate calls used by internal algorithms  //
   // ----------------------------------------------------- //
 
+
   // Bounded tessellation with prescribed bounding box
   void tessellate(const std::vector<RealType>& points,
                   const std::vector<CoordHash>& IntPLCpoints,
                   const PLC<2, RealType>& geometry,
                   const QuantizedCoordinates<2, RealType>& coords,
                   std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const;
+
+
+  // Internal method to compute the quantized tessellation.
+  void
+  computeUnboundedQuantizedTessellation(const std::vector<RealType>& points,
+					const std::vector<RealType>& nonGeneratingPoints,
+					internal::QuantTessellation<2, RealType>& qmesh) const;
+
+  
+  // Internal method to compute the quantized tessellation.
+  void
+  computeDelaunayConnectivity(const std::vector<RealType>& points,
+			      std::vector<RealPoint>& circumcenters,
+			      std::vector<unsigned>& triMask,
+			      std::map<EdgeHash, std::vector<unsigned> >& edge2tris,
+			      std::map<int, std::set<unsigned> >& gen2tri,
+			      std::vector<int>& triangleList,
+			      RealPoint& low_inner,
+			      RealPoint& high_inner,
+			      RealPoint& low_outer,
+			      RealPoint& high_outer) const;
+
 
   // -------------------------- //
   // Private member variables   //
@@ -132,8 +162,20 @@ private:
   // The quantized coordinates for this tessellator (inner and outer)
   mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
 
+  static CoordHash coordMax;
+  static RealType mDegeneracy;
+
   friend class BoostOrphanage<RealType>;
 };
+
+
+template<typename RealType>
+int64_t TriangleTessellator<RealType>::coordMax = (1LL << 26);
+
+template<typename RealType>
+RealType TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator::coordMax;
+
+
 
 } //end polytope namespace
 

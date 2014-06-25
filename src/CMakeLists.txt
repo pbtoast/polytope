@@ -1,6 +1,9 @@
 # Include Silo stuff if we've found it.
 if (SILO_FOUND)
   set(IO_SOURCES SiloWriter_2d.cc SiloWriter_3d.cc SiloReader_2d.cc SiloReader_3d.cc SiloUtils.cc)
+  message("++ IO_SOURCES: ${IO_SOURCES}")
+  message("++ SILO_LIBRARIES: ${SILO_LIBRARIES}")
+  message("++ HDF5_LIBRARIES: ${HDF5_LIBRARIES}")    
 endif()
 
 # By default, we include the Voro tessellator(s).

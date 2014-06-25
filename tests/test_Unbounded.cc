@@ -127,7 +127,7 @@ void test(Tessellator<2,double>& tessellator) {
 
   // Test 5: 2x2 Cartesian Generators
   {
-    cout << "\nTest 4: 2x2 Cartesian generators" << endl;
+    cout << "\nTest " << ntest << ": 2x2 Cartesian generators" << endl;
     vector<double> points;
     points.push_back(0.0); points.push_back(0.0);
     points.push_back(1.0); points.push_back(0.0);
@@ -141,7 +141,21 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Test 6: Two generators
+  // Test 6: 100 Random points in a unit square
+  {
+    cout << "\nTest " << ntest << ": 100 Random points" << endl;
+    const unsigned nPoints = 10;
+    vector<double> points;
+    for (unsigned i = 0; i != 2*nPoints; ++i) points.push_back(random01());
+    Tessellation<2,double> mesh;
+    tessellator.tessellate(points, mesh);
+    outputMesh(mesh, testName, points, ntest);
+    bool pass = true;
+    ++ntest;
+  }
+
+
+  // Test 7: Two generators
   {
     cout << "\nTest " << ntest << ": Two generators" << endl;
     vector<double> points;
@@ -155,7 +169,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Test 7: Line of generators, uniform
+  // Test 8: Line of generators, uniform
   {
     cout << "\nTest " << ntest << ": Uniform line of generators" << endl;
     int N=10;
@@ -169,7 +183,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Test 8: Line of generators, non-uniform
+  // Test 9: Line of generators, non-uniform
   {
     cout << "\nTest " << ntest << ": Non-uniform line of generators" << endl;
     int N = 10;
@@ -183,7 +197,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++ntest;
   }
 
-  // Test 9: Line of generators, non-uniform, shuffled
+  // Test 10: Line of generators, non-uniform, shuffled
   {
     cout << "\nTest " << ntest << ": Non-uniform line of generators, shuffled" << endl;
     int N = 10;
@@ -195,6 +209,21 @@ void test(Tessellator<2,double>& tessellator) {
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh, N, 2*N, 3*N-1, 2*N, 2*N);    
     if (!pass) howDidIDo.push_back(ntest);
+    ++ntest;
+  } 
+
+  // Test 11: 10 generators
+  {
+    cout << "\nTest " << ntest << ": 10 generators" << endl;
+    double pts[20] = {-0.164777,0.26823,-0.222225,0.05397,-0.0226029,0.128871,-0.135216,
+		      0.0134009,0.45223,0.416195,0.135712,0.217297,-0.358397,0.106969,
+		      -0.483699,-0.257113,-0.362768,0.304177,-0.343321,-0.0990556};
+    int N = 10;
+    vector<double> points(2*N);
+    for (unsigned i = 0; i < 2*N; ++i) points[i] = pts[i];
+    Tessellation<2,double> mesh;
+    tessellator.tessellate(points, mesh);
+    outputMesh(mesh, testName, points, ntest);
     ++ntest;
   } 
 

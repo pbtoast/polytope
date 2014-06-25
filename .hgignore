@@ -5,6 +5,7 @@ syntax: glob
 *.dylib
 *.a
 *.orig
+*.pyc
 
 # Ignore our build output
 build
