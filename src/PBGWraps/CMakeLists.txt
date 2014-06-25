@@ -39,6 +39,8 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
 
+set(PYTHON_LINK "python")
+
 # The Python library of wrapped Polytope methods
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 
@@ -72,11 +74,24 @@ set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 
 target_link_libraries(PolytopeModules 
   ${PYTHON_LINK}
+#  ${PYTHON_STATIC_LIB}
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
   ${HDF5_LINK}
 )
+
+# Remove the "lib" prefix convention from the library
+# NOTE: "init<modulename>" is not defined properly if it begins with "lib"
+set_target_properties(PolytopeModules PROPERTIES PREFIX "")
+
+# Change .dylib suffix to .so on OSX
+if (${APPLE})
+  set_target_properties(PolytopeModules PROPERTIES SUFFIX ".so")
+endif()
+
+# Allow rpath linkage to the Module
+#set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
 
 # Library install targets
 install (TARGETS PolytopeModules DESTINATION lib)

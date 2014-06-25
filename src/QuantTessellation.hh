@@ -77,6 +77,11 @@ public:
                                                           ip, degeneracy);
     return result;
   }
+  IntPoint hashedPosition(const PointHash ip) const {
+    IntPoint result;
+    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
+    return result;
+  }
 
   //----------------------------------------------------------------------------
   // Convert to/from IntPoint representations.  Note these conversions can
@@ -150,6 +155,14 @@ public:
     return unhashPosition(points[i]);
   }
 
+//   //----------------------------------------------------------------------------
+//   // Integer position for a point (normalized coordinates).
+//   //----------------------------------------------------------------------------
+//   IntPoint nodePosition(const unsigned i) {
+//     POLY_ASSERT(i < points.size());
+//     return hashedPosition(points[i]);
+//   }
+
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
   //----------------------------------------------------------------------------
@@ -158,6 +171,22 @@ public:
     RealPoint result = nodePosition(i);
     for (unsigned j = 0; j != Dimension; ++j) {
       result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+    }
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  // Floating position for a point (lab frame).
+  //----------------------------------------------------------------------------
+  RealPoint labNodePositionCollinear(const unsigned i) {
+    POLY_ASSERT(i < points.size());
+    RealPoint result = nodePosition(i);
+    for (unsigned j = 0; j != Dimension; ++j) {
+      if (low_labframe[j] == high_labframe[j]) {
+	result[j] = result[j] + low_labframe[j];
+      } else {
+	result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+      }
     }
     return result;
   }
@@ -231,9 +260,17 @@ public:
 
     // Nodes.
     mesh.nodes.resize(Dimension*points.size());
-    for (unsigned i = 0; i != points.size(); ++i) {
-      RealPoint p = labNodePosition(i);
-      std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+    if (low_labframe.x == high_labframe.x or
+	low_labframe.y == high_labframe.y) {
+      for (unsigned i = 0; i != points.size(); ++i) {
+	RealPoint p = labNodePositionCollinear(i);
+	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+      }
+    } else {
+      for (unsigned i = 0; i != points.size(); ++i) {
+	RealPoint p = labNodePosition(i);
+	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+      }
     }
 
     // Faces.

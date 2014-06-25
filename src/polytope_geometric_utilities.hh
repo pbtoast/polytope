@@ -72,8 +72,8 @@ template<typename RealType> struct Hasher<2, RealType> {
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
                 xhigh_outer[1] >= xhigh_inner[1]);
-    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] <= xhigh_inner[0] and
+                xlow_inner[1] <= xhigh_inner[1]);
     POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
                  pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1],
                  "(" << pos[0] << " " << pos[1] << ") ("
@@ -113,8 +113,8 @@ template<typename RealType> struct Hasher<2, RealType> {
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
                 xhigh_outer[1] >= xhigh_inner[1]);
-    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] <= xhigh_inner[0] and
+                xlow_inner[1] <= xhigh_inner[1]);
 
     // Decide the bounding box we're using.
     const RealType *xlow, *xhigh;

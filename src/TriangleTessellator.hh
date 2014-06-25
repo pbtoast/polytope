@@ -103,6 +103,28 @@ private:
 					const std::vector<RealType>& nonGeneratingPoints,
 					internal::QuantTessellation<2, RealType>& qmesh) const;
 
+
+  // Internal method to compute the quantized tessellation.
+  void
+  computeUnboundedQuantizedTessellation(const std::vector<RealType>& points,
+					const std::vector<RealType>& nonGeneratingPoints,
+					internal::QuantTessellation<2, RealType>& qmesh) const;
+
+  
+  // Internal method to compute the quantized tessellation.
+  void
+  computeDelaunayConnectivity(const std::vector<RealType>& points,
+			      std::vector<RealPoint>& circumcenters,
+			      std::vector<unsigned>& triMask,
+			      std::map<EdgeHash, std::vector<unsigned> >& edge2tris,
+			      std::map<int, std::set<unsigned> >& gen2tri,
+			      std::vector<int>& triangleList,
+			      RealPoint& low_inner,
+			      RealPoint& high_inner,
+			      RealPoint& low_outer,
+			      RealPoint& high_outer) const;
+
+
   // -------------------------- //
   // Private member variables   //
   // -------------------------- //
