@@ -103,13 +103,6 @@ private:
 					const std::vector<RealType>& nonGeneratingPoints,
 					internal::QuantTessellation<2, RealType>& qmesh) const;
 
-
-  // Internal method to compute the quantized tessellation.
-  void
-  computeUnboundedQuantizedTessellation(const std::vector<RealType>& points,
-					const std::vector<RealType>& nonGeneratingPoints,
-					internal::QuantTessellation<2, RealType>& qmesh) const;
-
   
   // Internal method to compute the quantized tessellation.
   void
