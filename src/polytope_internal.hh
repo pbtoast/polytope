@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 // An POLY_ASSERT macro, if one isn't already defined.
 #ifndef POLY_ASSERT

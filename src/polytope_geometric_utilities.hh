@@ -4,9 +4,12 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <algorithm>
+
+#include "Tessellation.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
