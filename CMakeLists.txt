@@ -136,13 +136,24 @@ endif()
 
 #Check for HDF5 and Silo
 if (${USE_SILO} EQUAL 1)
+
   # Find HDF5.
+  set(ENV{HDF5_ROOT} ${HDF5_ROOT})
   set(HDF5_USE_STATIC_LIBRARIES true)
   find_package(HDF5)
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
     list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
+
+    # Get rid of duplicates
+    # NOTE: Taken from Will Dicharry's FindHDF5.cmake module. This ensures
+    #       duplicates are removed from the beginning of the list so as
+    #       not to mess with the unresolved symbols search at linking.
+    list(REVERSE HDF5_LIBRARIES)
+    list(REMOVE_DUPLICATES HDF5_LIBRARIES)
+    list(REVERSE HDF5_LIBRARIES)
+
     message("-- Found hdf5 files in ${HDF5_INCLUDE_DIRS}")
     
     # Do we have parallel HDF5?
