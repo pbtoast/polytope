@@ -33,15 +33,15 @@ include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-#POLYTOPE_ADD_TEST( "serialize"       "" )
-#POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
-#POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
-#POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
-#POLYTOPE_ADD_TEST( "within_2d"       "" )
-#POLYTOPE_ADD_TEST( "intersect_2d"    "" )
-#POLYTOPE_ADD_TEST( "convexIntersect" "" )
-#POLYTOPE_ADD_TEST( "PLC_CSG"         "" )
-#POLYTOPE_ADD_TEST( "hash"            "" )
+POLYTOPE_ADD_TEST( "serialize"       "" )
+POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
+POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
+POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
+POLYTOPE_ADD_TEST( "within_2d"       "" )
+POLYTOPE_ADD_TEST( "intersect_2d"    "" )
+POLYTOPE_ADD_TEST( "convexIntersect" "" )
+POLYTOPE_ADD_TEST( "PLC_CSG"         "" )
+POLYTOPE_ADD_TEST( "hash"            "" )
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests
@@ -74,7 +74,6 @@ POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
 POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "plot"                        "BOOST_VORONOI" )
 
 # 3D Tetgen Tessellator tests
 POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
