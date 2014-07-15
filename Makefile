@@ -63,8 +63,13 @@ ifneq ($(debug), not-set)
   BUILDDIR := ${BUILDDIR}-Debug
   CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Debug
 else
-  BUILDDIR := ${BUILDDIR}-Release
-  CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Release
+  ifeq ($(debug), 1)
+    BUILDDIR := ${BUILDDIR}-Debug
+    CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Debug
+  else
+    BUILDDIR := ${BUILDDIR}-Release
+    CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Release
+  endif
 endif
 
 # prefix path for installation

@@ -237,11 +237,6 @@ configure_file(
   "${PROJECT_BINARY_DIR}/polytope.hh"
 )
 
-# Turn on testing support.
-#if (${TESTING} EQUAL 1)
-#  enable_testing()
-#endif()
-
 # Include the binary directory in the header file search path.
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/src")
@@ -260,9 +255,12 @@ add_subdirectory(src)
 
 # Tests directory
 if (${TESTING} EQUAL 1)
+  message("-- Unit testing enabled.")
   enable_testing()
   add_subdirectory(tests)
   include (CTest)
+else()
+  message("-- Unit testing disabled.")
 endif()
   
 # Polytope C library.
