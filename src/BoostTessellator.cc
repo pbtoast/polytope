@@ -119,8 +119,8 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Initialize quantized coordinate system
-  // mCoords.setDegeneracy(2.5e-7);
-  // mCoords.setCoordMax  (1LL << 22);
+  mCoords.setDegeneracy(mDegeneracy);
+  mCoords.setCoordMax  (mCoordMax);
   mCoords.initialize(points);
   
   this->computeVoronoiUnbounded(points, mesh);
@@ -162,8 +162,8 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0 and PLCpoints.size() % 2 == 0);
 
   // Initialize quantized coordinate system
-  // mCoords.setDegeneracy(9.3e-10);
-  // mCoords.setCoordMax  (1LL << 30);
+  mCoords.setDegeneracy(mDegeneracy);
+  mCoords.setCoordMax  (mCoordMax);
   mCoords.initialize(PLCpoints);
 
   this->computeVoronoiBounded(points, PLCpoints, geometry, mesh);
