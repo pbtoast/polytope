@@ -163,7 +163,7 @@ private:
   // The quantized coordinates for this tessellator (inner and outer)
   mutable QuantizedCoordinates<2,RealType> mCoords, mOuterCoords;
 
-  static CoordHash coordMax;
+  static CoordHash mCoordMax;
   static RealType mDegeneracy;
 
   friend class BoostOrphanage<RealType>;
@@ -171,10 +171,10 @@ private:
 
 
 template<typename RealType>
-int64_t TriangleTessellator<RealType>::coordMax = (1LL << 26);
+int64_t TriangleTessellator<RealType>::mCoordMax = (1LL << 26);
 
 template<typename RealType>
-RealType TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator::coordMax;
+RealType TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator::mCoordMax;
 
 
 
