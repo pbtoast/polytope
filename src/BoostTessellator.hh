@@ -152,7 +152,11 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const { return mDegeneracy; }
-  void degeneracy(RealType degeneracy) const { mDegeneracy = degeneracy; }
+
+  void degeneracy(RealType degeneracy) const { 
+    mDegeneracy = degeneracy; 
+    mCoordMax   = (CoordHash)(1.0/degeneracy);
+  }
 
 private:
   //-------------------- Private interface ---------------------- //
