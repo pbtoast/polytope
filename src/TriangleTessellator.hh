@@ -71,7 +71,8 @@ public:
   //! Should be returned appropriately for normalized coordinates, i.e., if all
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
-  virtual RealType degeneracy() const { return 1.0e-8; }
+  virtual RealType degeneracy() const { return mDegeneracy; }
+  void degeneracy(RealType degeneracy) const { mDegeneracy = degeneracy; }
 
 private:
   //-------------------- Private interface ---------------------- //
