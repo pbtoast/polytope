@@ -41,9 +41,9 @@ class BoostOrphanage: public OrphanageBase<2, RealType>
 public:
 
   // Polytope typedefs
-  typedef int64_t CoordHash;
-  typedef Point2<CoordHash> IntPoint;
-  typedef Point2<RealType> RealPoint;
+  typedef typename DimensionTraits<2, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<2, RealType>::IntPoint IntPoint;
+  typedef typename DimensionTraits<2, RealType>::RealPoint RealPoint;
 
   // Boost typedefs
   typedef boost::geometry::model::polygon<IntPoint, false> BGpolygon;

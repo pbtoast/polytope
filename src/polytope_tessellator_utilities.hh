@@ -15,6 +15,7 @@
 #include "Point.hh"
 #include "QuantizedCoordinates.hh"
 #if HAVE_BOOST
+BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<uint64_t>, uint64_t, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int64_t>, int64_t, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
 #endif
@@ -124,10 +125,10 @@ constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
 // PRE-CONDITIONS: 
 //    The mesh is empty
 //------------------------------------------------------------------------------
-template<typename RealType>
+template<typename RealType, typename IntType>
 void
 constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
-                               <polytope::Point2<int64_t>, false> >& cellRings,
+                               <polytope::Point2<IntType>, false> >& cellRings,
                              const std::vector<RealType>& points,
                              //const std::vector<RealType>& PLCpoints,
                              //const PLC<2,RealType>& geometry,
@@ -138,7 +139,7 @@ constructBoundedMeshTopology(const std::vector<boost::geometry::model::ring
   POLY_ASSERT(!coords.empty());
   
   // Typedefs
-  typedef int64_t CoordHash;
+  typedef IntType CoordHash;
   typedef std::pair<int, int> EdgeHash;
   typedef polytope::Point2<CoordHash> IntPoint;
   typedef polytope::Point2<double> RealPoint;
@@ -298,12 +299,12 @@ constructBoostBoundary(const std::vector<PointType>& PLCPoints,
 // PRE-CONDITIONS: 
 //    The mesh cells, faces, and nodes are full
 //------------------------------------------------------------------------------
-template <typename RealType>
+template <typename RealType, typename IntType>
 void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
                                 const RealType* low,
                                 const RealType dx,
                                 std::vector<boost::geometry::model::ring<
-                                   Point2<int64_t>, false> >& cellRings) {
+                                   Point2<IntType>, false> >& cellRings) {
   // Pre-conditions
   POLY_ASSERT(!mesh.cells.empty());
   POLY_ASSERT(!mesh.faces.empty());
@@ -311,7 +312,7 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
   POLY_ASSERT(low != 0 and dx != 0);
 
   // typedefs
-  typedef int64_t CoordHash;
+  typedef IntType CoordHash;
   typedef Point2<CoordHash> IntPoint;
   typedef boost::geometry::model::ring<IntPoint, false> BGring;
 

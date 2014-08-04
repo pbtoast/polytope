@@ -65,7 +65,9 @@ void test(Tessellator<2,double>& tessellator) {
     vector<double> points(2*N);
     for (unsigned i = 0; i < N; ++i){
        double theta = 2.0*M_PI*double(i)/double(N);
-       points[2*i] = cos(theta);  points[2*i+1] = sin(theta);
+       points[2*i  ] = 0.5 + 0.5*cos(theta);
+       points[2*i+1] = 0.5 + 0.5*sin(theta);
+       cout << points[2*i] << " " << points[2*i+1] << endl;
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, mesh);
@@ -248,6 +250,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
+    tessellator.degeneracy(1.0e-9);
     test(tessellator);  
   }
 #endif   

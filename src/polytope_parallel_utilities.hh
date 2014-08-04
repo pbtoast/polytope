@@ -10,7 +10,7 @@
 
 #include "mpi.h"
 
-#include "KeyTraits.hh"
+//#include "KeyTraits.hh"
 
 namespace polytope {
 

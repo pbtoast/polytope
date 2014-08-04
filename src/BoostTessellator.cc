@@ -66,10 +66,10 @@ struct vertexCompare {
 // compute the unit vector direction of an infinite edge in the Boost
 // Voronoi diagram
 //------------------------------------------------------------------------
-template<typename RealType>
+template<typename RealType, typename IntType>
 void
 computeInfiniteEdgeDirection(const VD::edge_type* edge,
-                             const vector<pair<IntPoint, int> >& generatorToIndex,
+                             const vector<pair<Point2<IntType>, int> >& generatorToIndex,
                              const QuantizedCoordinates<2, RealType>& coords,
                              RealType* direction) {
   const VD::cell_type* cell1 = edge->cell();
@@ -80,9 +80,9 @@ computeInfiniteEdgeDirection(const VD::edge_type* edge,
   size_t index2 = cell2->source_index();
   POLY_ASSERT(index1 < generatorToIndex.size() and 
 	      index2 < generatorToIndex.size());
-  const IntPoint p1 = generatorToIndex[index1].first;
-  const IntPoint p2 = generatorToIndex[index2].first;
-  const RealPoint r = coords.dequantize(p2) - coords.dequantize(p1);
+  const Point2<IntType> p1 = generatorToIndex[index1].first;
+  const Point2<IntType> p2 = generatorToIndex[index2].first;
+  const Point2<RealType> r = coords.dequantize(p2) - coords.dequantize(p1);
   if (edge->vertex0()) { direction[0] = -r.y;  direction[1] =  r.x; }
   else                 { direction[0] =  r.y;  direction[1] = -r.x; }
   geometry::unitVector<2, RealType>(direction);
@@ -215,7 +215,7 @@ computeCellNodes(const vector<RealType>& points,
        internal::pairCompareFirst<IntPoint, int> );
   
   // Some Boost voodoo to iterate over the first element of each generator-index pair
-  typedef vector<pair<IntPoint, int> >::value_type value_type;
+  typedef typename vector<pair<IntPoint, int> >::value_type value_type;
   boost::function<IntPoint(value_type&)> f = boost::bind(&value_type::first, _1);
   
   // The Boost.Polygon Voronoi Diagram object
@@ -429,8 +429,9 @@ computeCellRings(const vector<RealType>& points,
   POLY_ASSERT(!nodeMap.empty());
   map<int, PointType> id2nodes;
   vector<int> projectedNodes(nodeMap.size());
-  for (map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
-       itr != nodeMap.end(); ++itr) {
+  for (typename map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
+       itr != nodeMap.end(); 
+       ++itr) {
     i = itr->second.first;
     POLY_ASSERT(i < nodeMap.size());
     id2nodes[i] = itr->first;
@@ -571,8 +572,9 @@ computeVoronoiUnbounded(const vector<RealType>& points,
   const unsigned numNodes = nodeMap.size();
   mesh.nodes.resize(2*numNodes);
   mesh.infNodes.resize(numNodes);
-  for (map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
-       itr != nodeMap.end(); ++itr) {
+  for (typename map<PointType, pair<int,int> >::const_iterator itr = nodeMap.begin();
+       itr != nodeMap.end(); 
+       ++itr) {
     i = itr->second.first;
     inside = itr->second.second;
     POLY_ASSERT(i >= 0 and i < numNodes);

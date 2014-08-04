@@ -57,7 +57,7 @@ computeNormalizedPoints(const std::vector<RealType>& points,
     }
     // Add a small safety factor.
     for (unsigned j = 0; j != Dimension; ++j) {
-      const double dx = 0.005*(high[j] - low[j]);
+      const double dx = 0.0;//0.005*(high[j] - low[j]);
       low[j] -= dx;
       high[j] += dx;
     }

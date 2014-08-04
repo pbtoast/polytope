@@ -15,6 +15,7 @@
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 #include "Point.hh"
+//#include "DimensionTraits.hh"
 
 namespace polytope {
 
@@ -83,7 +84,7 @@ PLC<2, RealType>
 convexHull_2d(const std::vector<RealType>& points,
               const RealType* low,
               const RealType& dx) {
-  typedef uint64_t CoordHash;
+  typedef KeyTraits::Key CoordHash;
   typedef Point2<CoordHash> PointHash;
 
   POLY_ASSERT(!points.empty());

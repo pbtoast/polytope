@@ -170,7 +170,7 @@ tessellate(const vector<RealType>& points,
            Tessellation<2, RealType>& mesh) const {
 
   typedef pair<unsigned, unsigned> FaceHash;
-  typedef Point2<uint64_t> VertexHash;
+  typedef Point2<CoordHash> VertexHash;
 
   const unsigned ncells = points.size()/2;
   const RealType xmin = low[0], ymin = low[1];
@@ -197,9 +197,9 @@ tessellate(const vector<RealType>& points,
 
   unsigned i, j, k, nv, icell;
   double xc, yc;
-  vector<uint64_t> vertices;
-  vector<Point2<uint64_t> > hullVertices;
-  PLC<2, uint64_t> hull;
+  vector<CoordHash> vertices;
+  vector<Point2<CoordHash> > hullVertices;
+  PLC<2, CoordHash> hull;
 
   // Size the output arrays.
   mesh.cells.resize(ncells);
@@ -225,7 +225,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(con.total_particles() == ncells);
 
   // Dummy low coordinates in integer space for the convex hull.
-  uint64_t ilow[2] = {0U, 0U};
+  CoordHash ilow[2] = {0U, 0U};
 
   // Build the tessellation cell by cell.
   voronoicell_neighbor_2d cell;                    // Use cells with neighbor tracking.
@@ -246,15 +246,15 @@ tessellate(const vector<RealType>& points,
         // Read out the vertices into a temporary array.
         nv = cell.p;
         POLY_ASSERT(nv >= 3);
-        vertices = vector<uint64_t>();
+        vertices = vector<CoordHash>();
         vertices.reserve(2*nv);
         for (k = 0; k != nv; ++k) {
-          vertices.push_back(uint64_t(max(0.0, min(numeric_limits<uint64_t>::max() - 1.0, (xc + 0.5*cell.pts[2*k    ])/dx + 0.5))));
-          vertices.push_back(uint64_t(max(0.0, min(numeric_limits<uint64_t>::max() - 1.0, (yc + 0.5*cell.pts[2*k + 1])/dx + 0.5))));
+          vertices.push_back(CoordHash(max(0.0, min(numeric_limits<CoordHash>::max() - 1.0, (xc + 0.5*cell.pts[2*k    ])/dx + 0.5))));
+          vertices.push_back(CoordHash(max(0.0, min(numeric_limits<CoordHash>::max() - 1.0, (yc + 0.5*cell.pts[2*k + 1])/dx + 0.5))));
         }
 
         // Sort the vertices counter-clockwise.
-        hull = convexHull_2d(vertices, ilow, uint64_t(1));
+        hull = convexHull_2d(vertices, ilow, CoordHash(1));
 //         if (!(hull.facets.size() == nv)) {
 //           cerr << "Input vertices: " << endl;
 //           for (unsigned k = 0; k != nv; ++k) cerr << "    " << k << " (" << vertices[2*k] << " " << vertices[2*k + 1] << ")" << endl;
@@ -264,11 +264,11 @@ tessellate(const vector<RealType>& points,
 //         }
         POLY_ASSERT(hull.facets.size() <= nv);            // There may be some degenerate vertices, but the hull method reduces to the unique set.
         nv = hull.facets.size();
-        hullVertices = vector<Point2<uint64_t> >();
+        hullVertices = vector<Point2<CoordHash> >();
         hullVertices.reserve(nv);
         for (k = 0; k != nv; ++k) {
           i = hull.facets[k][0];
-          hullVertices.push_back(Point2<uint64_t>(vertices[2*i], vertices[2*i + 1]));
+          hullVertices.push_back(Point2<CoordHash>(vertices[2*i], vertices[2*i + 1]));
         }
 
         // Add any new vertices from this cell to the global set, and update the vertexMap

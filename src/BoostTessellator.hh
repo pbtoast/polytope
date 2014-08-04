@@ -17,6 +17,7 @@
 #include "BoostOrphanage.hh"
 #include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
+#include "DimensionTraits.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
@@ -25,32 +26,22 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
-// Some useful typedefs
-typedef int64_t CoordHash;
-typedef std::pair<int, int> EdgeHash;
-typedef polytope::Point2<CoordHash> IntPoint;
-typedef polytope::Point2<double> RealPoint;
-typedef RealPoint PointType;
-
-// Boost.Geometry typedefs
-typedef boost::geometry::model::polygon<PointType, false> BGpolygon;
-typedef boost::geometry::model::ring   <PointType, false> BGring;
-typedef boost::geometry::model::polygon<IntPoint , false> IntPolygon;
-typedef boost::geometry::model::ring   <IntPoint , false> IntRing;
-
 //------------------------------------------------------------------------
 // Map Polytope's point class to Boost.Polygon
 //------------------------------------------------------------------------
 namespace boost{
 namespace polygon{
 
+typedef polytope::DimensionTraits<2, double>::CoordHash CoordHash;
+typedef polytope::DimensionTraits<2, double>::IntPoint IntPoint;
+
 template <>
 struct geometry_concept<IntPoint> { typedef point_concept type; };
-  
+
 template <>
 struct point_traits<IntPoint> {
   typedef CoordHash coordinate_type;
-   
+
   static inline coordinate_type get(const IntPoint& point, orientation_2d orient) {
     return (orient == HORIZONTAL) ? point.x : point.y;
   }
@@ -102,22 +93,31 @@ struct point_traits<IntPoint> {
 } //end boost namespace
 } //end polygon namespace
 
-
-//------------------------------------------------------------------------
-// The Boost.Polygon Voronoi diagram object
-//------------------------------------------------------------------------
+// The Boost.Polygon Voronoi diagram struct
 // typedef boost::polygon::voronoi_diagram
 //   <CoordHash,boost::polygon::polytope_voronoi_diagram_traits> VD;
 typedef boost::polygon::voronoi_diagram<double> VD;
 
-
-namespace polytope
-{
+namespace polytope {
 
 template<typename RealType>
 class BoostTessellator: public Tessellator<2, RealType>
 {
 public:
+
+  // Some useful typedefs
+  typedef typename DimensionTraits<2, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<2, RealType>::IntPoint IntPoint;
+  typedef typename DimensionTraits<2, RealType>::RealPoint RealPoint;
+  
+  typedef std::pair<int, int> EdgeHash;
+  typedef RealPoint PointType;
+  
+  // Boost.Geometry typedefs
+  typedef boost::geometry::model::polygon<PointType, false> BGpolygon;
+  typedef boost::geometry::model::ring   <PointType, false> BGring;
+  typedef boost::geometry::model::polygon<IntPoint , false> IntPolygon;
+  typedef boost::geometry::model::ring   <IntPoint , false> IntRing;
 
   // Constructor, destructor.
   BoostTessellator();

@@ -19,9 +19,9 @@ template<int Dimension, typename RealType> struct DimensionTraits {};
 template<typename RealType>
 struct DimensionTraits<2, RealType> {
   typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
-  // typedef polytope::KeyTraits::Key CoordHash;
-  typedef int64_t CoordHash;
-  typedef polytope::Point2<CoordHash> Point;
+  typedef polytope::KeyTraits::Key CoordHash;
+  // typedef uint64_t CoordHash;
+  typedef polytope::Point2<CoordHash> IntPoint;
   typedef polytope::Point2<RealType> RealPoint;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
@@ -29,31 +29,29 @@ struct DimensionTraits<2, RealType> {
                                const RealType& dx) { 
     return ConvexHull(polytope::convexHull_2d(points, low, dx), points);
   }
-  static Point constructPoint(const RealType* ri,
-                              const RealType* rlow,
-                              const RealType& dx,
-                              const size_t i) {
-    return Point(ri[0], ri[1], 
-                 rlow[0], rlow[1], 
-                 dx, i);
+  static IntPoint constructPoint(const RealType* ri,
+				 const RealType* rlow,
+				 const RealType& dx,
+				 const size_t i) {
+    return IntPoint(ri[0], ri[1], rlow[0], rlow[1], dx, i);
   }
   static RealPoint constructPoint(const RealType* ri) {
      return RealPoint(ri[0], ri[1]);
   }
-  static Point faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
-                            const unsigned iface,
-                            const RealType* rlow,
-                            const RealType& dx) {
+  static IntPoint faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
+			       const unsigned iface,
+			       const RealType* rlow,
+			       const RealType& dx) {
     POLY_ASSERT(iface < mesh.faces.size());
     POLY_ASSERT(mesh.faces[iface].size() == 2);
     const unsigned n1 = mesh.faces[iface][0], n2 = mesh.faces[iface][1];
     POLY_ASSERT(n1 < mesh.nodes.size()/2);
     POLY_ASSERT(n2 < mesh.nodes.size()/2);
-    const Point pn1 = constructPoint(&mesh.nodes[2*n1], rlow, dx, n1);
-    const Point pn2 = constructPoint(&mesh.nodes[2*n2], rlow, dx, n2);
-    const Point result((pn1.x >> 1) + (pn2.x >> 1),
-                       (pn1.y >> 1) + (pn2.y >> 1),
-                       iface);
+    const IntPoint pn1 = constructPoint(&mesh.nodes[2*n1], rlow, dx, n1);
+    const IntPoint pn2 = constructPoint(&mesh.nodes[2*n2], rlow, dx, n2);
+    const IntPoint result((pn1.x >> 1) + (pn2.x >> 1),
+			  (pn1.y >> 1) + (pn2.y >> 1),
+			  iface);
     return result;
   }
   static RealType maxLength(const RealType* low, const RealType* high) {
@@ -86,8 +84,8 @@ template<typename RealType>
 struct DimensionTraits<3, RealType> {
   typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
   // typedef polytope::KeyTraits::Key CoordHash;
-  typedef int64_t CoordHash;
-  typedef polytope::Point3<CoordHash> Point;
+  typedef uint64_t CoordHash;
+  typedef polytope::Point3<CoordHash> IntPoint;
   typedef polytope::Point3<RealType> RealPoint;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
@@ -95,21 +93,19 @@ struct DimensionTraits<3, RealType> {
                                const RealType& dx) { 
     return ConvexHull(polytope::convexHull_3d(points, low, dx), points);
   }
-  static Point constructPoint(const RealType* ri,
-                              const RealType* rlow,
-                              const RealType& dx,
-                              const size_t i) {
-    return Point(ri[0], ri[1], ri[2], 
-                 rlow[0], rlow[1], rlow[2],
-                 dx, i);
+  static IntPoint constructPoint(const RealType* ri,
+				 const RealType* rlow,
+				 const RealType& dx,
+				 const size_t i) {
+    return IntPoint(ri[0], ri[1], ri[2], rlow[0], rlow[1], rlow[2], dx, i);
   }
   static RealPoint constructPoint(const RealType* ri) {
     return RealPoint(ri[0], ri[1], ri[2]);
   }
-  static Point faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
-                            const unsigned iface,
-                            const RealType* rlow,
-                            const RealType& dx) {
+  static IntPoint faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
+			       const unsigned iface,
+			       const RealType* rlow,
+			       const RealType& dx) {
     POLY_ASSERT(iface < mesh.faces.size());
     const unsigned nnodes = mesh.faces[iface].size();
     POLY_ASSERT(nnodes >= 3);
