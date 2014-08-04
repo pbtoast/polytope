@@ -20,6 +20,9 @@ class VoroPP_2d: public Tessellator<2, RealType> {
   //--------------------------- Public Interface ---------------------------//
 public:
 
+  typedef typename DimensionTraits<2, RealType>::CoordHash CoordHash;
+  typedef Point2<CoordHash> VertexHash;
+
   //! Constructor.
   //! The parameters (nx, ny) are used internally to Voro++ in order to make
   //! the selection of generators that can influence any particular generator

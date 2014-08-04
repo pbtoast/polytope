@@ -24,12 +24,13 @@ namespace {
 // The resulting multi_polygon is corrected to ensure it conforms to
 // the proper geometric concept.
 //------------------------------------------------------------------------
+template<typename IntType>
 void
-createBGUnion(boost::geometry::model::ring<Point2<int64_t>,false> ring, 
+createBGUnion(boost::geometry::model::ring<Point2<IntType>,false> ring, 
               boost::geometry::model::multi_polygon<
-                boost::geometry::model::polygon<Point2<int64_t>,false> >& multiPolygon ) {
+                boost::geometry::model::polygon<Point2<IntType>,false> >& multiPolygon ) {
   boost::geometry::model::multi_polygon<
-    boost::geometry::model::polygon<Point2<int64_t>,false> > temp;
+    boost::geometry::model::polygon<Point2<IntType>,false> > temp;
   boost::geometry::union_(multiPolygon, ring, temp);
   boost::geometry::correct(temp);
   multiPolygon=temp;
@@ -40,22 +41,24 @@ createBGUnion(boost::geometry::model::ring<Point2<int64_t>,false> ring,
 // pieces by redundant hanging nodes. This manifests as three (or more)
 // collinear nodes. We clip them as a final connection step
 //------------------------------------------------------------------------
+template<typename IntType>
 void
-cleanRingEdges(boost::geometry::model::ring<Point2<int64_t>,false>& ring) {
+cleanRingEdges(boost::geometry::model::ring<Point2<IntType>,false>& ring) {
   // Pre-conditions
   POLY_ASSERT(ring.size() > 2);
   POLY_ASSERT(ring.front() == ring.back());
   //POLY_ASSERT(!boost::geometry::intersects(ring));
 
   // Initialize the temporary ring
-  typedef boost::geometry::model::ring<Point2<int64_t>,false> BGring;
-  typedef int64_t CoordHash;
+  typedef boost::geometry::model::ring<Point2<IntType>,false> BGring;
+  typedef IntType CoordHash;
   BGring tmpRing;
   
   // Check collinearity on the middle points
   bool collinear;
-  for (BGring::const_iterator itr = ring.begin()+1;
-       itr != ring.end()-1; ++itr) {
+  for (typename BGring::const_iterator itr = ring.begin()+1;
+       itr != ring.end()-1; 
+       ++itr) {
     collinear = geometry::collinear<2,CoordHash>(&(*(itr-1)).x,
                                                  &(*(itr  )).x,
                                                  &(*(itr+1)).x,
@@ -146,7 +149,7 @@ adoptOrphans(const vector<RealType>& points,
     std::set<int> orphanNeighbors;
     for (typename BGring::const_iterator pointItr = orphan.begin();
          pointItr != orphan.end()-1; ++pointItr) {
-      std::map<IntPoint, std::set<int> >::iterator it = point2neighbors.find(*pointItr);
+      typename std::map<IntPoint, std::set<int> >::iterator it = point2neighbors.find(*pointItr);
       if (it != point2neighbors.end()){
         std::set<int> neighborSet = it->second;
         orphanNeighbors.insert(neighborSet.begin(), neighborSet.end());

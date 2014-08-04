@@ -110,9 +110,9 @@ vector<double> conditionNumber(Tessellation<2,double>& mesh) {
 // lloydTestDistributed
 // -----------------------------------------------------------------------
 void lloydTestDistributed(Tessellator<2,double>& tessellator) {
-  const unsigned nPoints     = 1000;     // Number of generators
-  const unsigned nIter       = 2000;     // Number of iterations
-  unsigned outputEvery = 10;      // Output frequency
+  const unsigned nPoints = 1000;    // Number of generators
+  const unsigned nIter   = 500;     // Number of iterations
+  unsigned outputEvery   = 10;      // Output frequency
   const int btype = 2;
 
   // Seed the random number generator the same on all processes.
@@ -195,13 +195,13 @@ int main(int argc, char** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
    
-// #if HAVE_TRIANGLE
-//   {
-//     cout << "\nTriangle Tessellator:\n" << endl;
-//     DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
-//     lloydTestDistributed(tessellator);
-//   }
-// #endif   
+#if HAVE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    DistributedTessellator<2,double> tessellator(new TriangleTessellator<double>(), true, true);
+    lloydTestDistributed(tessellator);
+  }
+#endif   
 
 #if HAVE_BOOST_VORONOI
   {

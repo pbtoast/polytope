@@ -52,11 +52,11 @@ std::string
 checkConsistentCommInfo(const std::string& label,
                         const unsigned rank,
                         const unsigned numDomains,
-                        const std::vector<typename polytope::DimensionTraits<Dimension, RealType>::Point>& hashes,
+                        const std::vector<typename polytope::DimensionTraits<Dimension, RealType>::IntPoint>& hashes,
                         const std::vector<unsigned>& neighborDomains,
                         const std::vector<std::vector<unsigned> >& sharedIDs) {
 
-  typedef typename polytope::DimensionTraits<Dimension, RealType>::Point Point;
+  typedef typename polytope::DimensionTraits<Dimension, RealType>::IntPoint Point;
 
   std::string result = "";
 
@@ -148,12 +148,12 @@ std::string
 checkAllSharedElementsFound(const std::string& label,
                             const unsigned rank,
                             const unsigned numDomains,
-                            const std::vector<typename polytope::DimensionTraits<Dimension, RealType>::Point>& hashes,
+                            const std::vector<typename polytope::DimensionTraits<Dimension, RealType>::IntPoint>& hashes,
                             const std::vector<unsigned>& neighborDomains,
                             const std::vector<std::vector<unsigned> >& sharedIDs,
                             const bool doNotAllowEmptySets) {
 
-  typedef typename polytope::DimensionTraits<Dimension, RealType>::Point Point;
+  typedef typename polytope::DimensionTraits<Dimension, RealType>::IntPoint Point;
 
   std::string result = "";
 
@@ -267,7 +267,7 @@ std::string
 checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
 
   typedef DimensionTraits<Dimension, RealType> Traits;
-  typedef typename Traits::Point Point;
+  typedef typename Traits::IntPoint Point;
 
   // Parallel configuration.
   int rank, numDomains;

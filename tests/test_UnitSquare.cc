@@ -67,7 +67,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
       cout << "   num mesh cells : " << mesh.cells.size()   << endl;
       cout << "   num mesh faces : " << mesh.faces.size()   << endl;
-      checkCartesianMesh(mesh,nx,nx);
+      //checkCartesianMesh(mesh,nx,nx);
    }
 }
 
@@ -87,6 +87,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
+    // tessellator.degeneracy(1.0e-7);
     generateMesh(tessellator);
   }
 #endif   

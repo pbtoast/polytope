@@ -33,15 +33,15 @@ include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-#POLYTOPE_ADD_TEST( "serialize"       "" )
-#POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
-#POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
-#POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
-#POLYTOPE_ADD_TEST( "within_2d"       "" )
-#POLYTOPE_ADD_TEST( "intersect_2d"    "" )
-#POLYTOPE_ADD_TEST( "convexIntersect" "" )
-#POLYTOPE_ADD_TEST( "PLC_CSG"         "" )
-#POLYTOPE_ADD_TEST( "hash"            "" )
+POLYTOPE_ADD_TEST( "serialize"       "" )
+POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
+POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
+POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
+POLYTOPE_ADD_TEST( "within_2d"       "" )
+POLYTOPE_ADD_TEST( "intersect_2d"    "" )
+POLYTOPE_ADD_TEST( "convexIntersect" "" )
+POLYTOPE_ADD_TEST( "PLC_CSG"         "" )
+POLYTOPE_ADD_TEST( "hash"            "" )
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests
@@ -57,38 +57,38 @@ include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
 
 
 # 2D Triangle and Boost Tessellator tests
-#POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
-#POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
-#POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
+POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "OrphanedCell"                "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "Unbounded"                   "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "UnboundedToBounded"          "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
-#POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "UnboundedToBounded"          "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
+POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
 #POLYTOPE_ADD_TEST( "plot"                        "BOOST_VORONOI" )
 
 # 3D Tetgen Tessellator tests
-#POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
+POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
 
 
 
 #-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")

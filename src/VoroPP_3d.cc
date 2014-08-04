@@ -170,7 +170,6 @@ tessellate(const vector<RealType>& points,
            Tessellation<3, RealType>& mesh) const {
 
   typedef set<unsigned> FaceHash;
-  typedef Point3<uint64_t> VertexHash;
 
   const unsigned ncells = points.size()/3;
   const RealType xmin = low[0], ymin = low[1], zmin = low[2];
@@ -246,11 +245,11 @@ tessellate(const vector<RealType>& points,
         zc += pp[2];
 
         // Read out the vertices into a temporary array.
-        vector<Point3<uint64_t> > vertices;
-        for (k = 0; k != cell.p; ++k) vertices.push_back(Point3<uint64_t>(RealType(xc + 0.5*cell.pts[3*k]),
-                                                                          RealType(yc + 0.5*cell.pts[3*k + 1]),
-                                                                          RealType(zc + 0.5*cell.pts[3*k + 2]),
-                                                                          dx));
+        vector<VertexHash > vertices;
+        for (k = 0; k != cell.p; ++k) vertices.push_back(VertexHash(RealType(xc + 0.5*cell.pts[3*k]),
+								    RealType(yc + 0.5*cell.pts[3*k + 1]),
+								    RealType(zc + 0.5*cell.pts[3*k + 2]),
+								    dx));
         POLY_ASSERT(vertices.size() >= 4);
 
         // Add any new vertices from this cell to the global set, and update the vertexMap
@@ -259,7 +258,7 @@ tessellate(const vector<RealType>& points,
 
         // // Blago!
         // std::cout << "Mesh vertices for cell " << icell << " : ";
-        // std::copy(vertices.begin(), vertices.end(), ostream_iterator<Point3<uint64_t> >(std::cout, " "));
+        // std::copy(vertices.begin(), vertices.end(), ostream_iterator<VertexHash >(std::cout, " "));
         // cout << endl;
         // std::cout << "                           ";
         // for (k = 0; k != vertices.size(); ++k) std::cout << "(" 

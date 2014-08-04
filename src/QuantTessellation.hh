@@ -14,10 +14,9 @@ namespace internal {
 template<int Dimension, typename RealType>
 class QuantTessellation {
 public:
-  typedef uint64_t UCoordHash;
-  typedef uint64_t PointHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash PointHash;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   typedef std::pair<int, int> EdgeHash;
   typedef std::vector<unsigned> FaceHash;
@@ -73,7 +72,7 @@ public:
   int addNewNode(const PointHash ix);
   int addNewNode(const RealPoint& x);
   int addNewNode(const RealType* x);
-  int addNewNode(const UCoordHash x, const UCoordHash y);
+  int addNewNode(const CoordHash x, const CoordHash y);
 
   int addNewEdge(const EdgeHash& x);
 
@@ -231,7 +230,7 @@ template<int Dimension, typename RealType>
 inline
 int
 QuantTessellation<Dimension, RealType>::
-addNewNode(const UCoordHash x, const UCoordHash y) {
+addNewNode(const CoordHash x, const CoordHash y) {
   return this->addNewNode(geometry::Hasher<Dimension, RealType>::hash(x, y));
 }
 

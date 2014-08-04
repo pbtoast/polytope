@@ -32,7 +32,10 @@ class TriangleTessellator: public Tessellator<2, RealType>
 {
 public:
 
-  typedef int64_t CoordHash;
+  typedef std::pair<int, int> EdgeHash;
+  typedef typename internal::QuantTessellation<2, RealType>::CoordHash CoordHash;
+  typedef typename internal::QuantTessellation<2, RealType>::IntPoint IntPoint;
+  typedef typename internal::QuantTessellation<2, RealType>::RealPoint RealPoint;
   
   // Constructor, destructor.
   TriangleTessellator();
@@ -72,13 +75,12 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const { return 1.0e-8; }
+  virtual void degeneracy(double value) const { mDegeneracy = value; }
 
 private:
   //-------------------- Private interface ---------------------- //
 
-  typedef std::pair<int, int> EdgeHash;
-  typedef Point2<CoordHash> IntPoint;
-  typedef Point2<double> RealPoint;
+  // Boost.Geometry types
   typedef boost::geometry::model::polygon<IntPoint,    // point type
                                           false>       // clockwise
     BGpolygon;
@@ -129,10 +131,12 @@ private:
 
 
 template<typename RealType>
-int64_t TriangleTessellator<RealType>::coordMax = (1LL << 26);
+typename TriangleTessellator<RealType>::CoordHash 
+TriangleTessellator<RealType>::coordMax = (1LL << 26);
 
 template<typename RealType>
-RealType TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator::coordMax;
+RealType 
+TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator::coordMax;
 
 
 

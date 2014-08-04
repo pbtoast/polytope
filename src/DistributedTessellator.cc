@@ -150,9 +150,9 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Some spiffy shorthand typedefs.
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point Point;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint Point;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
-  typedef KeyTraits::Key Key;
+  //typedef KeyTraits::Key Key;
   const double degeneracy = 1.5e-8;
 #if HAVE_SILO
   const bool siloBlago = false;

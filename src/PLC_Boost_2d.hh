@@ -12,16 +12,6 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
-// class HashedPoint {
-// public:
-//   const uint64_t get_x() { return geometry::Hasher<2, double>::qxval(val); }
-//   const uint64_t get_y() { return geometry::Hasher<2, double>::qyval(val); }
-//   void set_x(const uint64_t x) { val = (x + (geometry::Hasher<2, double>::qyval(val))); }
-//   void set_y(const uint64_t y) { val = (geometry::Hasher<2, double>::qxval(val) + (y<<31)); }
-// private:
-//   uint64_t val;
-// }
-// BOOST_GEOMETRY_REGISTER_POINT_2D_GET_SET(HashedPoint, uint64_t, boost::geometry::cs::cartesian, get_x(), get_y(), set_x(), set_y());
 
 namespace polytope {
 namespace BG {
@@ -233,8 +223,9 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
 				   const Point2<RealType>& p,
 				   std::vector<ReducedPLC<2, RealType> >& orphans) {
   using namespace PLC_boost_internal;
-  typedef boost::geometry::model::ring<Point2<RealType>, false> RingType;
-  typedef boost::geometry::model::polygon<Point2<RealType>, false> PolygonType;
+  typedef Point2<RealType> PointType;
+  typedef boost::geometry::model::ring<PointType, false> RingType;
+  typedef boost::geometry::model::polygon<PointType, false> PolygonType;
   std::vector<PolygonType> intersections;
   boost::geometry::intersection(ReducedPLCtoPolygon(a), ReducedPLCtoPolygon(b), intersections);
   POLY_ASSERT2(intersections.size() > 0,
@@ -245,8 +236,40 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
   // Only one geometry in the intersection
   if (intersections.size() == 1) {
     POLY_ASSERT(intersections[0].outer().front() == intersections[0].outer().back());
-//     POLY_ASSERT(not boost::geometry::intersects(intersections[0]));
-//     POLY_ASSERT(boost::geometry::covered_by(p, intersections[0]));
+    // POLY_ASSERT(not boost::geometry::intersects(intersections[0]));
+    // POLY_ASSERT(boost::geometry::covered_by(p, intersections[0]));
+
+    // // Blago!
+    // PolygonType pa = ReducedPLCtoPolygon(a);
+    // PolygonType pb = ReducedPLCtoPolygon(b);
+    // boost::geometry::correct(pa);
+    // boost::geometry::correct(pb);
+    // RingType ra = pa.outer();
+    // RingType rb = pb.outer();
+    // boost::geometry::correct(ra);
+    // boost::geometry::correct(rb);    
+    // std::vector<RingType> pcs;
+    // boost::geometry::intersection(ra, rb, pcs);
+    // std::cerr << "\nIntersect? "
+    // 	      << (boost::geometry::intersects(ra,rb) ? "YES" : "NO")
+    // 	      << std::endl;
+    // std::cerr << "\nNumber of pieces: " << pcs.size() << std::endl;
+    // std::cerr << "\n-------------------------------------" << std::endl;
+    // for (typename RingType::const_iterator itr = ra.begin();
+    // 	 itr != ra.end();
+    // 	 ++itr)  std::cerr << *itr << std::endl;
+    // std::cerr << "-------------------------------------" << std::endl;
+    // for (typename RingType::const_iterator itr = rb.begin();
+    // 	 itr != rb.end();
+    // 	 ++itr)  std::cerr << *itr << std::endl;
+    // std::cerr << "-------------------------------------" << std::endl;
+    // for (typename RingType::const_iterator itr = pcs[0].begin();
+    // 	 itr != pcs[0].end();
+    // 	 ++itr)  std::cerr << *itr << std::endl;
+    // std::cerr << "-------------------------------------\n" << std::endl;
+    // // Blago!
+    boost::geometry::unique(intersections[0]);
+
     return ReducedPLCfromPolygon(intersections[0]);
   }
   // The one geometry that contains point p is the returned intersection
@@ -266,6 +289,7 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
       }
     }
     POLY_ASSERT(k < intersections.size());
+    boost::geometry::unique(intersections[k]);
     return ReducedPLCfromPolygon(intersections[k]);
   }
 }
@@ -275,6 +299,6 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
 } //end namespace polytope
 
 
-#endif  // end #if HAVE_BOOST
+#endif  //end #if HAVE_BOOST
 
 #endif
