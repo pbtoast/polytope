@@ -45,7 +45,7 @@ add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
 #  ${PYTHON_LINK}
 #  ${PYTHON_STATIC_LIB}
-  ${PYTHON_LINK_LIB}
+#  ${PYTHON_LINK_LIB}
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
@@ -59,6 +59,9 @@ set_target_properties(PolytopeModules PROPERTIES PREFIX "")
 # Change .dylib suffix to .so on OSX
 if (${APPLE})
   set_target_properties(PolytopeModules PROPERTIES SUFFIX ".so")
+
+  # Force resolution of the python symbols to delay until we import the module.
+  TARGET_LINK_LIBRARIES(PolytopeModules "-undefined suppress -flat_namespace")
 endif()
 
 # Allow rpath linkage to the Module
