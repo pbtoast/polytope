@@ -108,12 +108,15 @@ if (USE_PYTHON EQUAL 1)
     string(REPLACE "/bin/python" "" PYTHON_ROOT ${PYTHON_EXE})
     set(PYTHON_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION}")
     set(PYTHON_LIB_DIR "${PYTHON_ROOT}/lib")
-    # Check that Pybindgen is installed there
-    if (EXISTS ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/pybindgen
-	OR     ${PYTHON_LIB_DIR}/python/site-packages/pybindgen)
+
+    # Check if pybindgen is available for import.
+    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
+    find_python_module(pybindgen)
+    if (NOT ${PY_PYBINDGEN} MATCHES "0")
       # Check that you have Python.h and libpython<version>.a
       if (EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" AND
-	  EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}.a")
+      	  (EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" OR
+           EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}"))
 	set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
 	set(PYBINDGEN_MODULE_NAME "PolytopeModules")
 	set(HAVE_PYTHON true)
@@ -125,8 +128,7 @@ if (USE_PYTHON EQUAL 1)
       endif()
     else()
       set(HAVE_PYTHON false)
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/")
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python/site-packages/")
+      message("-- Failed to find PyBindGen module python module.  Please install pybindgen somewhere importable by python to build optional polytope python bindings.")
     endif()
   else()
     set(HAVE_PYTHON false)
