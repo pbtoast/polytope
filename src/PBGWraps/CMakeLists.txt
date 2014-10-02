@@ -13,7 +13,7 @@ set(PYBINDGEN_ADDITIONAL_ARGS ${HAVE_TRIANGLE} ${HAVE_TETGEN} ${HAVE_BOOST_VORON
 PYBINDGEN_GENERATE_BINDINGS( "${LIST_OF_WRAPPED_CLASSES}" )
 
 # libpolytope location
-set(POLYTOPE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libpolytope.a")
+set(POLYTOPE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libpolytope${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 # libtetgen location
 if( TETGEN_FOUND )
@@ -22,8 +22,14 @@ endif()
 
 # libpython<version> location
 string(REPLACE "bin/python" "lib" PYTHON_LINK_LIB ${PYTHON_EXE})
-string(REPLACE "bin/python" "lib/libpython${PYTHON_VERSION}.a"
-  PYTHON_STATIC_LIB ${PYTHON_EXE})
+string(REPLACE "bin/python" "lib/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" PYTHON_STATIC_LIB ${PYTHON_EXE})
+string(REPLACE "bin/python" "lib/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}" PYTHON_SHARED_LIB ${PYTHON_EXE})
+
+if (EXISTS "${PYTHON_STATIC_LIB}")
+    set(PYTHON_LINK_LIB "${PYTHON_STATIC_LIB}")
+else()
+    set(PYTHON_LINK_LIB "${PYTHON_SHARED_LIB}")
+endif()
 
 # Include directories in the header file search path
 include_directories("${PROJECT_BINARY_DIR}")
@@ -31,17 +37,19 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
 
-set(PYTHON_LINK "python")
+set(PYTHON_LINK "python${PYTHON_VERSION}")
 
 # The Python library of wrapped Polytope methods
+link_directories("${PYTHON_LIB_DIR}")
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
-  ${PYTHON_LINK}
+#  ${PYTHON_LINK}
 #  ${PYTHON_STATIC_LIB}
+  ${PYTHON_LINK_LIB}
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
-#  ${HDF5_LIBRARIES}
+  ${HDF5_LIBRARIES}
 )
 
 # Remove the "lib" prefix convention from the library
