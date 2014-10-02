@@ -68,4 +68,5 @@ endif()
 #set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
 
 # Library install targets
-install (TARGETS PolytopeModules DESTINATION lib)
+install (TARGETS PolytopeModules DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
+install (FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
