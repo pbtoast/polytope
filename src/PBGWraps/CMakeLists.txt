@@ -39,6 +39,10 @@ include_directories("${PYBINDGEN_DIR}")
 
 set(PYTHON_LINK "python${PYTHON_VERSION}")
 
+# On some Linux machines we get messed up with the HDF5 libs including things like libdl and libm, so 
+# we try to cut down the list here to the first couple of elements.
+list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+
 # The Python library of wrapped Polytope methods
 link_directories("${PYTHON_LIB_DIR}")
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
@@ -49,8 +53,23 @@ target_link_libraries(PolytopeModules
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
-  ${HDF5_LIBRARIES}
+  ${HDF5_LIB}
 )
+
+#message("**** SYSTEM: ${CMAKE_SYSTEM}")
+#message("**** CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
+#message("**** CMAKE_SHARED_LINKER_FLAGS_RELEASE: ${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
+#message("**** CMAKE_CXX_IMPLICIT_LINK_LIBRARIES: ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
+#message("**** CMAKE_STANDARD_LIBRARIES: ${CMAKE_STANDARD_LIBRARIES}")
+#message("**** CMAKE_LINK_DEPENDS_NO_SHARED: ${CMAKE_LINK_DEPENDS_NO_SHARED}")
+#message("**** CMAKE_MODULE_LINKER_FLAGS: ${CMAKE_MODULE_LINKER_FLAGS}")
+#message("**** CMAKE_MODULE_LINKER_FLAGS_RELEASE: ${CMAKE_MODULE_LINKER_FLAGS_RELEASE}")
+#message("**** CMAKE_STANDARD_LIBRARIES: ${CMAKE_STANDARD_LIBRARIES}")
+#message("**** HDF5_LIBRARIES: ${HDF5_LIBRARIES}")
+#message("**** HDF5_C_LIBRARIES: ${HDF5_C_LIBRARIES}")
+#message("**** HDF5_CXX_LIBRARIES: ${HDF5_CXX_LIBRARIES}")
+#message("**** SILO_LIBRARIES: ${SILO_LIBRARIES}")
+#set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 # Remove the "lib" prefix convention from the library
 # NOTE: "init<modulename>" is not defined properly if it begins with "lib"
