@@ -97,7 +97,9 @@ private:
   // ----------------------------------------------------- //
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
-                       triangulateio& delaunay) const;
+                       triangulateio& delaunay,
+		       RealPoint& low,
+		       RealPoint& high) const;
 
   // Internal method to compute the quantized tessellation.
   void

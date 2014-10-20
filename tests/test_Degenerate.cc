@@ -41,9 +41,9 @@ double minLength(Tessellation<2,double>& mesh)
       double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
       double x1 = mesh.nodes[2*inode1], y1 = mesh.nodes[2*inode1+1];
       double len = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
-      faceLength = min( faceLength, sqrt(len) );
+      faceLength = min(faceLength, len);
    }
-   return faceLength;
+   return sqrt(faceLength);
 }
 
 // -----------------------------------------------------------------------
@@ -59,8 +59,8 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
    std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
    for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
    {
-      POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
-                       (nodeCells[i].size() == 2) ||
+      POLY_CHECK_BOOL( (nodeCells[i].size() == 4) or
+                       (nodeCells[i].size() == 2) or
                        (nodeCells[i].size() == 1) );
    }
    return true;
@@ -71,9 +71,9 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator)
 {
-   const unsigned N = 11;
-   const unsigned nx = 20;
-   double epsilon = 2.0e-12;
+  const unsigned N = 11;
+  const unsigned nx = 20;
+  double epsilon = 2.0e-12;
 
   // name for the output
   string testName = "Degenerate_" + tessellator.name();
@@ -97,8 +97,19 @@ void test(Tessellator<2,double>& tessellator)
                            boundary.mPLCpoints, 
                            boundary.mPLC, 
                            mesh);
+    // tessellator.tessellate(generators.mPoints, 
+    //                        mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
+
+    // {
+    //   for (int i=0; i<mesh.cells.size(); ++i) {
+    // 	if (mesh.cells[i].size() != 4) {
+    // 	  cerr << i << ": " << mesh.cells[i].size() << endl;
+    // 	}
+    //   }
+    // }
+
     if(isCartesian)  cout << "Degeneracy resolved" << endl; 
     else
       cout << "Degeneracy threshold reached! Minimum face length = " 
@@ -120,6 +131,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
+    // tessellator.degeneracy(1.0e-10);
     test(tessellator);
   }
 #endif   

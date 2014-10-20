@@ -103,8 +103,11 @@ template<typename RealType> struct Hasher<2, RealType> {
     // Quantize away.
     const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
+    // const RealType delta = std::min(dx[0], dx[1]);
     result += hash(CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[0] - xlow[0])/dx[0]))),
                    CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[1] - xlow[1])/dx[1]))));
+    // result += hash(CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[0] - xlow[0])/delta))),
+    //                CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[1] - xlow[1])/delta))));
     return result;
   }
 
@@ -136,10 +139,13 @@ template<typename RealType> struct Hasher<2, RealType> {
     // Extract the position (for the center of the cell).
     const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
+    // const RealType delta = std::min(dx[0], dx[1]);
     // pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType(( (hashedPosition & xmask())        + 0.5)*dx[0]))));
     // pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((((hashedPosition & ymask()) >> num1dbits()) + 0.5)*dx[1]))));
     pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType((qxval(hashedPosition) + 0.5)*dx[0]))));
     pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((qyval(hashedPosition) + 0.5)*dx[1]))));
+    // pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType((qxval(hashedPosition) + 0.5)*delta))));
+    // pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((qyval(hashedPosition) + 0.5)*delta))));
 
     // Post-conditions.
     POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and

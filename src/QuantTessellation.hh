@@ -558,7 +558,7 @@ std::ostream& operator<<(std::ostream& s,
   for (unsigned n = 0; n < mesh.points.size(); ++n)
   {
     s << " " << n << ": " << mesh.points[n] << " "
-      << intPosition(mesh, mesh.points[n]) << " "
+      << mesh.hashedPosition(mesh.points[n]) << " "
       << mesh.unhashPosition(mesh.points[n]) << std::endl;
   }
   s << std::endl;

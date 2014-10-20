@@ -75,9 +75,9 @@ void testBoundary(Boundary2D<double>& boundary,
     nPoints = nPoints * 10;
     
     cout << nPoints << " points...";
-    generators.randomPoints( nPoints );      
+    generators.randomPoints(nPoints);      
     tessellate2D(generators.mPoints,boundary,tessellator,mesh);
-    cout << "got meshed!" << endl;
+    cout << "DONE!" << endl;
     
     outputMesh(mesh, testName, generators.mPoints, n);
     mesh.clear();   
