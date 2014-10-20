@@ -31,6 +31,8 @@ using namespace polytope;
 double minLength(Tessellation<2,double>& mesh)
 {
    double faceLength = FLT_MAX;
+   int i0 = -1;
+   int i1 = -1;
    for (unsigned iface = 0; iface != mesh.faces.size(); ++iface)
    {
       POLY_ASSERT( mesh.faces[iface].size() == 2 );
@@ -39,9 +41,18 @@ double minLength(Tessellation<2,double>& mesh)
       double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
       double x1 = mesh.nodes[2*inode1], y1 = mesh.nodes[2*inode1+1];
       double len = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
-      faceLength = min( faceLength, sqrt(len) );
+      if (len < faceLength) {
+	faceLength = len;
+	i0 = inode0;
+	i1 = inode1;
+      }
+      // faceLength = min(faceLength, len);
    }
-   return faceLength;
+   // cerr << "(" << i0 << "," << i1 << ")  " 
+   // 	<< "(" << mesh.nodes[2*i0] << "," << mesh.nodes[2*i0+1] << ") "
+   // 	<< "(" << mesh.nodes[2*i1] << "," << mesh.nodes[2*i1+1] << ") "
+   // 	<< "  " << sqrt(faceLength) << endl;
+   return sqrt(faceLength);
 }
 
 // -----------------------------------------------------------------------
@@ -109,13 +120,14 @@ void jitterPoints(vector<double>& points,
 void test(Tessellator<2,double>& tessellator) {
   // Input generator parameters
   const unsigned nx = 20;
+  const unsigned ntrials = 100;
   const double xmin = -0.5, xmax = 0.5;
   const double ymin = -0.5, ymax = 0.5;
   const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
   POLY_ASSERT(nx > 2);
 
   // Jitter factor
-  const double epsilon = 2.0e-10;
+  const double epsilon = 2.0e-11;
 
   // Set the boundary
   Boundary2D<double> boundary;
@@ -138,14 +150,16 @@ void test(Tessellator<2,double>& tessellator) {
     }
   }
     
-  for (unsigned i = 0; i != 100; ++i) {
+
+  for (unsigned i = 0; i != ntrials; ++i) {
     mesh.clear();
     jitterPoints(points, jitterMask, epsilon);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, "BoundaryJitter_output", points, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(!isCartesian) 
-       cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
+      cout << i << ":  Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
+    POLY_ASSERT(isCartesian);
   }
 }
 
@@ -164,9 +178,10 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
+    //tessellator.degeneracy(1.0e-6);
     test(tessellator);
   }
-#endif   
+#endif
 
 #if HAVE_BOOST_VORONOI
   {

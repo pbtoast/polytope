@@ -62,18 +62,12 @@ void test(Tessellator<2,double>& tessellator) {
           << circumcenter[1] << ")" << endl;
      points[1] = 0.5 + displacement;
      Tessellation<2,double> mesh;
-     tessellator.tessellate(points,PLCpoints,boundary,mesh);
-     //tessellator.tessellate(points,mesh);
+     tessellator.tessellate(points, PLCpoints, boundary, mesh);
 
      outputMesh(mesh, testName, points, i);
 
      cout << "          Number of nodes = " << mesh.nodes.size()/2 << endl;
      cout << "          Number of faces = " << mesh.faces.size() << endl << endl;
-     // cout << "  Nodes:" << endl;
-     // for (int j=0; j != mesh.nodes.size()/2; ++j){
-     //    cout << scientific << setprecision(numeric_limits<double>::digits)
-     //         <<"    (" << mesh.nodes[2*j] << "," << mesh.nodes[2*j+1] << ")" << endl;
-     // }
   }
 }
 

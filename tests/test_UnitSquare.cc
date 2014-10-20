@@ -28,18 +28,22 @@ using namespace polytope;
 // checkCartesianMesh
 // -----------------------------------------------------------------------
 void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
-{
-   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
+{ 
    POLY_CHECK(mesh.cells.size()   == nx*ny );
+   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
    POLY_CHECK(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
-   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
+   for (unsigned i = 0; i != nx*ny; ++i) {
+     POLY_CHECK2(mesh.cells[i].size() == 4,
+		 "Error at cell " << i << ": number of faces = " << mesh.cells[i].size()
+		 << endl << endl << mesh);
+   }
    
    std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
-   for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
-   {
-      POLY_CHECK( (nodeCells[i].size() == 4) ||
-                  (nodeCells[i].size() == 2) ||
-                  (nodeCells[i].size() == 1) );
+   for (unsigned i = 0; i != (nx+1)*(ny+1); ++i) {
+      POLY_CHECK2((nodeCells[i].size() == 4) or
+                  (nodeCells[i].size() == 2) or
+                  (nodeCells[i].size() == 1),
+		  "Error at cell " << i << ": number of nodes = " << nodeCells[i].size());
    }
 }
 
@@ -67,7 +71,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
       cout << "   num mesh cells : " << mesh.cells.size()   << endl;
       cout << "   num mesh faces : " << mesh.faces.size()   << endl;
-      //checkCartesianMesh(mesh,nx,nx);
+      checkCartesianMesh(mesh,nx,nx);
    }
 }
 
@@ -87,7 +91,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    // tessellator.degeneracy(1.0e-7);
+    tessellator.degeneracy(1.0e-10);
     generateMesh(tessellator);
   }
 #endif   

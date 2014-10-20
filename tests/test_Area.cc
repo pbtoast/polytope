@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
     const double maxError = testAllBoundaries(tessellator);   
-    const double tol = 0.1;
+    const double tol = 0.001;
     if (maxError > tol) cout << "FAIL" << endl;
   }
 #endif
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
     const double maxError = testAllBoundaries(tessellator);   
-    const double tol = 0.1;
+    const double tol = 0.001;
     if (maxError > tol) cout << "FAIL" << endl;
   }
 #endif
