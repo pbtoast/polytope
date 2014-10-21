@@ -65,7 +65,7 @@ void generateMesh(Tessellator<2,double>& tessellator)
       generators.cartesianPoints( nxny );
       Tessellation<2,double> mesh;
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-      outputMesh(mesh, "wtfMesh_bounded", generators.mPoints);
+      outputMesh(mesh, "unitSquare_output", generators.mPoints);
       
       // CHECKS:
       cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
