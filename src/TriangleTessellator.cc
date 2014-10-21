@@ -418,9 +418,15 @@ computeUnboundedQuantizedTessellationCollinear(const vector<RealType>& points,
   int i, inode, icell1, icell2;
 
   // The center of the domain
+#if NORMALIZE_GENERATORS
   const RealPoint center = (qmesh.low_labframe + qmesh.high_labframe)/2;
-  const RealType rinf = 4.0*std::max(qmesh.high_labframe.x - qmesh.low_labframe.x,
-				     qmesh.high_labframe.y - qmesh.low_labframe.y);
+  const RealType rinf    = 4.0*std::max(qmesh.high_labframe.x - qmesh.low_labframe.x,
+					qmesh.high_labframe.y - qmesh.low_labframe.y);
+#else
+  const RealPoint center = (qmesh.low_inner + qmesh.high_inner)*0.5;
+  const RealType rinf    = 4.0*std::max(qmesh.high_inner.x - qmesh.low_inner.x,
+					qmesh.high_inner.y - qmesh.low_inner.y);
+#endif
 
   qmesh.low_inner  = center - RealPoint(rinf,rinf);
   qmesh.high_inner = center + RealPoint(rinf,rinf);
@@ -542,7 +548,7 @@ computeUnboundedQuantizedTessellationCollinear(const vector<RealType>& points,
 					   rinf, 1.0e-10, &node.x);
     POLY_ASSERT(test);
     inode = qmesh.addNewNode(node);
-    POLY_ASSERT(inode == 2*i+2);
+    POLY_ASSERT2(inode == 2*i+2, inode << " " << (2*i+2) << " " << node << "\n" << qmesh);
     qmesh.infNodes.push_back(inode);  
 
     // The edges around the bottom, right, and top of cell i
