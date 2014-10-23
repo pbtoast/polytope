@@ -65,19 +65,9 @@ include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories("${PYTHON_INCLUDE_DIR}")
 include_directories("${PYBINDGEN_DIR}")
+include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
 set(PYTHON_LINK "python${PYTHON_VERSION}")
-
-# On some Linux machines we get messed up with the HDF5 libs including things like libdl and libm, so 
-# we try to cut down the list here to the first couple of elements.
-list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
-
-# The Python library of wrapped Polytope methods
-#add_library(PolytopeModules-static STATIC ${PYBINDGEN_GENERATED_SOURCE})
-#set_target_properties(PolytopeModules-static PROPERTIES OUTPUT_NAME PolytopeModules)
-#target_link_libraries(PolytopeModules-static 
-#  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
-link_directories("${PYTHON_LIB_DIR}")
 
 ## Additional HDF5 link libraries
 ## NOTE:  This was added in to catch a few known build cases of static
@@ -90,6 +80,19 @@ link_directories("${PYTHON_LIB_DIR}")
 #else()
 #  set(HDF5_LINK "")
 #endif()
+
+# On some Linux machines we get messed up with the HDF5 libs including 
+# things like libdl and libm, so we try to cut down the list here to the 
+# first couple of elements.
+#list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+list(GET HDF5_LIBRARIES 0 3 HDF5_LIB)
+
+# The Python library of wrapped Polytope methods
+#add_library(PolytopeModules-static STATIC ${PYBINDGEN_GENERATED_SOURCE})
+#set_target_properties(PolytopeModules-static PROPERTIES OUTPUT_NAME PolytopeModules)
+#target_link_libraries(PolytopeModules-static 
+#  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
+link_directories("${PYTHON_LIB_DIR}")
 
 # The dynamic Python library of wrapped methods
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
