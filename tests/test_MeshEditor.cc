@@ -55,7 +55,7 @@ int main(int argc, char** argv)
       double nodePoints[12] = {0.00, 0.0,
                                0.75, 0.0,
                                1.00, 0.5,
-                               1.00, 0.50000001,
+                               1.00, 0.500001,
                                0.75, 1.0,
                                0.00, 1.0};
       mesh.nodes.resize(2*nnodes);

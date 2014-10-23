@@ -230,7 +230,8 @@ public:
       ohigh[j] = std::max(ohigh[j], center[j]+orinf);
       POLY_ASSERT(olow[j] <= ohigh[j]);
       //POLY_ASSERT(0.5*(ohigh[j]+olow[j]) == center[j]);
-      POLY_ASSERT(ohigh[j]-olow[j] == 2.0*orinf);
+      POLY_ASSERT2(std::abs((ohigh[j]-olow[j]) - 2.0*orinf) < mDegeneracy,
+                   ohigh[j]-olow[j] << " " << 2.0*orinf);
     }
 
     // Recompute the quantized mesh spacing

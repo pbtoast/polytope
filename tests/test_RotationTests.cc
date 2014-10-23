@@ -222,7 +222,7 @@ void runTest(Tessellator<2,double>& tessellator,
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
     //tessellator.tessellate(points, mesh);
-    meshEditor.cleanEdges(0.001);
+    meshEditor.cleanEdges(0.01);
     outputMesh(mesh, testName, points, step, time);
   }
 }
