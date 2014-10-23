@@ -70,8 +70,8 @@ template<typename RealType> struct Hasher<2, RealType> {
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
                 xhigh_outer[1] >= xhigh_inner[1]);
-    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] <= xhigh_inner[0] and
+                xlow_inner[1] <= xhigh_inner[1]);
     POLY_ASSERT2(pos[0] >= xlow_outer[0] and pos[0] <= xhigh_outer[0] and
                  pos[1] >= xlow_outer[1] and pos[1] <= xhigh_outer[1],
                  "(" << pos[0] << " " << pos[1] << ") ("
@@ -111,8 +111,8 @@ template<typename RealType> struct Hasher<2, RealType> {
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
                 xhigh_outer[1] >= xhigh_inner[1]);
-    POLY_ASSERT(xlow_inner[0] < xhigh_inner[0] and
-                xlow_inner[1] < xhigh_inner[1]);
+    POLY_ASSERT(xlow_inner[0] <= xhigh_inner[0] and
+                xlow_inner[1] <= xhigh_inner[1]);
 
     // Decide the bounding box we're using.
     const RealType *xlow, *xhigh;
@@ -136,6 +136,13 @@ template<typename RealType> struct Hasher<2, RealType> {
                  "(" << pos[0] << " " << pos[1] << ") ("
                  << xlow[0] << " " << xlow[1] << ") ("
                  << xhigh[0] << " " << xhigh[1] << ")");
+  }
+
+  // Return hashed integer as a hashed 2 position.
+  static void hashedPosition(uint64_t* pos,
+			     const uint64_t hashedPosition) {
+    pos[0] = qxval(hashedPosition);
+    pos[1] = qyval(hashedPosition);
   }
 };
 
@@ -437,6 +444,30 @@ between(const RealType* a, const RealType* b, const RealType* c, const RealType 
   const RealType thpt = dot<Dimension, RealType>(ab, ac);
   return ((thpt > 0) and (std::abs(thpt*thpt - ab_mag2*ac_mag2) < tol*ab_mag2) and (ac_mag2 <= ab_mag2));
 }
+
+
+//------------------------------------------------------------------------------
+// Determine if a cloud of points is collinear to some accuracy
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+bool
+collinear(const std::vector<RealType> points, const RealType tol) {
+  POLY_ASSERT(points.size() % Dimension == 0);
+  bool isCollinear = true;
+  int i;
+  if (points.size()/Dimension > 1) {
+    i = Dimension;
+    while (isCollinear and i != points.size()/Dimension) {
+      isCollinear *= collinear<Dimension, RealType>(&points[0],
+						    &points[Dimension],
+						    &points[Dimension*i],
+						    tol);
+      ++i;
+    }
+  }
+  return isCollinear;
+}
+
 
 //------------------------------------------------------------------------------
 // Find the closest point on a line segment (2D).
@@ -1165,6 +1196,24 @@ segmentIntersection2D(const RealType* a,
      return true;
    }
    return false;
+}
+
+//------------------------------------------------------------------------------
+// Compute the volume of a triangle given 3 node positions
+// Note for efficiency this method does not do the necessary division by 2,
+// so for the true volume you need to do this!
+//------------------------------------------------------------------------------
+template<typename RealType>
+inline
+double
+triangleVolume2(const RealType* n1,
+		const RealType* n2,
+		const RealType* n3) {
+  RealType n12[2] = {n2[0] - n1[0], n2[1] - n1[1]};
+  RealType n13[2] = {n3[0] - n1[0], n3[1] - n1[1]};
+  RealType A[3];
+  cross<2, RealType> (n13, n12, A);
+  return A[2];
 }
 
 //------------------------------------------------------------------------------

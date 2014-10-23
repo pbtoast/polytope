@@ -2,6 +2,7 @@
 // TriangleTessellator
 //------------------------------------------------------------------------
 #include <iostream>
+// #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <set>
@@ -323,6 +324,17 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   
+  // // BLAGO!
+  // std::ofstream dumpfile;
+  // dumpfile.open("generators.txt");
+  // const unsigned n = points.size()/2;
+  // std::cerr << "HERE WE GO : " << n << std::endl;
+  // for (unsigned i = 0; i != n; ++i) {
+  //   dumpfile << points[2*i] << " " << points[2*i+1] << std::endl;
+  // }
+  // dumpfile.close();
+  // // BLAGO!
+
   // Build a PLC with the bounding box, and then use the PLC method.
   ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
   this->tessellate(points, box.points, box, mesh);
@@ -710,6 +722,21 @@ computeCellRings(const vector<RealType>& points,
   const unsigned numGenerators = points.size()/2;
   int i;
   
+  // Create a reverse look-up map of IDs to nodes
+  POLY_ASSERT(nodeMap.size() > 0);
+  POLY_ASSERT(cellNodes.size() == numGenerators);
+  const unsigned numNodes = nodeMap.size();
+  map<int, IntPoint> id2nodes;
+  vector<int> innerCirc(numNodes);
+  for (typename map<IntPoint, pair<int,int> >::const_iterator itr = nodeMap.begin();
+       itr != nodeMap.end(); ++itr) {
+    i = itr->second.first;
+    POLY_ASSERT(i < nodeMap.size());
+    id2nodes[i] = itr->first;
+    innerCirc[i] = itr->second.second;
+  }
+  POLY_ASSERT(id2nodes.size() == numNodes);  
+
   // Circumcenters that lie outside the bounding box of the PLC boundary 
   // are quantized based on different criteria to avoid contaminating the 
   // degeneracy spacing of the mesh nodes. We will project these outer 

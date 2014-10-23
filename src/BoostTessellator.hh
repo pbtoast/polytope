@@ -210,6 +210,14 @@ private:
   friend class BoostOrphanage<RealType>;
 };
 
+
+template<typename RealType>
+int64_t BoostTessellator<RealType>::mCoordMax = (1LL << 26);
+
+template<typename RealType>
+RealType BoostTessellator<RealType>::mDegeneracy = 1.0/BoostTessellator::mCoordMax;
+
+
 } //end polytope namespace
 
 #endif

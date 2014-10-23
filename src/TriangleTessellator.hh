@@ -11,6 +11,9 @@
 #include <cmath>
 
 #include "Tessellator.hh"
+#include "Point.hh"
+#include "QuantTessellation.hh"
+
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "QuantizedCoordinates.hh"
@@ -22,6 +25,8 @@ struct triangulateio;
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
+typedef int64_t CoordHash;
+  
 namespace polytope 
 {
 
@@ -52,6 +57,11 @@ public:
                   const PLC<2, RealType>& geometry,
                   Tessellation<2, RealType>& mesh) const;
 
+  // Tessellate obeying the given reducedPLC boundary.
+  void tessellate(const std::vector<RealType>& points,
+		  const ReducedPLC<2, RealType>& geometry,
+		  Tessellation<2, RealType>& mesh) const;
+
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
 
@@ -63,7 +73,7 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const { return mDegeneracy; }
-  void degeneracy(const RealType val) const { mDegeneracy = val; }
+  void degeneracy(RealType degeneracy) const { mDegeneracy = degeneracy; }
 
 private:
   //-------------------- Private interface ---------------------- //
@@ -115,6 +125,7 @@ private:
   // ----------------------------------------------------- //
   // Private tessellate calls used by internal algorithms  //
   // ----------------------------------------------------- //
+
 
   // Bounded tessellation with prescribed bounding box
   void tessellate(const std::vector<RealType>& points,

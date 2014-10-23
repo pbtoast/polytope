@@ -64,8 +64,13 @@ ifneq ($(debug), not-set)
   BUILDDIR := ${BUILDDIR}-Debug
   CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Debug
 else
-  BUILDDIR := ${BUILDDIR}-Release
-  CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Release
+  ifeq ($(debug), 1)
+    BUILDDIR := ${BUILDDIR}-Debug
+    CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Debug
+  else
+    BUILDDIR := ${BUILDDIR}-Release
+    CONFIG_FLAGS += -DCMAKE_BUILD_TYPE=Release
+  endif
 endif
 
 # prefix path for installation
@@ -87,7 +92,6 @@ CONFIG_FLAGS += -DUSE_SILO=$(use_silo)
 ifneq ($(hdf5_root), not-set)
   CONFIG_FLAGS += -DHDF5_ROOT=$(hdf5_root)
 endif
-
 
 # Explicit path for PyBindGen
 ifeq ($(use_python), 1)
