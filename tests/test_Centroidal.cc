@@ -41,7 +41,7 @@ void lloyd(Tessellation<2,double>& mesh,
 // lloydTest
 // -----------------------------------------------------------------------
 void lloydTest(Tessellator<2,double>& tessellator) {
-  unsigned nPoints = 1000;     // Number of generators
+  unsigned nPoints = 100;     // Number of generators
   const unsigned nx = 5;
   const unsigned nIter   = 100;      // Number of iterations
   const int btype = 2;
@@ -100,7 +100,7 @@ void cleaningTest(Tessellator<2,double>& tessellator) {
   unsigned nPoints = 100;           // Number of generators
   const unsigned nx = 6;
   const unsigned nIter   = 100;     // Number of iterations
-  const double edgeTol = 0.001;     // Relative small-edge tolerance
+  const double edgeTol = 0.01;      // Relative small-edge tolerance
   const int btype = 3;
   const bool latticeGenerators = false;
   const bool perturbGenerator = false;

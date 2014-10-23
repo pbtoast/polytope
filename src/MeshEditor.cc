@@ -65,78 +65,6 @@ deleteNodes(const std::vector<unsigned>& nodesToDelete) {
 }
 //------------------------------------------------------------------------------
 
-/*
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-deleteBoundaryNodes(const std::vector<unsigned>& nodesToDelete) {
-  POLY_ASSERT2(false, "This routine is currently not implemented");
-
-  // Pre-conditions
-  POLY_ASSERT(!nodesToDelete.empty());
-
-  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
-  const unsigned nfaces0 = mMesh.faces.size();
-  const unsigned ncells0 = mMesh.cells.size();
-
-  // Collect cell, faces, and nodes
-  set<unsigned> boundaryCells, boundaryFaces, boundaryNodes;
-  map<unsigned, set<unsigned> > boundaryNodesToBoundaryFaces;
-  for (unsigned iface = 0; iface != mMesh.faces.size(); ++iface) {
-    POLY_ASSERT(iface < mMesh.faceCells.size());
-    POLY_ASSERT(mMesh.faceCells[iface].size() == 1 or
-		mMesh.faceCells[iface].size() == 2);
-    if (mMesh.faceCells[iface].size() == 1) {
-      const unsigned icell = (mMesh.faceCells[iface][0] < 0) ?
-	~mMesh.faceCells[iface][0] : mMesh.faceCells[iface][0];
-      POLY_ASSERT(icell >= 0);
-      POLY_ASSERT(icell < mMesh.cells.size());
-      boundaryCells.insert(icell);
-      boundaryFaces.insert(iface);
-      POLY_ASSERT(!mMesh.faces[iface].empty());
-      for (vector<unsigned>::const_iterator nodeItr = mMesh.faces[iface].begin(); 
-	   nodeItr != mMesh.faces[iface].end(); ++nodeItr) {
-	POLY_ASSERT(*nodeItr < nnodes0);
-	boundaryNodes.insert(*nodeItr);
-	boundaryNodesToBoundaryFaces[*nodeItr].insert(iface);
-      }
-    }
-  }
-
-  // Fill in the node mask
-  mNodeMask = vector<unsigned>(nnodes0, 1);
-  for (vector<unsigned>::const_iterator nodeItr = nodesToDelete.begin();
-       nodeItr != nodesToDelete.end(); ++nodeItr) {
-    POLY_ASSERT(*nodeItr < nnodes0);
-    POLY_ASSERT2(boundaryNodes.find(*nodeItr) != boundaryNodes.end(),
-		 "Node " << *nodeItr << " is flagged for deletion, but "
-		 "it is NOT a boundary node!");
-    mNodeMask[*nodeItr] = 0;
-  }
-
-  // Deleting nodes shouldn't remove any cells
-  mCellMask = vector<unsigned>(ncells0, 1);
-
-  // Deleting edges and faces is tricky. The 2D logic follows.
-  // In 2D, edges=faces and a boundary node has at least 2 faces
-  // These two faces correspond to boundary faces, each of which connects to a single boundary node
-  // Collapse the node to the nearer of its two boundary node neighbors provided neither neighbor
-  //    has already been flagged for deletion
-  //
-  // In 3D, edges!=faces.
-  // A boundary node may have an arbitrary number of edges and faces, depending
-  //    on the boundary
-  // First gather all boundary node neighbors connecting to this node through
-  //    boundary edges. (We obtain this list by looping over the nodes of its
-  //    associated boundary faces and pick out the edges (i.e. node-node pairs)
-  //    that also contain the node we want to delete.)
-  // Collapse the node to the nearest of its neighboring boundary nodes,
-  //    provided none of those nodes have also been flagged for deletion
-
-}
-//------------------------------------------------------------------------------
-*/
 
 
 //------------------------------------------------------------------------------
@@ -156,28 +84,6 @@ cleanEdges(const RealType edgeTol) {
   POLY_ASSERT(mCellMask.empty() and mFaceMask.empty() and mNodeMask.empty());
 }
 //------------------------------------------------------------------------------
-
-
-
-/*
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-cleanBoundaryEdges(const RealType edgeTol) {
-  // Pre-conditions
-  POLY_ASSERT2(edgeTol > 0.0, "Specify a positive (non-zero) edge tolerance!");
-
-  // flag edges smaller than the given tolerance in terms of face and node masks
-  std::vector<unsigned> cellMap, faceMap, nodeMap;
-  bool edgesClean = flagBoundaryEdgesForCleaning(edgeTol, cellMap, faceMap, nodeMap);
-  if (!edgesClean) cleanMesh(cellMap, faceMap, nodeMap);
-
-  // Post-conditions
-  POLY_ASSERT(mCellMask.empty() and mFaceMask.empty() and mNodeMask.empty());
-}
-//------------------------------------------------------------------------------
-*/
 
 
 
@@ -267,16 +173,17 @@ flagEdgesForCleaning(const RealType edgeTol,
   POLY_ASSERT(edgeToIndex.size() == edgeLength.size());
   POLY_ASSERT(cellToEdges.size() == ncells0);
   POLY_ASSERT(edgeToIndex.size() == indexToEdge.size());
-  // const unsigned nedges0 = edgeCount;
   const unsigned nedges0 = edgeToIndex.size();
 
   // Create a simple lookup for the border nodes. Also create a lookup
   // for corner nodes: nodes corresponding to 
-  vector<unsigned> isBorderNode(nnodes0, 0), isCornerNode(nnodes0, 0);
+  set<unsigned> cornerNodes;
+  // vector<unsigned> isBorderNode(nnodes0, 0), isCornerNode(nnodes0, 0);
   for (set<unsigned>::const_iterator nodeItr = borderNodes.begin();
-       nodeItr != borderNodes.end(); ++nodeItr) {
+       nodeItr != borderNodes.end(); 
+       ++nodeItr) {
     POLY_ASSERT(*nodeItr < nnodes0);
-    isBorderNode[*nodeItr] = 1;
+    // isBorderNode[*nodeItr] = 1;
     vector<unsigned> borderFaces = borderNodesToBorderFaces[*nodeItr];
     POLY_ASSERT(borderFaces.size() == 2);
     vector<unsigned> otherNodes;
@@ -298,7 +205,7 @@ flagEdgesForCleaning(const RealType edgeTol,
                                                 &mMesh.nodes[2*otherNodes[0]],
                                                 &mMesh.nodes[2*otherNodes[1]],
                                                 1.0e-8);
-    if (not collinear)  isCornerNode[*nodeItr] = 1;
+    if (not collinear) cornerNodes.insert(*nodeItr);// isCornerNode[*nodeItr] = 1;
   }
   
   // Compute the maximum edge length for the cells around an edge
@@ -330,24 +237,26 @@ flagEdgesForCleaning(const RealType edgeTol,
 
     inode0 = edge.first;
     inode1 = edge.second;
-    const bool cleanTest = edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
-       mNodeMask[inode0] == 1 and mNodeMask[inode1] == 1 and
-       (isCornerNode[inode0] == 0 or isCornerNode[inode1] == 0);
+    const bool cornerEdge = (cornerNodes.find(inode0) != cornerNodes.end() or
+                             cornerNodes.find(inode1) != cornerNodes.end());
+                            //(isCornerNode[inode0] == 0 or isCornerNode[inode1] == 0));
+    const bool cleanTest = (edgeLength[iedge] < edgeTol*maxCellEdgeLength[iedge] and
+                            mNodeMask[inode0] == 1 and 
+                            mNodeMask[inode1] == 1 and
+                            not cornerEdge);
     if (cleanTest) {
       edgesClean = false;
       edgeMask[iedge] = 0;
-      const bool node1KeepTest = isCornerNode[inode1] == 1 or 
-         (isBorderNode[inode1] == 1 and isBorderNode[inode0] == 0);
-      unsigned keepNode   = (node1KeepTest) ? inode1 : inode0;
-      unsigned deleteNode = (node1KeepTest) ? inode0 : inode1;
-      //unsigned keepNode   = (isBorderNode[inode1] == 1) ? inode1 : inode0;
-      //unsigned deleteNode = (isBorderNode[inode1] == 1) ? inode0 : inode1;
+      const bool node1KeepTest = //isCornerNode[inode1] == 1 or 
+         (cornerNodes.find(inode1) != cornerNodes.end()) or
+         (borderNodes.find(inode1) != borderNodes.end() and
+          borderNodes.find(inode0) == borderNodes.end());
+         //(isBorderNode[inode1] == 1 and isBorderNode[inode0] == 0);
+      unsigned keepNode   = node1KeepTest ? inode1 : inode0;
+      unsigned deleteNode = node1KeepTest ? inode0 : inode1;
       mNodeMask[keepNode  ] = 2;
       mNodeMask[deleteNode] = 0;
       nodeCollapse[deleteNode] = keepNode;
-      //mNodeMask[inode0] = 2;
-      //mNodeMask[inode1] = 0;
-      //nodeCollapse[inode1] = inode0;
     }
   }
   replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
@@ -594,7 +503,8 @@ flagEdgesForCleaning(const RealType edgeTol,
   } // Done with the multi-processor stuff
 #endif
   
-  // Check if there are any faces that need to be removed (for 3D meshes).
+  // Check if there are any faces that need to be removed.
+  // (Really only for 3D tessellations since edges=faces in 2D.)
   mFaceMask = std::vector<unsigned>(nfaces0, 1);
   if (!edgesClean) {
     unsigned numActiveEdges;
@@ -607,10 +517,6 @@ flagEdgesForCleaning(const RealType edgeTol,
         const EdgeType edge = internal::hashEdge(inode0, inode1);
         typename map<EdgeType, int>::const_iterator itr = edgeToIndex.find(edge);
         POLY_ASSERT(itr != edgeToIndex.end());
-
-	// // typename EdgeMap::left_const_iterator itr = edgeToID.left.find(edge);
-	// // POLY_ASSERT(itr != edgeToID.left.end());
-
 	numActiveEdges += edgeMask[itr->second];
       }
 
@@ -671,6 +577,387 @@ flagEdgesForCleaning(const RealType edgeTol,
   return edgesClean;
 }
 //------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+cleanMesh() {
+
+  // Pre-conditions
+  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
+
+  // Original mesh sizes
+  const unsigned ncells0 = mMesh.cells.size();
+  const unsigned nfaces0 = mMesh.faces.size();
+  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
+
+  // Determine the new cell, face, and node numberings.
+  unsigned nnodes1 = 0, nfaces1 = 0, ncells1 = 0;
+  std::vector<unsigned> nodeMap(nnodes0), faceMap(nfaces0), cellMap(ncells0);
+  for (unsigned i = 0; i != nnodes0; ++i) {
+    nodeMap[i] = nnodes1;
+    if (mNodeMask[i] == 1) nnodes1++;
+  }
+  for (unsigned i = 0; i != nfaces0; ++i) {
+    faceMap[i] = nfaces1;
+    if (mFaceMask[i] == 1) nfaces1++;
+  }
+  for (unsigned i = 0; i != ncells0; ++i) {
+    if (mCellMask[i] == 1) cellMap[i] = ncells1++;
+  }
+
+  // Post-conditions
+  POLY_ASSERT(std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0) == nnodes1);
+  POLY_ASSERT(std::accumulate(mFaceMask.begin(), mFaceMask.end(), 0) == nfaces1);
+  POLY_ASSERT(std::accumulate(mCellMask.begin(), mCellMask.end(), 0) == ncells1);
+
+  cleanMesh(cellMap, faceMap, nodeMap);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+cleanMesh(std::vector<unsigned>& cellMap,
+          std::vector<unsigned>& faceMap,
+          std::vector<unsigned>& nodeMap) {
+
+  // Pre-conditions
+  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
+
+  // Original mesh sizes
+  const unsigned ncells0 = mMesh.cells.size();
+  const unsigned nfaces0 = mMesh.faces.size();
+  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
+  const unsigned ncells1 = std::accumulate(mCellMask.begin(), mCellMask.end(), 0);
+  const unsigned nfaces1 = std::accumulate(mFaceMask.begin(), mFaceMask.end(), 0);
+  const unsigned nnodes1 = std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0);
+  
+  // // Count repeated node IDs to figure out which node positions need averaging
+  // internal::CounterMap<unsigned> nodeCount;
+  // for (unsigned i = 0; i != nnodes0; ++i)  ++nodeCount[nodeMap[i]];
+
+  // // Reconstruct the nodes.
+  // std::vector<RealType> newNodes(Dimension*nnodes1, 0.0);
+  // for (unsigned i = 0; i != nnodes0; ++i) {
+  //   const unsigned newID = nodeMap[i];
+  //   POLY_ASSERT(nodeCount[newID] == 1 or nodeCount[newID] == 2);
+  //   if (1) {//nodeCount[newID] == 1) {
+  //     for (unsigned j = 0; j != Dimension; ++j) 
+  //       newNodes[Dimension*newID+j] = mMesh.nodes[Dimension*i+j];
+  //   } else {
+  //     for (unsigned j = 0; j != Dimension; ++j)
+  //       newNodes[Dimension*newID+j] += 0.5*mMesh.nodes[Dimension*i+j];
+  //   }
+  // }
+  // mMesh.nodes = newNodes;
+  
+  std::vector<RealType> newNodes;
+  newNodes.reserve(Dimension*nnodes1);
+  for (unsigned i = 0; i != nnodes0; ++i) {
+    if (mNodeMask[i] == 1) {
+      std::copy(&mMesh.nodes[Dimension*i], &mMesh.nodes[Dimension*(i+1)], back_inserter(newNodes));
+    }
+  }
+  mMesh.nodes = newNodes;
+
+  // Reconstruct the faces.
+  std::vector<std::vector<unsigned> > newFaces;
+  std::vector<std::vector<int> > newFaceCells;
+  newFaces.reserve(nfaces1);
+  newFaceCells.reserve(nfaces1);
+  for (unsigned i = 0; i != nfaces0; ++i) {
+    if (mFaceMask[i] == 1) {
+      newFaces.push_back(mMesh.faces[i]);
+      for (std::vector<unsigned>::iterator itr = newFaces.back().begin();
+           itr != newFaces.back().end(); 
+           ++itr) {
+         //POLY_ASSERT(nodeMap.find(*itr) != nodeMap.end());
+        *itr = nodeMap[*itr];
+      }
+      POLY_ASSERT(mMesh.faceCells[i].size() == 1 or
+		  mMesh.faceCells[i].size() == 2);
+      newFaceCells.push_back(std::vector<int>());
+      unsigned fc = (mMesh.faceCells[i][0] < 0 ? ~mMesh.faceCells[i][0] : mMesh.faceCells[i][0]);
+      if (mCellMask[fc] == 1) newFaceCells.back().push_back(mMesh.faceCells[i][0] < 0 ?
+                                                           ~cellMap[fc] :
+                                                           cellMap[fc]);
+      if (mMesh.faceCells[i].size() == 2) {
+        fc = (mMesh.faceCells[i][1] < 0 ? ~mMesh.faceCells[i][1] : mMesh.faceCells[i][1]);
+        if (mCellMask[fc] == 1) newFaceCells.back().push_back(mMesh.faceCells[i][1] < 0 ?
+                                                              ~cellMap[fc] :
+                                                              cellMap[fc]);
+      }
+      POLY_ASSERT(newFaceCells.back().size() == 1 or
+		  newFaceCells.back().size() == 2);
+    }
+  }
+  mMesh.faces = newFaces;
+  mMesh.faceCells = newFaceCells;
+  
+
+  // Reconstruct the cells.  
+  std::vector<std::vector<int> > newCells;
+  newCells.resize(ncells1);
+  for (unsigned i = 0; i != ncells0; ++i) {
+    if (mCellMask[i] == 1) {
+      for (std::vector<int>::iterator itr = mMesh.cells[i].begin();
+           itr != mMesh.cells[i].end();
+           ++itr) {
+        const int iface = (*itr < 0 ? ~(*itr) : *itr);
+        //POLY_ASSERT(faceMap.find(iface) != faceMap.end());
+        if (mFaceMask[iface] == 1) {
+          // int newFace = (*itr >= 0 ? faceMap[iface] : ~faceMap[iface]);
+          newCells[i].push_back( *itr < 0 ? ~faceMap[iface] : faceMap[iface]);
+        }
+      }
+    }
+  }
+  mMesh.cells = newCells;  
+
+  // Update the shared nodes and faces.
+  const unsigned numNeighbors = mMesh.sharedNodes.size();
+  POLY_ASSERT(mMesh.sharedFaces.size() == numNeighbors);
+  for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
+    std::vector<unsigned> newNodes, newFaces;
+    for (std::vector<unsigned>::iterator itr = mMesh.sharedNodes[idomain].begin();
+         itr != mMesh.sharedNodes[idomain].end();
+         ++itr) {
+      if (mNodeMask[*itr] == 1) newNodes.push_back(nodeMap[*itr]);
+    }
+    for (std::vector<unsigned>::iterator itr = mMesh.sharedFaces[idomain].begin();
+         itr != mMesh.sharedFaces[idomain].end();
+         ++itr) {
+      if (mFaceMask[*itr] == 1) newFaces.push_back(faceMap[*itr]);
+    }
+    mMesh.sharedNodes[idomain] = newNodes;
+    mMesh.sharedFaces[idomain] = newFaces;
+  }
+
+  // If there was a convex hull in the mesh, it's probably no longer valid.
+  mMesh.convexHull = PLC<Dimension, RealType>();
+
+  // Clear out the masks. We're done.
+  mCellMask.clear();
+  mFaceMask.clear();
+  mNodeMask.clear();
+
+  // Post-conditions.
+  POLY_ASSERT(mMesh.nodes.size()     == Dimension*nnodes1);
+  POLY_ASSERT(mMesh.faces.size()     == nfaces1          );
+  POLY_ASSERT(mMesh.faceCells.size() == nfaces1          );
+  POLY_ASSERT(mMesh.cells.size()     == ncells1          );
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+computeMasks() {
+  // Pre-conditions
+  POLY_ASSERT(!mCellMask.empty() or !mFaceMask.empty() or !mNodeMask.empty());
+  
+  // Have cells, want faces and nodes
+  if (!mCellMask.empty()) {
+    computeFaceAndNodeMasks();
+  }
+  // Have faces, want cells and nodes
+  else if(!mFaceMask.empty()) {
+    computeCellAndNodeMasks();
+  }
+  // Have nodes, want cells and faces
+  else {
+    POLY_ASSERT(!mNodeMask.empty());
+    computeCellAndFaceMasks();
+  }
+
+  // Post-conditions
+  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+computeFaceAndNodeMasks() {
+  // Pre-conditions.
+  const unsigned ncells0 = mMesh.cells.size();
+  const unsigned nfaces0 = mMesh.faces.size();
+  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
+  POLY_ASSERT(mCellMask.size() == ncells0);
+  POLY_ASSERT(mFaceMask.empty() and mNodeMask.empty());
+  POLY_ASSERT(ncells0 == 0 or *max_element(mCellMask.begin(), mCellMask.end()) == 1);
+
+  // Create masks for the nodes and faces.
+  mFaceMask = std::vector<unsigned>(nfaces0, 0);
+  mNodeMask = std::vector<unsigned>(nnodes0, 0);
+  for (unsigned icell = 0; icell != ncells0; ++icell) {
+    if (mCellMask[icell] == 1) {
+      for (std::vector<int>::const_iterator faceItr = mMesh.cells[icell].begin();
+           faceItr != mMesh.cells[icell].end();
+           ++faceItr) {
+        const unsigned iface = (*faceItr >= 0 ? *faceItr : ~(*faceItr));
+        POLY_ASSERT(iface < nfaces0);
+        mFaceMask[iface] = 1;
+        for (std::vector<unsigned>::const_iterator nodeItr = mMesh.faces[iface].begin();
+             nodeItr != mMesh.faces[iface].end();
+             ++nodeItr) {
+          const unsigned inode = *nodeItr;
+          POLY_ASSERT(inode < nnodes0);
+          mNodeMask[inode] = 1;
+        }
+      }
+    }
+  }
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+computeCellAndNodeMasks() {
+  // Pre-conditions.
+  POLY_ASSERT(mCellMask.empty() and mNodeMask.empty());
+  POLY_ASSERT2(false, "Not currently implemented");
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+computeCellAndFaceMasks() {
+  // Pre-conditions.
+  POLY_ASSERT(mCellMask.empty() and mFaceMask.empty());
+  POLY_ASSERT2(false, "Not currently implemented");
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Static initializations
+//------------------------------------------------------------------------------
+template<> unsigned MeshEditor<2, double>::minEdgesPerFace = 1;
+template<> unsigned MeshEditor<3, double>::minEdgesPerFace = 3;
+
+//------------------------------------------------------------------------------
+// Explicit instantiation
+//------------------------------------------------------------------------------
+template class MeshEditor<2, double>;
+template class MeshEditor<3, double>;
+  
+}// end polytope namespace
+
+
+
+/*
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+deleteBoundaryNodes(const std::vector<unsigned>& nodesToDelete) {
+  POLY_ASSERT2(false, "This routine is currently not implemented");
+
+  // Pre-conditions
+  POLY_ASSERT(!nodesToDelete.empty());
+
+  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
+  const unsigned nfaces0 = mMesh.faces.size();
+  const unsigned ncells0 = mMesh.cells.size();
+
+  // Collect cell, faces, and nodes
+  set<unsigned> boundaryCells, boundaryFaces, boundaryNodes;
+  map<unsigned, set<unsigned> > boundaryNodesToBoundaryFaces;
+  for (unsigned iface = 0; iface != mMesh.faces.size(); ++iface) {
+    POLY_ASSERT(iface < mMesh.faceCells.size());
+    POLY_ASSERT(mMesh.faceCells[iface].size() == 1 or
+		mMesh.faceCells[iface].size() == 2);
+    if (mMesh.faceCells[iface].size() == 1) {
+      const unsigned icell = (mMesh.faceCells[iface][0] < 0) ?
+	~mMesh.faceCells[iface][0] : mMesh.faceCells[iface][0];
+      POLY_ASSERT(icell >= 0);
+      POLY_ASSERT(icell < mMesh.cells.size());
+      boundaryCells.insert(icell);
+      boundaryFaces.insert(iface);
+      POLY_ASSERT(!mMesh.faces[iface].empty());
+      for (vector<unsigned>::const_iterator nodeItr = mMesh.faces[iface].begin(); 
+	   nodeItr != mMesh.faces[iface].end(); ++nodeItr) {
+	POLY_ASSERT(*nodeItr < nnodes0);
+	boundaryNodes.insert(*nodeItr);
+	boundaryNodesToBoundaryFaces[*nodeItr].insert(iface);
+      }
+    }
+  }
+
+  // Fill in the node mask
+  mNodeMask = vector<unsigned>(nnodes0, 1);
+  for (vector<unsigned>::const_iterator nodeItr = nodesToDelete.begin();
+       nodeItr != nodesToDelete.end(); ++nodeItr) {
+    POLY_ASSERT(*nodeItr < nnodes0);
+    POLY_ASSERT2(boundaryNodes.find(*nodeItr) != boundaryNodes.end(),
+		 "Node " << *nodeItr << " is flagged for deletion, but "
+		 "it is NOT a boundary node!");
+    mNodeMask[*nodeItr] = 0;
+  }
+
+  // Deleting nodes shouldn't remove any cells
+  mCellMask = vector<unsigned>(ncells0, 1);
+
+  // Deleting edges and faces is tricky. The 2D logic follows.
+  // In 2D, edges=faces and a boundary node has at least 2 faces
+  // These two faces correspond to boundary faces, each of which connects to a single boundary node
+  // Collapse the node to the nearer of its two boundary node neighbors provided neither neighbor
+  //    has already been flagged for deletion
+  //
+  // In 3D, edges!=faces.
+  // A boundary node may have an arbitrary number of edges and faces, depending
+  //    on the boundary
+  // First gather all boundary node neighbors connecting to this node through
+  //    boundary edges. (We obtain this list by looping over the nodes of its
+  //    associated boundary faces and pick out the edges (i.e. node-node pairs)
+  //    that also contain the node we want to delete.)
+  // Collapse the node to the nearest of its neighboring boundary nodes,
+  //    provided none of those nodes have also been flagged for deletion
+
+}
+//------------------------------------------------------------------------------
+*/
+
+
+
+
+/*
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+MeshEditor<Dimension, RealType>::
+cleanBoundaryEdges(const RealType edgeTol) {
+  // Pre-conditions
+  POLY_ASSERT2(edgeTol > 0.0, "Specify a positive (non-zero) edge tolerance!");
+
+  // flag edges smaller than the given tolerance in terms of face and node masks
+  std::vector<unsigned> cellMap, faceMap, nodeMap;
+  bool edgesClean = flagBoundaryEdgesForCleaning(edgeTol, cellMap, faceMap, nodeMap);
+  if (!edgesClean) cleanMesh(cellMap, faceMap, nodeMap);
+
+  // Post-conditions
+  POLY_ASSERT(mCellMask.empty() and mFaceMask.empty() and mNodeMask.empty());
+}
+//------------------------------------------------------------------------------
+*/
+
+
 
 /*
 //------------------------------------------------------------------------------
@@ -1084,281 +1371,3 @@ flagBoundaryEdgesForCleaning(const RealType edgeTol,
 }
 //------------------------------------------------------------------------------
 */
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-cleanMesh() {
-
-  // Pre-conditions
-  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
-
-  // Original mesh sizes
-  const unsigned ncells0 = mMesh.cells.size();
-  const unsigned nfaces0 = mMesh.faces.size();
-  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
-
-  // Determine the new cell, face, and node numberings.
-  unsigned nnodes1 = 0, nfaces1 = 0, ncells1 = 0;
-  // std::map<unsigned, unsigned> old2new_nodes, old2new_faces, old2new_cells;
-  std::vector<unsigned> nodeMap(ncells0), faceMap(nfaces0), cellMap(ncells0);
-  for (unsigned i = 0; i != nnodes0; ++i) {
-    nodeMap[i] = nnodes1;
-    // old2new_nodes[i] = nnodes1;
-    if (mNodeMask[i] == 1) nnodes1++;
-  }
-  for (unsigned i = 0; i != nfaces0; ++i) {
-    faceMap[i] = nfaces1;
-    // old2new_faces[i] = nfaces1;
-    if (mFaceMask[i] == 1) nfaces1++;
-  }
-  for (unsigned i = 0; i != ncells0; ++i) {
-    if (mCellMask[i] == 1) cellMap[i] = ncells1++;
-    // if (mCellMask[i] == 1) old2new_cells[i] = ncells1++;
-  }
-
-  // Post-conditions
-  POLY_ASSERT(std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0) == nnodes1);
-  POLY_ASSERT(std::accumulate(mFaceMask.begin(), mFaceMask.end(), 0) == nfaces1);
-  POLY_ASSERT(std::accumulate(mCellMask.begin(), mCellMask.end(), 0) == ncells1);
-
-  cleanMesh(cellMap, faceMap, nodeMap);
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-cleanMesh(std::vector<unsigned>& cellMap,
-          std::vector<unsigned>& faceMap,
-          std::vector<unsigned>& nodeMap) {
-
-  // Pre-conditions
-  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
-
-  // Original mesh sizes
-  const unsigned ncells0 = mMesh.cells.size();
-  const unsigned nfaces0 = mMesh.faces.size();
-  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
-  const unsigned ncells1 = std::accumulate(mCellMask.begin(), mCellMask.end(), 0);
-  const unsigned nfaces1 = std::accumulate(mFaceMask.begin(), mFaceMask.end(), 0);
-  const unsigned nnodes1 = std::accumulate(mNodeMask.begin(), mNodeMask.end(), 0);
-  
-  // // Blago!
-  // cerr << "Old->New Faces" << endl;
-  // for (unsigned i = 0; i != nfaces0; ++i)
-  //    cerr << i << "\t-->\t" << faceMap[i] << endl;
-  // cerr << endl << "Old->New Nodes" << endl;
-  // for (unsigned i = 0; i != nnodes0; ++i) 
-  //    cerr << i << "\t-->\t" << nodeMap[i] << endl;;
-  // cerr << endl;
-  // // Blago!
-
-  
-  // Reconstruct the nodes.
-  std::vector<RealType> newNodes;
-  newNodes.reserve(nnodes1);
-  for (unsigned i = 0; i != nnodes0; ++i) {
-    if (mNodeMask[i] == 1) {
-      std::copy(&mMesh.nodes[Dimension*i], &mMesh.nodes[Dimension*(i + 1)], back_inserter(newNodes));
-    }
-  }
-  mMesh.nodes = newNodes;
-
-
-  // Reconstruct the faces.
-  std::vector<std::vector<unsigned> > newFaces;
-  std::vector<std::vector<int> > newFaceCells;
-  newFaces.reserve(nfaces1);
-  newFaceCells.reserve(nfaces1);
-  for (unsigned i = 0; i != nfaces0; ++i) {
-    if (mFaceMask[i] == 1) {
-      newFaces.push_back(mMesh.faces[i]);
-      for (std::vector<unsigned>::iterator itr = newFaces.back().begin();
-           itr != newFaces.back().end(); 
-           ++itr) {
-         //POLY_ASSERT(nodeMap.find(*itr) != nodeMap.end());
-        *itr = nodeMap[*itr];
-      }
-      POLY_ASSERT(mMesh.faceCells[i].size() == 1 or
-		  mMesh.faceCells[i].size() == 2);
-      newFaceCells.push_back(std::vector<int>());
-      unsigned fc = (mMesh.faceCells[i][0] < 0 ? ~mMesh.faceCells[i][0] : mMesh.faceCells[i][0]);
-      if (mCellMask[fc] == 1) newFaceCells.back().push_back(mMesh.faceCells[i][0] < 0 ?
-                                                           ~cellMap[fc] :
-                                                           cellMap[fc]);
-      if (mMesh.faceCells[i].size() == 2) {
-        fc = (mMesh.faceCells[i][1] < 0 ? ~mMesh.faceCells[i][1] : mMesh.faceCells[i][1]);
-        if (mCellMask[fc] == 1) newFaceCells.back().push_back(mMesh.faceCells[i][1] < 0 ?
-                                                              ~cellMap[fc] :
-                                                              cellMap[fc]);
-      }
-      POLY_ASSERT(newFaceCells.back().size() == 1 or
-		  newFaceCells.back().size() == 2);
-    }
-  }
-  mMesh.faces = newFaces;
-  mMesh.faceCells = newFaceCells;
-  
-
-  // Reconstruct the cells.  
-  std::vector<std::vector<int> > newCells;
-  newCells.resize(ncells1);
-  for (unsigned i = 0; i != ncells0; ++i) {
-    if (mCellMask[i] == 1) {
-      for (std::vector<int>::iterator itr = mMesh.cells[i].begin();
-           itr != mMesh.cells[i].end();
-           ++itr) {
-        const int iface = (*itr < 0 ? ~(*itr) : *itr);
-        //POLY_ASSERT(faceMap.find(iface) != faceMap.end());
-        if (mFaceMask[iface] == 1) {
-          // int newFace = (*itr >= 0 ? faceMap[iface] : ~faceMap[iface]);
-          newCells[i].push_back( *itr < 0 ? ~faceMap[iface] : faceMap[iface]);
-        }
-      }
-    }
-  }
-  mMesh.cells = newCells;  
-
-  // Update the shared nodes and faces.
-  const unsigned numNeighbors = mMesh.sharedNodes.size();
-  POLY_ASSERT(mMesh.sharedFaces.size() == numNeighbors);
-  for (unsigned idomain = 0; idomain != numNeighbors; ++idomain) {
-    std::vector<unsigned> newNodes, newFaces;
-    for (std::vector<unsigned>::iterator itr = mMesh.sharedNodes[idomain].begin();
-         itr != mMesh.sharedNodes[idomain].end();
-         ++itr) {
-      if (mNodeMask[*itr] == 1) newNodes.push_back(nodeMap[*itr]);
-    }
-    for (std::vector<unsigned>::iterator itr = mMesh.sharedFaces[idomain].begin();
-         itr != mMesh.sharedFaces[idomain].end();
-         ++itr) {
-      if (mFaceMask[*itr] == 1) newFaces.push_back(faceMap[*itr]);
-    }
-    mMesh.sharedNodes[idomain] = newNodes;
-    mMesh.sharedFaces[idomain] = newFaces;
-  }
-
-  // If there was a convex hull in the mesh, it's probably no longer valid.
-  mMesh.convexHull = PLC<Dimension, RealType>();
-
-  // Clear out the masks. We're done.
-  mCellMask.clear();
-  mFaceMask.clear();
-  mNodeMask.clear();
-
-  // Post-conditions.
-  POLY_ASSERT(mMesh.nodes.size()     == Dimension*nnodes1);
-  POLY_ASSERT(mMesh.faces.size()     == nfaces1          );
-  POLY_ASSERT(mMesh.faceCells.size() == nfaces1          );
-  POLY_ASSERT(mMesh.cells.size()     == ncells1          );
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-computeMasks() {
-  // Pre-conditions
-  POLY_ASSERT(!mCellMask.empty() or !mFaceMask.empty() or !mNodeMask.empty());
-  
-  // Have cells, want faces and nodes
-  if (!mCellMask.empty()) {
-    computeFaceAndNodeMasks();
-  }
-  // Have faces, want cells and nodes
-  else if(!mFaceMask.empty()) {
-    computeCellAndNodeMasks();
-  }
-  // Have nodes, want cells and faces
-  else {
-    POLY_ASSERT(!mNodeMask.empty());
-    computeCellAndFaceMasks();
-  }
-
-  // Post-conditions
-  POLY_ASSERT(!mCellMask.empty() and !mFaceMask.empty() and !mNodeMask.empty());
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-computeFaceAndNodeMasks() {
-  // Pre-conditions.
-  const unsigned ncells0 = mMesh.cells.size();
-  const unsigned nfaces0 = mMesh.faces.size();
-  const unsigned nnodes0 = mMesh.nodes.size()/Dimension;
-  POLY_ASSERT(mCellMask.size() == ncells0);
-  POLY_ASSERT(mFaceMask.empty() and mNodeMask.empty());
-  POLY_ASSERT(ncells0 == 0 or *max_element(mCellMask.begin(), mCellMask.end()) == 1);
-
-  // Create masks for the nodes and faces.
-  mFaceMask = std::vector<unsigned>(nfaces0, 0);
-  mNodeMask = std::vector<unsigned>(nnodes0, 0);
-  for (unsigned icell = 0; icell != ncells0; ++icell) {
-    if (mCellMask[icell] == 1) {
-      for (std::vector<int>::const_iterator faceItr = mMesh.cells[icell].begin();
-           faceItr != mMesh.cells[icell].end();
-           ++faceItr) {
-        const unsigned iface = (*faceItr >= 0 ? *faceItr : ~(*faceItr));
-        POLY_ASSERT(iface < nfaces0);
-        mFaceMask[iface] = 1;
-        for (std::vector<unsigned>::const_iterator nodeItr = mMesh.faces[iface].begin();
-             nodeItr != mMesh.faces[iface].end();
-             ++nodeItr) {
-          const unsigned inode = *nodeItr;
-          POLY_ASSERT(inode < nnodes0);
-          mNodeMask[inode] = 1;
-        }
-      }
-    }
-  }
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-computeCellAndNodeMasks() {
-  // Pre-conditions.
-  POLY_ASSERT(mCellMask.empty() and mNodeMask.empty());
-  POLY_ASSERT2(false, "Not currently implemented");
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-void
-MeshEditor<Dimension, RealType>::
-computeCellAndFaceMasks() {
-  // Pre-conditions.
-  POLY_ASSERT(mCellMask.empty() and mFaceMask.empty());
-  POLY_ASSERT2(false, "Not currently implemented");
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Static initializations
-//------------------------------------------------------------------------------
-template<> unsigned MeshEditor<2, double>::minEdgesPerFace = 1;
-template<> unsigned MeshEditor<3, double>::minEdgesPerFace = 3;
-
-//------------------------------------------------------------------------------
-// Explicit instantiation
-//------------------------------------------------------------------------------
-template class MeshEditor<2, double>;
-template class MeshEditor<3, double>;
-  
-}// end polytope namespace
