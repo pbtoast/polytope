@@ -108,12 +108,15 @@ if (USE_PYTHON EQUAL 1)
     string(REPLACE "/bin/python" "" PYTHON_ROOT ${PYTHON_EXE})
     set(PYTHON_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION}")
     set(PYTHON_LIB_DIR "${PYTHON_ROOT}/lib")
-    # Check that Pybindgen is installed there
-    if (EXISTS ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/pybindgen
-	OR     ${PYTHON_LIB_DIR}/python/site-packages/pybindgen)
+
+    # Check if pybindgen is available for import.
+    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
+    find_python_module(pybindgen)
+    if (NOT ${PY_PYBINDGEN} MATCHES "0")
       # Check that you have Python.h and libpython<version>.a
       if (EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" AND
-	  EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}.a")
+      	  (EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" OR
+           EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}"))
 	set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
 	set(PYBINDGEN_MODULE_NAME "PolytopeModules")
 	set(HAVE_PYTHON true)
@@ -125,8 +128,7 @@ if (USE_PYTHON EQUAL 1)
       endif()
     else()
       set(HAVE_PYTHON false)
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/")
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python/site-packages/")
+      message("-- Failed to find PyBindGen module python module.  Please install pybindgen somewhere importable by python to build optional polytope python bindings.")
     endif()
   else()
     set(HAVE_PYTHON false)
@@ -141,7 +143,7 @@ if (${USE_SILO} EQUAL 1)
   set(ENV{HDF5_ROOT} ${HDF5_ROOT})
 #       NOTE: Default to using static hdf5
   set(HDF5_USE_STATIC_LIBRARIES true)
-  find_package(HDF5)  
+  find_package(HDF5)
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
@@ -204,6 +206,11 @@ else()
 endif()
 
 
+if(HDF5_LIBRARIES)
+  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
+endif()
+
+
 # Enable Triangle if triangle.h and triangle.c are found.
 # We disable this on IBM xlC since Boost.Geometry does not compile correctly there for now.
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
@@ -253,9 +260,12 @@ if (HEADER_ONLY EQUAL 0)
 
   # Tests directory
   if (${TESTING} EQUAL 1)
+    message("-- Unit testing enabled.")
     enable_testing()
     add_subdirectory(tests)
-    include(CTest)
+    include (CTest)
+  else()
+    message("-- Unit testing disabled.")
   endif()
   
   # Polytope C library.
@@ -314,6 +324,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 

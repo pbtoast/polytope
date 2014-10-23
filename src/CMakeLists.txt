@@ -1,15 +1,18 @@
 # Include Silo stuff if we've found it.
 if (SILO_FOUND)
   set(IO_SOURCES SiloWriter_2d.cc SiloWriter_3d.cc SiloReader_2d.cc SiloReader_3d.cc SiloUtils.cc)
+  message("++ IO_SOURCES: ${IO_SOURCES}")
+  message("++ SILO_LIBRARIES: ${SILO_LIBRARIES}")
+  message("++ HDF5_LIBRARIES: ${HDF5_LIBRARIES}")    
 endif()
 
 # By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc MeshEditor.cc)
+set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Check if we can include each of the serial tessellators:
 if (HAVE_BOOST)
-  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc)
+  set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc MeshEditor.cc)
 endif()
 
 if (HAVE_TRIANGLE)
@@ -35,8 +38,7 @@ if (HAVE_MPI)
                                                  SerialDistributedTessellator.cc)
 endif()
 
-# The Polytope library:
-add_library(polytope ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
+add_library(polytope STATIC ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
 target_link_libraries(polytope voro_2d voro_3d ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
 
 # Library install targets
