@@ -59,11 +59,6 @@ double testBoundary(Boundary2D<double>& boundary,
     cout << "              Area  = " << area << endl;
     cout << "              Error = " << boundary.mArea - area << endl;
     cout << "   Fractional error = " << fracerr << endl;
-
-    outputMesh(mesh, "Blago", n);
-    
-    POLY_CHECK(false);
-
     mesh.clear();   
   }
   return result;
