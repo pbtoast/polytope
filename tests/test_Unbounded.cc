@@ -71,21 +71,6 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(points, mesh);
     outputMesh(mesh, testName, points, ntest);
     bool pass = checkMesh(mesh,N,N+1,2*N,N,N);
-    
-    // int attempts = 1;
-    // while (not pass and attempts < 7) {
-    //    attempts++;
-    //    cout << "Attempt " << attempts << ":" << endl
-    //         << "Turning up the degeneracy" << endl
-    //         << "  original value = " << tessellator.degeneracy() << endl
-    //         << "  new value      = " << tessellator.degeneracy()*10 << endl;
-    //    tessellator.degeneracy(10*tessellator.degeneracy());
-    //    mesh.clear();
-    //    tessellator.tessellate(points, mesh);
-    //    outputMesh(mesh, testName, points, ntest);
-    //    pass = checkMesh(mesh,N,N+1,2*N,N,N);
-    // }
-
     if (not pass) howDidIDo.push_back(ntest);
     ++ntest;
   }

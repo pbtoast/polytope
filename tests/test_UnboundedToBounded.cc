@@ -54,14 +54,7 @@ void runTest(Tessellator<2,double>& tessellator) {
 
     boundary.boostMyBoundary();
   }
-
-//   for (unsigned i = 0; i != boundary.mPLCpoints.size()/2; ++i) {
-//     cout << i << ": (" << boundary.mPLCpoints[2*i]
-// 	 << "," << boundary.mPLCpoints[2*i+1] << ")" << endl;
-//   }
-//   cout << boundary.mPLC << endl;
   
-
   // Generator data
   Generators<2,double> generators(boundary);
   generators.randomPoints(10);
