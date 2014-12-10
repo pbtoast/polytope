@@ -18,7 +18,7 @@ public:
   typedef std::pair<int, int> EdgeHash;
   typedef std::vector<unsigned> FaceHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
 
   // The normalized generator coordinates.

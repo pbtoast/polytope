@@ -1359,6 +1359,200 @@ uniquePoints(const std::vector<RealType>& points,
   POLY_ASSERT(indexMap.size() == n);
 }
 
+
+//------------------------------------------------------------------------------
+// Express a tessellation cell as a ReducedPLC
+//------------------------------------------------------------------------------
+// Functor to handle the partial dimension specialization
+template<int Dimension, typename RealType> struct CellToReducedPLCFunctor;
+
+// 2D
+template<typename RealType>
+struct CellToReducedPLCFunctor<2, RealType> {
+  static ReducedPLC<2, RealType> impl(const Tessellation<2, RealType>& mesh, 
+                                      const unsigned icell) {
+    POLY_ASSERT(not mesh.empty());
+    POLY_ASSERT(icell < mesh.cells.size());
+    ReducedPLC<2, RealType> result;
+    const unsigned nFaces = mesh.cells[icell].size();
+    POLY_ASSERT(nFaces >= 3);
+    result.facets.resize(nFaces, std::vector<int>(2));
+    for (unsigned i = 0; i != nFaces; ++i) {
+      const bool flip = mesh.cells[icell][i] < 0;
+      const unsigned iface = flip ? ~mesh.cells[icell][i] : mesh.cells[icell][i];
+      POLY_ASSERT(iface < mesh.faces.size());
+      POLY_ASSERT(mesh.faces[iface].size() == 2);
+      const int ip = flip ? mesh.faces[iface][0] : mesh.faces[iface][1];
+      POLY_ASSERT(ip < mesh.nodes.size()/2);
+      result.points.push_back(mesh.nodes[2*ip  ]);
+      result.points.push_back(mesh.nodes[2*ip+1]);
+      result.facets[i][0] = i;
+      result.facets[i][1] = (i+1)%nFaces;
+    }
+    POLY_ASSERT(result.points.size()/2 == nFaces);
+    return result;
+  }
+};
+
+// 3D
+template<typename RealType>
+struct CellToReducedPLCFunctor<3, RealType> {
+  static ReducedPLC<3, RealType> impl(const Tessellation<3, RealType>& mesh, 
+                                      const unsigned icell) {
+    POLY_ASSERT(icell < mesh.cells.size());
+    ReducedPLC<3, double> result;
+    std::map<int, int> old2new;
+    for (unsigned i = 0; i != mesh.cells[icell].size(); ++i) {
+      result.facets.push_back(std::vector<int>());
+      if (mesh.cells[icell][i] < 0) {
+        const unsigned iface = ~mesh.cells[icell][i];
+        const unsigned nnodes = mesh.faces[iface].size();
+        for (int j = nnodes - 1; j != -1; --j) {
+          const int ip = mesh.faces[iface][j];
+          POLY_ASSERT(ip < mesh.nodes.size()/3);
+          if (old2new.find(ip) == old2new.end()) {
+            old2new[ip] = result.points.size()/3;
+            result.points.push_back(mesh.nodes[3*ip  ]);
+            result.points.push_back(mesh.nodes[3*ip+1]);
+            result.points.push_back(mesh.nodes[3*ip+2]);
+          }
+          result.facets.back().push_back(old2new[ip]);
+        }
+        POLY_ASSERT(result.facets.back().size() == nnodes);
+      } else {
+        const unsigned iface = mesh.cells[icell][i];
+        const unsigned nnodes = mesh.faces[iface].size();
+        for (int j = 0; j != nnodes; ++j) {
+          const int ip = mesh.faces[iface][j];
+          POLY_ASSERT(ip < mesh.nodes.size()/3);
+          if (old2new.find(ip) == old2new.end()) {
+            old2new[ip] = result.points.size()/3;
+            result.points.push_back(mesh.nodes[3*ip  ]);
+            result.points.push_back(mesh.nodes[3*ip+1]);
+            result.points.push_back(mesh.nodes[3*ip+2]);
+          }
+          result.facets.back().push_back(old2new[ip]);
+        }
+        POLY_ASSERT(result.facets.back().size() == nnodes);
+      }
+    }
+    POLY_ASSERT(result.facets.size() == mesh.cells[icell].size());
+    return result;
+  }
+};
+
+// Interface
+template<int Dimension, typename RealType>
+ReducedPLC<Dimension, RealType>
+cellToReducedPLC(const Tessellation<Dimension, RealType>& mesh,
+                 const unsigned icell) {
+   return CellToReducedPLCFunctor<Dimension, RealType>::impl(mesh, icell);
+}
+
+
+
+//------------------------------------------------------------------------------
+// Compare a point to a line and determine if the point is inside the interior
+// half-plane (ret -1), inside the exterior half-plane (ret +1), or colinear
+// with the line (ret 0). (Method assumes line points (l1,l2) are specified in 
+// CCW manner.)
+//------------------------------------------------------------------------------
+template<typename RealType>
+int 
+aboveBelow(const RealType& l1x, const RealType& l1y,
+           const RealType& l2x, const RealType& l2y,
+           const RealType& px,  const RealType& py) {
+  const double ztest = (double(l2x - l1x)*double(py - l1y) -
+                        double(l2y - l1y)*double(px - l1x));
+  return -(ztest < 0.0 ? -1 :
+           ztest > 0.0 ?  1 :
+                          0);
+}
+
+//------------------------------------------------------------------------------
+// Compare a point to a plane and determine if it's inside the plane's interior
+// half-space (ret -1), inside its exterior half-space (ret +1), or it's
+// coplanar with the plane (ret 0). The plane is specified by the point
+// normal [(ox, oy, oz), (nx, ny, nz)], and the normal points in the direction
+// of the exterior half-space.
+//------------------------------------------------------------------------------
+template<typename RealType>
+int 
+aboveBelow(const RealType& ox, const RealType& oy, const RealType& oz,
+           const double& nx,   const double& ny,   const double& nz,
+           const RealType& px, const RealType& py, const RealType& pz) {
+  const double ztest = nx*double(px - ox) + ny*double(py - oy) + nz*double(pz - oz);
+  return (ztest < 0.0 ? -1 :
+          ztest > 0.0 ?  1 :
+          0);
+}
+
+//------------------------------------------------------------------------------
+// Check if an entire cloud of points is inside the interior half-plane of a
+// line (ret -1) or is inside the exterior half-plane (ret +1). If there is a
+// mixture of interior/exterior/collinear points, return 0.
+//------------------------------------------------------------------------------
+template<typename RealType>
+int 
+aboveBelow(const RealType& l1x, const RealType& l1y, 
+           const RealType& l2x, const RealType& l2y, 
+           const std::vector<RealType>& points) {
+  POLY_ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(points.size() > 1);
+  const unsigned n = points.size() / 2;
+  const int result = aboveBelow(l1x, l1y, l2x, l2y, points[0], points[1]);
+  unsigned i = 1;
+  while (i < n and result == aboveBelow(l1x, l1y, 
+                                        l2x, l2y, 
+                                        points[2*i], points[2*i + 1])) ++i;
+  if (i == n) {
+    return result;
+  } else {
+    return 0;
+  }
+}
+
+//------------------------------------------------------------------------------
+// Check if an entire cloud of points is inside the interior half-space of a
+// plane (ret -1) or is inside the exterior half-space (ret +1). If there is a
+// mixture of interior/exterior/coplanar points, return 0.
+//------------------------------------------------------------------------------
+template<typename RealType>
+int 
+aboveBelow(const RealType& ox, const RealType& oy, const RealType& oz, 
+           const RealType& nx,    const RealType& ny, const RealType& nz, 
+           const std::vector<RealType>& points) {
+  POLY_ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(points.size() > 1);
+  const unsigned n = points.size() / 3;
+  const int result = aboveBelow(ox, oy, oz, nx, ny, nz, points[0], points[1], points[2]);
+  unsigned i = 1;
+  while (i < n and result == aboveBelow(ox, oy, oz, 
+                                        nx, ny, nz,
+                                        points[3*i], points[3*i + 1], points[3*i + 2])) ++i;
+  if (i == n) {
+    return result;
+  } else {
+    return 0;
+  }
+}
+
+//------------------------------------------------------------------------------
+// Compute the 3D normal given three points (a, b, c).
+//------------------------------------------------------------------------------
+template<typename RealType>
+void 
+computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
+              const RealType& bx, const RealType& by, const RealType& bz,
+              const RealType& cx, const RealType& cy, const RealType& cz,
+              double& nx, double& ny, double& nz) {
+  const double dx_ab = bx - ax, dy_ab = by - ay, dz_ab = bz - az;
+  const double dx_ac = cx - ax, dy_ac = cy - ay, dz_ac = cz - az;
+  nx = dy_ab*dz_ac - dz_ab*dz_ac;
+  ny = dz_ab*dx_ac - dx_ab*dz_ac;
+  nz = dx_ab*dy_ac - dy_ab*dx_ac;
+}
+
 }
 }
 

@@ -12,17 +12,6 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
-// class HashedPoint {
-// public:
-//   const uint64_t get_x() { return geometry::Hasher<2, double>::qxval(val); }
-//   const uint64_t get_y() { return geometry::Hasher<2, double>::qyval(val); }
-//   void set_x(const uint64_t x) { val = (x + (geometry::Hasher<2, double>::qyval(val))); }
-//   void set_y(const uint64_t y) { val = (geometry::Hasher<2, double>::qxval(val) + (y<<31)); }
-// private:
-//   uint64_t val;
-// }
-// BOOST_GEOMETRY_REGISTER_POINT_2D_GET_SET(HashedPoint, uint64_t, boost::geometry::cs::cartesian, get_x(), get_y(), set_x(), set_y());
-
 namespace polytope {
 namespace BG {
 
@@ -36,6 +25,12 @@ namespace BG {
 								 const ReducedPLC<2, RealType>& b,
 								 const Point2<RealType>& p,
 								 std::vector<ReducedPLC<2, RealType> >& orphans);
+
+  template<typename RealType> bool boost_within(const Point2<RealType>& p, const ReducedPLC<2, RealType>& a);
+  template<typename RealType> bool boost_intersects(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>& b);
+  template<typename RealType> bool boost_intersects(const ReducedPLC<2, RealType>& a);
+
+   template<typename RealType> std::vector<ReducedPLC<2, RealType> > boost_unionReduce(const std::vector<ReducedPLC<2, RealType> >& a);
 
 
 //------------------------------------------------------------------------------
@@ -241,13 +236,11 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
 	       p.x << " " << p.y << std::endl 
 	       << boost::geometry::dsv(ReducedPLCtoPolygon(a)) << std::endl
 	       << boost::geometry::dsv(ReducedPLCtoPolygon(b)) << std::endl);
+  PolygonType result;
   
   // Only one geometry in the intersection
   if (intersections.size() == 1) {
-    POLY_ASSERT(intersections[0].outer().front() == intersections[0].outer().back());
-//     POLY_ASSERT(not boost::geometry::intersects(intersections[0]));
-//     POLY_ASSERT(boost::geometry::covered_by(p, intersections[0]));
-    return ReducedPLCfromPolygon(intersections[0]);
+    result = intersections[0];
   }
   // The one geometry that contains point p is the returned intersection
   else {
@@ -266,9 +259,64 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
       }
     }
     POLY_ASSERT(k < intersections.size());
-    return ReducedPLCfromPolygon(intersections[k]);
+    result = intersections[k];
   }
+  boost::geometry::correct(result);
+  boost::geometry::unique(result);
+  // POLY_ASSERT2(not boost::geometry::intersects(result),
+  //              "Self-intersecting result:\n" << boost::geometry::dsv(result));
+  return ReducedPLCfromPolygon(result);
 }
+
+
+// Within -- Point in Polygon
+template<typename RealType>
+bool boost_within(const Point2<RealType>& p,
+                  const ReducedPLC<2, RealType>& a) {
+  using namespace PLC_boost_internal;
+  return boost::geometry::within(p, ReducedPLCtoPolygon(a));
+}
+
+// Intersection -- Polygon and Polygon
+template<typename RealType>
+bool boost_intersects(const ReducedPLC<2, RealType>& a,
+                      const ReducedPLC<2, RealType>& b) {
+  using namespace PLC_boost_internal;
+  return boost::geometry::intersects(ReducedPLCtoPolygon(a), ReducedPLCtoPolygon(b));
+}
+
+// Intersection -- Polygon self intersection
+template<typename RealType>
+bool boost_intersects(const ReducedPLC<2, RealType>& a) {
+  using namespace PLC_boost_internal;
+  return boost::geometry::intersects(ReducedPLCtoPolygon(a));
+}
+
+// UnionReduce -- Reduce a collection of PLCs via unions
+template<typename RealType>
+std::vector<ReducedPLC<2, RealType> > boost_unionReduce(const std::vector<ReducedPLC<2, RealType> >& a) {
+  using namespace PLC_boost_internal;
+  typedef boost::geometry::model::polygon<Point2<RealType>, false> PolygonType;
+  typedef boost::geometry::model::multi_polygon<PolygonType>       MultiPolygonType;
+  MultiPolygonType bgresult;
+  for (int i = 0; i < a.size(); ++i) {
+    MultiPolygonType tmp;
+    boost::geometry::union_(bgresult, ReducedPLCtoPolygon(a[i]), tmp);
+    boost::geometry::correct(tmp);
+    bgresult = tmp;
+  }
+  POLY_ASSERT(not bgresult.empty());
+  POLY_ASSERT(bgresult.size() <= a.size());
+  std::vector<ReducedPLC<2, RealType> > result(bgresult.size());
+  for (int i = 0; i < bgresult.size(); ++i) {
+    POLY_ASSERT(bgresult[i].outer().front() == bgresult[i].outer().back());
+    POLY_ASSERT(not boost::geometry::intersects(bgresult[i]));
+    result[i] = ReducedPLCfromPolygon(bgresult[i]);
+  }
+  POLY_ASSERT(not result.empty());
+  POLY_ASSERT(result.size() <= a.size());
+  return result;
+}  
 
 
 } //end namespace BG

@@ -44,6 +44,8 @@ public:
   typedef int64_t CoordHash;
   typedef Point2<CoordHash> IntPoint;
   typedef Point2<RealType> RealPoint;
+  typedef ReducedPLC<2, RealType> RealPLC;
+  typedef ReducedPLC<2, CoordHash> IntPLC;
 
   // Boost typedefs
   typedef boost::geometry::model::polygon<IntPoint, false> BGpolygon;
@@ -55,10 +57,16 @@ public:
   ~BoostOrphanage();
 
   // Re-tessellate the area in orphaned cells by modifying the existing cell rings
+  void adoptOrphans_OLD(const std::vector<RealType>& points,
+                        const QuantizedCoordinates<2, RealType>& coords,
+                        std::vector<BGring>& cellRings,
+                        std::vector<BGring>& orphans) const;
+
+  // Re-tessellate the area in orphaned cells by modifying the existing cell rings
   void adoptOrphans(const std::vector<RealType>& points,
                     const QuantizedCoordinates<2, RealType>& coords,
-                    std::vector<BGring>& cellRings,
-                    std::vector<BGring>& orphans) const;
+                    std::vector<IntPLC>& cellRings,
+                    std::vector<IntPLC>& orphans) const;
 };
 
 } //end polytope namespace

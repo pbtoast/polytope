@@ -25,28 +25,22 @@ class QuantizedCoordinates: public ReducedPLC<Dimension, RealType> {
 public:
 
   typedef int64_t CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point     IntPoint;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   
   //! The bounding box size
-  std::vector<RealType> low, high;
-  
-  //! The outer bounding box sizes
-  std::vector<RealType> olow, ohigh;
-  
-  //! Infinite bounding sphere
-  std::vector<RealType> center;
-  RealType rinf;
+  RealPoint low, high;
 
-  //! Outer infinite bounding sphere
-  RealType orinf;
+  //! Infinite bounding sphere
+  RealPoint center;
+  RealType rinf;
 
   //! Parameters for controlling degeneracy spacing
   RealType mDegeneracy;
   CoordHash mCoordMax;
 
   //! The degeneracy spacing
-  RealType delta, odelta;
+  RealType delta;
 
   //! Flag for checking if coordinates have been modified
   bool mCoordinatesModified;
@@ -61,8 +55,6 @@ public:
     ReducedPLC<Dimension, RealType>(),
     low(), 
     high(), 
-    olow(), 
-    ohigh(),
     center(),
     mCoordinatesModified(false),
     mOuterBox(false) {}
@@ -72,15 +64,13 @@ public:
     ReducedPLC<Dimension, RealType>(),
     low(), 
     high(),
-    olow(), 
-    ohigh(),
     center(),
     mCoordinatesModified(false),
     mOuterBox(false)
   {
     initialize(points);
-    POLY_ASSERT(!low.empty() and !high.empty() and !center.empty());
-    POLY_ASSERT(delta != 0.0);
+    POLY_ASSERT(rinf   != 0.0);
+    POLY_ASSERT(delta  != 0.0);
     POLY_ASSERT(!mCoordinatesModified);
   }
 
@@ -89,41 +79,41 @@ public:
   //! Initialize the coordinate system
   //------------------------------------------------------------------------
   void initialize(const std::vector<RealType>& allPoints,
-                  const CoordHash coordMax = (1LL << 26),
-                  const RealType degeneracy = 1.5e-8) {
+                  const RealType degeneracy) {
     
     // Initialize degeneracy and coordMax
     if (!mCoordinatesModified) {
       mDegeneracy = degeneracy;
-      mCoordMax   = coordMax;
+      delta = degeneracy;
     }
-    low.clear(); high.clear(); center.clear();
     
     // compute bounds for the box
-    RealType plow[Dimension], phigh[Dimension];
-    geometry::computeBoundingBox<Dimension,RealType>(allPoints, true, plow, phigh);
-    
+    geometry::computeBoundingBox<Dimension,RealType>(allPoints, true, &low.x, &high.x);
+
     // The infinite-radius bounding sphere
-    RealType box[Dimension], cen[Dimension];
+    RealPoint box;
     rinf = 0.0;
     for (unsigned j = 0; j != Dimension; ++j) {
-      box[j] =      phigh[j] - plow[j];
-      cen[j] = 0.5*(phigh[j] + plow[j]);
-      rinf   = std::max(rinf, 4.0*box[j]);
+      center[j] = 0.5*(high[j] + low[j]);
+      box[j]    =      high[j] - low[j];
+      rinf      = std::max(rinf, 0.75*box[j]);
+      POLY_ASSERT(center[j] - rinf < low [j] and
+                  center[j] + rinf > high[j]);
     }
-    
+
     // Resize bounds to circumscribe sphere
     for (unsigned j = 0; j != Dimension; ++j) {
-      plow [j] = cen[j] - rinf;
-      phigh[j] = cen[j] + rinf;
+      low [j] = std::min(low [j], center[j] - rinf);
+      high[j] = std::max(high[j], center[j] + rinf);
     }
 
-    // Finalize box parameters
-    std::copy(plow , plow +Dimension, std::back_inserter(low   ));
-    std::copy(phigh, phigh+Dimension, std::back_inserter(high  ));
-    std::copy(cen  , cen  +Dimension, std::back_inserter(center));
-    delta = std::max(mDegeneracy, 2.0*rinf/RealType(mCoordMax));
-
+    // Figure out the maximum integer coordinate needed
+    mCoordMax = CoordHash(ceil(rinf / mDegeneracy));
+    POLY_ASSERT2(mCoordMax < std::numeric_limits<CoordHash>::max(),
+                 "Quantization Error: The floating point degeneracy tolerance " <<
+                 "specified of " << mDegeneracy << " overflows the integer grid. " <<
+                 "Please specify a coarser tolerance or use a longer integer.");
+    
     // Fill in the ReducedPLC information
     std::vector<RealType> pts;
     std::vector<std::vector<int> > fcts;
@@ -159,9 +149,6 @@ public:
     this->points = pts;
     this->facets = fcts;
 
-    // Initialize the outer bounding box to be equal to the inner
-    olow = low; ohigh = high; odelta = delta;
-
     mCoordinatesModified = false;
   }
 
@@ -169,13 +156,8 @@ public:
   //! Clear and empty operations
   //------------------------------------------------------------------------
   void clear() {
-    low.clear();  high.clear();  center.clear();  rinf=0;  delta=0;
-    olow.clear(); ohigh.clear(); orinf=0; odelta=0; 
+    rinf=0; delta=0;
     mOuterBox=false; mCoordinatesModified=false;
-  }
-  bool empty() const {
-    return (low.empty() and  high.empty() and  center.empty() and
-	    olow.empty() and ohigh.empty());
   }
 
   //------------------------------------------------------------------------
@@ -189,86 +171,66 @@ public:
     mCoordinatesModified = true;
   }
 
-  //------------------------------------------------------------------------
-  //! coordMax accessors
-  //------------------------------------------------------------------------
-  RealType getCoordMax() {
-    return mCoordMax;
-  }
-  void setCoordMax(const CoordHash coordMax) {
-    mCoordMax = coordMax;
-    mCoordinatesModified = true;
-  }
+  // //------------------------------------------------------------------------
+  // //! coordMax accessors
+  // //------------------------------------------------------------------------
+  // RealType getCoordMax() {
+  //   return mCoordMax;
+  // }
+  // void setCoordMax(const CoordHash coordMax) {
+  //   mCoordMax = coordMax;
+  //   mCoordinatesModified = true;
+  // }
 
   //------------------------------------------------------------------------
   //! Expand bounding box based on new bounds
   //------------------------------------------------------------------------
   void expand(const RealType* plow, const RealType* phigh) {
     // Pre-conditions
-    POLY_ASSERT(!low.empty() and !high.empty() and !center.empty());
     POLY_ASSERT(!this->points.empty() and !this->facets.empty());
 
     // Resize the box
-    RealType boxSize = 0.0;
-    olow.resize(Dimension);  ohigh.resize(Dimension);
+    RealType boxHalf = 0.0;
     for (unsigned j = 0; j != Dimension; ++j) {
-      olow [j] = std::min(low [j], plow [j]);
-      ohigh[j] = std::max(high[j], phigh[j]);
-      POLY_ASSERT(olow[j]   <= ohigh [j]);
-      POLY_ASSERT(olow[j]   <= center[j]);
-      POLY_ASSERT(center[j] <= ohigh [j]);
-      boxSize  = std::max(boxSize, ohigh [j]-center[j]);
-      boxSize  = std::max(boxSize, center[j]-  olow[j]);
+      POLY_ASSERT(plow [j] <= phigh[j]);
+      POLY_ASSERT(center[j] <= std::max(phigh[j], high[j]));
+      POLY_ASSERT(center[j] >= std::min(plow [j], low [j]));
+      boxHalf = std::max(boxHalf, std::max(phigh[j], high[j]) - center[j]);
+      boxHalf = std::max(boxHalf, center[j] - std::min(plow [j], low [j]));
+      low [j] = std::min(low [j], plow [j]);
+      high[j] = std::max(high[j], phigh[j]);
     }
     
     // Circumscribe the new box dimensions with the infinite sphere
-    orinf = 1.5*boxSize;
+    rinf = std::max(rinf, 1.5*boxHalf);
     
     // Inflate box dimensions to inscribe the new infinite sphere 
     for (unsigned j = 0; j != Dimension; ++j) {
-      olow [j] = std::min(olow [j], center[j]-orinf);
-      ohigh[j] = std::max(ohigh[j], center[j]+orinf);
-      POLY_ASSERT(olow[j] <= ohigh[j]);
-      //POLY_ASSERT(0.5*(ohigh[j]+olow[j]) == center[j]);
-      POLY_ASSERT2(std::abs((ohigh[j]-olow[j]) - 2.0*orinf) < mDegeneracy,
-                   ohigh[j]-olow[j] << " " << 2.0*orinf);
+      low [j] = std::min(low [j], center[j]-rinf);
+      high[j] = std::max(high[j], center[j]+rinf);
+      POLY_ASSERT(low[j] <= high[j]);
     }
 
-    // Recompute the quantized mesh spacing
-    odelta = std::max(mDegeneracy, 2.0*orinf/RealType(mCoordMax));
+#if HAVE_MPI
+    for (unsigned j = 0; j != Dimension; ++j) {
+      low [j] = allReduce(low [j], MPI_MIN, MPI_COMM_WORLD);
+      high[j] = allReduce(high[j], MPI_MAX, MPI_COMM_WORLD);
+    }
+    rinf = 0.5*(high[0] - low[0]);
+#endif
+
+    // Recompute the maximum coordinate
+    mCoordMax = CoordHash(ceil(rinf / mDegeneracy));
+    POLY_ASSERT2(mCoordMax < std::numeric_limits<CoordHash>::max(),
+                 "Quantization Error: After expanding the bounding box to represent " <<
+                 "Voronoi nodes, the floating point degeneracy tolerance " <<
+                 mDegeneracy << " now overflows the integer grid. " <<
+                 "Please specify a coarser tolerance or use a longer integer.");
+    
     mCoordinatesModified = false;
-    mOuterBox = true;
-
-    // I took this part out because expanding the bounding box
-    // should only introduce an outer bounding box. The inner bounding
-    // box and its associated reduced PLC shouldn't change after
-    // initialization. 9/19/2013.
-
-//     // Update the bounding box vertices for the reduced PLC
-//     std::vector<RealType> pts;
-//     if (Dimension == 2) {
-//       pts.push_back(low [0]);  pts.push_back(low [1]);
-//       pts.push_back(high[0]);  pts.push_back(low [1]);
-//       pts.push_back(high[0]);  pts.push_back(high[1]);
-//       pts.push_back(low [0]);  pts.push_back(high[1]);
-//     } else {
-//       POLY_ASSERT(Dimension == 3);
-//       pts.push_back(low [0]);  pts.push_back(low [1]);  pts.push_back(low [2]);
-//       pts.push_back(high[0]);  pts.push_back(low [1]);  pts.push_back(low [2]);
-//       pts.push_back(high[0]);  pts.push_back(high[1]);  pts.push_back(low [2]);
-//       pts.push_back(low [0]);  pts.push_back(high[1]);  pts.push_back(low [2]);
-//       pts.push_back(low [0]);  pts.push_back(low [1]);  pts.push_back(high[2]);
-//       pts.push_back(high[0]);  pts.push_back(low [1]);  pts.push_back(high[2]);
-//       pts.push_back(high[0]);  pts.push_back(high[1]);  pts.push_back(high[2]);
-//       pts.push_back(low [0]);  pts.push_back(high[1]);  pts.push_back(high[2]);
-//     }
-//     this->points = pts;
 
     // Post conditions
-    POLY_ASSERT(!olow.empty() and !ohigh.empty());
-    POLY_ASSERT(orinf > 0);
-    POLY_ASSERT(odelta > 0);
-
+    POLY_ASSERT(rinf > 0);
   }
 
   //------------------------------------------------------------------------
@@ -292,11 +254,6 @@ public:
       os << "(" << coords.low[j] << "," << coords.high[j] << ") ";
     }
     os << std::endl;
-    os << "Outer Bounding Box = ";
-    for (unsigned j = 0; j != Dimension; ++j) {
-       os << "(" << coords.olow[j] << "," << coords.high[j] << ") ";
-    }
-    os << std::endl;
     os << "Sphere Center = (";
     for (unsigned j = 0; j != Dimension; ++j) {
        os << coords.center[j] << ",";
@@ -312,47 +269,27 @@ public:
   //------------------------------------------------------------------------
   inline
   bool isInside(const RealType* point) const {
-    bool inside = true;
-    for (unsigned j = 0; j != Dimension; ++j)
-      inside *= (low[j] <= point[j] and point[j] <= high[j]);
-    return inside;
+     return true;
   }
-
+   
   //------------------------------------------------------------------------
   //! Quantize a floating-point-precision point
-  //! NOTE: If the point is inside the inner box, set the new integer
-  //!       point's index equal to 1
   //------------------------------------------------------------------------
   inline
   IntPoint quantize(const RealType* pointIn) const {
-    POLY_ASSERT(!mCoordinatesModified);
-    if (not mOuterBox) {
-      return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
-    } else {
-      if (isInside(pointIn))
-	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low[0], delta, 0);
-      else
-	return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &olow[0], odelta, 0);
-    }
+    POLY_ASSERT(not mCoordinatesModified);
+    return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &center.x, delta, 0);
   }
-   
+  
   //------------------------------------------------------------------------
   //! Dequantize an integer point to floating-point-precision 
   //------------------------------------------------------------------------
   inline
-  RealPoint dequantize(const CoordHash* pointIn, bool inner=true) const {
-    POLY_ASSERT(!mCoordinatesModified);
+  RealPoint dequantize(const CoordHash* pointIn) const {
+    POLY_ASSERT(not mCoordinatesModified);
     RealType p[Dimension];
-    std::vector<RealType> lo, hi;
-    RealType dx;
-    if (inner) {
-      lo = low;  hi = high;  dx = delta;
-    } else {
-      lo = olow; hi = ohigh; dx = odelta;
-    }
-    
-    for (unsigned j = 0; j != Dimension; ++j) {
-       p[j] = (pointIn[j] == mCoordMax) ? hi[j] : lo[j] + pointIn[j]*dx;
+    for (unsigned j = 0; j < Dimension; ++j) {
+      p[j] = center[j] + (RealType(pointIn[j]) + 0.5)*delta;
     }
     return DimensionTraits<Dimension, RealType>::constructPoint(p);
   }
@@ -364,13 +301,74 @@ public:
   RealPoint projectPoint(const RealType* rayPoint,
                          const RealType* rayDirection) const {
     RealPoint result;
-    RealType radius = (mOuterBox) ? orinf : rinf;
     bool test = geometry::rayCircleIntersection(rayPoint, rayDirection, 
-                                                &center[0], radius, 
-                                                mDegeneracy, &result.x);
+                                                &center.x, rinf, 
+                                                delta, &result.x);
+    POLY_CONTRACT_VAR(test);
     POLY_ASSERT(test);
     return result;
   }
+
+  // // //------------------------------------------------------------------------
+  // // //! Check if a point is inside inner bounding box
+  // // //------------------------------------------------------------------------
+  // // inline
+  // // bool isInside(const RealType* point) const {
+  // //   bool inside = true;
+  // //   for (unsigned j = 0; j != Dimension; ++j)
+  // //     inside *= (low[j] <= point[j] and point[j] <= high[j]);
+  // //   return inside;
+  // // }
+   
+  // // //------------------------------------------------------------------------
+  // // //! Quantize a floating-point-precision point
+  // // //! NOTE: If the point is inside the inner box, set the new integer
+  // // //!       point's index equal to 1
+  // // //------------------------------------------------------------------------
+  // // inline
+  // // IntPoint quantize(const RealType* pointIn) const {
+  // //   POLY_ASSERT(!mCoordinatesModified);
+  // //   if (not mOuterBox) {
+  // //     return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low.x, delta, 0);
+  // //   } else {
+  // //     if (isInside(pointIn))
+  // //       return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &low.x, delta, 0);
+  // //     else
+  // //       return DimensionTraits<Dimension, RealType>::constructPoint(pointIn, &olow.x, odelta, 0);
+  // //   }
+  // // }
+
+  // // //------------------------------------------------------------------------
+  // // //! Dequantize an integer point to floating-point-precision 
+  // // //------------------------------------------------------------------------
+  // // inline
+  // // RealPoint dequantize(const CoordHash* pointIn, bool inner=true) const {
+  // //   POLY_ASSERT(!mCoordinatesModified);
+  // //   RealType p[Dimension];
+  // //   RealPoint lo, hi;
+  // //   RealType dx;
+  // //   if (inner) { lo = low;  hi = high;  dx = delta; } 
+  // //   else       { lo = olow; hi = ohigh; dx = odelta;}
+  // //   for (unsigned j = 0; j != Dimension; ++j) {
+  // //      p[j] = (pointIn[j] == mCoordMax) ? hi[j] : lo[j] + pointIn[j]*dx;
+  // //   }
+  // //   return DimensionTraits<Dimension, RealType>::constructPoint(p);
+  // // }
+
+  // // //------------------------------------------------------------------------
+  // // //! Project a point to the bounding circle
+  // // //------------------------------------------------------------------------
+  // // inline
+  // // RealPoint projectPoint(const RealType* rayPoint,
+  // //                        const RealType* rayDirection) const {
+  // //   RealPoint result;
+  // //   RealType radius = (mOuterBox) ? orinf : rinf;
+  // //   bool test = geometry::rayCircleIntersection(rayPoint, rayDirection, 
+  // //                                               &center.x, radius, 
+  // //                                               mDegeneracy, &result.x);
+  // //   POLY_ASSERT(test);
+  // //   return result;
+  // // }
 
 
   //------------------------------------------------------------------------

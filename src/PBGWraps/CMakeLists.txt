@@ -87,12 +87,13 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 #list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
 list(GET HDF5_LIBRARIES 0 3 HDF5_LIB)
 
-# The Python library of wrapped Polytope methods
-#add_library(PolytopeModules-static STATIC ${PYBINDGEN_GENERATED_SOURCE})
-#set_target_properties(PolytopeModules-static PROPERTIES OUTPUT_NAME PolytopeModules)
-#target_link_libraries(PolytopeModules-static 
-#  ${POLYTOPE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${SILO_LIBRARIES})
 link_directories("${PYTHON_LIB_DIR}")
+
+
+
+# The static Python library of wrapped methods
+add_library(PolytopeModulesStatic STATIC ${PYBINDGEN_GENERATED_SOURCE})
+set_target_properties(PolytopeModulesStatic PROPERTIES OUTPUT_NAME PolytopeModules)
 
 # The dynamic Python library of wrapped methods
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
@@ -101,8 +102,8 @@ target_link_libraries(PolytopeModules
   ${POLYTOPE_STATIC_LIB} 
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
-  ${HDF5_LIB}
-)
+  ${HDF5_LIB})
+
 
 #message("**** SYSTEM: ${CMAKE_SYSTEM}")
 #message("**** CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
@@ -137,3 +138,4 @@ endif()
 # Library install targets
 install (TARGETS PolytopeModules DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
 install (FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
+install (TARGETS PolytopeModulesStatic DESTINATION lib)

@@ -55,12 +55,11 @@ protected:
   // Call the underlying tessellator
   typedef int64_t CoordHash;
   void callPrivateTessellate(const std::vector<RealType>& points,
-                             const std::vector<CoordHash>& IntPLCpoints,
-                             const PLC<Dimension, RealType>& geometry,
+                             const ReducedPLC<Dimension, CoordHash>& intGeometry,
                              const QuantizedCoordinates<Dimension, RealType>& coords,
-                             std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const
+                             std::vector<ReducedPLC<Dimension, CoordHash> >& intCells) const
   {
-    mTessellatorPtr->tessellate(points, IntPLCpoints, geometry, coords, IntCells);
+    mTessellatorPtr->tessellate(points, intGeometry, coords, intCells);
   }
 
 private:

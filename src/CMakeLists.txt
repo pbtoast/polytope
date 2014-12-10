@@ -14,6 +14,13 @@ endif()
 
 if (HAVE_TRIANGLE)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TriangleTessellator.cc)
+  add_library(triangle triangle.c)
+  set(TRIANGLE_LIB triangle)
+  set_target_properties(${TRIANGLE_LIB} PROPERTIES 
+    COMPILE_FLAGS "${COMPILE_FLAGS} -DTRILIBRARY -DCDT_ONLY -DANSI_DECLARATIONS"
+    LINKER_LANGUAGE C)
+else ()
+  set(TRIANGLE_LIB "")
 endif()
 
 if (HAVE_BOOST_VORONOI)
@@ -24,7 +31,8 @@ if (HAVE_TETGEN)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
   add_library(tetgen tetgen.cxx predicates.cc)
   set(TETGEN_LIB tetgen)
-  set_target_properties(${TETGEN_LIB} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY")
+  set_target_properties(${TETGEN_LIB} PROPERTIES 
+    COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY")
 else ()
   set(TETGEN_LIB "")
 endif ()
@@ -36,7 +44,7 @@ if (HAVE_MPI)
 endif()
 
 add_library(polytope STATIC ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
-target_link_libraries(polytope voro_2d voro_3d ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
+target_link_libraries(polytope voro_2d voro_3d ${TRIANGLE_LIB} ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
 
 # Library install targets
-install (TARGETS polytope ${TETGEN_LIB} DESTINATION lib)
+install (TARGETS polytope ${TRIANGLE_LIB} ${TETGEN_LIB} DESTINATION lib)

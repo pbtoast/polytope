@@ -1,3 +1,5 @@
+//------------------------------------------------------------------------
+// TriangleTessellator
 // 
 // An implemenation of the Tessellator interface that uses the Triangle
 // library by Jonathan Shewchuk.
@@ -11,30 +13,28 @@
 #include <cmath>
 
 #include "Tessellator.hh"
-#include "Point.hh"
-#include "QuantTessellation.hh"
+#include "DimensionTraits.hh"
+#include "QuantizedCoordinates.hh"
+#include "polytope_tessellator_utilities.hh"
 
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
-#include "QuantizedCoordinates.hh"
-#include "Point.hh"
-#include "polytope_tessellator_utilities.hh"
+
 struct triangulateio;
-
-// We use the Boost.Geometry library to handle polygon intersections and such.
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
-
-typedef int64_t CoordHash;
   
-namespace polytope 
-{
+namespace polytope {
 
 template<typename RealType>
-class TriangleTessellator: public Tessellator<2, RealType> 
-{
+class TriangleTessellator: public Tessellator<2, RealType> {
 public:
 
+  // Typedefs for edges, coordinates, and points
+  typedef std::pair<int, int> EdgeHash;
+  typedef typename DimensionTraits<2, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<2, RealType>::IntPoint IntPoint;
+  typedef typename DimensionTraits<2, RealType>::RealPoint RealPoint;
+
+  
   // Constructor, destructor.
   TriangleTessellator();
   ~TriangleTessellator();
@@ -57,10 +57,11 @@ public:
                   const PLC<2, RealType>& geometry,
                   Tessellation<2, RealType>& mesh) const;
 
-  // Tessellate obeying the given reducedPLC boundary.
+  // Tessellate obeying the given boundaries.
   void tessellate(const std::vector<RealType>& points,
-		  const ReducedPLC<2, RealType>& geometry,
-		  Tessellation<2, RealType>& mesh) const;
+                  const ReducedPLC<2, RealType>& geometry,
+                  Tessellation<2, RealType>& mesh) const;
+
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
@@ -78,49 +79,36 @@ public:
 private:
   //-------------------- Private interface ---------------------- //
    
-  // Typedefs for coordinates, edges and points
-  typedef int64_t CoordHash;  
-  typedef std::pair<int, int> EdgeHash;
-  typedef Point2<CoordHash> IntPoint;
-  typedef Point2<double> RealPoint;
-
-  // Typedefs for boost.geometry rings and polygons
-  // Template arguments are point_type and CW_orientation
-  typedef boost::geometry::model::polygon<IntPoint ,false> BGpolygon;
-  typedef boost::geometry::model::polygon<RealPoint,false> RealPolygon;
-  typedef boost::geometry::model::ring<IntPoint, false>    BGring;
-  typedef boost::geometry::model::ring<RealPoint,false>    RealRing;
-
-  // ------------------------------------------------- //
-  // Specialized tessellations based on the point set  //
-  // ------------------------------------------------- //
+  // Compute node IDs around each generator and their quantized locations
+  void computeCellNodesCollinear(const std::vector<RealType>& points,
+                                 std::vector<std::vector<unsigned> >& cellNodes,
+                                 std::map<int, IntPoint>& id2node,
+                                 std::vector<unsigned>& infNodes) const;
 
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
-			std::vector<RealPoint>& nodeList,
-			std::vector<std::vector<unsigned> >& cellNodes,
-			std::vector<unsigned>& infNodes) const;
-    
-  // Compute bounded cell rings from collection of unbounded node locations
-  void computeCellRings(const std::vector<RealType>& points,
-			const std::vector<RealPoint>& nodeList,
-			std::vector<std::vector<unsigned> >& cellNodes,
-                        Clipper2d<CoordHash>& clipper,
-			std::vector<BGring>& cellRings) const;
+                        std::vector<std::vector<unsigned> >& cellNodes,
+                        std::map<int, IntPoint>& id2node,
+                        std::vector<unsigned>& infNodes) const;
 
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
-                       triangulateio& delaunay) const;
+                       triangulateio& delaunay,
+                       const bool addStabilizingPoints) const;
 
-  // Compute an unbounded tessellation
-  void computeVoronoiUnbounded(const std::vector<RealType>& points,
-			       Tessellation<2, RealType>& mesh) const;
+  // Pulls out the relevant data from Triangle's output struct
+  void computeDelaunayConnectivity(const std::vector<RealType>& points,
+                                   std::vector<RealPoint>& circumcenters,
+                                   std::vector<unsigned>& triMask,
+                                   std::map<EdgeHash, std::vector<unsigned> >& edge2tris,
+                                   std::map<int, std::set<unsigned> >& gen2tri,
+                                   std::vector<int>& triangleList) const;
 
-  // Compute a bounded tessellation
-  void computeVoronoiBounded(const std::vector<RealType>& points,
-			     const std::vector<RealType>& PLCpoints,
-			     const PLC<2, RealType>& geometry,
-			     Tessellation<2, RealType>& mesh) const;
+  // Fill in the mesh struct using the final quantized cell data
+  void constructBoundedTopology(const std::vector<RealType>& points,
+                                const ReducedPLC<2, RealType>& geometry,
+                                const std::vector<ReducedPLC<2, CoordHash> >& intCells,
+                                Tessellation<2, RealType>& mesh) const;
 
   // ----------------------------------------------------- //
   // Private tessellate calls used by internal algorithms  //
@@ -129,10 +117,9 @@ private:
 
   // Bounded tessellation with prescribed bounding box
   void tessellate(const std::vector<RealType>& points,
-                  const std::vector<CoordHash>& IntPLCpoints,
-                  const PLC<2, RealType>& geometry,
+                  const ReducedPLC<2, CoordHash>& intGeometry,
                   const QuantizedCoordinates<2, RealType>& coords,
-                  std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const;
+                  std::vector<ReducedPLC<2, CoordHash> >& intCells) const;
 
   // -------------------------- //
   // Private member variables   //
@@ -141,10 +128,22 @@ private:
   // The quantized coordinates for this tessellator (inner and outer)
   static CoordHash coordMax;
   static RealType mDegeneracy; 
-  mutable QuantizedCoordinates<2,RealType> mCoords; //, mOuterCoords;
+  mutable QuantizedCoordinates<2,RealType> mCoords;
 
   friend class BoostOrphanage<RealType>;
 };
+
+
+//------------------------------------------------------------------------------
+// Static initializations.
+//------------------------------------------------------------------------------
+template<typename RealType> 
+typename TriangleTessellator<RealType>::CoordHash 
+TriangleTessellator<RealType>::coordMax = (1LL << 26);
+
+template<typename RealType> 
+RealType  
+TriangleTessellator<RealType>::mDegeneracy = 1.0/TriangleTessellator<RealType>::coordMax;
 
 } //end polytope namespace
 

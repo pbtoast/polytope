@@ -144,7 +144,7 @@ all test clean install:
 	@if [ ! -f $(BUILDDIR)/Makefile ]; then \
 		more INSTALL; \
 	else \
-		make -C $(BUILDDIR) $@ $(MAKEFLAGS); \
+		make -C $(BUILDDIR) $@; \
 	fi
 
 config: distclean
