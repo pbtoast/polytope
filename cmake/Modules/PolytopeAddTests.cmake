@@ -14,12 +14,20 @@ macro(POLYTOPE_ADD_TEST name dependency_list)
   set(BUILD_TEST true)
   foreach(_dependency ${dependency_list})
     set(DEP_NAME "HAVE_${_dependency}")
+
+    # Don't have the necessary dependencies
     if(NOT ${DEP_NAME})
       set(BUILD_TEST false)
     endif()
+
     # If using Tetgen, remember to link to its library
-    if(${_dependency} EQUAL "TETGEN")
-      set(APPEND EXTRA_LINK_LIBRARIES ${TETGEN_LIB})
+    if(${_dependency} STREQUAL "TETGEN")
+      set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} tetgen)
+    endif()
+
+    # If using Triangle, remember to link to its library
+    if(${_dependency} STREQUAL "TRIANGLE")
+      set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} triangle)
     endif()
   endforeach()  
 
@@ -59,6 +67,10 @@ macro(POLYTOPE_ADD_DISTRIBUTED_TEST name dependency_list procs)
       # If using Tetgen, remember to link to its library
       if(${_dependency} EQUAL "TETGEN")
 	set(APPEND EXTRA_LINK_LIBRARIES ${TETGEN_LIB})
+      endif()
+      # If using Triangle, remember to link to its library
+      if(${_dependency} EQUAL "TRIANGLE")
+	set(APPEND EXTRA_LINK_LIBRARIES ${TRIANGLE_LIB})
       endif()
     endforeach()
   else()

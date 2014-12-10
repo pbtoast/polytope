@@ -257,9 +257,9 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
   return !(hangingNodes.empty());
 }
 
-}
+} //end namespace internal
 
-}
+} //end namespace polytope
 
 // Classes within the library.
 #include "ErrorHandler.hh"

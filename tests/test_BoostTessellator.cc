@@ -108,14 +108,11 @@ void test2(Tessellator<2,double>& tessellator) {
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,points,1);
-  cout << mesh << endl;
   mesh.clear();
 
   // Tessellate bounded
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
   outputMesh(mesh,testName,points,2);
-
-  //cout << mesh << endl;
 }
 
 

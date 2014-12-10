@@ -31,19 +31,11 @@ bool checkMesh(const Tessellation<2,double>& mesh,
                const unsigned nfaces,
                const unsigned ninfNodes,
                const unsigned ninfFaces) {
-  POLY_CHECK_BOOL(mesh.cells.size()   == ncells);
-  POLY_CHECK_BOOL(mesh.nodes.size()/2 == nnodes);
-  POLY_CHECK_BOOL(mesh.faces.size()   == nfaces);
-  unsigned infNodeCount=0;
-  for(unsigned i = 0; i < mesh.infNodes.size(); ++i){
-    if( mesh.infNodes[i] == 1 ) ++infNodeCount;
-  }
-  POLY_CHECK_BOOL(infNodeCount == ninfNodes);
-  unsigned infFaceCount=0;
-  for(unsigned i = 0; i < mesh.infFaces.size(); ++i){
-    if( mesh.infFaces[i] == 1 ) ++infFaceCount;
-  }
-  POLY_CHECK_BOOL(infFaceCount == ninfFaces);
+  POLY_CHECK_BOOL(mesh.cells.size()    == ncells);
+  POLY_CHECK_BOOL(mesh.nodes.size()/2  == nnodes);
+  POLY_CHECK_BOOL(mesh.faces.size()    == nfaces);
+  POLY_CHECK_BOOL(mesh.infNodes.size() == ninfNodes);
+  POLY_CHECK_BOOL(mesh.infFaces.size() == ninfFaces);
   return true;
 }
 

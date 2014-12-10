@@ -115,11 +115,69 @@ public:
 
  
     }
+    boost::geometry::correct(cellRing);
 
     // Post-conditions
     POLY_ASSERT(cellRing.size() > 2);
-    POLY_ASSERT(cellRing.front() == cellRing.back());
-    //POLY_ASSERT(!boost::geometry::intersects(cellRing));
+    // POLY_ASSERT(cellRing.front() == cellRing.back());
+
+    if (boost::geometry::intersects(cellRing)) {
+       std::cerr << "ATTEMPTING TO CORRECT SELF-INTERSECTION" << std::endl;
+
+       std::cerr << std::endl << "BEFORE" << std::endl;
+       for (typename RingType::iterator itr = cellRing.begin();
+            itr != cellRing.end();
+            ++itr) std::cerr << *itr << std::endl;
+
+       int repeatedIndex = -1;
+       int index = 0;
+       for (typename RingType::iterator itr = cellRing.begin();
+            itr != cellRing.end()-1;
+            ++itr, index++) {
+          if (*itr == cellRing[0])  repeatedIndex = index;
+       }
+       POLY_ASSERT(repeatedIndex != -1);
+       
+       RingType splitRing1(cellRing.begin(), cellRing.begin()+repeatedIndex);
+       RingType splitRing2(cellRing.begin()+repeatedIndex, cellRing.end());
+       boost::geometry::correct(splitRing1);
+       boost::geometry::correct(splitRing2);
+
+       bool keepSplitRing1 = false;
+       for (typename RingType::iterator itr = splitRing1.begin();
+            itr != splitRing1.end();
+            ++itr)  keepSplitRing1 += boost::geometry::within(*itr, mBoundary);
+       
+       if (keepSplitRing1) {
+          cellRing = splitRing1;
+       } else {
+          bool keepSplitRing2 = false;
+          for (typename RingType::iterator itr = splitRing2.begin();
+               itr != splitRing2.end();
+               ++itr)  keepSplitRing2 += boost::geometry::within(*itr, mBoundary);
+          POLY_ASSERT(keepSplitRing2);
+          cellRing = splitRing2;
+       }
+
+       // std::vector<PointType> tmpPoints;
+       // for (typename RingType::iterator itr = cellRing.begin();
+       //      itr != cellRing.end();
+       //      ++itr) {
+       //    if (boost::geometry::within(*itr, mBoundary)) {
+       //       tmpPoints.push_back(*itr);
+       //    }
+       // }
+       // boost::geometry::assign(tmpRing, RingType(tmpPoints.begin(), tmpPoints.end()));
+       // boost::geometry::correct(tmpRing);
+       // cellRing = tmpRing;
+
+       std::cerr << "AFTER" << std::endl;
+       for (typename RingType::iterator itr = cellRing.begin();
+            itr != cellRing.end();
+            ++itr) std::cerr << *itr << std::endl;
+    }
+
+    POLY_ASSERT(!boost::geometry::intersects(cellRing));
   }
   
   // Store a reference to the boundary polygon

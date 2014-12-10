@@ -7,6 +7,7 @@
 
 #include "polytope.hh"
 #include "BoostOrphanage.hh"
+#include "PLC_Boost_2d.hh"
 
 namespace polytope {
 
@@ -82,6 +83,199 @@ cleanRingEdges(boost::geometry::model::ring<Point2<int64_t>,false>& ring) {
   ring = tmpRing;
 }
 
+//------------------------------------------------------------------------
+// Remove any collinear adjacent facets from a reduced PLC
+//------------------------------------------------------------------------
+template<typename RealType>
+void
+removeCollinearPointsFromPLC(ReducedPLC<2, RealType>& plc, const RealType tol) {
+  ReducedPLC<2, RealType> result;
+  const int nFacets = plc.facets.size();
+  for (int i = 0; i < nFacets; ++i) {
+    const int i1 = i;
+    const int i2 = (i+1) % nFacets;
+    POLY_ASSERT(plc.facets[i1].size() == 2 and plc.facets[i2].size() == 2);
+    POLY_ASSERT(plc.facets[i1][1] == plc.facets[i2][0]);
+    const int k1 = plc.facets[i1][0];
+    const int k2 = plc.facets[i1][1];
+    const int k3 = plc.facets[i2][1];
+    POLY_ASSERT(k1 != k2 and k1 != k3 and k2 != k3);
+    if (not geometry::collinear<2, RealType>(&plc.points[2*k1],
+                                             &plc.points[2*k2],
+                                             &plc.points[2*k3],
+                                             tol)) {
+      result.points.push_back(plc.points[2*k2  ]);
+      result.points.push_back(plc.points[2*k2+1]);
+    }
+  }
+  POLY_ASSERT(result.points.size()/2 > 0 and result.points.size()/2 <= nFacets);
+  result.facets.resize(result.points.size()/2, std::vector<int>(2));
+  for (int i = 0; i < result.points.size()/2; ++i) {
+    result.facets[i][0] = i;
+    result.facets[i][1] = (i+1) % (result.points.size()/2);
+  }
+  plc = result;
+}
+
+//------------------------------------------------------------------------
+// Collapse a facet having points within a given tolerance
+//------------------------------------------------------------------------
+template<typename RealType>
+void
+simplifyPLC(ReducedPLC<2, RealType>& plc, const RealType tol) {
+  typedef Point2<RealType> PointType;
+  ReducedPLC<2, RealType> result;
+  const int nFacets = plc.facets.size();
+  for (int i = 0; i < nFacets; ++i) {
+    POLY_ASSERT(plc.facets[i].size() == 2);
+    const int i1 = plc.facets[i][0];
+    const int i2 = plc.facets[i][1];
+    POLY_ASSERT(i1 < plc.points.size()/2 and i2 < plc.points.size()/2);
+    const PointType p1 = PointType(plc.points[2*i1], plc.points[2*i1+1]);
+    const PointType p2 = PointType(plc.points[2*i2], plc.points[2*i2+1]);
+    const double dx = double(p2.x - p1.x);
+    const double dy = double(p2.y - p1.y);
+    const double dist = sqrt(dx*dx + dy*dy);
+    if (dist > tol) {
+      result.points.push_back(plc.points[2*i1]);
+      result.points.push_back(plc.points[2*i1+1]);
+    }
+  }
+  POLY_ASSERT(result.points.size()/2 > 0 and result.points.size()/2 <= nFacets);
+  result.facets.resize(result.points.size()/2, std::vector<int>(2));
+  for (int i = 0; i < result.points.size()/2; ++i) {
+    result.facets[i][0] = i;
+    result.facets[i][1] = (i+1) % (result.points.size()/2);
+  }
+  plc = result;
+}
+
+//------------------------------------------------------------------------
+// Extract the point from a 2D ReducedPLC as a polytope::Point2
+//------------------------------------------------------------------------
+template<typename RealType>
+Point2<RealType>
+getPoint(const ReducedPLC<2, RealType> plc, const int i) {
+  POLY_ASSERT(i < plc.points.size()/2);
+  typedef Point2<RealType> PointType;
+  return PointType(plc.points[2*i], plc.points[2*i+1]);
+}
+
+//------------------------------------------------------------------------
+// Extract the point from a 2D ReducedPLC as a polytope::Point2
+//------------------------------------------------------------------------
+template<typename RealType, typename IntType>
+void
+constructBoostVoronoiCells(boost::polygon::voronoi_diagram<RealType>& voronoi,
+                           const vector<Point2<IntType> >& intPoints,
+                           const Point2<RealType>& low,
+                           const Point2<RealType>& high,
+                           const RealType degeneracy) {
+  typedef Point2<RealType> RealPoint;
+  typedef Point2<IntType>  IntPoint;
+  typedef boost::polygon::voronoi_diagram<RealType> VD;
+  const int numGenerators = intPoints.size();
+  const RealPoint center = (low + high)*0.5;
+  int sortedIndex=0, cellIndex;
+  IntPoint node, direction, pinf;
+  RealPoint endpoint;
+  map<IntPoint, int> node2id;
+  map<int, IntPoint> id2node;
+  vector<unsigned> cellNodes(numGenerators);
+  for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
+       cellItr != voronoi.cells().end(); 
+       ++cellItr, ++sortedIndex) {
+    const typename VD::edge_type* edge = cellItr->incident_edge();
+    vector<unsigned> nodeChain;
+    do {
+      cellIndex = intPoints[sortedIndex].index;
+      const typename VD::vertex_type* v0 = edge->vertex0();
+      const typename VD::vertex_type* v1 = edge->vertex1();
+
+      // Finite edge
+      if (v0 and v1) {
+        node = IntPoint(IntType(v0->x()), IntType(v0->y()));
+        const unsigned old_size = node2id.size();
+        const unsigned j = internal::addKeyToMap(node, node2id);
+        nodeChain.push_back(j);
+        if (j == old_size) id2node[j] = node;
+      }
+      
+      // Infinite edge
+      else {
+        POLY_ASSERT(v0 or v1);
+        const typename VD::vertex_type* vfin = v0 ? v0 : v1;
+        node = IntPoint(IntType(vfin->x()), IntType(vfin->y()));
+        
+        // Determine the edge direction pointing to infinity
+        const typename VD::cell_type* cell1 = edge->cell();
+        const typename VD::cell_type* cell2 = edge->twin()->cell();
+        POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
+        const size_t index1 = cell1->source_index();
+        const size_t index2 = cell2->source_index();
+        POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
+        const unsigned cellIndex1 = intPoints[index1].index;
+        const unsigned cellIndex2 = intPoints[index2].index;
+        
+        // Floating point endpoint
+        const IntPoint r = IntPoint(intPoints[2*cellIndex2  ] - intPoints[2*cellIndex1  ],
+                                    intPoints[2*cellIndex2+1] - intPoints[2*cellIndex1+1]);
+        const IntPoint d = v0 ? IntPoint(-r.y, r.x) : IntPoint(r.y, -r.x);
+        endpoint.x = center.x + (RealType(node.x) + 0.5)*degeneracy;
+        endpoint.y = center.y + (RealType(node.y) + 0.5)*degeneracy;
+        
+        
+        //TODO
+        //TODO Set endpoint equal to node
+        //TODO Compute a direction vector to infinity
+        //TODO Project endpoint along direction vector to bounding box (i.e. +/- coordMax/2)
+        //TODO
+        
+        
+        // Vertex 0 is finite, vertex 1 is the projected node. Add them in order
+        if (v0) {
+          { // Vertex 0
+            const unsigned old_size = node2id.size();
+            const unsigned j = internal::addKeyToMap(node, node2id);
+            nodeChain.push_back(j);
+            if (j == old_size)  id2node[j] = node;
+          }
+
+          { // Vertex 1
+            node = pinf;
+            const unsigned old_size = node2id.size();
+            const unsigned j = internal::addKeyToMap(node, node2id);
+            nodeChain.push_back(j);
+            if (j == old_size)  id2node[j] = node;
+          }
+        }
+  
+        // Vertex 0 is the projected infNode. Only add vertex 0.
+        else {
+          node = pinf;
+          const unsigned old_size = node2id.size();
+          const unsigned j = internal::addKeyToMap(node, node2id);
+          nodeChain.push_back(j);
+          if (j == old_size)  id2node[j] = node;
+        }
+      }
+
+      edge = edge->next();
+    } while (edge != cellItr->incident_edge());
+    POLY_ASSERT(not nodeChain.empty());
+
+    // Remove repeated node indices in the chain
+    vector<unsigned>::iterator it = std::unique(nodeChain.begin(), nodeChain.end());
+    nodeChain.resize(std::distance(nodeChain.begin(), it));
+    if (nodeChain.front() == nodeChain.back()) nodeChain.resize(nodeChain.size()-1);
+    POLY_ASSERT(not nodeChain.empty());
+
+    cellNodes[cellIndex] = nodeChain;
+  }
+}
+
+
+
 } // end anonymous namespace
 
 
@@ -107,17 +301,16 @@ BoostOrphanage<RealType>::
 template<typename RealType>
 void
 BoostOrphanage<RealType>::
-adoptOrphans(const vector<RealType>& points,
-	     const QuantizedCoordinates<2, RealType>& coords,
-	     vector<BGring>& cellRings,
-	     vector<BGring>& orphans) const {
+adoptOrphans_OLD(const vector<RealType>& points,
+                 const QuantizedCoordinates<2, RealType>& coords,
+                 vector<BGring>& cellRings,
+                 vector<BGring>& orphans) const {
   // Pre-conditions
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(!cellRings.empty());
   POLY_ASSERT(points.size()/2 == cellRings.size());
   POLY_ASSERT(!orphans.empty());
   
-  const int numGenerators = points.size()/2;
   int i,j;
   
   // Create reduced set of orphans by unioning all that neighbor each other.
@@ -275,7 +468,7 @@ adoptOrphans(const vector<RealType>& points,
       
       // Tessellate this sub-region
       vector<vector<vector<CoordHash> > > IntCells;
-      this->callPrivateTessellate(subpoints, subIntPLCpoints, subPLC, coords, IntCells);
+      // this->callPrivateTessellate(subpoints, subIntPLCpoints, subPLC, coords, IntCells);
       
       subCellRings.resize(IntCells.size());
       for (unsigned ii = 0; ii != IntCells.size(); ++ii) {
@@ -318,7 +511,7 @@ adoptOrphans(const vector<RealType>& points,
       
       // Index for the full tessellation
       int thisIndex = *nbItr;                                
-      POLY_ASSERT(thisIndex < numGenerators);
+      POLY_ASSERT(thisIndex < points.size()/2);
       
       // The full tessellation's cell ring
       BGring thisRing;
@@ -454,6 +647,271 @@ adoptOrphans(const vector<RealType>& points,
 }
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+BoostOrphanage<RealType>::
+adoptOrphans(const vector<RealType>& points,
+             const QuantizedCoordinates<2, RealType>& coords,
+             vector<IntPLC>& intCells,
+             vector<IntPLC>& orphans) const {
+  // Pre-conditions
+  POLY_ASSERT(not points.empty());
+  POLY_ASSERT(not intCells.empty());
+  POLY_ASSERT(not orphans.empty());
+  POLY_ASSERT(points.size()/2 == intCells.size());
+
+  // Create reduced set of orphans by unioning all that neighbor each other.
+  vector<IntPLC> reducedOrphans = BG::boost_unionReduce(orphans);
+  POLY_ASSERT2(reducedOrphans.size() > 0 and reducedOrphans.size() <= orphans.size(), 
+               reducedOrphans.size() << " " << orphans.size());
+
+  // Construct map from node points to cells
+  std::map<IntPoint, std::set<int> > point2cells;
+  for (int j = 0; j < intCells.size(); ++j) {
+    for (int k = 0; k < intCells[j].points.size()/2; ++k) {
+      point2cells[getPoint<CoordHash>(intCells[j], k)].insert(j);
+    }
+  }
+
+  // Compute the adoption on each orphan in the reduced set
+  for (int iorphan = 0; iorphan < reducedOrphans.size(); ++iorphan) {
+    IntPLC orphan = reducedOrphans[iorphan];
+    POLY_ASSERT(not orphan.facets.empty());
+    POLY_ASSERT(not orphan.points.empty());
+    POLY_ASSERT2(not BG::boost_intersects(orphan),
+                 "Unioning orphans has produced self-intersections");
+  
+    // Determine neighbors of this orphan
+    std::set<int> orphanNeighbors;
+    std::map<IntPoint, std::set<int> > point2neighbor;
+    for (int k = 0; k < orphan.points.size()/2; ++k) {
+      IntPoint ip = getPoint<CoordHash>(orphan, k);
+      std::map<IntPoint, std::set<int> >::iterator it = point2cells.find(ip);
+      if (it != point2cells.end()) {
+        orphanNeighbors.insert(it->second.begin(), it->second.end());
+        point2neighbor[it->first].insert(it->second.begin(), it->second.end());
+      }
+    }
+    POLY_ASSERT(not orphanNeighbors.empty());
+
+    // If the orphan only has a single neighbor, we can skip a lot of work.
+    // No need to tessellate - simply union the orphan with its neighbor cell.
+    std::vector<IntPLC> nbh_cells;
+    if (orphanNeighbors.size() > 1) {
+
+      // Organize a list of the orphan and its neighboring cells
+      vector<IntPLC> neighborhood;
+      std::vector<RealType> nbh_points;
+      neighborhood.push_back(orphan);
+      for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+           nbItr != orphanNeighbors.end();
+           ++nbItr) {
+        nbh_points.push_back(points[2*(*nbItr)  ]);
+        nbh_points.push_back(points[2*(*nbItr)+1]);
+        neighborhood.push_back(intCells[*nbItr]);
+      }
+ 
+      // Union reduce the orphan and its neighboring cells
+      neighborhood = BG::boost_unionReduce(neighborhood);
+      POLY_ASSERT(neighborhood.size() == 1);
+      POLY_ASSERT2(neighborhood.size() > 0, "Union produced empty set!");
+
+      // Union the orphan with the neighborhood one more time as a fail-safe
+      //
+      // NOTE: The order in which we union the orphan with each neighbor matters.
+      //       If the orphan and a neighboring cell only share a single node, and
+      //       that union is computed first, boost.geometry will return two 
+      //       polygons. The orphan ring may become lost in subsequent unions.
+      neighborhood.push_back(orphan);
+      neighborhood = BG::boost_unionReduce(neighborhood);
+      POLY_ASSERT(neighborhood.size() == 1);
+
+      // Some informative output if the neighborhood has more than one member
+      if (neighborhood.size() > 1) {
+        std::cerr << "Blago!" << std::endl;
+        for (int i = 0; i != neighborhood.size(); ++i) {
+          std::cerr << "Polygon " << i << " in the union contains" << std::endl
+                    << neighborhood[i] << std::endl;
+        }
+        POLY_ASSERT(false);
+      }
+
+
+      POLY_BEGIN_CONTRACT_SCOPE;
+      {
+        for (int ipoint = 0; ipoint < neighborhood[0].points.size()/2; ++ipoint) {
+          bool result = false;
+          const IntPoint ip = getPoint<CoordHash>(neighborhood[0], ipoint);
+          for (int jpoint = 0; jpoint < orphan.points.size()/2; ++jpoint) {
+            const IntPoint jp = getPoint<CoordHash>(orphan, jpoint);
+            result += (ip == jp);
+          }
+          for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+               nbItr != orphanNeighbors.end(); 
+               ++nbItr) {
+            for (int jpoint = 0; jpoint < intCells[*nbItr].points.size()/2; ++jpoint) {
+              const IntPoint jp = getPoint<CoordHash>(intCells[*nbItr], jpoint);
+              result += (ip == jp);
+            }
+          }
+          POLY_ASSERT2(result, "Union error: there are points in the bounding "
+                       << "neighborhood taht are not in the orphan or its neighbor cells.");
+        }
+      }
+      POLY_END_CONTRACT_SCOPE;
+
+      IntPLC nbh_boundary = neighborhood[0];
+      removeCollinearPointsFromPLC<CoordHash>(nbh_boundary, 1);
+      POLY_ASSERT(nbh_boundary.facets.size() > 2);
+      POLY_ASSERT(not BG::boost_intersects(nbh_boundary));
+
+      this->callPrivateTessellate(nbh_points, nbh_boundary, coords, nbh_cells);
+    }
+
+
+    // We're only concerned with the cells in the sub-tessellation whose generators
+    // are immediate neighbors of the orphaned chunk. These are the only cells which can
+    // "adopt" the orphan based on a local Voronoi principle
+    for (std::set<int>::const_iterator nbItr = orphanNeighbors.begin();
+         nbItr != orphanNeighbors.end(); 
+         ++nbItr){
+      std::set<int>::iterator it = orphanNeighbors.find(*nbItr);
+      POLY_ASSERT(it != orphanNeighbors.end());
+      
+      // Index for the sub-tessellation
+      int nbh_index = distance(orphanNeighbors.begin(), it);
+      POLY_ASSERT(nbh_index < orphanNeighbors.size());
+
+      // Index for the full tessellation
+      int index = *nbItr;
+      POLY_ASSERT(index < points.size()/2);
+      
+      // The full tessellation's cell
+      IntPLC cell;
+
+      if (orphanNeighbors.size() > 1) {
+        cell = nbh_cells[nbh_index];
+        simplifyPLC<CoordHash>(cell, 4);
+
+        // // Blago!
+        // cerr << "Old Cell " << index << ":" << endl << intCells[index] << endl;
+        // cerr << "New Cell " << index << ":" << endl << cell << endl;
+        // // Blago!
+
+        // When calling the private tessellate routine, we may end up with new cell
+        // rings that vertices that are close to the original ones, but off by a few
+        // quantized grid spacings. Unioning the old and new rings together can produce
+        // self-intersections and inconsistency with cells unaffected by the orphanage.
+        // Solution: Walk the new ring and make sure its vertices are consistent with
+        // the old ring.
+        IntPLC newCell;
+        newCell.points.resize(cell.points.size());
+        for (unsigned i = 0; i < cell.facets.size(); ++i) {
+          POLY_ASSERT(i < cell.points.size()/2);
+          const IntPoint ip = IntPoint(cell.points[2*i], cell.points[2*i+1]);
+          
+          // First check for points that are exactly equal
+          bool result = false;
+          unsigned j = 0;
+          IntPoint jp;
+          while (j < intCells[index].facets.size() and not result) {
+            jp = IntPoint(intCells[index].points[2*j], intCells[index].points[2*j+1]);
+            result += (ip == jp);
+            ++j;
+          }
+
+          // One point was exatly equal
+          if (result) {
+            newCell.points[2*i  ] = jp.x;
+            newCell.points[2*i+1] = jp.y;
+          }
+
+          // No equal points
+          else {
+            RealPoint pOld, pNew = coords.dequantize(&ip.x);
+            RealType dist = std::numeric_limits<RealType>::max();
+            unsigned j = 0;
+            IntPoint jp;
+            const RealType tol = 10.0*coords.delta;
+            while (j < intCells[index].facets.size() and dist > tol) {
+              jp = IntPoint(intCells[index].points[2*j], intCells[index].points[2*j+1]);
+              pOld = coords.dequantize(&jp.x);
+              dist = geometry::distance<2, RealType>(&pOld.x, &pNew.x);
+              ++j;
+            }
+
+            // A point is very close by. This is likely the point we were aiming for.
+            // Replace the new cell vertex with the old vertex location.
+            if (dist < tol) {
+              newCell.points[2*i  ] = jp.x;
+              newCell.points[2*i+1] = jp.y;
+            }
+
+            // No points are close by. This is likely a new cell vertex resulting from
+            // the orphan, so we'll just add it.
+            else {
+              newCell.points[2*i  ] = ip.x;
+              newCell.points[2*i+1] = ip.y;
+            }
+          }
+        }
+        cell.points = newCell.points;
+
+        // // Blago!
+        // cerr << "New New Cell " << index << ":" << endl << cell << endl;
+        // // Blago!
+      }
+
+      // If the orphan has only a single neighbor, just compute its union with
+      // that neighbor's cell ring from the full tessellation
+      else {
+        cell = orphan;
+  
+        vector<IntPLC> unionCell = BG::boost_union(cell, intCells[index]);
+        if (unionCell.size() > 1) {
+          std::cerr << "Blago!" << std::endl << "Unioned cell " << index
+                    << " has more than one cell:" << std::endl;
+          for (int j = 0; j < unionCell.size(); ++j) {
+            std::cerr << std::endl << "Cell " << j << ":" << std::endl << unionCell[j] << std::endl;
+          }
+        }
+        POLY_ASSERT(unionCell.size() == 1);
+        cell = unionCell[0];
+
+        POLY_BEGIN_CONTRACT_SCOPE;
+        {
+          for (int i = 0; i < cell.facets.size(); ++i) {
+            bool result = false;
+            const IntPoint ip = IntPoint(cell.points[2*i], cell.points[2*i+1]);
+            for (int j = 0; j < orphan.facets.size(); ++j) {
+              const IntPoint jp = IntPoint(orphan.points[2*i], orphan.points[2*i+1]);
+              result += (ip == jp);
+            }
+            for (int j = 0; j < intCells[index].facets.size(); ++j) {
+              const IntPoint jp = IntPoint(intCells[index].points[2*i], intCells[index].points[2*i+1]);
+              result += (ip == jp);
+            }
+            POLY_ASSERT2(result, "Union error: there are points in the single-neighbor "
+                         << "union cell that are not in the orphan or its neighbor.");
+          }
+        }
+        POLY_END_CONTRACT_SCOPE;
+      }
+      POLY_ASSERT(cell.facets.size() > 2);
+      
+      // Union may produce cell rings containing edges broken into multiple
+      // pieces (i.e. three or more sequential collinear nodes).
+      removeCollinearPointsFromPLC<CoordHash>(cell, 1);
+      POLY_ASSERT(cell.facets.size() > 2);
+      POLY_ASSERT(not BG::boost_intersects(cell));
+
+      // Replace the corresponding cell ring
+      intCells[index] = cell;
+    }
+  }
+}
+//------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------

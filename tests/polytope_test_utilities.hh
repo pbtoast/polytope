@@ -48,7 +48,7 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  POLY_ASSERT(points.empty() || 
+  POLY_ASSERT(points.empty() or
               points.size() == 2*mesh.cells.size());
 #if HAVE_SILO
   std::vector<double> index(mesh.cells.size());

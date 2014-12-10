@@ -1,6 +1,8 @@
 # Minimum CMake version.
 cmake_minimum_required (VERSION 2.8.5)
 
+##set(CMAKE_SKIP_RPATH true)
+
 # Adjust Polytope's module path.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -74,11 +76,11 @@ endif ()
 # set(Boost_DEBUG 1)
 set(Boost_ADDITIONAL_VERSIONS "1.51" "1.51.0" "1.52" "1.52.0" "1.53" "1.53.0")
 find_package(Boost "1.50")
-if (USING_XLC) 
-  set(Boost_FOUND false)
-  set(HAVE_BOOST false)
-  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
-endif()
+##if (USING_XLC) 
+##  set(Boost_FOUND false)
+##  set(HAVE_BOOST false)
+##  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
+##endif()
 if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
   set(HAVE_BOOST true)
@@ -112,9 +114,10 @@ if (USE_PYTHON EQUAL 1)
     # Check if pybindgen is available for import.
     include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
     find_python_module(pybindgen)
-    if (NOT ${PY_PYBINDGEN} MATCHES "0")
+    if (NOT ${PY_PYBINDGEN} STREQUAL "0")
       # Check that you have Python.h and libpython<version>.a
-      if (EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" AND
+      if ((EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" OR
+           EXISTS "${PYTHON_INCLUDE_DIR}/python${PYTHON_VERSION}/Python.h") AND
       	  (EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" OR
            EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}"))
 	set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
