@@ -1,0 +1,224 @@
+from pybindgen import *
+
+import os,sys
+sys.path.append(".")
+from PBGutils import *
+
+#-------------------------------------------------------------------------------
+# Class to handle wrapping this module.
+#-------------------------------------------------------------------------------
+class Tessellator:
+
+    #---------------------------------------------------------------------------
+    # Add the types to the given module.
+    #---------------------------------------------------------------------------
+    def __init__(self, mod):
+        
+        # Includes
+        mod.add_include('"PolytopeTypes.hh"')
+
+        # Namespaces
+        polytope = mod.add_cpp_namespace("polytope")
+
+        # Expose types
+
+        # --- The base tessellators
+        self.Tessellator2d = addObject(polytope, 
+                                       "Tessellator2d", 
+                                       allow_subclassing=True)
+        self.Tessellator3d = addObject(polytope, 
+                                       "Tessellator3d", 
+                                       allow_subclassing=True)
+        self.objs = [self.Tessellator2d, self.Tessellator3d]
+
+        # --- The serial tessellators
+        tessellator_string = "@SERIAL_TESSELLATORS@"
+        serialTessellators = tessellator_string.split(";")
+        for name in serialTessellators:
+            exec "self.%s = addObject(polytope, '%s', parent=self.Tessellator%s)" % (name, name, name[-2:])
+            exec "self.objs.append(self.%s)" % name
+        
+        # --- The distributed tessellators
+        if "@HAVE_MPI@" == "true":
+            self.DistributedTessellator2d = addObject(polytope,
+                                                      "DistributedTessellator2d",
+                                                      parent=self.Tessellator2d,
+                                                      allow_subclassing=True)
+            self.objs.append(self.DistributedTessellator2d)
+            self.DistributedTessellator3d = addObject(polytope,
+                                                      "DistributedTessellator3d",
+                                                      parent=self.Tessellator3d,
+                                                      allow_subclassing=True)
+            self.objs.append(self.DistributedTessellator3d)
+            self.SerialDistributedTessellator2d = addObject(polytope,
+                                                            "SerialDistributedTessellator2d",
+                                                            parent=self.DistributedTessellator2d)
+            self.objs.append(self.SerialDistributedTessellator2d)
+            self.SerialDistributedTessellator3d = addObject(polytope,
+                                                            "SerialDistributedTessellator3d",
+                                                            parent=self.DistributedTessellator3d)
+            self.objs.append(self.SerialDistributedTessellator3d)
+        
+        # self.VoroTessellator2d = addObject(polytope, "VoroTessellator2d", parent=self.Tessellator2d)
+        # self.VoroTessellator3d = addObject(polytope, "VoroTessellator3d", parent=self.Tessellator3d)
+        
+        return
+    
+    #---------------------------------------------------------------------------
+    # Generate bindings.
+    #---------------------------------------------------------------------------
+    def generateBindings(self, mod):
+                       
+        for obj in self.objs:
+            fullName = obj.name
+            baseName = fullName[:-2]
+            dim      = fullName[ -2]
+            exec "self.generate%sBindings(self.%s, %s)" % (baseName, fullName, dim)
+
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (Tessellator)
+    #---------------------------------------------------------------------------
+    def generateTessellatorBindings(self, x, ndim):
+        
+        # Object names
+        PLC          = "polytope::PLC%id" % ndim
+        Tessellation = "polytope::Tessellation%id" % ndim
+        
+        # Constructors
+        x.add_constructor([])
+
+        # Methods
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
+                                          refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
+                                          param("double *", "low"),
+                                          param("double *", "high"),
+                                          refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        x.add_method("tessellate", None, [constrefparam("vector_of_double", "points"),
+                                          constrefparam("vector_of_double", "PLCpoints"),
+                                          constrefparam(PLC, "geometry"),
+                                          refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+
+        x.add_method("tessellateDegenerate", "vector_of_unsigned", 
+                     [constrefparam("vector_of_double", "points"),
+                      param("double", "tol"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        x.add_method("tessellateDegenerate", "vector_of_unsigned", 
+                     [constrefparam("vector_of_double", "points"),
+                      param("double *", "low"),
+                      param("double *", "high"),
+                      param("double", "tol"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        x.add_method("tessellateDegenerate", "vector_of_unsigned",
+                     [constrefparam("vector_of_double", "points"),
+                      constrefparam("vector_of_double", "PLCpoints"),
+                      constrefparam(PLC, "geometry"),
+                      param("double", "tol"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+
+        x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
+        x.add_method("degeneracy", "double", [], is_pure_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=True, is_const=True)
+
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (TriangleTessellator)
+    #---------------------------------------------------------------------------
+    def generateTriangleTessellatorBindings(self, x, ndim):
+
+        # Constructors
+        x.add_constructor([])
+
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
+        
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (BoostTessellator)
+    #---------------------------------------------------------------------------
+    def generateBoostTessellatorBindings(self, x, ndim):
+
+        # Constructors
+        x.add_constructor([])
+
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
+        
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (TetgenTessellator)
+    #---------------------------------------------------------------------------
+    def generateTetgenTessellatorBindings(self, x, ndim):
+
+        # Constructors
+        x.add_constructor([])
+
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        
+        return    
+    
+    #---------------------------------------------------------------------------
+    # Bindings (DistributedTessellator)
+    #---------------------------------------------------------------------------
+    def generateDistributedTessellatorBindings(self, x, ndim):
+        
+        # Object names
+        TessellatorPtr  = "polytope::Tessellator%id*" % ndim
+        
+        # Constructors
+        x.add_constructor([param(TessellatorPtr, "serialTessellator", transfer_ownership=False),
+                           param("bool", "assumeControl", default_value="true"),
+                           param("bool", "buildCommunicationInfo", default_value="true")])
+        
+        # Methods
+        x.add_method("handlesPLCs", retval("bool"), [], is_virtual=True, is_const=True)
+        x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
+        x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
+        
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (SerialDistributedTessellator)
+    #---------------------------------------------------------------------------
+    def generateSerialDistributedTessellatorBindings(self, x, ndim):
+        
+        # Object names
+        Tessellator  = "polytope::Tessellator%id" % ndim
+        
+        # Constructors
+        x.add_constructor([inputptrparam(Tessellator, "serialTessellator"),
+                           param("bool", "assumeControl", default_value="true"),
+                           param("bool", "buildCommunicationInfo", default_value="true")])
+                
+        return
+
+    """
+    #---------------------------------------------------------------------------
+    # Bindings (VoroTessellator)
+    #---------------------------------------------------------------------------
+    def generateTriangleTessellatorBindings(self, x, ndim):
+        return
+    """
+    
+    

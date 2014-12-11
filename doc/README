@@ -6,7 +6,7 @@ code's underlying design decisions.
 To unpack the tarball run
 tar -xzf PolytopeOverview.tar.gz
 
-We recommend using "pdflatex -shell-escape" to compile the .tex source
+We recommend using pdflatex to compile the .tex source
 
 
 Authors:

@@ -128,6 +128,7 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const = 0;
+  virtual void degeneracy(const RealType val) const {};
 
   protected:
 
@@ -152,10 +153,9 @@ public:
   // Private bounded tessellate to set bounding box and degeneracy spacing
   typedef int64_t CoordHash;
   virtual void tessellate(const std::vector<RealType>& points,
-                          const std::vector<CoordHash>& PLCpoints,
-                          const PLC<Dimension, RealType>& geometry,
+                          const ReducedPLC<Dimension, CoordHash>& intGeometry,
                           const QuantizedCoordinates<Dimension, RealType>& coords,
-                          std::vector<std::vector<std::vector<CoordHash> > >& IntCells) const
+                          std::vector<ReducedPLC<Dimension, CoordHash> >& IntCells) const
   {
     error("This Tessellator does not support this tessellate routine");
   }
