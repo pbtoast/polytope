@@ -15,6 +15,7 @@
 #include "convexHull_2d.hh"
 #include "convexHull_3d.hh"
 #include "convexIntersect.hh"
+#include "convexWithin.hh"
 #include "deleteCells.hh"
 #include "bisectSearch.hh"
 #include "polytope_serialize.hh"
@@ -22,6 +23,7 @@
 #include "DimensionTraits.hh"
 #include "mortonOrderIndices.hh"
 #include "checkDistributedTessellation.hh"
+#include "PLC_Boost_2d.hh"
 
 using namespace std;
 using std::min;
@@ -61,6 +63,41 @@ sortByKeys(vector<Value>& values, const vector<Key>& keys) {
   sort(stuff.begin(), stuff.end(), ComparePairByFirstElement<Key, Value>());
   for (unsigned i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
 }
+
+//------------------------------------------------------------------------------
+// Output an intermediate tessellation
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+outputTessellation(const polytope::Tessellation<Dimension, RealType>& mesh,
+                   const vector<RealType>& points,
+                   const string name,
+                   const int rank,
+                   const vector<RealType>& cellField,
+                   const string cellFieldName) {
+#if HAVE_SILO   
+  POLY_ASSERT(cellField.size() == mesh.cells.size());
+  const string meshName = "DEBUG_DistributedTessellator_" + name;
+  vector<RealType> r2(mesh.cells.size(), RealType(rank));
+  vector<RealType> px(mesh.cells.size());
+  vector<RealType> py(mesh.cells.size());
+  vector<RealType> cf(mesh.cells.size());
+  for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+    px[i] = points[2*i];
+    py[i] = points[2*i+1];
+    cf[i] = cellField[i];
+  }
+  map<string, RealType*> fields, cellFields;
+  cellFields["domain"] = &r2[0];
+  cellFields["gen_x" ] = &px[0];
+  cellFields["gen_y" ] = &py[0];
+  cellFields[cellFieldName] = &cf[0];
+  cerr << "Writing " << name << " with " << mesh.cells.size() << " cells." << endl;
+  polytope::SiloWriter<Dimension, RealType>::write(mesh, fields, fields, fields, cellFields, meshName);
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
+
 
 } // end anonymous namespace
 
@@ -150,13 +187,11 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Some spiffy shorthand typedefs.
   typedef typename DimensionTraits<Dimension, RealType>::ConvexHull ConvexHull;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point Point;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint Point;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   typedef KeyTraits::Key Key;
-  const double degeneracy = 1.5e-8;
-#if HAVE_SILO
-  const bool siloBlago = false;
-#endif  
+  // const double degeneracy = 1.5e-8;
+  const bool visIntermediateMeshes = true;
 
   // Parallel configuration.
   int rank, numProcs;
@@ -206,53 +241,46 @@ computeDistributedTessellation(const vector<RealType>& points,
     vector<ConvexHull> domainHulls; // (numProcs);
     vector<unsigned> domainCellOffset(1, 0);
     {
-      ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull(generators, rlow, degeneracy);
+      ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull
+         (generators, rlow, mSerialTessellator->degeneracy());
+         // (generators, rlow, degeneracy);
 
       // We can skip some work here if the convex hull is of lower dimension than the 
       // problem itself. We determine the set of visible points for a full-dimension
       // hull by computing a local tessellation and collecting all generators that have
       // an exterior face on the local mesh. For a lower dimension hull, every point
       // is visible.
+      Tessellation<Dimension, RealType> localMesh;
+      set<unsigned> exteriorCells;
       if (DimensionTraits<Dimension, RealType>::hullDimension(localHull) == Dimension) {
-
-        Tessellation<Dimension, RealType> localMesh;
-        mSerialTessellator->tessellate(points, localHull.points, localHull, localMesh);
-        
-        // Blago!
-#if HAVE_SILO
-        if (siloBlago)
-        {
-          vector<double> r2(localMesh.cells.size(), rank);
-          vector<double> px(localMesh.cells.size());
-          vector<double> py(localMesh.cells.size());
-          vector<double> vis(localMesh.cells.size(), 0.0);
-          for (unsigned i = 0; i != localMesh.cells.size(); ++i) {
-            px[i] = points[2*i];
-            py[i] = points[2*i+1];
-          }
-          for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
-            if (localMesh.faceCells[i].size() == 1 ) {
-              unsigned icell = ((localMesh.faceCells[i][0] < 0) ? 
-                                ~localMesh.faceCells[i][0]      : 
-                                localMesh.faceCells[i][0]);
-              vis[icell] = 1.0;
-            }
-          }
-          map<string, double*> fields, cellFields;
-          cellFields["domain"] = &r2[0];
-          cellFields["gen_x"] = &px[0];
-          cellFields["gen_y"] = &py[0];
-          cellFields["visible"] = &vis[0];
-          cerr << "Writing local mesh with " << localMesh.cells.size() << endl;
-          polytope::SiloWriter<Dimension, RealType>::write(localMesh, fields, fields, 
-                                                           fields, cellFields, 
-                                                           "test_DistributedTessellator_localMesh");
-          MPI_Barrier(MPI_COMM_WORLD);
+         
+#if true
+        mSerialTessellator->tessellate(points, localMesh);
+        for (unsigned i = 0; i < points.size()/Dimension; ++i) {
+           ReducedPLC<Dimension, RealType> cell = geometry::cellToReducedPLC<Dimension, RealType>(localMesh, i);
+           if (not convexWithin(cell, localHull))  exteriorCells.insert(i);
         }
-#endif
-        // Blago!
 
-        set<unsigned> exteriorCells;
+        vector<RealPoint> exteriorPoints;
+        for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
+          exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
+        }
+
+        for (set<unsigned>::const_iterator itr = exteriorCells.begin();
+             itr != exteriorCells.end(); ++itr) {
+          RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
+          typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
+          if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
+        }   
+        
+        localHull.points.clear();
+        for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
+             pointItr != exteriorPoints.end(); 
+             ++pointItr) {
+           copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
+        }
+#else        
+        mSerialTessellator->tessellate(points, localHull.points, localHull, localMesh);
         for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
           if (localMesh.faceCells[i].size() == 1 ) {
             unsigned icell = ((localMesh.faceCells[i][0] < 0) ? 
@@ -279,15 +307,28 @@ computeDistributedTessellation(const vector<RealType>& points,
              pointItr != exteriorPoints.end(); ++pointItr) {
            copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
         }
+
+#endif  // new intersection idea
       }
       
       // We have a lower-dimension hull. Every point is visible
       else {
-        cerr << "Lower-dimensional data" << endl;
-        Tessellation<Dimension, RealType> localMesh;
         mSerialTessellator->tessellate(points, localMesh);
         localHull.points = generators;
       }
+
+      if (visIntermediateMeshes)
+      {
+        vector<RealType> vis(localMesh.cells.size(), 0.0);
+        for (typename set<unsigned>::const_iterator itr = exteriorCells.begin();
+             itr != exteriorCells.end();
+             ++itr) {
+           POLY_ASSERT(*itr < localMesh.cells.size());
+           vis[*itr] = 1.0;
+        }
+        outputTessellation(localMesh, points, "localMesh", rank, vis, "visible");
+      }
+
 
       // Serialize and send
       vector<char> localBuffer;
@@ -322,39 +363,45 @@ computeDistributedTessellation(const vector<RealType>& points,
       copy(domainHulls[i].points.begin(), domainHulls[i].points.end(), back_inserter(hullGenerators));
     }
     POLY_ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
+    
     Tessellation<Dimension, RealType> hullMesh;
-    this->tessellationWrapper(hullGenerators, hullMesh);
+    
+    //this->tessellationWrapper(hullGenerators, hullMesh);
 
-    // PLC<Dimension, RealType> plcTmp;
-    // plcTmp.facets = mPLCptr->facets;
-    // mSerialTessellator->tessellate(hullGenerators, *mPLCpointsPtr, plcTmp, hullMesh);
-
-
-    // Blago!
-#if HAVE_SILO
-    if (siloBlago)
-    {
-      vector<double> r2(hullMesh.cells.size(), rank);
-      vector<double> r3(hullMesh.cells.size());
-      vector<double> px(hullMesh.cells.size());
-      vector<double> py(hullMesh.cells.size());
-      for (unsigned i = 0; i != hullMesh.cells.size(); ++i) {
-        unsigned procOwner = bisectSearch(domainCellOffset, i);
-        r3[i] = double(procOwner);
-        px[i] = hullGenerators[2*i];
-        py[i] = hullGenerators[2*i+1];
+    switch (mType) {
+    case unbounded:
+      mSerialTessellator->tessellate(hullGenerators, hullMesh);
+      break;
+    case box:
+      mSerialTessellator->tessellate(hullGenerators, mLow, mHigh, hullMesh);
+      break;
+    case plc:
+      const unsigned numFacets = (mPLCptr->facets).size();
+      PLC<Dimension, RealType> outerPLC;
+      vector<double> outerPLCpoints(2*numFacets);
+      outerPLC.facets.resize(numFacets);
+      for (int i = 0; i != numFacets; ++i) {
+        outerPLC.facets[i].resize(2);
+        outerPLC.facets[i][0] = i;
+        outerPLC.facets[i][1] = (i+1)%numFacets;
+        unsigned index = (mPLCptr->facets)[i][0];
+        outerPLCpoints[2*i  ] = (*mPLCpointsPtr)[2*index  ];
+        outerPLCpoints[2*i+1] = (*mPLCpointsPtr)[2*index+1];
       }
-      map<string, double*> fields, hullCellFields;
-      hullCellFields["domain"] = &r2[0];
-      hullCellFields["domainOwner"] = &r3[0];
-      hullCellFields["gen_x"] = &px[0];
-      hullCellFields["gen_y"] = &py[0];
-      cerr << "Writing hull mesh with " << hullMesh.cells.size() << endl;
-      polytope::SiloWriter<Dimension, RealType>::write(hullMesh, fields, fields, fields, hullCellFields, "test_DistributedTessellator_hullMesh");
-      MPI_Barrier(MPI_COMM_WORLD);
+      mSerialTessellator->tessellate(hullGenerators, outerPLCpoints, outerPLC, hullMesh);
+      break;
     }
-#endif
-    // Blago!
+
+    if (visIntermediateMeshes)
+    {
+      vector<RealType> owner(hullMesh.cells.size());
+      for (unsigned i = 0; i < hullMesh.cells.size(); ++i) {
+        const unsigned procOwner = bisectSearch(domainCellOffset, i);
+        owner[i] = RealType(procOwner);
+      }
+      outputTessellation(hullMesh, hullGenerators, "visibleMesh", rank, owner, "domainOwner");
+    }
+
 
     // Find the set of domains we need to communicate with according to two criteria:
     // 1.  Any domain hull that intersects our own.
@@ -532,30 +579,11 @@ computeDistributedTessellation(const vector<RealType>& points,
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
 
-
-  // Blago!
-#if HAVE_SILO
-  if (siloBlago)
+  
+  if (visIntermediateMeshes)
   {   
-    POLY_ASSERT(gen2domain.size() == mesh.cells.size());
-    vector<double> r2(mesh.cells.size());
-    vector<double> px(mesh.cells.size());
-    vector<double> py(mesh.cells.size());
-    for (unsigned i = 0; i != mesh.cells.size(); ++i) {
-      r2[i] = gen2domain[i];
-      px[i] = generators[2*i];
-      py[i] = generators[2*i+1];
-    }
-    map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["domain"] = &r2[0];
-    cellFields["gen_x"] = &px[0];
-    cellFields["gen_y"] = &py[0];
-    cerr << "Writing full mesh with " << mesh.cells.size() << endl;
-    polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_DistributedTessellator_fullMesh");
-    MPI_Barrier(MPI_COMM_WORLD);
+    outputTessellation(mesh, generators, "fullMesh", rank, vector<RealType>(mesh.cells.size()), "dummy");
   }
-#endif
-  // Blago!
 
   // If requested, build the communication info for the shared nodes & faces
   // with our neighbor domains.
@@ -666,7 +694,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
+    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 26);
     
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
@@ -711,28 +739,6 @@ computeDistributedTessellation(const vector<RealType>& points,
   // }
   // // Blago!
 
-  // // Blago!
-  // if (rank == 2) {
-  //    vector<unsigned>::iterator it = 
-  //       std::find(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), 9);
-  //    if (it != mesh.neighborDomains.end()) {
-  //       unsigned badID = std::distance(mesh.neighborDomains.begin(), it);
-  //       vector<Point2<double> > badNodes(mesh.sharedNodes[badID].size());
-  //       int ii = 0;
-  //       for (vector<unsigned>::const_iterator itr = mesh.sharedNodes[badID].begin();
-  //            itr != mesh.sharedNodes[badID].end(); ++itr, ++ii) {
-  //          badNodes[ii] = Point2<double>(mesh.nodes[2*(*itr)], mesh.nodes[2*(*itr)+1]);
-  //       }
-  //       cerr << "Shared nodes before deleteCells:\n";
-  //       copy(mesh.sharedNodes[badID].begin(), mesh.sharedNodes[badID].end(), ostream_iterator<unsigned>(cerr, " "));
-  //       cerr << endl;
-  //       copy(badNodes.begin(), badNodes.end(), ostream_iterator<Point2<double> >(cerr, " "));
-  //       cerr << endl;
-  //    }
-  // }
-  // MPI_Barrier(MPI_COMM_WORLD);
-  // // Blago!
-
 
   // Remove the elements of the tessellation corresponding to
   // other domains generators, and renumber the resulting elements.
@@ -740,50 +746,10 @@ computeDistributedTessellation(const vector<RealType>& points,
   fill(cellMask.begin() + nlocal, cellMask.end(), 0);
   deleteCells(mesh, cellMask);
 
-  // Blago!
-  // if (rank == 2) {
-  //    vector<unsigned>::iterator it = 
-  //       std::find(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), 9);
-  //    if (it != mesh.neighborDomains.end()) {
-  //       unsigned badID = std::distance(mesh.neighborDomains.begin(), it);
-  //       unsigned badNodeID = mesh.sharedNodes[badID][0];
-  //       cerr << "Bad Node " << badNodeID << " @ (" << mesh.nodes[2*badNodeID]
-  //            << "," << mesh.nodes[2*badNodeID+1] << ")" << endl;
-  //    }
-  // }
-  // Blago!
-
-  // // Blago!
-  // for (unsigned iproc = 0; iproc != mesh.neighborDomains.size(); ++iproc) {
-  //    cerr << rank << "\t<-->\t" << mesh.neighborDomains[iproc] 
-  //         << "\t:\t" << mesh.sharedNodes[iproc].size()
-  //         << "\t"    << mesh.sharedFaces[iproc].size() << endl;
-  // }
-  // MPI_Barrier(MPI_COMM_WORLD);
-  // // Blago!
-
-  // Blago!
-#if HAVE_SILO
-  if (siloBlago)
+  if (visIntermediateMeshes)
   {
-    vector<double> r2(mesh.cells.size());
-    vector<double> px(mesh.cells.size());
-    vector<double> py(mesh.cells.size());
-    for (unsigned i = 0; i != mesh.cells.size(); ++i) {
-       r2[i] = gen2domain[i];
-       px[i] = generators[2*i];
-       py[i] = generators[2*i+1];
-    }
-    map<string, double*> nodeFields, edgeFields, faceFields, cellFields;
-    cellFields["domain"] = &r2[0];
-    cellFields["gen_x"] = &px[0];
-    cellFields["gen_y"] = &py[0];
-    cerr << "Writing final mesh with " << mesh.cells.size() << endl;
-    polytope::SiloWriter<Dimension, RealType>::write(mesh, nodeFields, edgeFields, faceFields, cellFields, "test_DistributedTessellator_finalMesh");
-    MPI_Barrier(MPI_COMM_WORLD);
+    outputTessellation(mesh, generators, "finalMesh", rank, vector<RealType>(mesh.cells.size()), "dummy");
   }
-#endif
-  // Blago!
 
 
   // Remove any neighbors we don't actually share any info with.

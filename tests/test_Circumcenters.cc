@@ -24,7 +24,7 @@ using namespace polytope;
 // test
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
-  const int N = 34;
+  const int N = 40;
   double displacement = 1.0;
 
   string testName = "Circumcenters_" + tessellator.name();

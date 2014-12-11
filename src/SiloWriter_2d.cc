@@ -438,10 +438,11 @@ write(const Tessellation<2, RealType>& mesh,
   {
     char masterFileName[1024];
     if (cycle >= 0)
-      snprintf(masterFileName, 1024, "%s-%d/%s-%d.silo", prefix.c_str(), nproc, prefix.c_str(), cycle);
+      snprintf(masterFileName, 1024, "%s/%s-%d.silo", masterDirName.c_str(), prefix.c_str(), cycle);
     else
-      snprintf(masterFileName, 1024, "%s-%d/%s.silo", prefix.c_str(), nproc, prefix.c_str());
+      snprintf(masterFileName, 1024, "%s/%s.silo", masterDirName.c_str(), prefix.c_str());
     int driver = DB_HDF5;
+    // cerr << "Opening MASTER file " << masterFileName << endl;
     DBfile* file = DBCreate(masterFileName, DB_CLOBBER, DB_LOCAL, "Master file", driver);
 
     vector<char*> meshNames(numFiles*numChunks);

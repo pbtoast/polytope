@@ -37,7 +37,7 @@ using namespace polytope;
 double testBoundary(Boundary2D<double>& boundary,
                     Tessellator<2,double>& tessellator) {
   Generators<2,double> generators( boundary );
-  unsigned nPoints = 10;
+  unsigned nPoints = 1;
   Tessellation<2,double> mesh;
   cout << "Area of boundary = " << boundary.mArea << endl;
   double result = 0.0;
@@ -46,6 +46,7 @@ double testBoundary(Boundary2D<double>& boundary,
     nPoints = nPoints * 10;
     cout << nPoints << " points..." << endl;
     
+
     generators.randomPoints( nPoints );
     tessellator.tessellate(generators.mPoints,
 			   boundary.mPLCpoints,
@@ -58,9 +59,6 @@ double testBoundary(Boundary2D<double>& boundary,
     cout << "              Area  = " << area << endl;
     cout << "              Error = " << boundary.mArea - area << endl;
     cout << "   Fractional error = " << fracerr << endl;
-
-    outputMesh(mesh, "Blago", n);
-    
     mesh.clear();   
   }
   return result;

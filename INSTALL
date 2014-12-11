@@ -64,6 +64,11 @@ hdf5_root=<path>
 	      building its Python bindings. If Python bindings are not
 	      built, this is not an issue.
 
+
+header_only=0
+	Choose to build as a collection of headers installed into local
+	include directory (1) or build the whole shebang (0).
+
 use_silo=0
         Choose to build with silo file capability (1) or without (0).
         Defaults to 1 if silo can be found.
@@ -96,6 +101,7 @@ Polytope provides interfaces for a number of tools:
 - Voro++ by Chris Rycroft at LBL
 - Triangle by Jonathan Shewchuck at Berkeley
 - Tetgen by Hang Si
+- Boost.Polygon.Voronoi, part of the Boost C++ Library
 
 Support for Triangle and Tetgen is available with minimal effort, but you 
 must respect the licenses of their authors and make arrangements with them 

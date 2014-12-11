@@ -1,6 +1,8 @@
 # Minimum CMake version.
 cmake_minimum_required (VERSION 2.8.5)
 
+##set(CMAKE_SKIP_RPATH true)
+
 # Adjust Polytope's module path.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -74,11 +76,11 @@ endif ()
 # set(Boost_DEBUG 1)
 set(Boost_ADDITIONAL_VERSIONS "1.51" "1.51.0" "1.52" "1.52.0" "1.53" "1.53.0")
 find_package(Boost "1.50")
-if (USING_XLC) 
-  set(Boost_FOUND false)
-  set(HAVE_BOOST false)
-  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
-endif()
+##if (USING_XLC) 
+##  set(Boost_FOUND false)
+##  set(HAVE_BOOST false)
+##  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
+##endif()
 if (Boost_FOUND)
   include_directories("${Boost_INCLUDE_DIR}")
   set(HAVE_BOOST true)
@@ -108,12 +110,16 @@ if (USE_PYTHON EQUAL 1)
     string(REPLACE "/bin/python" "" PYTHON_ROOT ${PYTHON_EXE})
     set(PYTHON_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION}")
     set(PYTHON_LIB_DIR "${PYTHON_ROOT}/lib")
-    # Check that Pybindgen is installed there
-    if (EXISTS ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/pybindgen
-	OR     ${PYTHON_LIB_DIR}/python/site-packages/pybindgen)
+
+    # Check if pybindgen is available for import.
+    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
+    find_python_module(pybindgen)
+    if (NOT ${PY_PYBINDGEN} STREQUAL "0")
       # Check that you have Python.h and libpython<version>.a
-      if (EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" AND
-	  EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}.a")
+      if ((EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" OR
+           EXISTS "${PYTHON_INCLUDE_DIR}/python${PYTHON_VERSION}/Python.h") AND
+      	  (EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" OR
+           EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}"))
 	set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
 	set(PYBINDGEN_MODULE_NAME "PolytopeModules")
 	set(HAVE_PYTHON true)
@@ -125,8 +131,7 @@ if (USE_PYTHON EQUAL 1)
       endif()
     else()
       set(HAVE_PYTHON false)
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python${PYTHON_VERSION}/site-packages/")
-      message("-- Failed to find PyBindGen module in ${PYTHON_LIB_DIR}/python/site-packages/")
+      message("-- Failed to find PyBindGen module python module.  Please install pybindgen somewhere importable by python to build optional polytope python bindings.")
     endif()
   else()
     set(HAVE_PYTHON false)
@@ -141,7 +146,7 @@ if (${USE_SILO} EQUAL 1)
   set(ENV{HDF5_ROOT} ${HDF5_ROOT})
 #       NOTE: Default to using static hdf5
   set(HDF5_USE_STATIC_LIBRARIES true)
-  find_package(HDF5)  
+  find_package(HDF5)
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
@@ -204,6 +209,11 @@ else()
 endif()
 
 
+if(HDF5_LIBRARIES)
+  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
+endif()
+
+
 # Enable Triangle if triangle.h and triangle.c are found.
 # We disable this on IBM xlC since Boost.Geometry does not compile correctly there for now.
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
@@ -233,40 +243,46 @@ configure_file(
   "${PROJECT_BINARY_DIR}/polytope.hh"
 )
 
-# Include the binary directory in the header file search path.
-include_directories("${PROJECT_BINARY_DIR}")
-include_directories("${PROJECT_SOURCE_DIR}/src")
 
-# Libraries
+if (HEADER_ONLY EQUAL 0)
+  # Include the binary directory in the header file search path.
+  include_directories("${PROJECT_BINARY_DIR}")
+  include_directories("${PROJECT_SOURCE_DIR}/src")
 
-# Voro 2d/3d libraries.
-include_directories(voro_2d)
-add_subdirectory(voro_2d)
-include_directories(voro_3d)
-add_subdirectory(voro_3d)
+  # Libraries
 
-# Polytope proper.
-include_directories("${PROJECT_SOURCE_DIR}/src/")
-add_subdirectory(src)
+  # Voro 2d/3d libraries.
+  include_directories(voro_2d)
+  add_subdirectory(voro_2d)
+  include_directories(voro_3d)
+  add_subdirectory(voro_3d)
 
-# Tests directory
-if (TESTING EQUAL 1)
-  enable_testing()
-  add_subdirectory(tests)
-  include (CTest)
-endif()
+  # Polytope proper.
+  include_directories("${PROJECT_SOURCE_DIR}/src/")
+  add_subdirectory(src)
+
+  # Tests directory
+  if (${TESTING} EQUAL 1)
+    message("-- Unit testing enabled.")
+    enable_testing()
+    add_subdirectory(tests)
+    include (CTest)
+  else()
+    message("-- Unit testing disabled.")
+  endif()
   
-# Polytope C library.
-if (BUILD_C_INTERFACE EQUAL 1)
-  include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-  add_subdirectory(polytope_c)
-endif()
+  # Polytope C library.
+  if (BUILD_C_INTERFACE EQUAL 1)
+    include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+    add_subdirectory(polytope_c)
+  endif()
 
-# Python bindings.
-if(HAVE_PYTHON)
-  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
-  include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
-  add_subdirectory(src/PBGWraps)
+  # Python bindings.
+  if(HAVE_PYTHON)
+    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
+    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
+    add_subdirectory(src/PBGWraps)
+  endif()
 endif()
 
 # Library install targets
@@ -277,6 +293,8 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
                "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
                "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
                "${PROJECT_SOURCE_DIR}/src/simplifyPLCfacets.hh"
                "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
@@ -287,9 +305,17 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh"
 	       "${PROJECT_SOURCE_DIR}/src/BoostTessellator.hh"
                "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh"
+	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
+               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
+	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
+               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
 	       "${PROJECT_SOURCE_DIR}/src/OrphanageBase.hh"
 	       "${PROJECT_SOURCE_DIR}/src/BoostOrphanage.hh"
 	       "${PROJECT_SOURCE_DIR}/src/Clipper2d.hh"
+               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_2d.hh" 
                "${PROJECT_SOURCE_DIR}/src/convexHull_3d.hh" 
                "${PROJECT_SOURCE_DIR}/src/Point.hh" 
@@ -301,6 +327,7 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
 	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
+	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 

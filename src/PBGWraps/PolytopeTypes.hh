@@ -243,7 +243,7 @@ namespace {
       label = PyString_AsString(key);
       result[std::string(label)] = new RealType[expectedSize];
       if (not PyList_Check(item)) {
-        std::cerr << "ERROR : values need to be lists of floats." << std::endl;
+        std::cerr << "ERROR : values need to be lists of floats: " << std::string(label) << std::endl;
         return result;
       }
       if (PyList_Size(item) != expectedSize) {
@@ -253,7 +253,7 @@ namespace {
       for (j = 0; j != expectedSize; ++j) {
         val = PyList_GetItem(item, j);
         if (not PyFloat_Check(val)) {
-          std::cerr << "ERROR : list of values should be convertable to floats." << std::endl;
+          std::cerr << "ERROR : list of values should be convertable to floats: " << std::string(label) << std::endl;
           return result;
         }
         result[std::string(label)][j] = PyFloat_AsDouble(val);
@@ -274,6 +274,7 @@ namespace {
   }
 }
 
+// Write with just a file prefix.
 template<int Dimension, typename RealType>
 inline
 void
@@ -309,6 +310,58 @@ writeTessellation(const Tessellation<Dimension, RealType>& mesh,
                                          faceFields,
                                          cellFields,
                                          filePrefix,
+                                         cycle,
+                                         time);
+
+  // Clean up our memory.
+  deleteMemory<RealType>(nodeFields);
+  deleteMemory<RealType>(edgeFields);
+  deleteMemory<RealType>(faceFields);
+  deleteMemory<RealType>(cellFields);
+
+#else
+  std::cerr << "WARNING : apparently polytope was built without silo support, so cannot write silo files." << std::endl;
+#endif
+}
+  
+// Write with a file prefix and directory.
+template<int Dimension, typename RealType>
+inline
+void
+writeTessellation(const Tessellation<Dimension, RealType>& mesh,
+                  std::string filePrefix,
+                  std::string directory,
+                  PyObject* nodeFieldsDict,
+                  PyObject* edgeFieldsDict,
+                  PyObject* faceFieldsDict,
+                  PyObject* cellFieldsDict,
+                  int cycle,
+                  RealType time) {
+
+#if HAVE_SILO
+  // Extract the various optional fields.
+  std::map<std::string, RealType*> nodeFields = buildMapFromPyObject<RealType>(nodeFieldsDict, mesh.nodes.size()/Dimension);
+  std::map<std::string, RealType*> faceFields = buildMapFromPyObject<RealType>(faceFieldsDict, mesh.faces.size());
+  std::map<std::string, RealType*> cellFields = buildMapFromPyObject<RealType>(cellFieldsDict, mesh.cells.size());
+
+  // The edge fields don't currently work in 3D, so screen that case out.
+  std::map<std::string, RealType*> edgeFields;
+  if (Dimension == 3) {
+    if (edgeFieldsDict != Py_None) {
+      std::cerr << "WARNING : writing edge fields currently not supported in 3D.  Ignoring passed edgeFields set." << std::endl;
+    }
+  } else {
+    edgeFields = buildMapFromPyObject<RealType>(edgeFieldsDict, mesh.faces.size());
+  }
+
+  // Do the deed.
+  SiloWriter<Dimension, RealType>::write(mesh,
+                                         nodeFields,
+                                         edgeFields,
+                                         faceFields,
+                                         cellFields,
+                                         filePrefix,
+                                         directory,
                                          cycle,
                                          time);
 

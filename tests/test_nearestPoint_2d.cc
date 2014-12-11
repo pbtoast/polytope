@@ -65,6 +65,49 @@ int main(int argc, char** argv) {
                 result[0] << " " << result[1] << " : " << dist);
   }
 
+  // Make sure the new point is EXACTLY on the boundary
+  { 
+    double p[2] = {-4.5, -4.2127}, answer[2] = {-5.0, -4.2127}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2(result[0] == answer[0] and result[1] == answer[1],
+                result[0] << " " << result[1] << " : " << dist);
+  }
+  
+  { 
+    double p[2] = {-4.2127, -4.775}, answer[2] = {-4.2127, -5.0}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2(result[0] == answer[0] and result[1] == answer[1],
+                result[0] << " " << result[1] << " : " << dist);
+  }
+  
+  { 
+    double p[2]      = {4.888392983934, -4.33233323};
+    double answer[2] = {5.000000000000, -4.33233323}, result[2];
+    const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+    POLY_CHECK2(result[0] == answer[0] and result[1] == answer[1],
+                result[0] << " " << result[1] << " : " << dist);
+  }
+
+  {
+    double result[2];
+    for (unsigned i = 0; i != 100; ++i) {
+      const double xrand = polytope::random01() - 5;
+      const double yrand = polytope::random01() - 4;
+      double p[2] = {xrand, yrand};
+      const double dist = nearestPoint(p, numVertices, vertices, plc, result);
+      POLY_CHECK2(result[0] == -5.0,
+                  p[0] << " " << p[1] << " --> " << result[0] << " " << result[1]);
+    }
+  }
+
+  {
+    double p[2] = {0.5, 0.5}, s1[2] = {1.1, 1.0}, s2[2] = {2.0, 2.0}, result[2];
+    polytope::geometry::closestPointOnSegment2D(p, s1, s2, result);
+    POLY_CHECK(result[0] == s1[0]);
+    POLY_CHECK(result[1] == s1[1]);
+  }
+
+
   cout << "PASS" << endl;
   return 0;
 }

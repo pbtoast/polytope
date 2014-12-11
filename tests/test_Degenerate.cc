@@ -32,18 +32,19 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 double minLength(Tessellation<2,double>& mesh)
 {
-   double faceLength = FLT_MAX;
-   for (unsigned iface = 0; iface != mesh.faces.size(); ++iface)
-   {
-      POLY_ASSERT( mesh.faces[iface].size() == 2 );
-      const unsigned inode0 = mesh.faces[iface][0];
-      const unsigned inode1 = mesh.faces[iface][1];
-      double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
-      double x1 = mesh.nodes[2*inode1], y1 = mesh.nodes[2*inode1+1];
-      double len = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
-      faceLength = min( faceLength, sqrt(len) );
-   }
-   return faceLength;
+  double fl2min =  std::numeric_limits<double>::max();
+  double fl2max = -std::numeric_limits<double>::max();
+  for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
+    POLY_ASSERT( mesh.faces[iface].size() == 2 );
+    const unsigned inode0 = mesh.faces[iface][0];
+    const unsigned inode1 = mesh.faces[iface][1];
+    double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
+    double x1 = mesh.nodes[2*inode1], y1 = mesh.nodes[2*inode1+1];
+    double len2 = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
+    fl2min = std::min(fl2min, len2);
+    fl2max = std::max(fl2max, len2);
+  }
+  return sqrt(fl2min);
 }
 
 // -----------------------------------------------------------------------
@@ -51,19 +52,19 @@ double minLength(Tessellation<2,double>& mesh)
 // -----------------------------------------------------------------------
 bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 {
-   POLY_CHECK_BOOL(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
-   POLY_CHECK_BOOL(mesh.cells.size()   == nx*ny );
-   POLY_CHECK_BOOL(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
-   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK_BOOL(mesh.cells[i].size() == 4);
-   
-   std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
-   for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
-   {
-      POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
-                       (nodeCells[i].size() == 2) ||
-                       (nodeCells[i].size() == 1) );
-   }
-   return true;
+  POLY_CHECK_BOOL(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
+  POLY_CHECK_BOOL(mesh.cells.size()   == nx*ny );
+  POLY_CHECK_BOOL(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
+  for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK_BOOL(mesh.cells[i].size() == 4);
+  
+  std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
+  for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
+  {
+     POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
+                      (nodeCells[i].size() == 2) ||
+                      (nodeCells[i].size() == 1) );
+  }
+  return true;
 }
 
 // -----------------------------------------------------------------------
@@ -93,13 +94,15 @@ void test(Tessellator<2,double>& tessellator)
     generators.cartesianPoints(nxny);         // reset locations
     generators.perturb(epsilon);              // perturb
     Tessellation<2,double> mesh;
+    //tessellator.tessellate(generators.mPoints, mesh);
     tessellator.tessellate(generators.mPoints, 
                            boundary.mPLCpoints, 
                            boundary.mPLC, 
                            mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
-    if(isCartesian)  cout << "Degeneracy resolved" << endl; 
+    if(isCartesian)  
+      cout << "Degeneracy resolved" << endl; 
     else
       cout << "Degeneracy threshold reached! Minimum face length = " 
            << minLength(mesh) << endl;

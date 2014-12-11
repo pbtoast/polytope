@@ -64,4 +64,30 @@ class Functions:
 #   time       : (optional, default=0.0) time
 # """,
 
+            polytope.add_function("writeTessellation", 
+                                  None,
+                                  [constrefparam("polytope::Tessellation%id" % dim, "mesh"),
+                                   param("std::string", "filePrefix"),
+                                   param("std::string", "directory"),
+                                   param("PyObject*", "nodeFields", transfer_ownership=False),
+                                   param("PyObject*", "edgeFields", transfer_ownership=False),
+                                   param("PyObject*", "faceFields", transfer_ownership=False),
+                                   param("PyObject*", "cellFields", transfer_ownership=False),
+                                   param("int", "cycle", default_value = "0"),
+                                   param("double", "time", default_value = "0.0")],
+                                  template_parameters = [str(dim), "double"],
+                                  custom_name = ("writeTessellation%id" % dim),
+                                  docstring = "writeTessellation -- output a silo file with optional fields")
+# arguments:
+#   mesh       : the tessellation to write
+#   filePrefix : prefix for the output file name
+#   directory  : the base directory for the files
+#   nodeFields : (optional, default=None) dictionary of (name -> vals) node centered values to put in file
+#   edgeFields : (optional, default=None) dictionary of (name -> vals) edge centered values to put in file
+#   faceFields : (optional, default=None) dictionary of (name -> vals) face centered values to put in file
+#   cellFields : (optional, default=None) dictionary of (name -> vals) cell centered values to put in file
+#   cycle      : (optional, default=0) cycle number
+#   time       : (optional, default=0.0) time
+# """,
+
         return

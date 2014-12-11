@@ -1,6 +1,9 @@
 //------------------------------------------------------------------------------
 // An internal handy intermediate representation of a tessellation.
 //------------------------------------------------------------------------------
+#ifndef __Polytope_QuantTessellation__
+#define __Polytope_QuantTessellation__
+
 #include <algorithm>
 #include "polytope_internal.hh"
 #include "DimensionTraits.hh"
@@ -15,7 +18,7 @@ public:
   typedef std::pair<int, int> EdgeHash;
   typedef std::vector<unsigned> FaceHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::Point IntPoint;
+  typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
 
   // The normalized generator coordinates.
@@ -57,6 +60,11 @@ public:
                                                           const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
                                                           const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
                                                           ip, degeneracy);
+    return result;
+  }
+  IntPoint hashedPosition(const PointHash ip) const {
+    IntPoint result;
+    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
     return result;
   }
 
@@ -114,6 +122,14 @@ public:
     return unhashPosition(points[i]);
   }
 
+//   //----------------------------------------------------------------------------
+//   // Integer position for a point (normalized coordinates).
+//   //----------------------------------------------------------------------------
+//   IntPoint nodePosition(const unsigned i) {
+//     POLY_ASSERT(i < points.size());
+//     return hashedPosition(points[i]);
+//   }
+
   //----------------------------------------------------------------------------
   // Floating position for a point (lab frame).
   //----------------------------------------------------------------------------
@@ -122,6 +138,22 @@ public:
     RealPoint result = nodePosition(i);
     for (unsigned j = 0; j != Dimension; ++j) {
       result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+    }
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  // Floating position for a point (lab frame).
+  //----------------------------------------------------------------------------
+  RealPoint labNodePositionCollinear(const unsigned i) {
+    POLY_ASSERT(i < points.size());
+    RealPoint result = nodePosition(i);
+    for (unsigned j = 0; j != Dimension; ++j) {
+      if (low_labframe[j] == high_labframe[j]) {
+	result[j] = result[j] + low_labframe[j];
+      } else {
+	result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+      }
     }
     return result;
   }
@@ -195,24 +227,37 @@ public:
 
     // Nodes.
     mesh.nodes.resize(Dimension*points.size());
-    for (unsigned i = 0; i != points.size(); ++i) {
-      RealPoint p = labNodePosition(i);
-      std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+    if (low_labframe.x == high_labframe.x or
+	low_labframe.y == high_labframe.y) {
+      for (unsigned i = 0; i != points.size(); ++i) {
+	RealPoint p = labNodePositionCollinear(i);
+	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+      }
+    } else {
+      for (unsigned i = 0; i != points.size(); ++i) {
+	RealPoint p = labNodePosition(i);
+	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
+      }
     }
 
     // Faces.
     mesh.faces.reserve(faces.size());
     for (unsigned i = 0; i != faces.size(); ++i) {
       mesh.faces.push_back(std::vector<unsigned>());
-      for (unsigned j = 0; j != faces[i].size(); ++j) {
-        if (faces[i][j] >= 0) {
-          mesh.faces[i].push_back(edges[faces[i][j]].first);
-        } else {
-          mesh.faces[i].push_back(edges[~faces[i][j]].second);
-        }
-        POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
+      if (faces[i].size() == 1) {
+	mesh.faces[i].push_back(edges[faces[i][0]].first);
+	mesh.faces[i].push_back(edges[faces[i][0]].second);
+      } else {
+	for (unsigned j = 0; j != faces[i].size(); ++j) {
+	  if (faces[i][j] >= 0) {
+	    mesh.faces[i].push_back(edges[faces[i][j]].first);
+	  } else {
+	    mesh.faces[i].push_back(edges[~faces[i][j]].second);
+	  }
+	  POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
+	}
+	POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
       }
-      POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
     }
 
     // Much of our data can simply be copied over wholesale.
@@ -321,3 +366,5 @@ public:
 
 }
 }
+
+#endif

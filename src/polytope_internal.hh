@@ -36,6 +36,8 @@ void internal_abort();
 #define POLY_END_CONTRACT_SCOPE 
 #endif
 
+#define POLY_CONTRACT_VAR(x) if (0 && &x == &x){}
+
 namespace internal {
 
 
@@ -241,6 +243,8 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
       const int j = (i + 1) % edges.size();
       const int ii = result[i];
       const int jj = result[j];
+      POLY_CONTRACT_VAR(ii);
+      POLY_CONTRACT_VAR(jj);
       POLY_ASSERT((ii >= 0 ? ii : ~ii) < edges.size());
       POLY_ASSERT((jj >= 0 ? jj : ~jj) < edges.size());
       POLY_ASSERT(((ii >= 0 and jj >= 0) and edges[ii].second == edges[jj].first) or
@@ -253,9 +257,9 @@ computeSortedFaceEdges(std::vector<std::pair<int, int> >& edges,
   return !(hangingNodes.empty());
 }
 
-}
+} //end namespace internal
 
-}
+} //end namespace polytope
 
 // Classes within the library.
 #include "ErrorHandler.hh"
