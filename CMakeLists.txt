@@ -112,7 +112,7 @@ if (USE_PYTHON EQUAL 1)
     # Check if pybindgen is available for import.
     include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
     find_python_module(pybindgen)
-    if (NOT ${PY_PYBINDGEN} MATCHES "0")
+    if (NOT ${PY_PYBINDGEN} STREQUAL "0")
       # Check that you have Python.h and libpython<version>.a
       if (EXISTS "${PYTHON_INCLUDE_DIR}/Python.h" AND
       	  (EXISTS "${PYTHON_LIB_DIR}/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" OR
