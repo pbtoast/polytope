@@ -289,7 +289,8 @@ public:
     POLY_ASSERT(not mCoordinatesModified);
     RealType p[Dimension];
     for (unsigned j = 0; j < Dimension; ++j) {
-      p[j] = center[j] + (RealType(pointIn[j]) + 0.5)*delta;
+      p[j] = center[j] + (RealType(pointIn[j]))*delta;
+      // p[j] = center[j] + (RealType(pointIn[j]) + 0.5)*delta;
     }
     return DimensionTraits<Dimension, RealType>::constructPoint(p);
   }
