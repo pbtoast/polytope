@@ -8,6 +8,29 @@ Changes:
 - Mostly minor fixes/changes.  Added some python functionality.
 
 --------------------------------------------------------------------------------
+Release 0.5.20
+
+changeset:
+  490:bc5088adddb1
+
+Changes:
+
+- Adding a link flag for building the python extension module on Mac OSX.
+
+--------------------------------------------------------------------------------
+Release 0.5.19
+
+changeset:
+  472:c13a436c0bb9
+
+Changes:
+
+- Minor python changes (improved printing of PLCs, etc.)
+- Release LICENSE file now correct.
+- David added documentation in the "doc/" directory.
+- Assorted minor bug fixes.
+
+--------------------------------------------------------------------------------
 Release 0.5.18
 
 changeset:

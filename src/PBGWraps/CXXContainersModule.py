@@ -17,8 +17,8 @@ def generateStdVectorBindings(v, value, cppname,
         v.add_constructor([param("int", "size"), param(value, "value")])
 
     # __len__
-    v.add_method("size", "int", [])
-    v.add_method("size", "int", [], custom_name = "__len__")
+    v.add_method("size", "unsigned int", [])
+    v.add_method("size", "unsigned int", [], custom_name = "__len__")
     v.add_method("resize", None, [param("int", "size")])
 
     # __add__ and __iadd__
@@ -129,8 +129,8 @@ def generateStdSetBindings(v, value, cppname,
     v.add_constructor([constrefparam(cppname, "rhs")])
 
     # __len__
-    v.add_method("size", "int", [])
-    v.add_method("size", "int", [], custom_name = "__len__")
+    v.add_method("size", "unsigned int", [])
+    v.add_method("size", "unsigned int", [], custom_name = "__len__")
 
     # __contains__
     if pointerValue:
