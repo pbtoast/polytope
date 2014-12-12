@@ -190,7 +190,6 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::IntPoint Point;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   typedef KeyTraits::Key Key;
-  // const double degeneracy = 1.5e-8;
   const bool visIntermediateMeshes = true;
 
   // Parallel configuration.
@@ -694,7 +693,8 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 26);
+    const RealType dx = mSerialTessellator->degeneracy();
+    // const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 26);
     
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
@@ -709,8 +709,45 @@ computeDistributedTessellation(const vector<RealType>& points,
                                                                                             &rlow[0],
                                                                                             dx,
                                                                                             *itr));
+      
+      
+      // // Blago!
+      // if ((rank == 5  and mesh.neighborDomains[idomain] == 10) or
+      //     (rank == 10 and mesh.neighborDomains[idomain] == 5 )) {
+      //   const unsigned other = mesh.neighborDomains[idomain];
+      //   set<unsigned> nnn;
+      //   for (unsigned iface = 0; iface < mesh.faceCells.size(); ++iface) { 
+      //     if (mesh.faceCells[iface].size() == 2) {
+      //       const unsigned icell1 = (mesh.faceCells[iface][0] < 0) ? ~mesh.faceCells[iface][0] : mesh.faceCells[iface][0];
+      //       const unsigned icell2 = (mesh.faceCells[iface][1] < 0) ? ~mesh.faceCells[iface][1] : mesh.faceCells[iface][1];
+      //       const unsigned iproc1 = gen2domain[icell1];
+      //       const unsigned iproc2 = gen2domain[icell2];
+      //       if ((iproc1 == 5 and iproc2 == 10) or (iproc1 == 10 and iproc2 == 5)) {
+      //         nnn.insert(mesh.faces[iface][0]);
+      //         nnn.insert(mesh.faces[iface][1]);
+      //       }
+      //     }
+      //   }
+      //   vector<Point> n4;
+      //   for (set<unsigned>::iterator itr = nnn.begin(); itr != nnn.end(); ++itr) {
+      //     POLY_ASSERT(*itr < nodePoints.size());
+      //     Point pp = DimensionTraits<Dimension, RealType>::constructPoint(&(mesh.nodes[Dimension * (*itr)]),
+      //                                                                     &rlow[0],
+      //                                                                     dx,
+      //                                                                     *itr);
+      //     n4.push_back(pp);
+      //   }
+      //   sort(n4.begin(), n4.end());
+      //   for (unsigned i = 0; i < n4.size(); ++i) {
+      //     cerr << n4[i] << endl;
+      //   }
+      // }
+      // // Blago!
+      
+      
       sort(nodePoints.begin(), nodePoints.end());
       for (unsigned i = 0; i != mesh.sharedNodes[idomain].size(); ++i) mesh.sharedNodes[idomain][i] = nodePoints[i].index;
+
 
       // Faces.
       vector<Point> facePoints;
@@ -819,14 +856,19 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // // Blago!
     // for (unsigned idomain = 0; idomain != numNeighbors; ++idomain){
-    //    cerr << " shares " << mesh.sharedNodes[idomain].size() 
-    //         << " nodes with " << mesh.neighborDomains[idomain] << endl;
-    //    for (unsigned i=0; i != mesh.sharedNodes[idomain].size(); ++i){
-    //       unsigned inode = mesh.sharedNodes[idomain][i];
-    //       cerr << "   Node " << inode << " @ (" << mesh.nodes[2*inode] 
-    //            << "," << mesh.nodes[2*inode+1] << ")" << endl;
-    //    }
-    // }      
+    //    if ((rank == 0 and mesh.neighborDomains[idomain] == 7) or
+    //        (rank == 7 and mesh.neighborDomains[idomain] == 0)) {
+    //       cerr << " shares " << mesh.sharedNodes[idomain].size() 
+    //            << " nodes with " << mesh.neighborDomains[idomain] << endl;
+    //       for (unsigned i=0; i != mesh.sharedNodes[idomain].size(); ++i){
+    //          unsigned inode = mesh.sharedNodes[idomain][i];
+    //          cerr << "   Node " << inode << " @ (" << mesh.nodes[2*inode] 
+    //               << "," << mesh.nodes[2*inode+1] << ")"
+    //               << "  own? " << (ownNode[inode] == rank ? "YES" : "NO") << endl;
+    //       }
+    //    }      
+    // }
+    // MPI_Barrier(MPI_COMM_WORLD);
     // // Blago!
 
     // Post the sends for any nodes we own, and note which nodes we expect to receive.

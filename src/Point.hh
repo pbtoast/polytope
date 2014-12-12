@@ -35,16 +35,18 @@ struct Point2 {
   Point2(const RealType& xi, const RealType& yi, const RealType& dx, const unsigned i = 0): 
     x(static_cast<UintType>(xi/dx + 0.5)),
     y(static_cast<UintType>(yi/dx + 0.5)),
+    // x(static_cast<UintType>(xi/dx)),
+    // y(static_cast<UintType>(yi/dx)),
     index(i) {}
   template<typename RealType>
   Point2(const RealType& xi, const RealType& yi, 
          const RealType& xlow, const RealType& ylow,
          const RealType& dx,
          const unsigned i = 0): 
-    // x(static_cast<UintType>((xi - xlow)/dx + 0.5)),
-    // y(static_cast<UintType>((yi - ylow)/dx + 0.5)),
-    x(static_cast<UintType>((xi - xlow)/dx)),
-    y(static_cast<UintType>((yi - ylow)/dx)),
+    x(static_cast<UintType>((xi - xlow)/dx + 0.5)),
+    y(static_cast<UintType>((yi - ylow)/dx + 0.5)),
+    // x(static_cast<UintType>((xi - xlow)/dx)),
+    // y(static_cast<UintType>((yi - ylow)/dx)),
     index(i) {}
   template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }

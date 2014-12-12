@@ -12,21 +12,24 @@ if (HAVE_BOOST)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostOrphanage.cc MeshEditor.cc)
 endif()
 
+# TriangleTessellator and triangle source
 if (HAVE_TRIANGLE)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TriangleTessellator.cc)
-  add_library(triangle triangle.c)
+  add_library(triangle triangle.c predicates.cc)
   set(TRIANGLE_LIB triangle)
   set_target_properties(${TRIANGLE_LIB} PROPERTIES 
-    COMPILE_FLAGS "${COMPILE_FLAGS} -DTRILIBRARY -DCDT_ONLY -DANSI_DECLARATIONS"
+    COMPILE_FLAGS "${COMPILE_FLAGS} -DTRILIBRARY -DCDT_ONLY -DANSI_DECLARATIONS -fPIC"
     LINKER_LANGUAGE C)
 else ()
   set(TRIANGLE_LIB "")
 endif()
 
+# BoostTessellator
 if (HAVE_BOOST_VORONOI)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} BoostTessellator.cc)
 endif ()
 
+# TetgenTessellator and tetgen source
 if (HAVE_TETGEN)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TetgenTessellator.cc)
   add_library(tetgen tetgen.cxx predicates.cc)

@@ -76,6 +76,7 @@ POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "TiltedLattice"               "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "ProjectionIntersection"      "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "BoostGeometry"               "BOOST"         )
 #POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
 #POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )
 

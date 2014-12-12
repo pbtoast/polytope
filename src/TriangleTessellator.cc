@@ -26,6 +26,8 @@
 #define ANSI_DECLARATORS 
 #define CDT_ONLY // Conforming Delaunay triangulations only! 
 
+#define ENABLE_INTEGER_INTERSECTIONS false
+
 // Because Hang Si has messed with some of Shewchuk's predicates and
 // included them with his own Tetgen library, we need to rename some of 
 // the symbols therein to prevent duplicate symbols from confusing the 
@@ -276,6 +278,60 @@ quantizeGeometry(const QuantizedCoordinates<2, RealType>& coords,
 }
 
 //------------------------------------------------------------------------------
+// Output an pair of node-index lists as a ReducedPLC for the cell
+//------------------------------------------------------------------------------
+template<typename RealType, typename IntType>
+ReducedPLC<2, RealType>
+dequantizeGeometry(const QuantizedCoordinates<2, RealType>& coords,
+                   const ReducedPLC<2, IntType>& geometry) {
+  typedef Point2<RealType> RealPoint;
+  typedef Point2<IntType> IntPoint;
+  ReducedPLC<2, RealType> result;
+  result.facets = geometry.facets;
+  result.holes  = geometry.holes;
+  result.points.resize(geometry.points.size());
+  for (unsigned i = 0; i < geometry.points.size()/2; ++i) {
+    const RealPoint rp = coords.dequantize(&geometry.points[2*i]);
+    result.points[2*i  ] = rp.x;
+    result.points[2*i+1] = rp.y;
+  }
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Collapse a facet having points within a given tolerance
+//------------------------------------------------------------------------------
+template<typename RealType>
+void
+simplifyGeometry(ReducedPLC<2, RealType>& geometry, const RealType tol) {
+  typedef Point2<RealType> PointType;
+  ReducedPLC<2, RealType> result;
+  const int nFacets = geometry.facets.size();
+  for (int i = 0; i < nFacets; ++i) {
+    POLY_ASSERT(geometry.facets[i].size() == 2);
+    const int i1 = geometry.facets[i][0];
+    const int i2 = geometry.facets[i][1];
+    POLY_ASSERT(i1 < geometry.points.size()/2 and i2 < geometry.points.size()/2);
+    const PointType p1 = PointType(geometry.points[2*i1], geometry.points[2*i1+1]);
+    const PointType p2 = PointType(geometry.points[2*i2], geometry.points[2*i2+1]);
+    const double dx = double(p2.x - p1.x);
+    const double dy = double(p2.y - p1.y);
+    const double dist = sqrt(dx*dx + dy*dy);
+    if (dist > tol) {
+      result.points.push_back(geometry.points[2*i1]);
+      result.points.push_back(geometry.points[2*i1+1]);
+    }
+  }
+  POLY_ASSERT(result.points.size()/2 > 0 and result.points.size()/2 <= nFacets);
+  result.facets.resize(result.points.size()/2, std::vector<int>(2));
+  for (int i = 0; i < result.points.size()/2; ++i) {
+    result.facets[i][0] = i;
+    result.facets[i][1] = (i+1) % (result.points.size()/2);
+  }
+  geometry = result;
+}
+
+//------------------------------------------------------------------------------
 // Exprss the Triangle-generated delaunay struct as a Tessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
@@ -379,6 +435,25 @@ public:
             pt1.x == pt2.x   and pt1.y < pt2.y-1 ? true : false);
   }
 };
+
+//------------------------------------------------------------------------------
+// Check the orientation of a cell. If CCW, return True.
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool
+checkCellOrientation(const RealType* pt, const ReducedPLC<2, RealType>& cell) {
+  double orientation = 0.0;
+  double pta[2] = {double(pt[0]), double(pt[1])};
+  for (int ifacet = 0; ifacet < cell.facets.size(); ++ifacet) {
+    double ptb[2] = {double(cell.points[2*cell.facets[ifacet][0]  ]),
+                     double(cell.points[2*cell.facets[ifacet][0]+1])};
+    double ptc[2] = {double(cell.points[2*cell.facets[ifacet][1]  ]),
+                     double(cell.points[2*cell.facets[ifacet][1]+1])};
+    orientation += orient2d(pta, ptb, ptc);
+  }
+  return (orientation > 0.0);
+}
+
 
 } // end anonymous namespace
 
@@ -510,8 +585,9 @@ tessellate(const vector<RealType>& points,
 
 
   // Construct a PLC of the geometric boundary.
-  const ReducedPLC<2, CoordHash> intGeometry = quantizeGeometry<RealType, CoordHash>(mCoords, geometry);
   vector<ReducedPLC<2, CoordHash> > intCells(numGenerators);
+#if ENABLE_INTEGER_INTERSECTIONS
+  const ReducedPLC<2, CoordHash> intGeometry = quantizeGeometry<RealType, CoordHash>(mCoords, geometry);
   vector<ReducedPLC<2, CoordHash> > orphans;
   for (int i = 0; i < numGenerators; ++i) {
     const IntPoint intGenerator = mCoords.quantize(&points[2*i]);
@@ -519,7 +595,11 @@ tessellate(const vector<RealType>& points,
 
     intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, orphans);
     POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-                 "Cell " << i << " intersects itself:\n" << intCell);
+                 "Cell " << i << " intersects itself:\n" 
+                 << "\nBefore clipping:\n" << intCell
+                 << "\nAfter clipping:\n" << intCells[i]
+                 << "\nOuter Geometry:\n" << intGeometry
+                 << "\nGenerator:\n" << intGenerator);
   }
 
   if (orphans.size() > 0) {
@@ -527,6 +607,23 @@ tessellate(const vector<RealType>& points,
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, mCoords, intCells, orphans);
   }
+#else
+  vector<ReducedPLC<2, RealType> > orphans;
+  for (int i = 0; i < numGenerators; ++i) {
+    const RealPoint generator = RealPoint(points[2*i], points[2*i+1]);
+    const ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
+    const ReducedPLC<2, RealType> cell = dequantizeGeometry(mCoords, intCell);
+    ReducedPLC<2, RealType> clippedCell;
+    clippedCell = BG::boost_clip<RealType>(geometry, cell, generator, orphans);
+    POLY_ASSERT2(not BG::boost_intersects(clippedCell), clippedCell);
+    intCells[i] = quantizeGeometry<RealType, CoordHash>(mCoords, clippedCell);
+    simplifyGeometry<CoordHash>(intCells[i], 0);
+  }
+
+  if (orphans.size() > 0) {
+    cerr << "Orphans detected. Taking no action." << endl;
+  }
+#endif
 
   constructBoundedTopology(points, geometry, intCells, mesh);
 }
@@ -710,8 +807,8 @@ computeCellNodes(const vector<RealType>& points,
   
   // Assign a unique ID to each triangle and circumcenter.
   // Circumcenters that overlap are collapsed into nodes.
-  // NOTE: This is all done in floating point.
-  map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
+  // map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
+  map<IntPoint, int> circ2id;
   map<int, unsigned> tri2id;
   for (i = 0; i != numTriangles; ++i){
     if (triMask[i] == 1) {
@@ -889,14 +986,16 @@ constructBoundedTopology(const vector<RealType>& points,
                          Tessellation<2, RealType>& mesh) const {
   const unsigned numGenerators = points.size()/2;
   int i, j, k, iedge;
+  // std::map<IntPoint, int, ThreeByThreeCompare<CoordHash> > point2node;
   std::map<IntPoint, int> point2node;
   std::map<EdgeHash, int> edgeHash2id;
   std::map<int, std::vector<int> > edgeCells;
-  // std::set<unsigned> plcNodes;
-  // std::set<unsigned> indices;
-  // for (unsigned ii = 0; ii < geometry.points.size()/2; ++ii) indices.insert(ii);
   mesh.cells = std::vector<std::vector<int> >(numGenerators);
   for (i = 0; i != numGenerators; ++i) { 
+
+    // POLY_ASSERT(checkCellOrientation<CoordHash>
+    //             (&(mCoords.quantize(&points[2*i])).x, intCells[i]));
+
     const unsigned nfacets = intCells[i].facets.size();
     POLY_ASSERT(nfacets > 2);
     for (unsigned ifacet = 0; ifacet < nfacets; ++ifacet) {
@@ -939,7 +1038,7 @@ constructBoundedTopology(const vector<RealType>& points,
   mesh.faces = std::vector<std::vector<unsigned> >(edgeHash2id.size());
   for (typename std::map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
        itr != edgeHash2id.end(); ++itr) {
-    const EdgeHash& ehash = itr->first;
+    const EdgeHash ehash = itr->first;
     i = itr->second;
     POLY_ASSERT(i < mesh.faces.size());
     POLY_ASSERT(mesh.faces[i].size() == 0);
@@ -1054,8 +1153,6 @@ constructBoundedTopology(const vector<RealType>& points,
     }
     POLY_ASSERT(dist < 4.0*mCoords.delta);
   }
-
-
 }
 //------------------------------------------------------------------------------
 
