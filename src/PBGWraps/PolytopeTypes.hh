@@ -1,6 +1,8 @@
 #ifndef __PBGWRAPS_POLYTOPETYPES__
 #define __PBGWRAPS_POLYTOPETYPES__
 
+#include <sstream>
+
 #include "Python.h"
 #include "polytope.hh"
 
@@ -13,6 +15,7 @@
 #include "TetgenTessellator.hh"
 #include "MeshEditor.hh"
 #include "SiloWriter.hh"
+#include "polytope_write_OOGL.hh"
 
 #if HAVE_MPI
 #include "DistributedTessellator.hh"
@@ -73,6 +76,16 @@ typedef SerialDistributedTessellator<3, double> SerialDistributedTessellator3d;
 typedef MeshEditor<2, double> MeshEditor2d;
 typedef MeshEditor<3, double> MeshEditor3d;
 
+
+//------------------------------------------------------------------------------
+// PLC pretty printing
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+std::string PLC_repr( PLC<Dimension, RealType>& self ) {
+  std::ostringstream os;
+  os << self;
+  return os.str();
+}
 
 //------------------------------------------------------------------------------
 // PLC Getters and Setters
