@@ -258,7 +258,7 @@ public:
     for (unsigned j = 0; j != Dimension; ++j) {
        os << coords.center[j] << ",";
     }
-    os << std::endl;
+    os << ")" << std::endl;
     os << "Sphere Radius = " << coords.rinf << std::endl;
     os << "Int Spacing   = " << coords.delta << std::endl;
     return os;

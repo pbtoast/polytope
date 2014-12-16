@@ -190,7 +190,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   typedef typename DimensionTraits<Dimension, RealType>::IntPoint Point;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
   typedef KeyTraits::Key Key;
-  const bool visIntermediateMeshes = true;
+  const bool visIntermediateMeshes = false;
 
   // Parallel configuration.
   int rank, numProcs;

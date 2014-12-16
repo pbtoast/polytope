@@ -68,7 +68,7 @@ void testBoundary(Boundary2D<double>& boundary,
   string testName = os.str();
 
   Generators<2,double> generators( boundary );
-  unsigned nPoints = 1;
+  unsigned nPoints = 10;
   Tessellation<2,double> mesh;
   for( unsigned n = 0; n < 3; ++n ){
     POLY_ASSERT(mesh.empty());
