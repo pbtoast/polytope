@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     boost::geometry::intersection(a, b, result);
     POLY_CHECK2(result.size() == 1, result.size());
     boost::geometry::correct(result[0]);
-    for (typename RingType::const_iterator itr = result[0].outer().begin();
+    for (RingType::const_iterator itr = result[0].outer().begin();
          itr != result[0].outer().end();
          ++itr)   cout << itr->get<0>() << " " << itr->get<1>() << endl;
     POLY_CHECK(not boost::geometry::intersects(result[0]));

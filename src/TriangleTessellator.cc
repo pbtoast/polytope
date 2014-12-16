@@ -26,7 +26,7 @@
 #define ANSI_DECLARATORS 
 #define CDT_ONLY // Conforming Delaunay triangulations only! 
 
-#define ENABLE_INTEGER_INTERSECTIONS false
+#define ENABLE_INTEGER_INTERSECTIONS true
 
 // Because Hang Si has messed with some of Shewchuk's predicates and
 // included them with his own Tetgen library, we need to rename some of 
@@ -586,14 +586,14 @@ tessellate(const vector<RealType>& points,
 
   // Construct a PLC of the geometric boundary.
   vector<ReducedPLC<2, CoordHash> > intCells(numGenerators);
+  vector<ReducedPLC<2, CoordHash> > intOrphans;
 #if ENABLE_INTEGER_INTERSECTIONS
   const ReducedPLC<2, CoordHash> intGeometry = quantizeGeometry<RealType, CoordHash>(mCoords, geometry);
-  vector<ReducedPLC<2, CoordHash> > orphans;
   for (int i = 0; i < numGenerators; ++i) {
     const IntPoint intGenerator = mCoords.quantize(&points[2*i]);
     const ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
 
-    intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, orphans);
+    intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, intOrphans);
     POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
                  "Cell " << i << " intersects itself:\n" 
                  << "\nBefore clipping:\n" << intCell
@@ -602,11 +602,6 @@ tessellate(const vector<RealType>& points,
                  << "\nGenerator:\n" << intGenerator);
   }
 
-  if (orphans.size() > 0) {
-    cerr << "Orphans detected." << endl;
-    BoostOrphanage<RealType> orphanage(this);
-    orphanage.adoptOrphans(points, mCoords, intCells, orphans);
-  }
 #else
   vector<ReducedPLC<2, RealType> > orphans;
   for (int i = 0; i < numGenerators; ++i) {
@@ -615,16 +610,33 @@ tessellate(const vector<RealType>& points,
     const ReducedPLC<2, RealType> cell = dequantizeGeometry(mCoords, intCell);
     ReducedPLC<2, RealType> clippedCell;
     clippedCell = BG::boost_clip<RealType>(geometry, cell, generator, orphans);
-    POLY_ASSERT2(not BG::boost_intersects(clippedCell), clippedCell);
     intCells[i] = quantizeGeometry<RealType, CoordHash>(mCoords, clippedCell);
     simplifyGeometry<CoordHash>(intCells[i], 0);
+    POLY_ASSERT2(not BG::boost_intersects(intCells[i]), 
+                 "Cell " << i << " intersects itself:\n"
+                 << "\nBefore clipping, quantized:\n" << intCell
+                 << "\nBefore clipping, dequantized:\n" << cell
+                 << "\nAfter clipping, dequantized:\n" << clippedCell
+                 << "\nAfter clipping, quantized & simplified:\n" << intCells[i]
+                 << "\nOuter geometry:\n" << geometry
+                 << "\nGenerator:\n" << generator);
   }
 
-  if (orphans.size() > 0) {
-    cerr << "Orphans detected. Taking no action." << endl;
+  // Quantize the floating-point orphans
+  intOrphans.resize(orphans.size());
+  for (int i = 0; i < orphans.size(); ++i) {
+    intOrphans[i] = quantizeGeometry<RealType, CoordHash>(mCoords, orphans[i]);
   }
 #endif
 
+  // Run the orphan adoption algorithm
+  if (intOrphans.size() > 0) {
+    cerr << "Orphans detected." << endl;
+    BoostOrphanage<RealType> orphanage(this);
+    orphanage.adoptOrphans(points, mCoords, intCells, intOrphans);
+  }
+
+  // Finalize
   constructBoundedTopology(points, geometry, intCells, mesh);
 }
 //------------------------------------------------------------------------------
@@ -807,8 +819,8 @@ computeCellNodes(const vector<RealType>& points,
   
   // Assign a unique ID to each triangle and circumcenter.
   // Circumcenters that overlap are collapsed into nodes.
-  // map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
-  map<IntPoint, int> circ2id;
+  map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
+  // map<IntPoint, int> circ2id;
   map<int, unsigned> tri2id;
   for (i = 0; i != numTriangles; ++i){
     if (triMask[i] == 1) {
@@ -818,9 +830,13 @@ computeCellNodes(const vector<RealType>& points,
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       tri2id[i] = j;
-      if (k != circ2id.size()) id2node[j] = ip;
+      // if (k != circ2id.size()) id2node[j] = ip;
     }
   }
+
+  for (typename map<IntPoint, int>::const_iterator itr = circ2id.begin();
+       itr != circ2id.end();
+       ++itr)   id2node[itr->second] = itr->first;
   POLY_ASSERT(circ2id.size() == id2node.size());
 
   // Find all the infinite edges of the unbounded Voronoi. Project nodes at
@@ -1299,7 +1315,7 @@ tessellate(const vector<RealType>& points,
     this->computeCellNodes(points, cellNodes, id2node, infNodes);
   }
   POLY_ASSERT(cellNodes.size() == numGenerators);
-  
+
   vector<ReducedPLC<2, CoordHash> > dummy;
   intCells.resize(numGenerators);
   for (int i = 0; i < numGenerators; ++i) {
@@ -1307,16 +1323,15 @@ tessellate(const vector<RealType>& points,
     const ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
     intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, dummy);
     POLY_ASSERT(dummy.empty());
-    POLY_ASSERT2(not BG::boost_intersects(intCells[i]), intCells[i]);
+    // POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
+    //              "Cell " << i << " intersects itself:\n" 
+    //              << "\nBefore clipping:\n" << intCell
+    //              << "\nAfter clipping:\n" << intCells[i]
+    //              << "\nOuter Geometry:\n" << intGeometry
+    //              << "\nGenerator:\n" << intGenerator);
   }  
 }
 //------------------------------------------------------------------------------
-
-
-
-
-
-
 
 
 
