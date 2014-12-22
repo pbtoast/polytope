@@ -25,6 +25,12 @@
 #include "checkDistributedTessellation.hh"
 #include "PLC_Boost_2d.hh"
 
+#ifndef NDEBUG
+#define DEBUG_MODE true
+#else
+#define DEBUG_MODE false
+#endif
+
 using namespace std;
 using std::min;
 using std::max;
@@ -236,259 +242,10 @@ computeDistributedTessellation(const vector<RealType>& points,
   vector<unsigned> gen2domain(nlocal, rank);
   if (numProcs > 1) {
 
-    // Compute the convex hull of each domain and distribute them to all processes.
-    vector<ConvexHull> domainHulls; // (numProcs);
-    vector<unsigned> domainCellOffset(1, 0);
-    {
-      ConvexHull localHull = DimensionTraits<Dimension, RealType>::convexHull
-         (generators, rlow, mSerialTessellator->degeneracy());
-         // (generators, rlow, degeneracy);
+    // Store the collection of sorted neighbor domains
+    mesh.neighborDomains = this->computeDomainNeighbors(points, visIntermediateMeshes);
 
-      // We can skip some work here if the convex hull is of lower dimension than the 
-      // problem itself. We determine the set of visible points for a full-dimension
-      // hull by computing a local tessellation and collecting all generators that have
-      // an exterior face on the local mesh. For a lower dimension hull, every point
-      // is visible.
-      Tessellation<Dimension, RealType> localMesh;
-      set<unsigned> exteriorCells;
-      if (DimensionTraits<Dimension, RealType>::hullDimension(localHull) == Dimension) {
-         
-#if true
-        mSerialTessellator->tessellate(points, localMesh);
-        for (unsigned i = 0; i < points.size()/Dimension; ++i) {
-           ReducedPLC<Dimension, RealType> cell = geometry::cellToReducedPLC<Dimension, RealType>(localMesh, i);
-           if (not convexWithin(cell, localHull))  exteriorCells.insert(i);
-        }
-
-        vector<RealPoint> exteriorPoints;
-        for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
-          exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
-        }
-
-        for (set<unsigned>::const_iterator itr = exteriorCells.begin();
-             itr != exteriorCells.end(); ++itr) {
-          RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
-          typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
-          if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
-        }   
-        
-        localHull.points.clear();
-        for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
-             pointItr != exteriorPoints.end(); 
-             ++pointItr) {
-           copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
-        }
-#else        
-        mSerialTessellator->tessellate(points, localHull.points, localHull, localMesh);
-        for (unsigned i = 0; i != localMesh.faceCells.size(); ++i) {
-          if (localMesh.faceCells[i].size() == 1 ) {
-            unsigned icell = ((localMesh.faceCells[i][0] < 0) ? 
-                              ~localMesh.faceCells[i][0]      : 
-                              localMesh.faceCells[i][0]);
-            exteriorCells.insert(icell);
-          }        
-        }
-        
-        vector<RealPoint> exteriorPoints;
-        for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
-          exteriorPoints.push_back(DimensionTraits<Dimension, RealType>::constructPoint(&(localHull.points[Dimension*i])));
-        }
-        
-        for (set<unsigned>::const_iterator itr = exteriorCells.begin();
-             itr != exteriorCells.end(); ++itr) {
-          RealPoint addPoint = DimensionTraits<Dimension, RealType>::constructPoint(&(points[Dimension * (*itr)]));
-          typename vector<RealPoint>::iterator it = std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
-          if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
-        }   
-        
-        localHull.points.clear();
-        for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
-             pointItr != exteriorPoints.end(); ++pointItr) {
-           copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
-        }
-
-#endif  // new intersection idea
-      }
-      
-      // We have a lower-dimension hull. Every point is visible
-      else {
-        mSerialTessellator->tessellate(points, localMesh);
-        localHull.points = generators;
-      }
-
-      if (visIntermediateMeshes)
-      {
-        vector<RealType> vis(localMesh.cells.size(), 0.0);
-        for (typename set<unsigned>::const_iterator itr = exteriorCells.begin();
-             itr != exteriorCells.end();
-             ++itr) {
-           POLY_ASSERT(*itr < localMesh.cells.size());
-           vis[*itr] = 1.0;
-        }
-        outputTessellation(localMesh, points, "localMesh", rank, vis, "visible");
-      }
-
-
-      // Serialize and send
-      vector<char> localBuffer;
-      serialize(localHull, localBuffer);
-      for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
-        vector<char> buffer = localBuffer;
-        unsigned bufSize = localBuffer.size();
-        MPI_Bcast(&bufSize, 1, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
-        buffer.resize(bufSize);
-        MPI_Bcast(&buffer.front(), bufSize, MPI_CHAR, sendProc, MPI_COMM_WORLD);
-        vector<char>::const_iterator itr = buffer.begin();
-        ConvexHull newHull;
-        deserialize(newHull, itr, buffer.end());
-        POLY_ASSERT(itr == buffer.end());
-        domainHulls.push_back(newHull);
-        domainCellOffset.push_back(domainCellOffset.back() + domainHulls[sendProc].points.size()/Dimension);
-      }
-    }
-    POLY_ASSERT(domainHulls.size() == numProcs);
-    POLY_ASSERT(domainCellOffset.size() == numProcs + 1);
-
-    // // Blago!
-    // cerr << "Domain cell offsets : ";
-    // copy(domainCellOffset.begin(), domainCellOffset.end(), ostream_iterator<unsigned>(cerr, " "));
-    // cerr << endl;
-    // cerr << " mLow, mHigh : (" << mLow[0] << " " << mLow[1] << ") (" << mHigh[0] << " " << mHigh[1] << ")" << endl;
-    // // Blago!
-
-    // Create a tessellation of the hull vertices for all domains.
-    vector<RealType> hullGenerators;
-    for (unsigned i = 0; i != numProcs; ++i) {
-      copy(domainHulls[i].points.begin(), domainHulls[i].points.end(), back_inserter(hullGenerators));
-    }
-    POLY_ASSERT(hullGenerators.size()/Dimension == domainCellOffset.back());
-    
-    Tessellation<Dimension, RealType> hullMesh;
-    
-    //this->tessellationWrapper(hullGenerators, hullMesh);
-
-    switch (mType) {
-    case unbounded:
-      mSerialTessellator->tessellate(hullGenerators, hullMesh);
-      break;
-    case box:
-      mSerialTessellator->tessellate(hullGenerators, mLow, mHigh, hullMesh);
-      break;
-    case plc:
-      const unsigned numFacets = (mPLCptr->facets).size();
-      PLC<Dimension, RealType> outerPLC;
-      vector<double> outerPLCpoints(2*numFacets);
-      outerPLC.facets.resize(numFacets);
-      for (int i = 0; i != numFacets; ++i) {
-        outerPLC.facets[i].resize(2);
-        outerPLC.facets[i][0] = i;
-        outerPLC.facets[i][1] = (i+1)%numFacets;
-        unsigned index = (mPLCptr->facets)[i][0];
-        outerPLCpoints[2*i  ] = (*mPLCpointsPtr)[2*index  ];
-        outerPLCpoints[2*i+1] = (*mPLCpointsPtr)[2*index+1];
-      }
-      mSerialTessellator->tessellate(hullGenerators, outerPLCpoints, outerPLC, hullMesh);
-      break;
-    }
-
-    if (visIntermediateMeshes)
-    {
-      vector<RealType> owner(hullMesh.cells.size());
-      for (unsigned i = 0; i < hullMesh.cells.size(); ++i) {
-        const unsigned procOwner = bisectSearch(domainCellOffset, i);
-        owner[i] = RealType(procOwner);
-      }
-      outputTessellation(hullMesh, hullGenerators, "visibleMesh", rank, owner, "domainOwner");
-    }
-
-
-    // Find the set of domains we need to communicate with according to two criteria:
-    // 1.  Any domain hull that intersects our own.
-    // 2.  Any domain hull that has elements adjacent to one of ours in the hullMesh.
-    set<unsigned> neighborSet;
-
-    // First any hulls that intersect ours.
-    for (unsigned otherProc = 0; otherProc != numProcs; ++otherProc) {
-      if (otherProc != rank and
-          convexIntersect(domainHulls[otherProc], domainHulls[rank])) neighborSet.insert(otherProc);
-    }
-
-    // We need the set of cells that share nodes.
-    const vector<set<unsigned> > hullNodeCells = hullMesh.computeNodeCells();
-    const vector<set<unsigned> > hullCellToNodes = hullMesh.computeCellToNodes();
-    set<unsigned> cellsOfInterest;
-
-    // Now any hulls that have elements adjacent to ours in the hull mesh.
-    for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
-      for (set<unsigned>::const_iterator nodeItr1 = hullCellToNodes[icell].begin();
-           nodeItr1 != hullCellToNodes[icell].end(); ++nodeItr1){
-        for (set<unsigned>::const_iterator cellItr1 = hullNodeCells[*nodeItr1].begin();
-             cellItr1 != hullNodeCells[*nodeItr1].end(); ++cellItr1){
-           cellsOfInterest.insert(*cellItr1);
-
-          // // Now the nodes of the hulls adjacent to our own. This second layer of adjacency
-          // // catches neighbors on the full mesh that may not be neighbors on the hull mesh
-          // // without adding a second communication step
-          // for (set<unsigned>::const_iterator nodeItr2 = hullCellToNodes[*cellItr1].begin();
-          //      nodeItr2 != hullCellToNodes[*cellItr1].end(); ++nodeItr2){
-          //   for (set<unsigned>::const_iterator cellItr2 = hullNodeCells[*nodeItr2].begin();
-          //        cellItr2 != hullNodeCells[*nodeItr2].end(); ++cellItr2){
-          //     cellsOfInterest.insert(*cellItr2);
-          //     // const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr2);
-          //     // if (otherProc != rank) neighborSet.insert(otherProc);
-          //   }
-          // }
-        }
-      }
-    }
-
-    // Now add the likely neighbors to our neighbor set
-    for (set<unsigned>::const_iterator cellItr = cellsOfInterest.begin();
-         cellItr != cellsOfInterest.end(); ++cellItr) {
-      const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr);
-      if (otherProc != rank) neighborSet.insert(otherProc);
-    }
-    
-    // // Now any hulls that have elements adjacent to ours in the hull mesh.
-    // for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
-    //   for (typename vector<int>::const_iterator faceItr = hullMesh.cells[icell].begin();
-    //        faceItr != hullMesh.cells[icell].end(); ++faceItr) {
-    //     const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-    //     POLY_ASSERT(iface < hullMesh.faceCells.size());
-    //     for (vector<unsigned>::const_iterator nodeItr = hullMesh.faces[iface].begin();
-    //          nodeItr != hullMesh.faces[iface].end();
-    //          ++nodeItr) {
-    //       const unsigned inode = *nodeItr;
-    //       POLY_ASSERT(inode < hullNodeCells.size());
-    //       for (set<unsigned>::const_iterator itr = hullNodeCells[inode].begin();
-    //            itr != hullNodeCells[inode].end();
-    //            ++itr) {
-    //         const unsigned otherProc = bisectSearch(domainCellOffset, *itr);
-    //         if (otherProc != rank) neighborSet.insert(otherProc);
-    //       }
-    //     }
-    //   }
-    // }
-
-    
-
-    // Copy the neighbor set information the mesh.
-    mesh.neighborDomains = vector<unsigned>();
-    copy(neighborSet.begin(), neighborSet.end(), back_inserter(mesh.neighborDomains));
-    sort(mesh.neighborDomains.begin(), mesh.neighborDomains.end());
-
-    // // Blago!
-    // cerr << "1st communicating with : ";
-    // copy(mesh.neighborDomains.begin(), 
-    //      mesh.neighborDomains.end(), 
-    //      ostream_iterator<unsigned>(cerr, " "));
-    // cerr << endl;
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // // Blago!
-
-#ifndef NDEBUG
-    // Make sure everyone is consistent about who talks to whom.
-    // This is potentially an expensive check on massively parallel systems!
+    POLY_BEGIN_CONTRACT_SCOPE;
     {
       for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
         unsigned numOthers = mesh.neighborDomains.size();
@@ -498,12 +255,12 @@ computeDistributedTessellation(const vector<RealType>& points,
           otherNeighbors.resize(numOthers);
           MPI_Bcast(&(otherNeighbors.front()), numOthers, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
           POLY_ASSERT(rank == sendProc or
-                 count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
-                 count(otherNeighbors.begin(), otherNeighbors.end(), rank));
+                      count(mesh.neighborDomains.begin(), mesh.neighborDomains.end(), sendProc) == 
+                      count(otherNeighbors.begin(), otherNeighbors.end(), rank));
         }
       }
     }
-#endif
+    POLY_END_CONTRACT_SCOPE;
 
     // For now we're not going to clever, just send all our generators to our 
     // potential neighbor set.  Pack 'em up.
@@ -549,10 +306,8 @@ computeDistributedTessellation(const vector<RealType>& points,
     }
 
     // Make sure all our sends are completed.
-    // cerr << rank << " : Waiting for generator sends to complete." << endl;
     vector<MPI_Status> sendStatus(sendRequests.size());
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
-    // cerr << rank << " : DONE." << endl;
   }
   POLY_ASSERT(gen2domain.size() == generators.size()/Dimension);
 
@@ -565,15 +320,6 @@ computeDistributedTessellation(const vector<RealType>& points,
   //   }
   // }
   
-
-  // // Blago!
-  // if (rank == 4) {
-  //   cerr << "double points[" << generators.size() << "] = {" << endl;
-  //   copy(generators.begin(), generators.end(), ostream_iterator<double>(cerr, ","));
-  //   cerr << "};";
-  // }
-  // // Blago!
-
 
   // Construct the tessellation including the other domains' generators.
   this->tessellationWrapper(generators, mesh);
@@ -693,8 +439,8 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    const RealType dx = mSerialTessellator->degeneracy();
-    // const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 26);
+    //const RealType dx = mSerialTessellator->degeneracy();
+    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
     
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
@@ -827,7 +573,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   // // Blago!
 
   // In parallel we need to make sure the shared nodes are bit perfect the same.
-  if (numProcs > 0) {
+  if (numProcs > 1) {
 
     // Figure out which domain owns the shared nodes.
     const unsigned nNodes = mesh.nodes.size()/Dimension;
@@ -872,7 +618,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // // Blago!
 
     // Post the sends for any nodes we own, and note which nodes we expect to receive.
-#ifndef NDEBUG
+#if DEBUG_MODE
     vector<unsigned> bufSizes(numNeighbors, 0);
 #endif
     list<vector<double> > sendCoords;
@@ -910,7 +656,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
 
       // Send any nodes we have for this neighbor.
-#ifndef NDEBUG
+#if DEBUG_MODE
       bufSizes[idomain] = Dimension*sendNodes.size();
       sendRequests.push_back(MPI_Request());
       MPI_Isend(&bufSizes[idomain], 1, MPI_UNSIGNED,
@@ -933,7 +679,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       POLY_ASSERT(recvNodesItr != allRecvNodes.end());
       const vector<unsigned>& recvNodes = *recvNodesItr;
 
-#ifndef NDEBUG      
+#if DEBUG_MODE      
       unsigned otherSize;
       MPI_Status recvStatus;
       MPI_Recv(&otherSize, 1, MPI_UNSIGNED, mesh.neighborDomains[idomain], 9, MPI_COMM_WORLD, &recvStatus);
@@ -966,7 +712,9 @@ computeDistributedTessellation(const vector<RealType>& points,
         // Unpack the coordinates to the receive nodes.
         for (unsigned j = 0; j != recvNodes.size(); ++j) {
           const unsigned i = recvNodes[j];
-          for (unsigned k = 0; k != Dimension; ++k) mesh.nodes[Dimension*i + k] = recvCoords[Dimension*j + k];
+          for (unsigned k = 0; k != Dimension; ++k) {
+            mesh.nodes[Dimension*i + k] = recvCoords[Dimension*j + k];
+          }
         }
       }
     }
@@ -977,10 +725,10 @@ computeDistributedTessellation(const vector<RealType>& points,
   }
 
   // Post-conditions.
-#ifndef NDEBUG
+#if DEBUG_MODE
   const string msg = checkDistributedTessellation(mesh);
   if (msg != "ok" and rank == 0) cerr << msg;
-  //POLY_ASSERT(msg == "ok");
+  POLY_ASSERT(msg == "ok");
 #endif
 }
 
@@ -1068,6 +816,200 @@ computeBoundingBox(const vector<RealType>& points,
     rhigh[j] = allReduce(rhigh[j], MPI_MAX, MPI_COMM_WORLD);
   }
 }
+
+
+//------------------------------------------------------------------------------
+// computeDomainNeighbors
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+vector<unsigned>
+DistributedTessellator<Dimension, RealType>::
+computeDomainNeighbors(const vector<RealType>& points,
+                       const bool visIntermediateMeshes) const {
+  // pre-conditions
+  POLY_ASSERT(!points.empty());
+
+  // Some typedefs used here
+  typedef DimensionTraits<Dimension, RealType> DT;
+  typedef typename DT::ConvexHull ConvexHull;
+  typedef typename DT::IntPoint   Point;
+  typedef typename DT::RealPoint  RealPoint;
+
+  // Parallel configuration.
+  int rank, numProcs;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+  
+  // Compute the local bounding box
+  RealType rlow[Dimension], rhigh[Dimension];
+  this->computeBoundingBox(points, rlow, rhigh);
+  
+  const double degeneracy = max(this->degeneracy(), 1.5e-8);
+
+  // Compute the convex hull of each domain and distribute them to all processes.
+  vector<ConvexHull> domainHulls; // (numProcs);
+  vector<unsigned> domainCellOffset(1, 0);
+  {
+    ConvexHull localHull = DT::convexHull(points, rlow, mSerialTessellator->degeneracy());;
+
+    // We can skip some work here if the convex hull is of lower dimension than the 
+    // problem itself. We determine the set of visible points for a full-dimension
+    // hull by computing a local tessellation and collecting all generators that have
+    // an exterior face on the local mesh. For a lower dimension hull, every point
+    // is visible.
+    Tessellation<Dimension, RealType> localMesh;
+    set<unsigned> exteriorCells;
+    if (DT::hullDimension(localHull) == Dimension)
+    {
+      mSerialTessellator->tessellate(points, localMesh);
+      for (unsigned i = 0; i < points.size()/Dimension; ++i) {
+        ReducedPLC<Dimension, RealType> cell = geometry::cellToReducedPLC<Dimension, RealType>(localMesh, i);
+        if (not convexWithin(cell, localHull))  exteriorCells.insert(i);
+      }
+      
+      vector<RealPoint> exteriorPoints(localHull.points.size()/Dimension);
+      for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
+        exteriorPoints[i] = DT::constructPoint(&(localHull.points[Dimension*i]));
+      }
+      
+      for (set<unsigned>::const_iterator itr = exteriorCells.begin();
+           itr != exteriorCells.end(); 
+           ++itr) {
+        RealPoint addPoint = DT::constructPoint(&(points[Dimension * (*itr)]));
+        typename vector<RealPoint>::iterator it = 
+           std::find(exteriorPoints.begin(), exteriorPoints.end(), addPoint);
+        if (it == exteriorPoints.end())  exteriorPoints.push_back(addPoint);
+      }   
+        
+      localHull.points.clear();
+      for (typename vector<RealPoint>::iterator pointItr = exteriorPoints.begin();
+           pointItr != exteriorPoints.end(); 
+           ++pointItr) {
+        copy(&(*pointItr).x, (&(*pointItr).x + Dimension), back_inserter(localHull.points));
+      }
+    }
+
+    // We have a lower-dimension hull. Every point is visible.
+    else
+    {
+      mSerialTessellator->tessellate(points, localMesh);
+      localHull.points = points;
+    }
+    
+    if (visIntermediateMeshes)
+    {
+      vector<RealType> vis(localMesh.cells.size(), 0.0);
+      for (typename set<unsigned>::const_iterator itr = exteriorCells.begin();
+           itr != exteriorCells.end();
+           ++itr) {
+        POLY_ASSERT(*itr < localMesh.cells.size());
+        vis[*itr] = 1.0;
+      }
+      outputTessellation(localMesh, points, "localMesh", rank, vis, "visible");
+    }
+      
+    // Serialize the hull + extra visible points and send to all
+    vector<char> localBuffer;
+    serialize(localHull, localBuffer);
+    for (unsigned sendProc = 0; sendProc != numProcs; ++sendProc) {
+      vector<char> buffer = localBuffer;
+      unsigned bufSize = localBuffer.size();
+      MPI_Bcast(&bufSize, 1, MPI_UNSIGNED, sendProc, MPI_COMM_WORLD);
+      buffer.resize(bufSize);
+      MPI_Bcast(&buffer.front(), bufSize, MPI_CHAR, sendProc, MPI_COMM_WORLD);
+      vector<char>::const_iterator itr = buffer.begin();
+      ConvexHull newHull;
+      deserialize(newHull, itr, buffer.end());
+      POLY_ASSERT(itr == buffer.end());
+      domainHulls.push_back(newHull);
+      domainCellOffset.push_back(domainCellOffset.back() + domainHulls[sendProc].points.size()/Dimension);
+    }
+  }
+  POLY_ASSERT(domainHulls.size() == numProcs);
+  POLY_ASSERT(domainCellOffset.size() == numProcs + 1);
+
+  // Create a tessellation using the visible points from all other domains.
+  vector<RealType> allVisibleGenerators;
+  for (unsigned i = 0; i != numProcs; ++i) {
+    copy(domainHulls[i].points.begin(), 
+         domainHulls[i].points.end(), 
+         back_inserter(allVisibleGenerators));
+  }
+  POLY_ASSERT(allVisibleGenerators.size()/Dimension == domainCellOffset.back());
+  Tessellation<Dimension, RealType> visibleMesh;
+
+  // this->tessellationWrapper(allVisibleGenerators, visibleMesh);
+
+  switch (mType) {
+  case unbounded:
+    mSerialTessellator->tessellate(allVisibleGenerators, visibleMesh);
+    break;
+  case box:
+    mSerialTessellator->tessellate(allVisibleGenerators, mLow, mHigh, visibleMesh);
+    break;
+  case plc:
+    PLC<Dimension, RealType> tmpPLC;
+    tmpPLC.facets = mPLCptr->facets;
+    mSerialTessellator->tessellate(allVisibleGenerators, *mPLCpointsPtr, tmpPLC, visibleMesh);
+    break;
+  }
+
+  if (visIntermediateMeshes)
+  {
+    vector<RealType> owner(visibleMesh.cells.size());
+    for (unsigned i = 0; i < visibleMesh.cells.size(); ++i) {
+      const unsigned procOwner = bisectSearch(domainCellOffset, i);
+      owner[i] = RealType(procOwner);
+    }
+    outputTessellation(visibleMesh, allVisibleGenerators, "visibleMesh", rank, owner, "domainOwner");
+  }
+
+
+  // Find the set of domains we need to communicate with according to two criteria:
+  // 1.  Any domain hull that intersects our own.
+  // 2.  Any domain hull that has elements adjacent to one of ours in the visible mesh.
+  set<unsigned> neighborSet;
+
+  // First any hulls that intersect ours.
+  for (unsigned otherProc = 0; otherProc != numProcs; ++otherProc) {
+    if (otherProc != rank and
+        convexIntersect(domainHulls[otherProc], domainHulls[rank])) {
+      neighborSet.insert(otherProc);
+    }
+  }
+
+  // We need the set of cells that share nodes.
+  const vector<set<unsigned> > hullNodeCells = visibleMesh.computeNodeCells();
+  const vector<set<unsigned> > hullCellToNodes = visibleMesh.computeCellToNodes();
+  set<unsigned> cellsOfInterest;
+
+  // Now any hulls that have elements adjacent to ours in the hull mesh.
+  for (unsigned icell = domainCellOffset[rank]; icell != domainCellOffset[rank + 1]; ++icell) {
+    for (set<unsigned>::const_iterator nodeItr1 = hullCellToNodes[icell].begin();
+         nodeItr1 != hullCellToNodes[icell].end(); ++nodeItr1){
+      for (set<unsigned>::const_iterator cellItr1 = hullNodeCells[*nodeItr1].begin();
+           cellItr1 != hullNodeCells[*nodeItr1].end(); ++cellItr1){
+        cellsOfInterest.insert(*cellItr1);
+      }
+    }
+  }
+
+  // Now add the likely neighbors to our neighbor set
+  for (set<unsigned>::const_iterator cellItr = cellsOfInterest.begin();
+       cellItr != cellsOfInterest.end(); ++cellItr) {
+    const unsigned otherProc = bisectSearch(domainCellOffset, *cellItr);
+    if (otherProc != rank) neighborSet.insert(otherProc);
+  }
+
+  // Store the final ordered neighbors
+  vector<unsigned> neighborDomains;
+  copy(neighborSet.begin(), neighborSet.end(), back_inserter(neighborDomains));
+  sort(neighborDomains.begin(), neighborDomains.end());
+
+  return neighborDomains;
+}
+
+
 
 //------------------------------------------------------------------------------
 // Explicit instantiation.

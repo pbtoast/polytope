@@ -128,6 +128,10 @@ protected:
                           RealType* rlow,
                           RealType* rhigh) const;
 
+  // Internal method for computing set of domains (likely) neighboring this one
+  std::vector<unsigned> computeDomainNeighbors(const std::vector<RealType>& points,
+                                               const bool visIntermediateMeshes) const;
+
 private:
   // Forbidden methods.
   DistributedTessellator();
