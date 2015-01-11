@@ -181,7 +181,7 @@ constructBoostVoronoiCells(boost::polygon::voronoi_diagram<RealType>& voronoi,
   RealPoint endpoint;
   map<IntPoint, int> node2id;
   map<int, IntPoint> id2node;
-  vector<unsigned> cellNodes(numGenerators);
+  // vector<unsigned> cellNodes(numGenerators);
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 
        ++cellItr, ++sortedIndex) {
@@ -270,7 +270,7 @@ constructBoostVoronoiCells(boost::polygon::voronoi_diagram<RealType>& voronoi,
     if (nodeChain.front() == nodeChain.back()) nodeChain.resize(nodeChain.size()-1);
     POLY_ASSERT(not nodeChain.empty());
 
-    cellNodes[cellIndex] = nodeChain;
+    // cellNodes[cellIndex] = nodeChain;
   }
 }
 

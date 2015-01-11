@@ -412,7 +412,7 @@ dumpDelaunay(const triangulateio& delaunay,
 template<typename RealType>
 class ThreeByThreeCompare {
 public:
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) {
+  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
     return (pt1.x < pt2.x-1 ? true :
             (pt1.x == pt2.x-1 or pt1.x == pt2.x or pt1.x == pt2.x+1) and 
             pt1.y < pt2.y-1 ? true : false);
@@ -429,7 +429,7 @@ public:
 template<typename RealType>
 class PlusSignCompare {
 public:
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) {
+  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
     return (pt1.x < pt2.x-1 ? true :
             pt1.x == pt2.x-1 and pt1.y < pt2.y ? true :
             pt1.x == pt2.x   and pt1.y < pt2.y-1 ? true : false);
