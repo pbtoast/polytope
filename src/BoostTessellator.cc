@@ -71,7 +71,7 @@ plcOfCell(const vector<unsigned>& nodeIndices,
 template<typename RealType>
 class ThreeByThreeCompare {
 public:
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) {
+  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
     return (pt1.x < pt2.x-1 ? true :
             (pt1.x == pt2.x-1 or pt1.x == pt2.x or pt1.x == pt2.x+1) and 
             pt1.y < pt2.y-1 ? true : false);
@@ -89,7 +89,7 @@ template<typename RealType>
 class ThreeByThreeTolCompare {
 public:
   ThreeByThreeTolCompare(RealType tol_) : tol(tol_) {};
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) {
+  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
     return (pt1.x < pt2.x-tol ? true :
             (pt1.x >= pt2.x-tol and pt1.x <= pt2.x+tol) and 
             pt1.y < pt2.y-tol ? true : false);
