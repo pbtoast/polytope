@@ -819,8 +819,8 @@ computeCellNodes(const vector<RealType>& points,
   
   // Assign a unique ID to each triangle and circumcenter.
   // Circumcenters that overlap are collapsed into nodes.
-  map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
-  // map<IntPoint, int> circ2id;
+  // map<IntPoint, int, ThreeByThreeCompare<CoordHash> > circ2id;
+  map<IntPoint, int> circ2id;
   map<int, unsigned> tri2id;
   for (i = 0; i != numTriangles; ++i){
     if (triMask[i] == 1) {
