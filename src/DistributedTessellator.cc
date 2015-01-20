@@ -326,9 +326,17 @@ computeDistributedTessellation(const vector<RealType>& points,
 
   
   if (visIntermediateMeshes)
-  {   
+  {
     outputTessellation(mesh, generators, "fullMesh", rank, vector<RealType>(mesh.cells.size()), "dummy");
   }
+
+  // // Blago!
+  // {
+  //    Tessellation<Dimension, RealType> uMesh;
+  //    this->mSerialTessellator->tessellate(generators, uMesh);
+  //    outputTessellation(uMesh, generators, "unboundedFullMesh", rank, vector<RealType>(mesh.cells.size()), "dummy");
+  // }
+  // // Blago!
 
   // If requested, build the communication info for the shared nodes & faces
   // with our neighbor domains.
@@ -439,8 +447,8 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Compute the bounding box for the mesh coordinates.
     this->computeBoundingBox(mesh.nodes, rlow, rhigh);
-    //const RealType dx = mSerialTessellator->degeneracy();
-    const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
+    const RealType dx = mSerialTessellator->degeneracy();
+    // const RealType dx = DimensionTraits<Dimension, RealType>::maxLength(rlow, rhigh)/(1LL << 34);
     
     // Sort the shared elements.  This should make the ordering consistent on all domains without communication.
     unsigned numNeighbors = mesh.neighborDomains.size();
@@ -458,8 +466,10 @@ computeDistributedTessellation(const vector<RealType>& points,
       
       
       // // Blago!
-      // if ((rank == 5  and mesh.neighborDomains[idomain] == 10) or
-      //     (rank == 10 and mesh.neighborDomains[idomain] == 5 )) {
+      // int rank1 = 10;
+      // int rank2 = 13;
+      // if ((rank == rank1 and mesh.neighborDomains[idomain] == rank2) or
+      //     (rank == rank2 and mesh.neighborDomains[idomain] == rank1)) {
       //   const unsigned other = mesh.neighborDomains[idomain];
       //   set<unsigned> nnn;
       //   for (unsigned iface = 0; iface < mesh.faceCells.size(); ++iface) { 
@@ -468,7 +478,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       //       const unsigned icell2 = (mesh.faceCells[iface][1] < 0) ? ~mesh.faceCells[iface][1] : mesh.faceCells[iface][1];
       //       const unsigned iproc1 = gen2domain[icell1];
       //       const unsigned iproc2 = gen2domain[icell2];
-      //       if ((iproc1 == 5 and iproc2 == 10) or (iproc1 == 10 and iproc2 == 5)) {
+      //       if ((iproc1 == rank1 and iproc2 == rank2) or (iproc1 == rank2 and iproc2 == rank1)) {
       //         nnn.insert(mesh.faces[iface][0]);
       //         nnn.insert(mesh.faces[iface][1]);
       //       }
@@ -476,9 +486,14 @@ computeDistributedTessellation(const vector<RealType>& points,
       //   }
       //   vector<Point> n4;
       //   for (set<unsigned>::iterator itr = nnn.begin(); itr != nnn.end(); ++itr) {
+      //     cerr << setprecision(numeric_limits<double>::digits)
+      //          << mesh.nodes[Dimension*(*itr)] << " , "
+      //          << mesh.nodes[Dimension*(*itr)+1] << "  " << *itr << endl;
       //     POLY_ASSERT(*itr < nodePoints.size());
+      //     RealType cen[2] = {0.5, 0.5};
       //     Point pp = DimensionTraits<Dimension, RealType>::constructPoint(&(mesh.nodes[Dimension * (*itr)]),
-      //                                                                     &rlow[0],
+      //                                                                     // &rlow[0],
+      //                                                                     &cen[0],
       //                                                                     dx,
       //                                                                     *itr);
       //     n4.push_back(pp);

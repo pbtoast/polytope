@@ -27,16 +27,31 @@ void internal_abort();
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
     polytope::internal_abort(); \
   }
-#define POLY_BEGIN_CONTRACT_SCOPE if (false) { while(false)
-#define POLY_END_CONTRACT_SCOPE } while(false)
+#define POLY_BEGIN_CONTRACT_SCOPE 
+#define POLY_END_CONTRACT_SCOPE 
 #else
 #define POLY_ASSERT(x)
 #define POLY_ASSERT2(x, msg)
-#define POLY_BEGIN_CONTRACT_SCOPE 
-#define POLY_END_CONTRACT_SCOPE 
+#define POLY_BEGIN_CONTRACT_SCOPE if (false) { while(false)
+#define POLY_END_CONTRACT_SCOPE } while(false)
 #endif
 
 #define POLY_CONTRACT_VAR(x) if (0 && &x == &x){}
+
+// A requirement contract that is always on to check user input.
+#define POLY_VERIFY(x) \
+  if (!(x)) \
+  { \
+    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
+    polytope::internal_abort(); \
+  }
+#define POLY_VERIFY2(x, msg) \
+  if (!(x)) \
+  { \
+    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+    polytope::internal_abort(); \
+  }
+
 
 namespace internal {
 
@@ -84,16 +99,16 @@ addKeyToMap(const Key& key, std::map<Key, int, Comparator>& key2id) {
 // This thing just overloads the index operator to start the count at zero
 // for new key values.
 //------------------------------------------------------------------------------
-template<typename Key, 
+template<typename Key,
          typename Comparator = std::less<Key> >
-class CounterMap: public std::map<Key, unsigned> {
+class CounterMap: public std::map<Key, unsigned, Comparator> {
 public:
-  CounterMap(): std::map<Key, unsigned>() {}
+  CounterMap(): std::map<Key, unsigned, Comparator>() {}
   virtual ~CounterMap() {}
   unsigned& operator[](const Key& key) {
     typename std::map<Key, unsigned>::iterator itr = this->find(key);
     if (itr == this->end()) {
-      std::map<Key, unsigned>::operator[](key) = 0U;
+      std::map<Key, unsigned, Comparator>::operator[](key) = 0U;
       itr = this->find(key);
     }
     POLY_ASSERT(itr != this->end());
