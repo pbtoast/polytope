@@ -163,8 +163,10 @@ struct BoostTessellatorTraits<RealType, RealType> {
   typedef polytope::Point2<IntType>  IntPoint;
   static PointType deboost(const polytope::QuantizedCoordinates<2, RealType>& coords, 
                            const RealType* pointIn) {
-    IntPoint ip = IntPoint(floor(pointIn[0]), floor(pointIn[1]));
-    return coords.dequantize(&ip.x);
+    return RealPoint(coords.low_inner.x + coords.delta*pointIn[0],
+                     coords.low_inner.y + coords.delta*pointIn[1]);
+    // IntPoint ip = IntPoint(floor(pointIn[0]), floor(pointIn[1]));
+    // return coords.dequantize(&ip.x);
   }
   static PointType quantize(const polytope::QuantizedCoordinates<2, RealType>& coords, 
                             const RealType* pointIn) {
@@ -175,9 +177,9 @@ struct BoostTessellatorTraits<RealType, RealType> {
     return pointIn;
   }
   static PointType project(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const PointType& endPoint,
+                           const RealType* endPoint,
                            const RealType* direction) {
-    return coords.projectPoint(&endPoint.x, direction);
+    return coords.projectPoint(endPoint, direction);
   }
 };
 
@@ -189,7 +191,7 @@ template<typename RealType>
 struct BoostTessellatorTraits<RealType, int64_t> {
   typedef int64_t IntType;
   typedef IntType CoordType;
-  typedef polytope::Point2<IntType> PointType;
+  typedef polytope::Point2<IntType>  PointType;
   typedef polytope::Point2<RealType> RealPoint;
   typedef polytope::Point2<IntType>  IntPoint;
   static PointType deboost(const polytope::QuantizedCoordinates<2, RealType>& coords, 
@@ -205,9 +207,10 @@ struct BoostTessellatorTraits<RealType, int64_t> {
     return coords.dequantize(&pointIn.x);
   }
   static PointType project(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const PointType& endPoint,
+                           const int64_t* endPoint,
                            const RealType* direction) {
-    const RealPoint tmp = coords.dequantize(&endPoint.x);
+    const IntPoint iep   = IntPoint(endPoint[0], endPoint[1]);
+    const RealPoint tmp  = coords.dequantize(&iep.x);
     const RealPoint pinf = coords.projectPoint(&tmp.x, direction);
     return coords.quantize(&pinf.x);
   }
