@@ -106,7 +106,10 @@ int main(int argc, char** argv)
     BoostTessellator<double> tessellator;
     const double maxError = testAllBoundaries(tessellator);   
     const double tol = 0.1;
-    if (maxError > tol) cout << "FAIL" << endl;
+    POLY_CHECK2(maxError < tol,
+		"FAIL: Maximum error " << maxError << " in total "
+		<< "area of all tested boundaries is greater than "
+		<< "the tolerance " << tol << ".");
   }
 #endif
 
