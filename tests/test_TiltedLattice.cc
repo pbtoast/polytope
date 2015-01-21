@@ -3,7 +3,7 @@
 // Initialize generators on an NxN Cartesian lattice for N in [2,100],
 // then solidly rotate the lattice by 1 degree.
 // Check that the resulting tessellation is still a lattice of quads.
-
+// -----------------------------------------------------------------------
 #include <iostream>
 #include <vector>
 #include <set>
@@ -57,13 +57,20 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // -----------------------------------------------------------------------
 // generateMesh
 // -----------------------------------------------------------------------
-void generateMesh(Tessellator<2,double>& tessellator)
+void generateMesh(Tessellator<2,double>& tessellator,
+                  const bool checkLattice)
 {
-   // Set the boundary
+  // Constants
   const double degToRad = 2.0*M_PI/360;
-  const double angle = 4.0 * degToRad;
-  const unsigned Nmin = 2;
-  const unsigned Nmax = 100;
+
+  // Parameters
+  const double degrees = 4.0;     // Angle of tilt
+  const unsigned Nmin = 2;        // Minimum value of N for NxN lattice
+  const unsigned Nmax = 100;      // Maximum value of N for NxN lattice
+  const unsigned dumpEvery = 10;  // Set to 1 to dump EVERY mesh
+
+  // Derived parameters
+  const double angle = degrees * degToRad;
 
   double boundaryPoints[8] = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0};
   vector<double> plcPoints(8);
@@ -96,14 +103,13 @@ void generateMesh(Tessellator<2,double>& tessellator)
 
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, plcPoints, plc, mesh);
-    // tessellator.tessellate(points, mesh);
-    outputMesh(mesh, "tiltedLattice_output", points, N);
+    if (N % dumpEvery == 0)  outputMesh(mesh, "tiltedLattice_output", points, N);
     
     // CHECKS:
     cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
     cout << "   num mesh cells : " << mesh.cells.size()   << endl;
     cout << "   num mesh faces : " << mesh.faces.size()   << endl;
-    checkCartesianMesh(mesh, N, N);
+    if (checkLattice)  checkCartesianMesh(mesh, N, N);
   }
 }
 
@@ -123,7 +129,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    generateMesh(tessellator);
+    generateMesh(tessellator, true);
   }
 #endif   
 
@@ -131,7 +137,14 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    generateMesh(tessellator);
+    generateMesh(tessellator, false);
+    
+    // NOTE: We do not check to see if BoostTessellator
+    // resolves the degenerate lattice mesh. Boost.Voronoi 
+    // requires integer input data; it is an unrealistic
+    // expectation to think a degenerate Cartesian mesh
+    // could be resolved with generators snapped to an
+    // integer grid.  -DPS 01/20/2015
   }
 #endif
 

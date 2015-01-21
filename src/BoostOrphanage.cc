@@ -181,7 +181,7 @@ constructBoostVoronoiCells(boost::polygon::voronoi_diagram<RealType>& voronoi,
   RealPoint endpoint;
   map<IntPoint, int> node2id;
   map<int, IntPoint> id2node;
-  vector<unsigned> cellNodes(numGenerators);
+  // vector<unsigned> cellNodes(numGenerators);
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 
        ++cellItr, ++sortedIndex) {
@@ -270,7 +270,7 @@ constructBoostVoronoiCells(boost::polygon::voronoi_diagram<RealType>& voronoi,
     if (nodeChain.front() == nodeChain.back()) nodeChain.resize(nodeChain.size()-1);
     POLY_ASSERT(not nodeChain.empty());
 
-    cellNodes[cellIndex] = nodeChain;
+    // cellNodes[cellIndex] = nodeChain;
   }
 }
 
@@ -756,7 +756,7 @@ adoptOrphans(const vector<RealType>& points,
             }
           }
           POLY_ASSERT2(result, "Union error: there are points in the bounding "
-                       << "neighborhood taht are not in the orphan or its neighbor cells.");
+                       << "neighborhood that are not in the orphan or its neighbor cells.");
         }
       }
       POLY_END_CONTRACT_SCOPE;
@@ -892,8 +892,8 @@ adoptOrphans(const vector<RealType>& points,
               const IntPoint jp = IntPoint(intCells[index].points[2*i], intCells[index].points[2*i+1]);
               result += (ip == jp);
             }
-            POLY_ASSERT2(result, "Union error: there are points in the single-neighbor "
-                         << "union cell that are not in the orphan or its neighbor.");
+            // POLY_ASSERT2(result, "Union error: there are points in the single-neighbor "
+            //              << "union cell that are not in the orphan or its neighbor.");
           }
         }
         POLY_END_CONTRACT_SCOPE;

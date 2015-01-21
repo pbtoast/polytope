@@ -39,8 +39,8 @@ struct IntersectFacetsFunctor<2, RealType> {
       POLY_ASSERT(facets[ifacet].size() == 2);
       i = facets[ifacet][0];
       j = facets[ifacet][1];
-      POLY_ASSERT(i >= 0 and i < numVertices);
-      POLY_ASSERT(j >= 0 and j < numVertices);
+      // POLY_ASSERT(i >= 0 and i < numVertices);
+      // POLY_ASSERT(j >= 0 and j < numVertices);
       intersects = geometry::segmentIntersection2D(point1, point2,
                                                    &vertices[2*i], &vertices[2*j],
                                                    intersectionPoint);

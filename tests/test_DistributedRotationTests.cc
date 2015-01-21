@@ -285,14 +285,14 @@ int main(int argc, char** argv)
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
 
-#if HAVE_TRIANGLE
-  {
-    if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
-    DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
-                                                  true, true);
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
-  }
-#endif   
+// #if HAVE_TRIANGLE
+//   {
+//     if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
+//     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
+//                                                   true, true);
+//     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+//   }
+// #endif   
 
 
 #if HAVE_BOOST_VORONOI

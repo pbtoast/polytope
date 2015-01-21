@@ -83,13 +83,15 @@ private:
   void computeCellNodesCollinear(const std::vector<RealType>& points,
                                  std::vector<std::vector<unsigned> >& cellNodes,
                                  std::map<int, IntPoint>& id2node,
-                                 std::vector<unsigned>& infNodes) const;
+                                 std::vector<unsigned>& infNodes,
+                                 const bool expandCoordinates) const;
 
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
                         std::vector<std::vector<unsigned> >& cellNodes,
                         std::map<int, IntPoint>& id2node,
-                        std::vector<unsigned>& infNodes) const;
+                        std::vector<unsigned>& infNodes,
+                        const bool expandCoordinates) const;
 
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,
@@ -102,7 +104,9 @@ private:
                                    std::vector<unsigned>& triMask,
                                    std::map<EdgeHash, std::vector<unsigned> >& edge2tris,
                                    std::map<int, std::set<unsigned> >& gen2tri,
-                                   std::vector<int>& triangleList) const;
+                                   std::vector<int>& triangleList,
+                                   RealType* low,
+                                   RealType* high) const;
 
   // Fill in the mesh struct using the final quantized cell data
   void constructBoundedTopology(const std::vector<RealType>& points,

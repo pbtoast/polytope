@@ -15,7 +15,7 @@ endif()
 # TriangleTessellator and triangle source
 if (HAVE_TRIANGLE)
   set(TESSELLATOR_SOURCES ${TESSELLATOR_SOURCES} TriangleTessellator.cc)
-  add_library(triangle triangle.c)
+  add_library(triangle triangle.c predicates.cc)
   set(TRIANGLE_LIB triangle)
   set_target_properties(${TRIANGLE_LIB} PROPERTIES 
     COMPILE_FLAGS "${COMPILE_FLAGS} -DTRILIBRARY -DCDT_ONLY -DANSI_DECLARATIONS -fPIC"
