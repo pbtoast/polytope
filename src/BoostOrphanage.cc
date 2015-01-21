@@ -756,7 +756,7 @@ adoptOrphans(const vector<RealType>& points,
             }
           }
           POLY_ASSERT2(result, "Union error: there are points in the bounding "
-                       << "neighborhood taht are not in the orphan or its neighbor cells.");
+                       << "neighborhood that are not in the orphan or its neighbor cells.");
         }
       }
       POLY_END_CONTRACT_SCOPE;
@@ -892,8 +892,8 @@ adoptOrphans(const vector<RealType>& points,
               const IntPoint jp = IntPoint(intCells[index].points[2*i], intCells[index].points[2*i+1]);
               result += (ip == jp);
             }
-            POLY_ASSERT2(result, "Union error: there are points in the single-neighbor "
-                         << "union cell that are not in the orphan or its neighbor.");
+            // POLY_ASSERT2(result, "Union error: there are points in the single-neighbor "
+            //              << "union cell that are not in the orphan or its neighbor.");
           }
         }
         POLY_END_CONTRACT_SCOPE;

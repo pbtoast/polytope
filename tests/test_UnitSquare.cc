@@ -2,7 +2,8 @@
 //
 // Mesh a unit square with (nx-by-nx) Cartesian generators for nx in [2,100].
 // Perform checks on the resulting tessellation to see if it is indeed Cartesian.
-// Both Triangle and Voro++ 2D tessellators are tested here.
+// Triangle and Boost tessellators are tested here.
+// -----------------------------------------------------------------------
 
 #include <iostream>
 #include <fstream>
@@ -51,76 +52,44 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // -----------------------------------------------------------------------
 void generateMesh(Tessellator<2,double>& tessellator)
 {
-   // Set the boundary
-   Boundary2D<double> boundary;
-   boundary.setUnitSquare();
-   Generators<2,double> generators( boundary );
-   
-   const unsigned imin   = 2;
-   const unsigned imax   = 101;
-   const unsigned iscale = 1;
+  // Set the boundary
+  Boundary2D<double> boundary;
+  boundary.setUnitSquare();
+  Generators<2,double> generators( boundary );
+  
+  const unsigned Nmin   = 2;
+  const unsigned Nmax   = 101;
 
-   const unsigned Imax  = 99;
-   const unsigned Nmin  = 2;
-   const unsigned scale = 1;
-   
-   for (unsigned i = 0; i != Imax; ++i) {
-     unsigned nx = Nmin + scale*i;
-     cout << "Testing nx=" << nx << endl;
+  
+  for (unsigned nx = Nmin; nx != Nmax; ++nx) {
+    cout << "Testing nx=" << nx << endl;
 
-      // Create generators
-      std::vector<unsigned> nxny(2,nx);
-      generators.cartesianPoints(nxny);
-      Tessellation<2,double> mesh;
-      
-//      ifstream os;
-//      double x, y, z;
-//      vector<double> points;
-//      os.open("oneMillionRandomGenerators.txt");
-//      for (unsigned ii = 0; ii != 1000000; ++ii) {
-//        os >> x >> y >> z;
-//        points.push_back(x);
-//        points.push_back(y);
-//      }
-//      os.close();
-
-     Timing::Time start = Timing::currentTime();
-     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-     //tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-     double time = Timing::difference(start, Timing::currentTime());
+    // Create generators
+    std::vector<unsigned> nxny(2,nx);
+    generators.cartesianPoints(nxny);
+    Tessellation<2,double> mesh;
      
-     cout << "Mesh construction took " << time << " seconds." << endl;
-     
-     // CHECKS:
-     cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
-     cout << "   num mesh cells : " << mesh.cells.size()   << endl;
-     cout << "   num mesh faces : " << mesh.faces.size()   << endl;
-     checkCartesianMesh(mesh,nx,nx);
+    Timing::Time start = Timing::currentTime();
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    double time = Timing::difference(start, Timing::currentTime());
+    
+    cout << "Mesh construction took " << time << " seconds." << endl;
+    
+    // CHECKS:
+    cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
+    cout << "   num mesh cells : " << mesh.cells.size()   << endl;
+    cout << "   num mesh faces : " << mesh.faces.size()   << endl;
+    checkCartesianMesh(mesh,nx,nx);
 
-//      ofstream os;
-//      os.open("oneMillionRandomGenerators.txt");
-//      os << "# x \t\t y \t\t z" << endl;
-//      for (unsigned j = 0; j != generators.mPoints.size()/2; ++j) {
-//        os << generators.mPoints[2*j] << " \t " << generators.mPoints[2*j+1] << " \t " << 0.0 << endl;
-//      }
-//      os.close();
-
-//      unsigned ic = 692152;
-//      cout << "Cell " << ic << " has face indices" << endl;
-//      for (vector<int>::iterator itr = mesh.cells[ic].begin();
-// 	  itr != mesh.cells[ic].end(); ++itr) {
-//        unsigned iface = (*itr < 0) ? ~(*itr) : *itr;
-//        cout << "   " << iface << " with nodes" << endl;
-//        unsigned inode0 = (*itr > 0) ? mesh.faces[iface][0] : mesh.faces[iface][1];
-//        unsigned inode1 = (*itr > 0) ? mesh.faces[iface][1] : mesh.faces[iface][0];
-//        cout << "      (" << mesh.nodes[2*inode0] << "," << mesh.nodes[2*inode0+1] << ")" << endl
-// 	    << "      (" << mesh.nodes[2*inode1] << "," << mesh.nodes[2*inode1+1] << ")" << endl;
-//        unsigned c0 = mesh.faceCells[iface][0] < 0 ? ~mesh.faceCells[iface][0] : mesh.faceCells[iface][0];
-//        unsigned c1 = mesh.faceCells[iface][1] < 0 ? ~mesh.faceCells[iface][1] : mesh.faceCells[iface][1];
-//        unsigned icell = (c0 == ic) ? c1 : c0;
-//        cout << "   and neighboring cell " << icell << endl;
-//      }
-   }
+    // ofstream os;
+    // os.open("oneMillionRandomGenerators.txt");
+    // os << "# x \t\t y \t\t z" << endl;
+    // for (unsigned j = 0; j != generators.mPoints.size()/2; ++j) {
+    //   os << generators.mPoints[2*j] << " \t " 
+    //      << generators.mPoints[2*j+1] << " \t " << 0.0 << endl;
+    // }
+    // os.close();
+  }
 }
 
 

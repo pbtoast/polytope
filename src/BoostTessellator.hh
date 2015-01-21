@@ -17,6 +17,7 @@
 #include "BoostOrphanage.hh"
 #include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
+#include "BoostTessellatorTraits.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
@@ -143,78 +144,6 @@ struct polytope_voronoi_ctype_traits {
 } //end boost namespace
 } //end polygon namespace
 
-
-//------------------------------------------------------------------------
-// Define a trait class to help with floating point versus integer
-// operations.
-//------------------------------------------------------------------------
-template<typename RealType, typename BaseType> struct BoostTessellatorTraits {};
-
-// Base type is floating point. The data out of Boost has to be rescaled based on
-// the original quantization of the generators. The return type is a RealPoint.
-// Calling quantize should do nothing. We're not working in the ints with this
-// option turned on.
-template<typename RealType>
-struct BoostTessellatorTraits<RealType, RealType> {
-  typedef int64_t IntType;
-  typedef RealType CoordType;
-  typedef polytope::Point2<RealType> PointType;
-  typedef polytope::Point2<RealType> RealPoint;
-  typedef polytope::Point2<IntType>  IntPoint;
-  static PointType deboost(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const RealType* pointIn) {
-    return RealPoint(coords.low_inner.x + coords.delta*pointIn[0],
-                     coords.low_inner.y + coords.delta*pointIn[1]);
-    // IntPoint ip = IntPoint(floor(pointIn[0]), floor(pointIn[1]));
-    // return coords.dequantize(&ip.x);
-  }
-  static PointType quantize(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                            const RealType* pointIn) {
-    return PointType(pointIn[0], pointIn[1]);
-  }
-  static RealPoint dequantize(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                              const PointType pointIn) {
-    return pointIn;
-  }
-  static PointType project(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const RealType* endPoint,
-                           const RealType* direction) {
-    return coords.projectPoint(endPoint, direction);
-  }
-};
-
-// Base type is 64-bit integer. The data out of Boost has to be floored. Although
-// it's scaled to be on the integer grid, it's actually floating point valued.
-// The return type is an IntPoint. Calling quantize should snap a floating point
-// value to the integer grid. Geometric operation use the ints with this option on.
-template<typename RealType>
-struct BoostTessellatorTraits<RealType, int64_t> {
-  typedef int64_t IntType;
-  typedef IntType CoordType;
-  typedef polytope::Point2<IntType>  PointType;
-  typedef polytope::Point2<RealType> RealPoint;
-  typedef polytope::Point2<IntType>  IntPoint;
-  static PointType deboost(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const RealType* pointIn) {
-    return PointType(floor(pointIn[0]), floor(pointIn[1]));
-  }
-  static PointType quantize(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                            const RealType* pointIn) {
-    return coords.quantize(pointIn);
-  }
-  static RealPoint dequantize(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                              const PointType pointIn) {
-    return coords.dequantize(&pointIn.x);
-  }
-  static PointType project(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const int64_t* endPoint,
-                           const RealType* direction) {
-    const IntPoint iep   = IntPoint(endPoint[0], endPoint[1]);
-    const RealPoint tmp  = coords.dequantize(&iep.x);
-    const RealPoint pinf = coords.projectPoint(&tmp.x, direction);
-    return coords.quantize(&pinf.x);
-  }
-};
 
 // // The Boost.Polygon Voronoi diagram
 // typedef boost::polygon::voronoi_builder<int64_t, boost::polygon::polytope_voronoi_ctype_traits> VB;

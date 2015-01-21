@@ -83,13 +83,15 @@ private:
   void computeCellNodesCollinear(const std::vector<RealType>& points,
                                  std::vector<std::vector<unsigned> >& cellNodes,
                                  std::map<int, IntPoint>& id2node,
-                                 std::vector<unsigned>& infNodes) const;
+                                 std::vector<unsigned>& infNodes,
+                                 const bool expandCoordinates) const;
 
   // Compute node IDs around each generator and their quantized locations
   void computeCellNodes(const std::vector<RealType>& points,
                         std::vector<std::vector<unsigned> >& cellNodes,
                         std::map<int, IntPoint>& id2node,
-                        std::vector<unsigned>& infNodes) const;
+                        std::vector<unsigned>& infNodes,
+                        const bool expandCoordinates) const;
 
   // Computes the triangularization using Triangle
   void computeDelaunay(const std::vector<RealType>& points,

@@ -670,12 +670,12 @@ tessellate(const vector<RealType>& points,
 
   // The points are collinear. This is easy:
   if (collinear) {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
+    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes, true);
   }
 
   // The points aren't collinear. Do the complicated stuff.
   else {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
+    this->computeCellNodes(points, cellNodes, id2node, infNodes, true);
   }
 
   // Copy the quantized nodes to the final tessellation.
@@ -757,12 +757,12 @@ tessellate(const vector<RealType>& points,
 
   // The points are collinear. This is easy:
   if (collinear) {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
+    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes, true);
   }
 
   // The points aren't collinear. Do the complicated stuff.
   else {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
+    this->computeCellNodes(points, cellNodes, id2node, infNodes, true);
   }
   POLY_ASSERT(cellNodes.size() == numGenerators);
 
@@ -1049,10 +1049,13 @@ TriangleTessellator<RealType>::
 computeCellNodesCollinear(const vector<RealType>& points,
                           vector<vector<unsigned> >& cellNodes,
                           map<int, IntPoint>& id2node,
-                          vector<unsigned>& infNodes) const { 
+                          vector<unsigned>& infNodes,
+                          const bool expandCoordinates) const { 
 
   // A dummy expansion just in case we're doing a distributed mesh construction.
-  mCoords.expand(&mCoords.low_inner.x, &mCoords.high_inner.x);
+  if (expandCoordinates) {
+    mCoords.expand(&mCoords.low_inner.x, &mCoords.high_inner.x);
+  }
 
   // Call the 1d routine for projecting a line of points
   vector<RealPoint> nodes;
@@ -1081,7 +1084,8 @@ TriangleTessellator<RealType>::
 computeCellNodes(const vector<RealType>& points,
                  vector<vector<unsigned> >& cellNodes,
                  map<int, IntPoint>& id2node,
-                 vector<unsigned>& infNodes) const { 
+                 vector<unsigned>& infNodes,
+                 const bool expandCoordinates) const { 
   const unsigned numGenerators = points.size()/2;
   int i, j, k;
   // Compute the minimum connectivity set from the Delaunay diagram.
@@ -1107,7 +1111,9 @@ computeCellNodes(const vector<RealType>& points,
   POLY_ASSERT(gen2tri.size()       ==   numGenerators);
 
   // Expand the bounding box for quantization
-  mCoords.expand(&low.x, &high.x);
+  if (expandCoordinates) {
+    mCoords.expand(&low.x, &high.x);
+  }
 
 
 
@@ -1713,7 +1719,7 @@ tessellate(const vector<RealType>& points,
 
   // The Quantized coordinates
   mCoords = coords;
-  
+
   const unsigned numGenerators = points.size()/2;
   const bool collinear = geometry::collinear<2, RealType>(points, mDegeneracy);
   vector<vector<unsigned> > cellNodes;
@@ -1723,11 +1729,11 @@ tessellate(const vector<RealType>& points,
   // Use the appropriate cell node routine
   if (collinear) 
   {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
+    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes, false);
   }
   else 
   {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
+    this->computeCellNodes(points, cellNodes, id2node, infNodes, false);
   }
   POLY_ASSERT(cellNodes.size() == numGenerators);
 
