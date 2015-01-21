@@ -26,61 +26,30 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// outputResult
-// -----------------------------------------------------------------------
-void outputResult(Tessellator<2,double>& tessellator,
-		  const int bType,
-		  const unsigned nPoints) {
-  // output name
-  ostringstream os;
-  os << "RandomPoints_" << tessellator.name() << "_" << bType;
-  string testName = os.str();
-
-  // Boundary data
-  Boundary2D<double> boundary;
-  boundary.setDefaultBoundary(bType);
-  
-  // Generator data
-  Generators<2,double> generators( boundary );
-  generators.randomPoints(nPoints);
-  
-  Tessellation<2,double> mesh;
-  tessellator.tessellate(generators.mPoints, 
-                         boundary.mPLCpoints,
-                         boundary.mPLC,
-                         mesh);
-  POLY_ASSERT( mesh.cells.size() == nPoints );
-  double area = computeTessellationArea(mesh);
-  cout << "Tessellation Area = " << area << endl;
-  cout << "Relative error    = " << (boundary.mArea-area)/boundary.mArea << endl;  
-  outputMesh(mesh, testName, generators.mPoints);
-}
-
-
-// -----------------------------------------------------------------------
 // testBoundary
 // -----------------------------------------------------------------------
 void testBoundary(Boundary2D<double>& boundary,
-                  Tessellator<2,double>& tessellator) {
+                  Tessellator<2,double>& tessellator,
+                  int boundaryID) {
   // output name
   ostringstream os;
-  os << "RandomPoints_" << tessellator.name() << "_" << boundary.mType;
+  os << "RandomPoints_" << tessellator.name();
   string testName = os.str();
 
-  Generators<2,double> generators( boundary );
+  Generators<2,double> generators(boundary);
   unsigned nPoints = 10;
   Tessellation<2,double> mesh;
   for( unsigned n = 0; n < 3; ++n ){
     POLY_ASSERT(mesh.empty());
     nPoints = nPoints * 10;
-    
-    cout << nPoints << " points...";
+    int plotIndex = 3*boundaryID + n;
+
+    cout << nPoints << " points..." << endl;
     generators.randomPoints( nPoints );      
-    tessellate2D(generators.mPoints,boundary,tessellator,mesh);
-    cout << "got meshed!" << endl;
-    
-    outputMesh(mesh, testName, generators.mPoints, n);
+    tessellate2D(generators.mPoints,boundary,tessellator,mesh);    
+    outputMesh(mesh, testName, generators.mPoints, plotIndex);
     mesh.clear();   
+    plotIndex++;
   }
 }
 
@@ -88,11 +57,12 @@ void testBoundary(Boundary2D<double>& boundary,
 // testAllBoundaries
 // -----------------------------------------------------------------------
 void testAllBoundaries(Tessellator<2,double>& tessellator) {
+  int plotIndex = 0;
   for (int bid = 0; bid < 10; ++bid){
     cout << "Testing boundary type " << bid << endl;
     Boundary2D<double> boundary;
     boundary.setDefaultBoundary(bid);
-    testBoundary(boundary, tessellator);
+    testBoundary(boundary, tessellator, bid);
   }
 }
 

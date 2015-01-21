@@ -612,10 +612,8 @@ constructBoundedTopology(const vector<RealType>& points,
   
   // Now build the unique mesh nodes and cell info.
   const unsigned numGenerators = cellRings.size();
-  map<PointType, int> point2node;
-  // map<PointType, int, ThreeByThreeTolCompare<CoordType> > 
-  //    point2node(ThreeByThreeTolCompare<CoordType>(1.49e-8));
-  // map<IntPoint, int, ThreeByThreeCompare<CoordHash> > point2node;
+  // map<PointType, int> point2node;
+  map<IntPoint, int> point2node;
   map<EdgeHash, int> edgeHash2id;
   map<int, vector<int> > edgeCells;
   int i, j, k, iedge;
@@ -630,8 +628,13 @@ constructBoundedTopology(const vector<RealType>& points,
       const PointType p1 = PointType(cellRings[i].points[2*i1], cellRings[i].points[2*i1+1]);
       const PointType p2 = PointType(cellRings[i].points[2*i2], cellRings[i].points[2*i2+1]);
       POLY_ASSERT(p1 != p2);
-      j = internal::addKeyToMap(p1, point2node);
-      k = internal::addKeyToMap(p2, point2node);
+      const IntPoint ip1 = mCoords.quantize(&p1.x);
+      const IntPoint ip2 = mCoords.quantize(&p2.x);
+      // j = internal::addKeyToMap(p1, point2node);
+      // k = internal::addKeyToMap(p2, point2node);
+      j = internal::addKeyToMap(ip1, point2node);
+      k = internal::addKeyToMap(ip2, point2node);
+      if (j != k) {
       POLY_ASSERT(j != k);
       iedge = internal::addKeyToMap(internal::hashEdge(j,k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
@@ -639,6 +642,7 @@ constructBoundedTopology(const vector<RealType>& points,
                    "BLAGO: " << iedge << " " << j << " " << k << " " << edgeCells[iedge][0] 
                    << " " << edgeCells[iedge][1]);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
+      }
     }
     POLY_ASSERT(mesh.cells[i].size() >= 3);
   }
@@ -647,12 +651,12 @@ constructBoundedTopology(const vector<RealType>& points,
   // Fill in the mesh nodes.
   RealPoint node;
   mesh.nodes = std::vector<RealType>(2*point2node.size());
-  for (typename std::map<PointType, int>::const_iterator itr = point2node.begin();
-  // for (typename std::map<IntPoint, int>::const_iterator itr = point2node.begin();
+  // for (typename std::map<PointType, int>::const_iterator itr = point2node.begin();
+  for (typename std::map<IntPoint, int>::const_iterator itr = point2node.begin();
        itr != point2node.end(); 
        ++itr) {
-    const RealPoint p = BTT::dequantize(mCoords, itr->first);
-    // const RealPoint p = mCoords.dequantize(&(itr->first).x);
+    // const RealPoint p = BTT::dequantize(mCoords, itr->first);
+    const RealPoint p = mCoords.dequantize(&(itr->first).x);
     i = itr->second;
     POLY_ASSERT(i < mesh.nodes.size()/2);
     // if (not BG::boost_within(p, geometry)) {
