@@ -44,9 +44,18 @@ PYBINDGEN_GENERATE_BINDINGS("${PYTHONPKGS}")
 # libpolytope location
 set(POLYTOPE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libpolytope${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
+# libtriangle location
+if(HAVE_TRIANGLE)
+  set(TRIANGLE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtriangle${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+  set(TRIANGLE_STATIC_LIB "")
+endif()
+
 # libtetgen location
 if(HAVE_TETGEN)
-  set(TETGEN_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtetgen.a")
+  set(TETGEN_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtetgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+  set(TETGEN_STATIC_LIB "")
 endif()
 
 # libpython<version> location
@@ -100,6 +109,7 @@ add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
 #  ${PYTHON_LINK}
   ${POLYTOPE_STATIC_LIB} 
+  ${TRIANGLE_STATIC_LIB}
   ${TETGEN_STATIC_LIB}
   ${SILO_LIBRARIES}
   ${HDF5_LIB})
