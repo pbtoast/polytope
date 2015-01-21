@@ -62,6 +62,24 @@ plcOfCell(const vector<unsigned>& nodeIndices,
 }
 
 //------------------------------------------------------------------------------
+// Check the orientation of a cell. If CCW, return True.
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool
+checkCellOrientation(const RealType* pt, const ReducedPLC<2, RealType>& cell) {
+  double orientation = 0.0;
+  double pta[2] = {double(pt[0]), double(pt[1])};
+  for (int ifacet = 0; ifacet < cell.facets.size(); ++ifacet) {
+    double ptb[2] = {double(cell.points[2*cell.facets[ifacet][0]  ]),
+                     double(cell.points[2*cell.facets[ifacet][0]+1])};
+    double ptc[2] = {double(cell.points[2*cell.facets[ifacet][1]  ]),
+                     double(cell.points[2*cell.facets[ifacet][1]+1])};
+    orientation += orient2d(pta, ptb, ptc);
+  }
+  return (orientation > 0.0);
+}
+
+//------------------------------------------------------------------------------
 // Comparison operator for two points. They're equal if one lives inside the
 // 3x3 region around the other:    _ _ _
 //                                |_|_|_|
@@ -272,6 +290,9 @@ tessellate(const vector<RealType>& points,
     //TODO implement the bi-infinite edge fix
     //TODO
     
+    POLY_ASSERT2(not BG::boost_intersects<CoordType>(cell),
+		 "Cell " << i << " self-intersects before clipping"
+		 << endl << cell);
     cells[i] = BG::boost_clip<CoordType>(boundary, cell, generator, orphans);
     POLY_ASSERT(not BG::boost_intersects<CoordType>(cells[i]));
   }
@@ -323,30 +344,6 @@ computeCellNodes(const vector<RealType>& points,
   // voroBuilder.construct(&voronoi);
   construct_voronoi(generators.begin(), generators.end(), &voronoi);  
   POLY_ASSERT(voronoi.num_cells() == numGenerators);
-
-
-  // {
-  //   int sortedIndex=0, cellIndex;
-  //   cellNodes.resize(numGenerators);
-  //   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
-  //        cellItr != voronoi.cells().end(); 
-  //        ++cellItr, ++sortedIndex) {
-  //     const typename VD::edge_type* edge = cellItr->incident_edge();
-  //     cerr << "Cell " << sortedIndex << ":" << endl;
-  //     do {
-  //       cellIndex = generators[sortedIndex].index;
-  //       const typename VD::vertex_type* v0 = edge->vertex0();
-  //       const typename VD::vertex_type* v1 = edge->vertex1();
-  //       cerr << "  Edge" << endl;
-  //       if (v0) cerr << "    " << v0->x() << "  " << v0->y() << endl;
-  //       else    cerr << "    INF" << endl;
-  //       if (v1) cerr << "    " << v1->x() << "  " << v1->y() << endl;
-  //       else    cerr << "    INF" << endl;
-  //       edge = edge->next();
-  //     } while (edge != cellItr->incident_edge());
-  //   }
-  // }  
-
 
   // Compute a bounding box for the floating point vertex positions
   RealPoint vlow  = RealPoint( numeric_limits<RealType>::max(),  
@@ -581,7 +578,8 @@ computeCellNodesCollinear(const vector<RealType>& points,
 
   // Call the 1d routine for projecting a line of points
   vector<RealPoint> nodes;
-  constructCells1d(points, &(mCoords.center()).x, mCoords.infiniteRadius(), cellNodes, nodes);
+  const RealPoint center = mCoords.center();
+  constructCells1d(points, &center.x, mCoords.infiniteRadius(), cellNodes, nodes);
   POLY_ASSERT(cellNodes.size() == points.size()/2);
   POLY_ASSERT(nodes.size() == points.size());
 
@@ -625,8 +623,10 @@ constructBoundedTopology(const vector<RealType>& points,
       const int i1 = cellRings[i].facets[ifacet][0];
       const int i2 = cellRings[i].facets[ifacet][1];
       POLY_ASSERT(i1 != i2);
-      const PointType p1 = PointType(cellRings[i].points[2*i1], cellRings[i].points[2*i1+1]);
-      const PointType p2 = PointType(cellRings[i].points[2*i2], cellRings[i].points[2*i2+1]);
+      const PointType p1 = PointType(cellRings[i].points[2*i1],
+				     cellRings[i].points[2*i1+1]);
+      const PointType p2 = PointType(cellRings[i].points[2*i2],
+				     cellRings[i].points[2*i2+1]);
       POLY_ASSERT(p1 != p2);
       const IntPoint ip1 = mCoords.quantize(&p1.x);
       const IntPoint ip2 = mCoords.quantize(&p2.x);
@@ -692,7 +692,8 @@ constructBoundedTopology(const vector<RealType>& points,
   for (i = 0; i != mesh.faces.size(); ++i) {
     if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
       const int n1 = mesh.faces[i][0], n2 = mesh.faces[i][1];
-      std::cerr << "Blago! " << i << " " << edgeCells[i].size() << " : " << n1 << " " << n2 << " : ("
+      std::cerr << "Blago! " << i << " "
+		<< edgeCells[i].size() << " : " << n1 << " " << n2 << " : ("
                 << mesh.nodes[2*n1] << " " << mesh.nodes[2*n1 + 1] << ") ("
                 << mesh.nodes[2*n2] << " " << mesh.nodes[2*n2 + 1] << ")" << std::endl;
       for (j = 0; j != edgeCells[i].size(); ++j) {

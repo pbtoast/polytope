@@ -243,7 +243,6 @@ computeSortedFaceNodes(const vector<pair<int, int> >& edges) {
     orderedEdges.reserve(nedges);
     int lastNode;
     bool hangingNodes = false;
-    bool deletedEdge  = false;
     for (i = 0; i != nedges; ++i) {
       if ((nodeUseCount[edges[i].first] == 1 and nodeUseCount[edges[i].second] == 2) or
           (nodeUseCount[edges[i].first] == 2 and nodeUseCount[edges[i].second] == 1)) {
@@ -846,11 +845,6 @@ tessellate(const vector<RealType>& points,
   }
 #endif
 
-<<<<<<< variant A
-    intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, orphans);
-    // POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-    //              "Cell " << i << " intersects itself:\n" << intCell);
->>>>>>> variant B
 
   POLY_BEGIN_CONTRACT_SCOPE;
   {
@@ -912,11 +906,6 @@ tessellate(const vector<RealType>& points,
     // //   //              << "to cell " << itr->second[0]);
     // //   }
     // // }
-####### Ancestor
-    intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, orphans);
-    POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-                 "Cell " << i << " intersects itself:\n" << intCell);
-======= end
   }
   POLY_END_CONTRACT_SCOPE;
 
@@ -1069,7 +1058,8 @@ computeCellNodesCollinear(const vector<RealType>& points,
 
   // Call the 1d routine for projecting a line of points
   vector<RealPoint> nodes;
-  constructCells1d(points, &(mCoords.center()).x, mCoords.infiniteRadius(), cellNodes, nodes);
+  const RealPoint center = mCoords.center();
+  constructCells1d(points, &center.x, mCoords.infiniteRadius(), cellNodes, nodes);
   POLY_ASSERT(cellNodes.size() == points.size()/2);
   POLY_ASSERT(nodes.size() == points.size());
 
@@ -1256,8 +1246,6 @@ computeCellNodes(const vector<RealType>& points,
       const IntPoint ip = mCoords.quantize(&pinf.x);
       POLY_ASSERT(0 <= ip.x and ip.x <= mCoords.coordMax() and
                   0 <= ip.y and ip.y <= mCoords.coordMax());
-      // POLY_ASSERT(-mCoords.coordMax() <= ip.x and ip.x <= mCoords.coordMax() and
-      //             -mCoords.coordMax() <= ip.y and ip.y <= mCoords.coordMax());
       k = circ2id.size();
       j = internal::addKeyToMap(ip, circ2id);
       if (k != circ2id.size())  id2node[j] = ip;
@@ -1395,8 +1383,6 @@ computeCellNodes(const vector<RealType>& points,
             const IntPoint ip = mCoords.quantize(&pinf.x);
             POLY_ASSERT(0 <= ip.x and ip.x <= mCoords.coordMax() and
                         0 <= ip.y and ip.y <= mCoords.coordMax());
-            // POLY_ASSERT(-mCoords.coordMax() <= ip.x and ip.x <= mCoords.coordMax() and
-            //             -mCoords.coordMax() <= ip.y and ip.y <= mCoords.coordMax());
             k = circ2id.size();
             j = internal::addKeyToMap(ip, circ2id);
             if (k != circ2id.size()) {
