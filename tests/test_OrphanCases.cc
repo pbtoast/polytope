@@ -5,6 +5,7 @@
 // in the middle with only 20 points. Seeding the random number generator
 // provides the input generator locations. Test cases were found through 
 // trial-and-error (though with obnoxious frequency!).
+// -----------------------------------------------------------------------
 
 #include <iostream>
 #include <vector>
@@ -246,11 +247,11 @@ void test(Tessellator<2,double>& tessellator) {
     const double tessArea = computeTessellationArea(mesh);
     const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
     const double tol      = 1.0e-7;
-    POLY_CHECK2(fracerr < tol, "Relative error in the tessellation "
-        	<< "area exceeds tolerance:" << endl
-        	<< "      Area = " << tessArea << endl
-        	<< "     Error = " << trueArea - tessArea << endl
-        	<< "Frac Error = " << fracerr);
+    POLY_ASSERT2(fracerr < tol, "Relative error in the tessellation "
+                 << "area exceeds tolerance:" << endl
+                 << "      Area = " << tessArea << endl
+                 << "     Error = " << trueArea - tessArea << endl
+                 << "Frac Error = " << fracerr);
     bool result = checkNearestNode(mesh, dist);
     POLY_ASSERT(result);
     ++i;
@@ -261,12 +262,11 @@ void test(Tessellator<2,double>& tessellator) {
     cout << "\nTest 8: Lots of random points" << endl;
     const unsigned N = 100;
     for (unsigned iter = 0; iter != N; ++iter) {
-      srand(1049520+iter);
+      srand(10332520+iter);
       Generators<2,double> generators(boundary);
       generators.randomPoints(50);
       Tessellation<2,double> mesh;
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-      //tessellator.tessellate(generators.mPoints, mesh);
       outputMesh(mesh, testName, generators.mPoints, i+iter);
       cout << iter << endl;
       printArea(boundary,mesh);

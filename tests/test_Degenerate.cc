@@ -33,7 +33,6 @@ using namespace polytope;
 double minLength(Tessellation<2,double>& mesh)
 {
   double fl2min =  std::numeric_limits<double>::max();
-  double fl2max = -std::numeric_limits<double>::max();
   for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
     POLY_ASSERT( mesh.faces[iface].size() == 2 );
     const unsigned inode0 = mesh.faces[iface][0];
@@ -42,7 +41,6 @@ double minLength(Tessellation<2,double>& mesh)
     double x1 = mesh.nodes[2*inode1], y1 = mesh.nodes[2*inode1+1];
     double len2 = (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
     fl2min = std::min(fl2min, len2);
-    fl2max = std::max(fl2max, len2);
   }
   return sqrt(fl2min);
 }
@@ -94,18 +92,18 @@ void test(Tessellator<2,double>& tessellator)
     generators.cartesianPoints(nxny);         // reset locations
     generators.perturb(epsilon);              // perturb
     Tessellation<2,double> mesh;
-    //tessellator.tessellate(generators.mPoints, mesh);
     tessellator.tessellate(generators.mPoints, 
                            boundary.mPLCpoints, 
                            boundary.mPLC, 
                            mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
-    if(isCartesian)  
+    if(isCartesian) {  
       cout << "Degeneracy resolved" << endl; 
-    else
+    } else {
       cout << "Degeneracy threshold reached! Minimum face length = " 
            << minLength(mesh) << endl;
+    }
   }
 }
 

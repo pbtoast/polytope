@@ -36,6 +36,8 @@ double distance2(const double x1, const double y1,
 // The test itself
 //------------------------------------------------------------------------------
 void runTest(Tessellator<2,double>& tessellator) {
+
+  // Parameters
   const double x1 = 0.0, y1 = 0.0;
   const double x2 = 1.0, y2 = 1.0;
   const unsigned Nmin = 50;
@@ -45,6 +47,8 @@ void runTest(Tessellator<2,double>& tessellator) {
   int rank, numProcs;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+
+  if (rank == 0) cout << "\nTesting Distributed " << tessellator.name() << endl;
 
   // Seed the random number generator the same on all processes.
   srand(10489591);
