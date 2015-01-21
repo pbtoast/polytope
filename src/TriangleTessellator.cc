@@ -518,8 +518,8 @@ tessellate(const vector<RealType>& points,
     const ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
 
     intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, orphans);
-    POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-                 "Cell " << i << " intersects itself:\n" << intCell);
+    // POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
+    //              "Cell " << i << " intersects itself:\n" << intCell);
   }
 
   if (orphans.size() > 0) {
