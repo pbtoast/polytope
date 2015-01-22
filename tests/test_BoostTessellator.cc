@@ -21,7 +21,7 @@ using namespace polytope;
 void test1(Tessellator<2,double>& tessellator) {
   
   // Output name
-  string testName = "BoostTessellator_test1";
+  string testName = "BoostTessellator";
 
   // Create the generators.
   vector<double> points;
@@ -64,12 +64,12 @@ void test1(Tessellator<2,double>& tessellator) {
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,1);
+  outputMesh(mesh,testName,points,0);
   mesh.clear();
 
   // Tessellate bounded
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,2);
+  outputMesh(mesh,testName,points,1);
 }
 
 
@@ -79,7 +79,7 @@ void test1(Tessellator<2,double>& tessellator) {
 void test2(Tessellator<2,double>& tessellator) {
   
   // Output name
-  string testName = "BoostTessellator_test2";
+  string testName = "BoostTessellator";
 
   // Rectangular boundary
   vector<double> PLCpoints;
@@ -107,12 +107,76 @@ void test2(Tessellator<2,double>& tessellator) {
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,1);
+  outputMesh(mesh,testName,points,2);
   mesh.clear();
 
   // Tessellate bounded
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,2);
+  outputMesh(mesh,testName,points,3);
+}
+
+
+
+//------------------------------------------------------------------------
+// test3
+//------------------------------------------------------------------------
+void test3(Tessellator<2,double>& tessellator) {
+  
+  // Output name
+  string testName = "BoostTessellator";
+
+  // Constants
+  const double degToRad = 2.0*M_PI/360.0;
+
+  // Parameters
+  const int nx = 10;
+  const double degrees = 2.5;
+  const double x1 = 0.0, y1 = 0.0;
+  const double x2 = 1.0, y2 = 1.0;
+  
+  // Derived params
+  const double angle = degrees * degToRad;
+  const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx;
+  const double xcen = 0.5*(x1+x2), ycen = 0.5*(y1+y2);
+  const double cosAngle = cos(angle);
+  const double sinAngle = sin(angle);
+
+  // Create the generators.
+  vector<double> points;
+  double xi, yi;
+  for (int iy = 0; iy != nx; ++iy) {
+    yi = y1 + (iy + 0.5)*dy - ycen;
+    for (int ix = 0; ix != nx; ++ix) {
+      xi = x1 + (ix + 0.5)*dx - xcen;
+      points.push_back(xcen + cosAngle*xi - sinAngle*yi);
+      points.push_back(ycen + cosAngle*yi + sinAngle*xi);
+    }
+  }
+
+  // Create the boundary
+  ReducedPLC<2, double> plc;
+  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
+  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
+  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
+  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
+
+  plc.facets.resize(4, vector<int>(2));
+  for (int i = 0; i != 4; ++i) {
+    plc.facets[i][0] = i;
+    plc.facets[i][1] = (i+1)%4;
+  }
+
+  // The mesh
+  Tessellation<2,double> mesh;
+
+  // Tessellate unbounded
+  tessellator.tessellate(points, mesh);
+  outputMesh(mesh,testName,points,4);
+  mesh.clear();
+
+  // Tessellate bounded
+  tessellator.tessellate(points, plc.points, plc, mesh);
+  outputMesh(mesh,testName,points,5);
 }
 
 
@@ -136,6 +200,11 @@ main(int argc, char** argv)
   {
     cout << "\nTest 2" << endl;
     test2(tessellator);
+  }
+
+  {
+    cout << "\nTest 3" << endl;
+    test3(tessellator);
   }
 
 

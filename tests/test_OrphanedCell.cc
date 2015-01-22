@@ -40,7 +40,8 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
-void test(Tessellator<2,double>& tessellator) {
+void test(Tessellator<2,double>& tessellator,
+          const bool checkMesh) {
 
   // Initialize the bounded tessellation shtuff
   std::vector<double> PLCpoints;
@@ -92,30 +93,34 @@ void test(Tessellator<2,double>& tessellator) {
 
   //cerr << mesh << endl;
 
-  // Total mesh checks
-  POLY_CHECK(mesh.cells.size()   == 9 );
-  POLY_CHECK(mesh.nodes.size()/2 == 26);
-  POLY_CHECK(mesh.faces.size()   == 34);
-  // Individual cell checks
-  POLY_CHECK(mesh.cells[0].size() == 5 );
-  POLY_CHECK(mesh.cells[1].size() == 4 );
-  POLY_CHECK(mesh.cells[2].size() == 4 );
-  POLY_CHECK(mesh.cells[3].size() == 4 );
-  POLY_CHECK(mesh.cells[4].size() == 12);
-  POLY_CHECK(mesh.cells[5].size() == 4 );
-  POLY_CHECK(mesh.cells[6].size() == 5 );
-  POLY_CHECK(mesh.cells[7].size() == 4 );
-  POLY_CHECK(mesh.cells[8].size() == 4 );
-  // Tessellation area check
-  const double trueArea = 8.74;
-  const double tessArea = computeTessellationArea(mesh);
-  const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
-  const double tol      = 1.0e-7;
-  POLY_CHECK2(fracerr < tol, "Relative error in the tessellation "
-              << "area exceeds tolerance:" << endl
-              << "      Area = " << tessArea << endl
-              << "     Error = " << trueArea - tessArea << endl
-              << "Frac Error = " << fracerr);
+  if (checkMesh) {
+    // Total mesh checks
+    POLY_CHECK(mesh.cells.size()   == 9 );
+    POLY_CHECK(mesh.nodes.size()/2 == 26);
+    POLY_CHECK(mesh.faces.size()   == 34);
+    // Individual cell checks
+    POLY_CHECK(mesh.cells[0].size() == 5 );
+    POLY_CHECK(mesh.cells[1].size() == 4 );
+    POLY_CHECK(mesh.cells[2].size() == 4 );
+    POLY_CHECK(mesh.cells[3].size() == 4 );
+    POLY_CHECK(mesh.cells[4].size() == 12);
+    POLY_CHECK(mesh.cells[5].size() == 4 );
+    POLY_CHECK(mesh.cells[6].size() == 5 );
+    POLY_CHECK(mesh.cells[7].size() == 4 );
+    POLY_CHECK(mesh.cells[8].size() == 4 );
+    // Tessellation area check
+    const double trueArea = 8.74;
+    const double tessArea = computeTessellationArea(mesh);
+    const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
+    const double tol      = 1.0e-7;
+    POLY_CHECK2(fracerr < tol, "Relative error in the tessellation "
+                << "area exceeds tolerance:" << endl
+                << "      Area = " << tessArea << endl
+                << "     Error = " << trueArea - tessArea << endl
+                << "Frac Error = " << fracerr);
+  } else {
+    cout << "Checking currently disabled for " << tessellator.name() << endl;
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -131,7 +136,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    test(tessellator);
+    test(tessellator, true);
   }
 #endif
 
@@ -139,7 +144,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    test(tessellator);
+    test(tessellator, false);
   }
 #endif
 
