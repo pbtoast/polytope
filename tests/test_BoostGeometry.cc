@@ -45,6 +45,9 @@ int main(int argc, char** argv)
     POLY_CHECK(not boost::geometry::intersects(result[0]));
   }
 
+
+  cout << "PASS" << endl;
+
 #if HAVE_MPI
   MPI_Finalize();
 #endif

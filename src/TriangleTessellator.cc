@@ -769,26 +769,6 @@ tessellate(const vector<RealType>& points,
   vector<ReducedPLC<2, CoordHash> > intCells(numGenerators);
   vector<ReducedPLC<2, CoordHash> > intOrphans;
 
-  POLY_BEGIN_CONTRACT_SCOPE;
-  {
-    internal::CounterMap<IntPoint> vertexCounter;
-    map<IntPoint, vector<int> > vertexToCells;
-    for (int i = 0; i < numGenerators; ++i) {
-      for (int j = 0; j < cellNodes[i].size(); ++j) {
-        POLY_ASSERT(id2node.find(cellNodes[i][j]) != id2node.end());
-        const IntPoint vertex = id2node[cellNodes[i][j]];
-        ++vertexCounter[vertex];
-        vertexToCells[vertex].push_back(i);
-      }
-    }
-    for (typename map<IntPoint, vector<int> >::const_iterator itr = vertexToCells.begin();
-         itr != vertexToCells.end();
-         ++itr) POLY_ASSERT2(vertexCounter[itr->first] > 1,
-                             "Vertex " << mCoords.dequantize(&(itr->first).x) << " belonging "
-                             << "to cell " << itr->second[0] << " only counted once.");
-  }
-  POLY_END_CONTRACT_SCOPE;
-
 
 #if ENABLE_INTEGER_INTERSECTIONS
   const ReducedPLC<2, CoordHash> intGeometry = quantizeGeometry<RealType, CoordHash>(mCoords, geometry);
@@ -804,18 +784,18 @@ tessellate(const vector<RealType>& points,
       removeCollinearPoints<CoordHash>(intCell, 1);
       cerr << "AFTER:\n" << intCell << endl;
     }
+#endif
     POLY_ASSERT2(not BG::boost_intersects(intCell),
                  "Cell " << i << " intersects itself BEFORE CLIPPING:\n" << intCell);
-#endif
 
     intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, intOrphans);
 
-    // POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-    //              "Cell " << i << " intersects itself:\n" 
-    //              << "\nBefore clipping:\n" << intCell
-    //              << "\nAfter clipping:\n" << intCells[i]
-    //              << "\nOuter Geometry:\n" << intGeometry
-    //              << "\nGenerator:\n" << intGenerator);
+    POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
+                 "Cell " << i << " intersects itself:\n" 
+                 << "\nBefore clipping:\n" << intCell
+                 << "\nAfter clipping:\n" << intCells[i]
+                 << "\nOuter Geometry:\n" << intGeometry
+                 << "\nGenerator:\n" << intGenerator);
   }
 
 #else
@@ -913,7 +893,6 @@ tessellate(const vector<RealType>& points,
 
   // Run the orphan adoption algorithm
   if (intOrphans.size() > 0) {
-    cerr << "Orphans detected." << endl;
     BoostOrphanage<RealType> orphanage(this);
     orphanage.adoptOrphans(points, mCoords, intCells, intOrphans);
   }
@@ -1431,12 +1410,25 @@ constructBoundedTopology(const vector<RealType>& points,
       POLY_ASSERT(pX1 != pX2);
       j = internal::addKeyToMap(pX1, point2node);
       k = internal::addKeyToMap(pX2, point2node);
-      POLY_ASSERT(j != k);
+      POLY_ASSERT2(j != k,
+                   "\nCell " << i << " has an edge whose vertices are identical:" << endl
+                   << "   " << j << ": " << pX1 << ": " << mCoords.dequantize(&pX1.x) << endl
+                   << "   " << k << ": " << pX2 << ": " << mCoords.dequantize(&pX2.x) << endl);
       iedge = internal::addKeyToMap(internal::hashEdge(j, k), edgeHash2id);
       edgeCells[iedge].push_back(j < k ? i : ~i);
-      POLY_ASSERT2(edgeCells[iedge].size() == 1 or edgeCells[iedge][0]*edgeCells[iedge][1] <= 0,
-                   "BLAGO: " << iedge << " " << j << " " << k << " " << edgeCells[iedge][0] 
-		   << " " << edgeCells[iedge][1]);
+      POLY_ASSERT2(edgeCells[iedge].size() == 1 or 
+                   edgeCells[iedge][0]*edgeCells[iedge][1] <= 0,
+                   "\nCells "   << internal::positiveID(edgeCells[iedge][0]) 
+                   << " and " << internal::positiveID(edgeCells[iedge][1])
+                   << " walked shared edge " << iedge << " in the same direction."
+                   << endl
+                   << "Edge vertices (ID : hash : floating point)" << endl
+                   << "   " << j << ": " << pX1 << ": " << mCoords.dequantize(&pX1.x) << endl
+                   << "   " << k << ": " << pX2 << ": " << mCoords.dequantize(&pX2.x) << endl
+                   << "Hashed cell " << internal::positiveID(edgeCells[iedge][0]) << ":" << endl
+                   << intCells[internal::positiveID(edgeCells[iedge][0])] << endl
+                   << "Hashed cell " << internal::positiveID(edgeCells[iedge][1]) << ":" << endl
+                   << intCells[internal::positiveID(edgeCells[iedge][1])] << endl);
       mesh.cells[i].push_back(j < k ? iedge : ~iedge);
     }
     POLY_ASSERT(mesh.cells[i].size() >= 3);
@@ -1740,12 +1732,12 @@ tessellate(const vector<RealType>& points,
     const ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
     intCells[i] = BG::boost_clip<CoordHash>(intGeometry, intCell, intGenerator, dummy);
     POLY_ASSERT(dummy.empty());
-    // POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
-    //              "Cell " << i << " intersects itself:\n" 
-    //              << "\nBefore clipping:\n" << intCell
-    //              << "\nAfter clipping:\n" << intCells[i]
-    //              << "\nOuter Geometry:\n" << intGeometry
-    //              << "\nGenerator:\n" << intGenerator);
+    POLY_ASSERT2(not BG::boost_intersects(intCells[i]),
+                 "Cell " << i << " intersects itself:\n" 
+                 << "\nBefore clipping:\n" << intCell
+                 << "\nAfter clipping:\n" << intCells[i]
+                 << "\nOuter Geometry:\n" << intGeometry
+                 << "\nGenerator:\n" << intGenerator);
   }  
 }
 //------------------------------------------------------------------------------

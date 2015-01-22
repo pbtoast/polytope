@@ -859,8 +859,6 @@ computeDomainNeighbors(const vector<RealType>& points,
   RealType rlow[Dimension], rhigh[Dimension];
   this->computeBoundingBox(points, rlow, rhigh);
   
-  const double degeneracy = max(this->degeneracy(), 1.5e-8);
-
   // Compute the convex hull of each domain and distribute them to all processes.
   vector<ConvexHull> domainHulls; // (numProcs);
   vector<unsigned> domainCellOffset(1, 0);
@@ -963,9 +961,24 @@ computeDomainNeighbors(const vector<RealType>& points,
     mSerialTessellator->tessellate(allVisibleGenerators, mLow, mHigh, visibleMesh);
     break;
   case plc:
-    PLC<Dimension, RealType> tmpPLC;
+    ReducedPLC<Dimension, RealType> tmpPLC;
+    vector<RealType> tmpPLCpoints;
     tmpPLC.facets = mPLCptr->facets;
-    mSerialTessellator->tessellate(allVisibleGenerators, *mPLCpointsPtr, tmpPLC, visibleMesh);
+    std::map<int, int> pointMap;
+    for (int ifacet = 0; ifacet < mPLCptr->facets.size(); ++ifacet) {
+      for (int k = 0; k < mPLCptr->facets[ifacet].size(); ++k) {
+        const int ipt = mPLCptr->facets[ifacet][k];
+        const int old_size = pointMap.size();
+        const int nipt = internal::addKeyToMap(ipt, pointMap);
+        tmpPLC.facets[ifacet][k] = nipt;
+        if (old_size != pointMap.size()) {
+          for (int j = 0; j < Dimension; ++j) {
+            tmpPLCpoints.push_back((*mPLCpointsPtr)[Dimension*ipt+j]);
+          }
+        }
+      }
+    }
+    mSerialTessellator->tessellate(allVisibleGenerators, tmpPLCpoints, tmpPLC, visibleMesh);
     break;
   }
 
