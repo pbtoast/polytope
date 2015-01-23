@@ -46,8 +46,19 @@ if (HAVE_MPI)
     DistributedTessellator.cc SerialDistributedTessellator.cc)
 endif()
 
-add_library(polytope STATIC ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc polytope_internal_abort.cc)
-target_link_libraries(polytope voro_2d voro_3d ${TRIANGLE_LIB} ${TETGEN_LIB} ${SILO_LIBRARIES} ${HDF5_LIBRARIES})
+add_library(polytope STATIC
+  ${TESSELLATOR_SOURCES} 
+  ${IO_SOURCES} 
+  ErrorHandler.cc 
+  polytope_internal_abort.cc)
+
+target_link_libraries(polytope
+  voro_2d 
+  voro_3d 
+  ${TRIANGLE_LIB} 
+  ${TETGEN_LIB} 
+  ${SILO_LIBRARIES}
+  ${HDF5_LIBRARIES})
 
 # Library install targets
 install (TARGETS polytope ${TRIANGLE_LIB} ${TETGEN_LIB} DESTINATION lib)

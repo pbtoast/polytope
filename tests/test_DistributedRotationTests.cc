@@ -233,7 +233,6 @@ void runTest(Tessellator<2,double>& tessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  MeshEditor<2,double> meshEditor(mesh);
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
   outputMesh(mesh, testName, points, step, time);
    
@@ -258,17 +257,11 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    //meshEditor.cleanEdges(0.01);
     outputMesh(mesh, testName, points, step, time);
 
     // Check the correctness of the parallel data structures
     const string parCheck = checkDistributedTessellation(mesh);
-    if (parCheck != "ok") {
-      if (rank == 8 or rank == 9) {
-        copy(points.begin(), points.end(), ostream_iterator<double>(cerr, " "));
-      }
-    }
-    POLY_CHECK2(parCheck == "ok", parCheck);
+    POLY_ASSERT2(parCheck == "ok", parCheck);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 }
@@ -284,15 +277,17 @@ int main(int argc, char** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
+  const int testBegin = 1;
+  const int testEnd   = 5;
 
-// #if HAVE_TRIANGLE
-//   {
-//     if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
-//     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
-//                                                   true, true);
-//     for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
-//   }
-// #endif   
+#if HAVE_TRIANGLE
+  {
+    if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
+    DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
+                                                  true, true);
+    for (int i = testBegin; i < testEnd; ++i) runTest(tessellator,i);
+  }
+#endif   
 
 
 #if HAVE_BOOST_VORONOI
@@ -300,7 +295,7 @@ int main(int argc, char** argv)
     if (rank==0) cout << "\nBoost Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),
                                                   true, true);
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+    for (int i = testBegin; i < testEnd; ++i) runTest(tessellator,i);
   }
 #endif
    
