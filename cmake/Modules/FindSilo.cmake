@@ -44,6 +44,26 @@
 ##    SILO_LIBRARIES 
 ##    SILO_INCLUDE_DIRS
 ##)
+# Try to find SILO library and headers.
+# This file sets the following variables:
+#
+# SILO_INCLUDE_DIR, where to find silo.h, etc.
+# SILO_LIBRARIES, the libraries to link against
+# SILO_FOUND, If false, do not try to use SILO.
+#
+# Also defined, but not for general use are:
+# SILO_LIBRARY, the full path to the silo library.
+# SILO_INCLUDE_PATH, for CMake backward compatibility
+FIND_PATH( SILO_INCLUDE_DIR silo.h
+  /usr/local/include
+  /usr/include)
+
+FIND_LIBRARY(SILO_LIBRARY NAMES silo siloh5
+  /usr/lib
+  /usr/local/lib)
+
+SET(SILO_FOUND false)
+
 IF(SILO_INCLUDE_DIR)
   IF(SILO_LIBRARY)
     SET(SILO_LIBRARIES ${SILO_LIBRARY})
@@ -63,9 +83,8 @@ ENDIF()
 # all listed variables are TRUE
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(SILO 
-                                  DEFAULT_MSG 
-                                  SILO_LIBRARY 
-                                  SILO_INCLUDE_DIR)
+  DEFAULT_MSG 
+  SILO_LIBRARY 
+  SILO_INCLUDE_DIR)
 
-MARK_AS_ADVANCED(SILO_INCLUDE_DIR
-                 SILO_LIBRARY)
+MARK_AS_ADVANCED(SILO_INCLUDE_DIR  SILO_LIBRARY)
