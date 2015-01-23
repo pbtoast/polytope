@@ -1,14 +1,15 @@
 Release 0.5.22
 
 changeset:
-  565:09ceae70fce1
+  577:2ba9badd24b8
 
 Changes:
 
 - Significant efficiency and robustness improvement to TriangleTessellator
-- Internal reorganization to consolidate types defined in multiple places.
-- Unified PLC-based interface to Boost.Geometry operations
-- A few new tests.
+- Added unified PLC-based interface to Boost.Geometry operations
+- Added Python utility classes and soon-to-be unit tests in polytope_py
+- Internal reorganization of types
+- A few new unit tests.
 
 --------------------------------------------------------------------------------
 Release 0.5.21
