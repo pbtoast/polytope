@@ -145,7 +145,7 @@ if (${USE_SILO} EQUAL 1)
   # Find HDF5.
   set(ENV{HDF5_ROOT} ${HDF5_ROOT})
 #       NOTE: Default to using static hdf5
-  set(HDF5_USE_STATIC_LIBRARIES false)
+  set(HDF5_USE_STATIC_LIBRARIES true)
   find_package(HDF5)
   if (${HDF5_FOUND})
     # Get rid of'debug' and 'optimized' detritis.
