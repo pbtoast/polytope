@@ -39,6 +39,7 @@ class Functions:
                               custom_name = "writePLCtoOFF",
                               docstring = "writePLCtoOFF -- output a PLC to an OFF file for use with GeomView.")
 
+
         for dim in (2, 3):
             polytope.add_function("writeTessellation", 
                                   None,
@@ -89,5 +90,16 @@ class Functions:
 #   cycle      : (optional, default=0) cycle number
 #   time       : (optional, default=0.0) time
 # """,
+
+
+            polytope.add_function("constructConvexHull%id" % dim,
+                                  retval("polytope::PLC%id*" % dim, caller_owns_return=True),
+                                  [constrefparam("vector_of_double", "points"),
+                                   constrefparam("vector_of_double", "points"),
+                                   param("double", "dx")],
+                                  template_parameters = ["double"],
+                                  custom_name = ("constructConvexHull%id" % dim),
+                                  docstring = "constructConvexHull -- output the convex hull of a collection of points as a PLC")
+
 
         return

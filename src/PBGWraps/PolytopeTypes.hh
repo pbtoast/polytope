@@ -375,6 +375,35 @@ writeTessellation(const Tessellation<Dimension, RealType>& mesh,
   std::cerr << "WARNING : apparently polytope was built without silo support, so cannot write silo files." << std::endl;
 #endif
 }
+
+
+
+
+
+
+// Construct a 2d convex hull from a collection of points
+template<typename RealType>
+inline
+PLC<2, RealType>*
+constructConvexHull2d(const std::vector<RealType>& points,
+                      const std::vector<RealType>& low,
+                      const RealType dx) {
+   PLC<2, RealType>* resultPtr = 
+      new PLC<2, RealType>(convexHull_2d(points, &low[0], dx));
+   return resultPtr;
+}
+
+// Construct a 3d convex hull from a collection of points
+template<typename RealType>
+inline
+PLC<3, RealType>*
+constructConvexHull3d(const std::vector<RealType>& points,
+                      const std::vector<RealType>& low,
+                      const RealType dx) {
+   PLC<3, RealType>* resultPtr = 
+      new PLC<3, RealType>(convexHull_3d(points, &low[0], dx));
+   return resultPtr;
+}
   
 }
 

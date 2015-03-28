@@ -93,6 +93,7 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 # On some Linux machines we get messed up with the HDF5 libs including 
 # things like libdl and libm, so we try to cut down the list here to the 
 # first couple of elements.
+message("+++ ${HDF5_LIBRARIES}")
 list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
 #list(GET HDF5_LIBRARIES 0 3 HDF5_LIB)
 
