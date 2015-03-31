@@ -30,7 +30,6 @@ for itest in range(Ntests):
     lowerBounds[0] = xmin
     lowerBounds[1] = ymin
     
-    
     plc = polytope.constructConvexHull2d(points, lowerBounds, dx)
 
     nVerts = plc.facets.size()
