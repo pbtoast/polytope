@@ -445,10 +445,10 @@ adoptOrphans(const vector<RealType>& points,
         cell = nbh_cells[nbh_index];
         simplifyPLC<CoordHash>(cell, 1);
 
-        // Blago!
-        cerr << "Old Cell " << index << ":" << endl << intCells[index] << endl;
-        cerr << "New Cell " << index << ":" << endl << cell << endl;
-        // Blago!
+        // // Blago!
+        // cerr << "Old Cell " << index << ":" << endl << intCells[index] << endl;
+        // cerr << "New Cell " << index << ":" << endl << cell << endl;
+        // // Blago!
 
         // When calling the private tessellate routine, we may end up with new cell
         // rings that vertices that are close to the original ones, but off by a few
