@@ -109,6 +109,32 @@ public:
                        const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
 
+
+  //! The following methods all return the same sort of tessellation as the 
+  //! above versions. The input points and geometry are first normalized 
+  //! with respect to the same maximal bounds across all dimensions. This is
+  //! done to maintain aspect ratios between points. After tessellating, the
+  //! mesh nodes are scaled back to the original frame.
+
+  //! Unbounded case.
+  virtual void
+  tessellateNormalized(const std::vector<RealType>& points,
+                       Tessellation<Dimension, RealType>& mesh) const;
+  //! Bounded by a box.
+  virtual void
+  tessellateNormalized(const std::vector<RealType>& points,
+                       RealType* low,
+                       RealType* high,
+                       Tessellation<Dimension, RealType>& mesh) const;
+
+  //! Bounded by a PLC.
+  virtual void
+  tessellateNormalized(const std::vector<RealType>& points,
+                       const std::vector<RealType>& PLCpoints,
+                       const PLC<Dimension, RealType>& geometry,
+                       Tessellation<Dimension, RealType>& mesh) const;
+
+
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
   //! tessellate method, above), and false if it does not. Some algorithms 

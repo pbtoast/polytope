@@ -19,7 +19,8 @@ class PyTessellator:
                  partitioner       = None,
                  timer             = False,
                  boundaryGenerators= False,
-                 unbounded         = False):
+                 unbounded         = False,
+                 robustTessellate  = True):
 
         # Store the serial tessellator - default is Triangle
         if serialTessellator is not None:
@@ -63,6 +64,9 @@ class PyTessellator:
         # Are the boundary points also generators?
         self.boundaryGenerators = boundaryGenerators
 
+        # Use the degeneracy-safe (robust) tessellate call?
+        self.robustTessellate = robustTessellate
+
         # Partitioner - default is Voronoi partitioner
         if partitioner is None:
             self.partitioner = VoronoiPartitioner(self.serialTessellator,
@@ -99,12 +103,16 @@ class PyTessellator:
         if self.unbounded:
             self.tessellator.tessellate(self.points, tessellation)
         else:
-            #self.tessellator.tessellate(allPoints, self.PLCpoints, self.PLC, tessellation)
-            self.tessellator.tessellateDegenerate(allPoints, 
-                                                  self.PLCpoints, 
-                                                  self.PLC, 
-                                                  self.tessellator.degeneracy(),
-                                                  tessellation)
+            if self.robustTessellate:
+                self.tessellator.tessellateDegenerate(allPoints, 
+                                                      self.PLCpoints, 
+                                                      self.PLC, 
+                                                      self.tessellator.degeneracy(),
+                                                      tessellation)
+            else:
+                #self.tessellator.tessellate(allPoints, self.PLCpoints, self.PLC, tessellation)
+                self.tessellator.tessellateNormalized(allPoints, self.PLCpoints, self.PLC, tessellation)
+
 
 
         if self.timer:
