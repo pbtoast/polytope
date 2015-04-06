@@ -585,7 +585,7 @@ public:
 template <typename T1, typename T2>
 class PairCompare {
 public:
-  bool operator()(const std::pair<T1,T2> pair1, const std::pair<T1,T2> pair2) {
+  bool operator()(const std::pair<T1,T2> pair1, const std::pair<T1,T2> pair2) const {
     return (pair1.first  <  pair2.first      ? true :
             pair1.first  == pair2.first and
             pair1.second <  pair2.second     ? true : false);
