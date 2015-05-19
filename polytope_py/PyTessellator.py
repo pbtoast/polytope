@@ -262,7 +262,7 @@ class PyTessellator:
     def computeTessellationFromGenerators(self, tessellation, points, 
                                           boundaryPoints=None, 
                                           repartition=False):
-        assert len(points) != 0        
+        #assert len(points) != 0        
         if repartition:
             if ((type(points[0]) is not tuple) and (type(points[0]) is not list)):
                 tupledPoints = []
