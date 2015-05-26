@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 #endif
 
 
-  typedef int32_t CoordType;
+  typedef int64_t CoordType;
   typedef boost::geometry::model::d2::point_xy<CoordType> PointType;
   typedef boost::geometry::model::polygon<PointType> PolygonType;
   typedef boost::geometry::model::ring<PointType> RingType;
