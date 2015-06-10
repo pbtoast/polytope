@@ -84,6 +84,7 @@ class Tessellator:
         
         # Object names
         PLC          = "polytope::PLC%id" % ndim
+        ReducedPLC   = "polytope::ReducedPLC%id" % ndim
         Tessellation = "polytope::Tessellation%id" % ndim
         
         # Constructors

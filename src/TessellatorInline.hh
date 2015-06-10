@@ -227,6 +227,21 @@ tessellateDegenerate(const std::vector<RealType>& points,
   return result;
 }
 
+//------------------------------------------------------------------------------
+// Do a tessellation with potential degenerate generators.
+// ReducedPLC case.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+std::vector<unsigned>
+Tessellator<Dimension, RealType>::
+tessellateDegenerate(const std::vector<RealType>& points,
+                     const ReducedPLC<Dimension, RealType>& geometry,
+                     const RealType tol,
+                     Tessellation<Dimension, RealType>& mesh) const {
+  return this->tessellateDegenerate(points, geometry.points, geometry, tol, mesh);
+}
+
 
 
 //------------------------------------------------------------------------------
@@ -332,5 +347,18 @@ tessellateNormalized(const std::vector<RealType>& points,
   denormalizePointsWithSameAspectRatio<RealType>(mesh.nodes, xmin, xmax);
 }
 
+//------------------------------------------------------------------------------
+// Do a tessellation by first normalizing the input points.
+// ReducedPLC.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+inline
+void
+Tessellator<Dimension, RealType>::
+tessellateNormalized(const std::vector<RealType>& points,
+                     const ReducedPLC<Dimension, RealType>& geometry,
+                     Tessellation<Dimension, RealType>& mesh) const {
+   this->tessellateNormalized(points, geometry.points, geometry, mesh);
+}
 
 }
