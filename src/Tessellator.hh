@@ -79,6 +79,20 @@ public:
     error("This Tessellator does not support boundaries specified as PLCs.");
   }
 
+  //! Generate a Voronoi-like tessellation for the given set of generator 
+  //! points and a description of the geometry in which they exist.
+  //! The geometry description uses the ReducedPLC to combine vertex
+  //! coordinates and facet topology into a single struct out of convenience.
+  //! \param points A (Dimension*numPoints) array containing point coordinates.
+  //! \param geometry A description of the geometry in Reduced Piecewise Linear Complex form.
+  //! \param mesh This will store the resulting tessellation.
+  virtual void tessellate(const std::vector<RealType>& points,
+                          const ReducedPLC<Dimension, RealType>& geometry,
+                          Tessellation<Dimension, RealType>& mesh) const
+  {
+    error("This Tessellator does not support boundaries specified as PLCs.");
+  }
+
   //! The following methods all return the same sort of tessellation as the 
   //! above versions, except these versions do not assume that the input
   //! generators are unique.  We allow degeneracies here, which implies a 
@@ -109,6 +123,13 @@ public:
                        const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
 
+  //! Bounded by a PLC.
+  virtual std::vector<unsigned>
+  tessellateDegenerate(const std::vector<RealType>& points,
+                       const ReducedPLC<Dimension, RealType>& geometry,
+                       const RealType tol,
+                       Tessellation<Dimension, RealType>& mesh) const;
+
 
   //! The following methods all return the same sort of tessellation as the 
   //! above versions. The input points and geometry are first normalized 
@@ -132,6 +153,12 @@ public:
   tessellateNormalized(const std::vector<RealType>& points,
                        const std::vector<RealType>& PLCpoints,
                        const PLC<Dimension, RealType>& geometry,
+                       Tessellation<Dimension, RealType>& mesh) const;
+
+  //! Bounded by a ReducedPLC.
+  virtual void
+  tessellateNormalized(const std::vector<RealType>& points,
+                       const ReducedPLC<Dimension, RealType>& geometry,
                        Tessellation<Dimension, RealType>& mesh) const;
 
 

@@ -98,7 +98,7 @@ class PLC:
         
         # Attributes
         attributes = ["points"]
-        returnvals = ["vector_of_vector_of_double*"]
+        returnvals = ["vector_of_double*"]
 
         for i,(att,ret) in enumerate(zip(attributes,returnvals)):
             x.add_custom_instance_attribute(att, retval(ret, reference_existing_object=True),
