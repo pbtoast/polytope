@@ -39,6 +39,8 @@ class PLC:
                        
         self.generatePLCBindings(self.PLC2d, 2)
         self.generatePLCBindings(self.PLC3d, 3)
+        self.generateReducedPLCBindings(self.ReducedPLC2d, 2)
+        self.generateReducedPLCBindings(self.ReducedPLC3d, 3)
 
         return
 

@@ -90,6 +90,7 @@ class Tessellator:
         x.add_constructor([])
 
         # Methods
+        # Standard tessellate methods
         x.add_method("tessellate", None, 
                      [constrefparam("vector_of_double", "points"),
                       refparam(Tessellation, "mesh")],
@@ -106,7 +107,13 @@ class Tessellator:
                       constrefparam(PLC, "geometry"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
-
+        x.add_method("tessellate", None, 
+                     [constrefparam("vector_of_double", "points"),
+                      constrefparam(ReducedPLC, "geometry"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        
+        # Tessellate with quantized generators
         x.add_method("tessellateDegenerate", "vector_of_unsigned", 
                      [constrefparam("vector_of_double", "points"),
                       param("double", "tol"),
@@ -126,7 +133,14 @@ class Tessellator:
                       param("double", "tol"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
+        x.add_method("tessellateDegenerate", "vector_of_unsigned", 
+                     [constrefparam("vector_of_double", "points"),
+                      constrefparam(ReducedPLC, "geometry"),
+                      param("double", "tol"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
 
+        # Tessellate with normalized generator positions
         x.add_method("tessellateNormalized", None, 
                      [constrefparam("vector_of_double", "points"),
                       refparam(Tessellation, "mesh")],
@@ -141,6 +155,11 @@ class Tessellator:
                      [constrefparam("vector_of_double", "points"),
                       constrefparam("vector_of_double", "PLCpoints"),
                       constrefparam(PLC, "geometry"),
+                      refparam(Tessellation, "mesh")],
+                     is_virtual=True, is_const=True)
+        x.add_method("tessellateNormalized", None, 
+                     [constrefparam("vector_of_double", "points"),
+                      constrefparam(ReducedPLC, "geometry"),
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
 
