@@ -170,8 +170,14 @@ class CXXContainers:
         # We break this set into two types:
         #   elementTypes0 : things we want to index by value
         #   elementTypes1 : things we want to index by pointer
-        self.elementTypes0 = ["unsigned", "int", "double"]
-        self.elementTypes1 = ["vector_of_unsigned", "vector_of_int", "vector_of_double", "vector_of_vector_of_int", "set_of_unsigned"]
+        self.elementTypes0 = ["unsigned", 
+                              "int", 
+                              "double"]
+        self.elementTypes1 = ["vector_of_unsigned", 
+                              "vector_of_int", 
+                              "vector_of_double", 
+                              "vector_of_vector_of_int", 
+                              "set_of_unsigned"]
 
         # std::vector types.
         for name in (self.elementTypes0 + self.elementTypes1):

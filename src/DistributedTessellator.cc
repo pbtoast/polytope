@@ -182,6 +182,21 @@ tessellate(const vector<RealType>& points,
 }
 
 //------------------------------------------------------------------------------
+// Compute the tessellation in a ReducedPLC.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+void
+DistributedTessellator<Dimension, RealType>::
+tessellate(const vector<RealType>& points,
+           const ReducedPLC<Dimension, RealType>& geometry,
+           Tessellation<Dimension, RealType>& mesh) const {
+  mType = plc;
+  mPLCpointsPtr = &geometry.points;
+  mPLCptr = &geometry;
+  this->computeDistributedTessellation(points, mesh);
+}
+
+//------------------------------------------------------------------------------
 // This method encapsulates the actual distributed tessellation algorithm.
 //------------------------------------------------------------------------------
 template<int Dimension, typename RealType>
