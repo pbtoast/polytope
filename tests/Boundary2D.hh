@@ -43,7 +43,7 @@ public:
   // Vector of generators to define the boundary
   vector<RealType> mPLCpoints;
   // Ranges of bounding box
-  RealType mCenter[2], mLow[2], mHigh[2], mArea;
+  RealType mCenter[3], mLow[3], mHigh[3], mArea;
   
   BGpolygon mBGboundary;
   

@@ -856,11 +856,8 @@ tessellate(const vector<RealType>& points,
          ++itr) {
        const pair<int, int> edge = itr->first;
        if (edgeCounter[edge] == 1) {
-          int k1 = edge.first;
-          int k2 = edge.second;
-          IntPoint v1 = indexToVertex[k1];
-          IntPoint v2 = indexToVertex[k2];
-          // cerr << "Edge " << mCoords.dequantize(&v1.x) << " , " << mCoords.dequantize(&v2.x)
+          // cerr << "Edge " << mCoords.dequantize(&((indexToVertex[edge.first ]).x)) 
+	  //      << " , "   << mCoords.dequantize(&((indexToVertex[edge.second]).x))
           //      << " only counted once. Neighboring cell: " << itr->second[0] << endl;
        }
     }
