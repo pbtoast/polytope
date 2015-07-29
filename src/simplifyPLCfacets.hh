@@ -36,7 +36,7 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
   // Reduce to the set of unique points.
   std::vector<unsigned> old2new;
   geometry::uniquePoints<2, RealType>(points, xmin, xmax, tol, result.points, old2new);
-  const unsigned nnewpoints = result.points.size()/2;
+  // const unsigned nnewpoints = result.points.size()/2;
   // std::cerr << "Original points: " << std::endl;
   // for (unsigned i = 0; i != points.size()/2; ++i) {
   //   std::cerr << "    " << i << " : (" << points[2*i] << " " << points[2*i+1] << ")" << std::endl;
@@ -261,7 +261,7 @@ simplifyPLCfacets(const PLC<3, RealType>& plc,
            itr != edgeCount.end();
            ++itr) {
         if (itr->second == 1) edges.push_back(itr->first);
-        const EdgeHash ehash = itr->first;
+        // const EdgeHash ehash = itr->first;
         // std::cerr << "  --> " << itr->second 
         //           << " [" << ehash.first << " " << ehash.second << "] : ("
         //           << result.points[3*ehash.first] << " " << result.points[3*ehash.first+1] << " " << result.points[3*ehash.first+2] << ") (" 

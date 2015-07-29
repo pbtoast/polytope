@@ -46,7 +46,7 @@ template<typename RealType, typename BaseType> struct BoostTessellatorTraits {};
 //------------------------------------------------------------------------
 template<typename RealType>
 struct BoostTessellatorTraits<RealType, RealType> {
-  typedef int64_t IntType;
+  typedef typename polytope::DimensionTraits<2, RealType>::CoordHash IntType;
   typedef RealType CoordType;
   typedef polytope::Point2<RealType> PointType;
   typedef polytope::Point2<RealType> RealPoint;
@@ -81,8 +81,8 @@ struct BoostTessellatorTraits<RealType, RealType> {
 // value to the integer grid. Geometric operation use the ints with this option on.
 //------------------------------------------------------------------------
 template<typename RealType>
-struct BoostTessellatorTraits<RealType, int64_t> {
-  typedef int64_t IntType;
+struct BoostTessellatorTraits<RealType, typename polytope::DimensionTraits<2, RealType>::CoordHash> {
+  typedef typename polytope::DimensionTraits<2, RealType>::CoordHash IntType;
   typedef IntType CoordType;
   typedef polytope::Point2<IntType>  PointType;
   typedef polytope::Point2<RealType> RealPoint;
@@ -100,7 +100,7 @@ struct BoostTessellatorTraits<RealType, int64_t> {
     return coords.dequantize(&pointIn.x);
   }
   static PointType project(const polytope::QuantizedCoordinates<2, RealType>& coords, 
-                           const int64_t* endPoint,
+                           const IntType* endPoint,
                            const RealType* direction) {
     const IntPoint iep   = IntPoint(endPoint[0], endPoint[1]);
     const RealPoint tmp  = coords.dequantize(&iep.x);

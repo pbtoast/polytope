@@ -14,12 +14,12 @@ namespace internal {
 template<int Dimension, typename RealType>
 class QuantTessellation {
 public:
-  typedef uint64_t PointHash;
-  typedef std::pair<int, int> EdgeHash;
-  typedef std::vector<unsigned> FaceHash;
   typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash PointHash;
   typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
+  typedef std::pair<int, int> EdgeHash;
+  typedef std::vector<unsigned> FaceHash;
 
   // The normalized generator coordinates.
   std::vector<RealType> generators;

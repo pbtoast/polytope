@@ -36,7 +36,8 @@ if(HAVE_TETGEN)
 endif()
 
 # Generate the TessellatorModules input script
-configure_file(TessellatorModule.py.in  ${PYBINDGEN_DIR}/TessellatorModule.py)
+#configure_file(TessellatorModule.py.in  ${PYBINDGEN_DIR}/TessellatorModule.py)
+configure_file(TessellatorModule.py.in  ${PROJECT_BINARY_DIR}/src/PBGWraps/TessellatorModule.py)
 
 # Call the PyBindGen macros to create the C bindings
 PYBINDGEN_GENERATE_BINDINGS("${PYTHONPKGS}")
@@ -93,7 +94,6 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 # On some Linux machines we get messed up with the HDF5 libs including 
 # things like libdl and libm, so we try to cut down the list here to the 
 # first couple of elements.
-message("+++ ${HDF5_LIBRARIES}")
 list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
 #list(GET HDF5_LIBRARIES 0 3 HDF5_LIB)
 

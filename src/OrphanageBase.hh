@@ -19,6 +19,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include "DimensionTraits.hh"
 #include "QuantizedCoordinates.hh"
 
 
@@ -53,7 +54,7 @@ public:
 protected:
 
   // Call the underlying tessellator
-  typedef int64_t CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   void callPrivateTessellate(const std::vector<RealType>& points,
                              const ReducedPLC<Dimension, CoordHash>& intGeometry,
                              const QuantizedCoordinates<Dimension, RealType>& coords,

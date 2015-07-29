@@ -25,7 +25,7 @@ class QuantizedCoordinates: public ReducedPLC<Dimension, RealType> {
 public:
   //-------------- Public types and member variables ----------------- //
 
-  typedef int64_t CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
   typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
 
