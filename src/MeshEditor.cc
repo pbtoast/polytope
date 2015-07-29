@@ -190,7 +190,7 @@ flagEdgesForCleaning(const RealType edgeTol,
     for (vector<unsigned>::const_iterator faceItr = borderFaces.begin();
          faceItr != borderFaces.end();
          ++faceItr) {
-      const unsigned iface = (*faceItr < 0) ? ~(*faceItr) : *faceItr;
+      const unsigned iface = *faceItr;
       POLY_ASSERT(iface < mMesh.faces.size());
       POLY_ASSERT(mMesh.faceCells[iface].size() == 1);
       POLY_ASSERT(mMesh.faces[iface].size() == 2);

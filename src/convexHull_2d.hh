@@ -83,8 +83,10 @@ PLC<2, RealType>
 convexHull_2d(const std::vector<RealType>& points,
               const RealType* low,
               const RealType& dx) {
-  typedef uint64_t CoordHash;
+  typedef KeyTraits::Key CoordHash;
   typedef Point2<CoordHash> PointHash;
+  // typedef polytope::DimensionTraits<2, RealType>::CoordHash CoordHash;
+  // typedef polytope::DimensionTraits<2, RealType>::IntPoint PointHash;
 
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);

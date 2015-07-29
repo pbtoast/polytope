@@ -204,7 +204,7 @@ public:
   Tessellator& operator=(const Tessellator&);
 
   // Private bounded tessellate to set bounding box and degeneracy spacing
-  typedef int64_t CoordHash;
+  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
   virtual void tessellate(const std::vector<RealType>& points,
                           const ReducedPLC<Dimension, CoordHash>& intGeometry,
                           const QuantizedCoordinates<Dimension, RealType>& coords,

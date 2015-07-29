@@ -36,7 +36,7 @@ namespace boost{
 namespace polygon{
 
 typedef double fptType;
-typedef int64_t CoordHash;
+typedef polytope::DimensionTraits<2, double>::CoordHash CoordHash;
 typedef polytope::Point2<CoordHash> IntPoint;
 
 template <>
@@ -146,8 +146,10 @@ struct polytope_voronoi_ctype_traits {
 
 
 // // The Boost.Polygon Voronoi diagram
-// typedef boost::polygon::voronoi_builder<int64_t, boost::polygon::polytope_voronoi_ctype_traits> VB;
-// typedef boost::polygon::voronoi_diagram<double, boost::polygon::polytope_voronoi_diagram_traits> VD;
+// typedef boost::polygon::voronoi_builder<polytope::DimensionTraits<2, RealType>::CoordHash, 
+// 					boost::polygon::polytope_voronoi_ctype_traits> VB;
+// typedef boost::polygon::voronoi_diagram<double, 
+// 					boost::polygon::polytope_voronoi_diagram_traits> VD;
 
 namespace polytope {
 
@@ -160,7 +162,7 @@ public:
 
   // Some useful typedefs
   typedef std::pair<int, int> EdgeHash;
-  typedef int64_t CoordHash;
+  typedef typename polytope::DimensionTraits<2, RealType>::CoordHash CoordHash;
 
   // The Big Switch: geometric operations in integers or doubles?
   typedef BoostTessellatorTraits<RealType, RealType>  BTT;     // uncomment to use floating point
