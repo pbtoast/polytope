@@ -10,10 +10,10 @@
 
 template<typename RealType> class Boundary2D;
 
-#if Boost_FOUND
+#if HAVE_BOOST
 // We use the Boost.Geometry library to handle polygon intersections and such.
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
+// #include <boost/geometry.hpp>
+// #include <boost/geometry/geometries/geometries.hpp>
 #endif
 
 namespace polytope {
@@ -21,12 +21,11 @@ namespace polytope {
 //------------------------------------------------------------------------------
 // A macro for checking true/false test conditions.
 //------------------------------------------------------------------------------
-#define POLY_CHECK(x) { if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); } }
-#define POLY_CHECK2(x, msg) { if (!(x)) { cout << "FAIL: " << #x << endl << msg << endl; exit(-1); } }
+#define POLY_CHECK(x) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl; exit(-1); } }
+#define POLY_CHECK2(x, msg) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl << msg << std::endl; exit(-1); } }
 
-#if Boost_FOUND
-namespace BG = boost::geometry;
-typedef BG::cs::cartesian cart;
+#if HAVE_BOOST
+typedef boost::geometry::cs::cartesian cart;
 #endif
 
 //------------------------------------------------------------------------------
@@ -181,16 +180,16 @@ void tessellate2D(std::vector<RealType>& points,
    }
 }
 
-#if Boost_FOUND
+#if HAVE_BOOST
 //------------------------------------------------------------------------------
 // Make a 2D Boost.Geometry point
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::point<RealType,2,cart> makePoint2D(std::vector<RealType>& position) {
+boost::geometry::model::point<RealType,2,cart> makePoint2D(std::vector<RealType>& position) {
    POLY_ASSERT( position.size() == 2 );
-   BG::model::point<RealType,2,cart> point;
-   BG::set<0>(point, position[0]);
-   BG::set<1>(point, position[1]);
+   boost::geometry::model::point<RealType,2,cart> point;
+   boost::geometry::set<0>(point, position[0]);
+   boost::geometry::set<1>(point, position[1]);
    return point;
 }
 
@@ -198,12 +197,12 @@ BG::model::point<RealType,2,cart> makePoint2D(std::vector<RealType>& position) {
 // Make a 3D Boost.Geometry point
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::point<RealType,3,cart> makePoint3D(std::vector<RealType>& position) {
+boost::geometry::model::point<RealType,3,cart> makePoint3D(std::vector<RealType>& position) {
    POLY_ASSERT( position.size() == 3 );
-   BG::model::point<RealType,3,cart> point;
-   BG::set<0>(point, position[0]);
-   BG::set<1>(point, position[1]);
-   BG::set<2>(point, position[2]);
+   boost::geometry::model::point<RealType,3,cart> point;
+   boost::geometry::set<0>(point, position[0]);
+   boost::geometry::set<1>(point, position[1]);
+   boost::geometry::set<2>(point, position[2]);
    return point;
 }
 
@@ -211,14 +210,14 @@ BG::model::point<RealType,3,cart> makePoint3D(std::vector<RealType>& position) {
 // Make a Boost.Geometry polygon from a concatenated vector of (x,y) points
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
+boost::geometry::model::polygon<boost::geometry::model::point<RealType,2,cart>,false> 
 makePolygon( std::vector<RealType>& points ) {
-   typedef BG::model::point<RealType,2,cart> RealPoint;
-   BG::model::polygon<RealPoint,false> polygon;
+   typedef boost::geometry::model::point<RealType,2,cart> RealPoint;
+   boost::geometry::model::polygon<RealPoint,false> polygon;
    for (unsigned i = 0; i < points.size()/2; ++i) {
-      BG::append( polygon, RealPoint(points[2*i],points[2*i+1]) );
+      boost::geometry::append( polygon, RealPoint(points[2*i],points[2*i+1]) );
    }
-   BG::append( polygon, RealPoint(points[0],points[1]) );
+   boost::geometry::append( polygon, RealPoint(points[0],points[1]) );
    return polygon;
 }
 
@@ -226,10 +225,10 @@ makePolygon( std::vector<RealType>& points ) {
 // Make a Boost.Geometry polygon from a PLC and its point list
 //------------------------------------------------------------------------------
 template <typename RealType>
-BG::model::polygon<BG::model::point<RealType,2,cart>,false> 
+boost::geometry::model::polygon<boost::geometry::model::point<RealType,2,cart>,false> 
 makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
-   typedef BG::model::point<RealType,2,cart> RealPoint;
-   typedef BG::model::polygon<RealPoint,false> BGpolygon;
+   typedef boost::geometry::model::point<RealType,2,cart> RealPoint;
+   typedef boost::geometry::model::polygon<RealPoint,false> BGpolygon;
    
    unsigned i,j;
    BGpolygon polygon;
@@ -237,10 +236,10 @@ makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
    for (j = 0; j != PLC.facets.size(); ++j){
       POLY_ASSERT( PLC.facets[j].size() == 2 );
       i = PLC.facets[j][0];
-      BG::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) );
+      boost::geometry::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) );
    }
    i = PLC.facets[0][0];
-   BG::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) ); //Close the polygon
+   boost::geometry::append( polygon, RealPoint(PLCpoints[2*i],PLCpoints[2*i+1]) ); //Close the polygon
    
    // Walk the facets composing each hole and add the first node
    const unsigned nHoles = PLC.holes.size();
@@ -251,10 +250,10 @@ makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
          for (j = 0; j != PLC.holes[ihole].size(); ++j){
             POLY_ASSERT( PLC.holes[ihole][j].size() == 2 );
             i = PLC.holes[ihole][j][0];
-            BG::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );
+            boost::geometry::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );
          }
          i = PLC.holes[ihole][0][0];
-         BG::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );  //Close the polygon
+         boost::geometry::append( holes[ihole], RealPoint( PLCpoints[2*i], PLCpoints[2*i+1] ) );  //Close the polygon
       }
    }
    return polygon;
@@ -265,7 +264,7 @@ makePolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
 //------------------------------------------------------------------------------
 template <typename RealType>
 RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ) {
-   typedef BG::model::point<RealType,2,cart> RealPoint;
+   typedef boost::geometry::model::point<RealType,2,cart> RealPoint;
    RealType area = 0;
    for (unsigned i = 0; i != mesh.cells.size(); ++i) {
       std::vector<RealType> nodeCell;
@@ -278,8 +277,8 @@ RealType computeTessellationArea( polytope::Tessellation<2,RealType>& mesh ) {
          nodeCell.push_back( mesh.nodes[2*inode  ] );
          nodeCell.push_back( mesh.nodes[2*inode+1] );
       }
-      BG::model::polygon<RealPoint,false> cellPolygon = makePolygon( nodeCell );
-      area += BG::area( cellPolygon );
+      boost::geometry::model::polygon<RealPoint,false> cellPolygon = makePolygon( nodeCell );
+      area += boost::geometry::area( cellPolygon );
       nodeCell.clear();
    }
    return area;

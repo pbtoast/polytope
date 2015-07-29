@@ -4,9 +4,13 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
+//#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <algorithm>
+
+#include "Tessellation.hh"
+#include "ReducedPLC.hh"
 
 #if HAVE_MPI
 #include "mpi.h"
@@ -52,20 +56,26 @@ template<int Dimension, typename RealType> struct Hasher;
 // 2D
 template<typename RealType> struct Hasher<2, RealType> {
 
-  static uint64_t coordMax()                { return (1ULL << 21) - 1ULL; }
-  static uint64_t outerFlag()               { return (1ULL << 63); }
-  static uint64_t xmask()                   { return (1ULL << 31) - 1ULL; }
-  static uint64_t ymask()                   { return xmask() << 31; }
-  static uint64_t qxval(const uint64_t val) { return (val & xmask()); }
-  static uint64_t qyval(const uint64_t val) { return (val & ymask()) >> 31; }
+  // typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
+  typedef KeyTraits::Key CoordHash;
+
+  static unsigned  num1dbits()                { return 31U; }
+  //static unsigned  num1dbits()                { return 30U; }
+  static CoordHash coordMax()                 { return (1ULL << num1dbits()) - 1ULL; }
+  static CoordHash outerFlag()                { return (1ULL << 63); }
+  static CoordHash xmask()                    { return (1ULL << num1dbits()) - 1ULL; }
+  static CoordHash ymask()                    { return xmask() << num1dbits(); }
+  static CoordHash qxval(const CoordHash val) { return (val & xmask()); }
+  static CoordHash qyval(const CoordHash val) { return (val & ymask()) >> num1dbits(); }
+  static CoordHash hash(const CoordHash x, const CoordHash y) { return x + (y << num1dbits()); }
 
   // Hash a 2 position
-  static uint64_t hashPosition(const RealType* pos,
-                               const RealType* xlow_inner,
-                               const RealType* xhigh_inner,
-                               const RealType* xlow_outer,
-                               const RealType* xhigh_outer,
-                               const RealType minTol = RealType(0)) {
+  static CoordHash hashPosition(const RealType* pos,
+				const RealType* xlow_inner,
+				const RealType* xhigh_inner,
+				const RealType* xlow_outer,
+				const RealType* xhigh_outer,
+				const RealType minTol = RealType(0)) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1]);
     POLY_ASSERT(xhigh_outer[0] >= xhigh_inner[0] and
@@ -79,7 +89,7 @@ template<typename RealType> struct Hasher<2, RealType> {
                  << xhigh_outer[0] << " " << xhigh_outer[1] << ")");
 
     // Decide the bounding box we're using.
-    uint64_t result = 0ULL;
+    CoordHash result = 0ULL;
     const RealType *xlow, *xhigh;
     if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
         pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1]) {
@@ -94,8 +104,11 @@ template<typename RealType> struct Hasher<2, RealType> {
     // Quantize away.
     const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
-    result += (uint64_t(std::min(coordMax(), uint64_t(std::max(RealType(0), pos[0] - xlow[0])/dx[0]))) +
-               uint64_t(std::min(coordMax(), uint64_t(std::max(RealType(0), pos[1] - xlow[1])/dx[1])) << 31));
+    // const RealType delta = std::min(dx[0], dx[1]);
+    result += hash(CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[0] - xlow[0])/dx[0]))),
+                   CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[1] - xlow[1])/dx[1]))));
+    // result += hash(CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[0] - xlow[0])/delta))),
+    //                CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[1] - xlow[1])/delta))));
     return result;
   }
 
@@ -105,7 +118,7 @@ template<typename RealType> struct Hasher<2, RealType> {
                              const RealType* xhigh_inner,
                              const RealType* xlow_outer,
                              const RealType* xhigh_outer,
-                             const uint64_t hashedPosition,
+                             const CoordHash hashedPosition,
                              const RealType minTol = RealType(0)) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1]);
@@ -127,8 +140,13 @@ template<typename RealType> struct Hasher<2, RealType> {
     // Extract the position (for the center of the cell).
     const RealType dx[2] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
-    pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType(( (hashedPosition & xmask())        + 0.5)*dx[0]))));
-    pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((((hashedPosition & ymask()) >> 31) + 0.5)*dx[1]))));
+    // const RealType delta = std::min(dx[0], dx[1]);
+    // pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType(( (hashedPosition & xmask())        + 0.5)*dx[0]))));
+    // pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((((hashedPosition & ymask()) >> num1dbits()) + 0.5)*dx[1]))));
+    pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType((qxval(hashedPosition) + 0.5)*dx[0]))));
+    pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((qyval(hashedPosition) + 0.5)*dx[1]))));
+    // pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType((qxval(hashedPosition) + 0.5)*delta))));
+    // pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((qyval(hashedPosition) + 0.5)*delta))));
 
     // Post-conditions.
     POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
@@ -139,8 +157,8 @@ template<typename RealType> struct Hasher<2, RealType> {
   }
 
   // Return hashed integer as a hashed 2 position.
-  static void hashedPosition(uint64_t* pos,
-			     const uint64_t hashedPosition) {
+  static void hashedPosition(CoordHash* pos,
+			     const CoordHash hashedPosition) {
     pos[0] = qxval(hashedPosition);
     pos[1] = qyval(hashedPosition);
   }
@@ -149,22 +167,27 @@ template<typename RealType> struct Hasher<2, RealType> {
 // 3D
 template<typename RealType> struct Hasher<3, RealType> {
 
-  static uint64_t coordMax()                { return (1ULL << 21) - 1ULL; }
-  static uint64_t outerFlag()               { return (1ULL << 63); }
-  static uint64_t xmask()                   { return (1ULL << 21) - 1ULL; }
-  static uint64_t ymask()                   { return xmask() << 21; }
-  static uint64_t zmask()                   { return xmask() << 42; }
-  static uint64_t qxval(const uint64_t val) { return (val & xmask()); }
-  static uint64_t qyval(const uint64_t val) { return (val & ymask()) >> 21; }
-  static uint64_t qzval(const uint64_t val) { return (val & zmask()) >> 42; }
+  // typedef DimensionTraits<3, RealType>::CoordHash CoordHash;
+  typedef KeyTraits::Key CoordHash;
+
+  static unsigned  num1dbits()                { return 21U; }
+  static CoordHash coordMax()                 { return (1ULL << num1dbits()) - 1ULL; }
+  static CoordHash outerFlag()                { return (1ULL << 63); }
+  static CoordHash xmask()                    { return (1ULL << num1dbits()) - 1ULL; }
+  static CoordHash ymask()                    { return xmask() << num1dbits(); }
+  static CoordHash zmask()                    { return xmask() << (2*num1dbits()); }
+  static CoordHash qxval(const CoordHash val) { return (val & xmask()); }
+  static CoordHash qyval(const CoordHash val) { return (val & ymask()) >> num1dbits(); }
+  static CoordHash qzval(const CoordHash val) { return (val & zmask()) >> (2*num1dbits()); }
+  static CoordHash hash(const CoordHash x, const CoordHash y, const CoordHash z) { return x + (y << num1dbits()) + (z << (2*num1dbits())); }
 
   // Hash a 3 position
-  static uint64_t hashPosition(const RealType* pos,
-                               const RealType* xlow_inner,
-                               const RealType* xhigh_inner,
-                               const RealType* xlow_outer,
-                               const RealType* xhigh_outer,
-                               const RealType minTol = RealType(0)) {
+  static CoordHash hashPosition(const RealType* pos,
+				const RealType* xlow_inner,
+				const RealType* xhigh_inner,
+				const RealType* xlow_outer,
+				const RealType* xhigh_outer,
+				const RealType minTol = RealType(0)) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1] and
                 xlow_outer[2] <= xlow_inner[2]);
@@ -182,7 +205,7 @@ template<typename RealType> struct Hasher<3, RealType> {
                  << xhigh_outer[0] << " " << xhigh_outer[1] << " " << xhigh_outer[2] << ")");
 
     // Decide the bounding box we're using.
-    uint64_t result = 0ULL;
+    CoordHash result = 0ULL;
     const RealType *xlow, *xhigh;
     if (pos[0] < xlow_inner[0] or pos[0] > xhigh_inner[0] or
         pos[1] < xlow_inner[1] or pos[1] > xhigh_inner[1] or
@@ -199,9 +222,9 @@ template<typename RealType> struct Hasher<3, RealType> {
     const RealType dx[3] = {std::max(RealType((xhigh[0] - xlow[0])/coordMax()), std::max(std::numeric_limits<RealType>::epsilon(), minTol)),
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(std::numeric_limits<RealType>::epsilon(), minTol)),
                             std::max(RealType((xhigh[2] - xlow[2])/coordMax()), std::max(std::numeric_limits<RealType>::epsilon(), minTol))};
-    result += (uint64_t(std::min(coordMax(), uint64_t(std::max(RealType(0), pos[0] - xlow[0])/dx[0]))) +
-               uint64_t(std::min(coordMax(), uint64_t(std::max(RealType(0), pos[1] - xlow[1])/dx[1])) << 21) +
-               uint64_t(std::min(coordMax(), uint64_t(std::max(RealType(0), pos[2] - xlow[2])/dx[2])) << 42));
+    result += hash(CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[0] - xlow[0])/dx[0]))),
+                   CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[1] - xlow[1])/dx[1]))),
+                   CoordHash(std::min(coordMax(), CoordHash(std::max(RealType(0), pos[2] - xlow[2])/dx[2]))));
     return result;
   }
 
@@ -211,7 +234,7 @@ template<typename RealType> struct Hasher<3, RealType> {
                              const RealType* xhigh_inner,
                              const RealType* xlow_outer,
                              const RealType* xhigh_outer,
-                             const uint64_t hashedPosition,
+                             const CoordHash hashedPosition,
                              const RealType minTol = RealType(0)) {
     POLY_ASSERT(xlow_outer[0] <= xlow_inner[0] and
                 xlow_outer[1] <= xlow_inner[1] and
@@ -238,8 +261,8 @@ template<typename RealType> struct Hasher<3, RealType> {
                             std::max(RealType((xhigh[1] - xlow[1])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon())),
                             std::max(RealType((xhigh[2] - xlow[2])/coordMax()), std::max(minTol, std::numeric_limits<RealType>::epsilon()))};
     pos[0] = std::max(xlow[0], std::min(xhigh[0], RealType(xlow[0] + RealType(( (hashedPosition & xmask())        + 0.5)*dx[0]))));
-    pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((((hashedPosition & ymask()) >> 21) + 0.5)*dx[1]))));
-    pos[2] = std::max(xlow[2], std::min(xhigh[2], RealType(xlow[2] + RealType((((hashedPosition & zmask()) >> 42) + 0.5)*dx[2]))));
+    pos[1] = std::max(xlow[1], std::min(xhigh[1], RealType(xlow[1] + RealType((((hashedPosition & ymask()) >> num1dbits()) + 0.5)*dx[1]))));
+    pos[2] = std::max(xlow[2], std::min(xhigh[2], RealType(xlow[2] + RealType((((hashedPosition & zmask()) >> (2*num1dbits())) + 0.5)*dx[2]))));
 
     // Post-conditions.
     POLY_ASSERT2(pos[0] >= xlow[0] and pos[0] <= xhigh[0] and
@@ -1331,20 +1354,22 @@ uniquePoints(const std::vector<RealType>& points,
              std::vector<unsigned>& indexMap) {
   POLY_ASSERT(points.size() % Dimension == 0);
   typedef geometry::Hasher<Dimension, RealType> HasherType;
+  // typedef DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
+  typedef KeyTraits::Key CoordHash;
 
   // // Compute the bounding box.
   // RealType xmin[Dimension], xmax[Dimension];
   // computeBoundingBox<Dimension, RealType>(points, true, xmin, xmax);
 
   const unsigned n = points.size()/Dimension;
-  std::map<uint64_t, unsigned> uniqueHashes;
+  std::map<CoordHash, unsigned> uniqueHashes;
   uniquePointSet = std::vector<RealType>();
   indexMap = std::vector<unsigned>();
   unsigned j = 0;
   RealType pos[Dimension];
   for (unsigned i = 0; i != n; ++i) {
-    const uint64_t hashi = HasherType::hashPosition(&points[Dimension*i], xmin, xmax, xmin, xmax, tol);
-    std::map<uint64_t, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
+    const CoordHash hashi = HasherType::hashPosition(&points[Dimension*i], xmin, xmax, xmin, xmax, tol);
+    std::map<CoordHash, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
     if (itr == uniqueHashes.end()) {
       uniqueHashes[hashi] = j;
       HasherType::unhashPosition(pos, xmin, xmax, xmin, xmax, hashi, tol);
