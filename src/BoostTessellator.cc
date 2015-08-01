@@ -742,7 +742,6 @@ tessellate(const std::vector<RealType>& points,
   // The Quantized coordinates
   mCoords = coords;
   
-  const unsigned numGenerators = points.size()/2;
   const bool collinear = geometry::collinear<2, RealType>(points, mDegeneracy);
   vector<vector<unsigned> > cellNodes;
   map<int, PointType> id2node;
@@ -757,7 +756,7 @@ tessellate(const std::vector<RealType>& points,
   {
     this->computeCellNodes(points, cellNodes, id2node, infNodes);
   }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
+  POLY_ASSERT(cellNodes.size() == points.size()/2);
 
   // vector<ReducedPLC<2, CoordHash> > dummy;
   // intCells.resize(numGenerators);

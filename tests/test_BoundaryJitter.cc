@@ -83,19 +83,16 @@ bool checkBoundary(const Tessellation<2,double>& mesh,
    POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
 
    // Check that node is exactly on the boundary
-   bool checkx, checky;
    double x, y;
    for (std::set<unsigned>::const_iterator nodeItr = boundaryNodes.begin();
        nodeItr != boundaryNodes.end(); ++nodeItr) {
      x = mesh.nodes[2*(*nodeItr)  ];
      y = mesh.nodes[2*(*nodeItr)+1];
-     checkx = (x == low[0] or x == high[0]);
-     checky = (y == low[1] or y == high[1]);
-     POLY_ASSERT2(checkx or checky, "Node " << *nodeItr << " at (" 
+     POLY_ASSERT2((x==low[0] or x==high[0] or y==low[1] or y==high[1]), 
+		  "Node " << *nodeItr << " at (" 
                   << x      << "," << y       << ") is outside bounding box (" 
                   << low[0] << "," << high[0] << ")x("
                   << low[1] << "," << high[1] << ").");
-     //if (checkx and checky) cerr << "Corner! " << x << " " << y << endl;
    }
 
    return true;
@@ -186,8 +183,7 @@ void test(Tessellator<2,double>& tessellator) {
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(!isCartesian) 
        cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
-    bool result = checkBoundary(mesh, low, high);
-    POLY_ASSERT(result);
+    POLY_ASSERT(checkBoundary(mesh, low, high));
   }
 }
 

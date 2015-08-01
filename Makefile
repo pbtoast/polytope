@@ -14,7 +14,6 @@ use_silo       = 1
 use_python     = 0
 use_C          = 1
 python_exe     = not-set
-python_version = not-set
 build_tests    = 1
 c_real_type    = double
 
@@ -83,6 +82,7 @@ endif
 # explicit boost path
 ifneq ($(boost_root), not-set)
   CONFIG_FLAGS += -DBOOST_ROOT=$(boost_root)
+  CONFIG_FLAGS += -DUSE_BOOST=1
 endif
 
 # Choose to build silo or not if available
@@ -96,12 +96,7 @@ endif
 # Explicit path for PyBindGen
 ifeq ($(use_python), 1)
   ifneq ($(python_exe), not-set)
-    ifneq ($(python_version), not-set)
-       CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
-       CONFIG_FLAGS += -DPYTHON_VERSION=$(python_version)
-    else
-       use_python = 0
-    endif
+    CONFIG_FLAGS += -DPYTHON_EXE=$(python_exe)
   else
     use_python = 0
   endif
