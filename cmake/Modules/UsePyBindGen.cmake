@@ -15,7 +15,7 @@
 # Variables that must be set before calling PYBINDGEN_GENERATE_BINDINGS:
 #   PYBINDGEN_DIR
 #     - Location of the python source code to build the bindings
-#   PYTHON_EXE
+#   PYTHON_EXECUTABLE
 #     - Python executable
 #   PYTHON_LIB_DIR
 #     - Python lib (typically obtained from the executable root)
@@ -66,7 +66,7 @@ macro(PYBINDGEN_GENERATE_BINDINGS module_list)
   endforeach()
   add_custom_command(
     OUTPUT ${PYBINDGEN_GENERATED_SOURCE} ${PYBINDGEN_GENERATED_HEADER}
-    COMMAND ${PYTHON_EXE} 
+    COMMAND ${PYTHON_EXECUTABLE} 
       ${PYBINDGEN_DIR}/${PYBINDGEN_MODULE_NAME}Bindings.py
       ${PYBINDGEN_ADDITIONAL_ARGS}
     DEPENDS ${PYBINDGEN_SOURCE}

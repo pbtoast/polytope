@@ -18,7 +18,7 @@ set(PYTHONPKGS
 )
 
 # Generate the PolytopeModulesBindings.py driver script
-configure_file(PolytopeModulesBindings.py.in  ${PYBINDGEN_DIR}/PolytopeModulesBindings.py)
+configure_file(PolytopeModulesBindings.py.in ${PYBINDGEN_DIR}/PolytopeModulesBindings.py)
 
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePyBindGen.cmake)
@@ -59,17 +59,6 @@ else()
   set(TETGEN_STATIC_LIB "")
 endif()
 
-# libpython<version> location
-string(REPLACE "bin/python" "lib" PYTHON_LINK_LIB ${PYTHON_EXE})
-string(REPLACE "bin/python" "lib/libpython${PYTHON_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}" PYTHON_STATIC_LIB ${PYTHON_EXE})
-string(REPLACE "bin/python" "lib/libpython${PYTHON_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}" PYTHON_SHARED_LIB ${PYTHON_EXE})
-
-if (EXISTS "${PYTHON_STATIC_LIB}")
-    set(PYTHON_LINK_LIB "${PYTHON_STATIC_LIB}")
-else()
-    set(PYTHON_LINK_LIB "${PYTHON_SHARED_LIB}")
-endif()
-
 # Include directories in the header file search path
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/src")
@@ -85,21 +74,13 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 ##        Polytope to link against all the hdf5 libraries it finds.
 ## FIXME: A better solution is to allow users to specify a list of
 ##        additional link args when configuring Polytope.
-#if (HDF5_ROOT)
-#  set(HDF5_LINK "${HDF5_LIBRARIES}")
-#else()
-#  set(HDF5_LINK "")
-#endif()
 
 # On some Linux machines we get messed up with the HDF5 libs including 
 # things like libdl and libm, so we try to cut down the list here to the 
 # first couple of elements.
 list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
-#list(GET HDF5_LIBRARIES 0 3 HDF5_LIB)
 
 link_directories("${PYTHON_LIB_DIR}")
-
-
 
 # The static Python library of wrapped methods
 add_library(PolytopeModulesStatic STATIC ${PYBINDGEN_GENERATED_SOURCE})
@@ -108,29 +89,12 @@ set_target_properties(PolytopeModulesStatic PROPERTIES OUTPUT_NAME PolytopeModul
 # The dynamic Python library of wrapped methods
 add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 target_link_libraries(PolytopeModules 
-#  ${PYTHON_LINK}
-  ${POLYTOPE_STATIC_LIB} 
-  ${TRIANGLE_STATIC_LIB}
-  ${TETGEN_STATIC_LIB}
-  ${SILO_LIBRARIES}
-  ${HDF5_LIB}
-)
-
-
-#message("**** SYSTEM: ${CMAKE_SYSTEM}")
-#message("**** CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
-#message("**** CMAKE_SHARED_LINKER_FLAGS_RELEASE: ${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
-#message("**** CMAKE_CXX_IMPLICIT_LINK_LIBRARIES: ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
-#message("**** CMAKE_STANDARD_LIBRARIES: ${CMAKE_STANDARD_LIBRARIES}")
-#message("**** CMAKE_LINK_DEPENDS_NO_SHARED: ${CMAKE_LINK_DEPENDS_NO_SHARED}")
-#message("**** CMAKE_MODULE_LINKER_FLAGS: ${CMAKE_MODULE_LINKER_FLAGS}")
-#message("**** CMAKE_MODULE_LINKER_FLAGS_RELEASE: ${CMAKE_MODULE_LINKER_FLAGS_RELEASE}")
-#message("**** CMAKE_STANDARD_LIBRARIES: ${CMAKE_STANDARD_LIBRARIES}")
-#message("**** HDF5_LIBRARIES: ${HDF5_LIBRARIES}")
-#message("**** HDF5_C_LIBRARIES: ${HDF5_C_LIBRARIES}")
-#message("**** HDF5_CXX_LIBRARIES: ${HDF5_CXX_LIBRARIES}")
-#message("**** SILO_LIBRARIES: ${SILO_LIBRARIES}")
-#set(CMAKE_VERBOSE_MAKEFILE TRUE)
+                      #${PYTHON_LINK}
+                      ${POLYTOPE_STATIC_LIB} 
+		      ${TRIANGLE_STATIC_LIB}
+		      ${TETGEN_STATIC_LIB}
+		      ${SILO_LIBRARIES}
+		      ${HDF5_LIB})
 
 # Remove the "lib" prefix convention from the library
 # NOTE: "init<modulename>" is not defined properly if it begins with "lib"
@@ -141,13 +105,19 @@ if (${APPLE})
   set_target_properties(PolytopeModules PROPERTIES SUFFIX ".so")
 
   # Force resolution of the python symbols to delay until we import the module.
-  TARGET_LINK_LIBRARIES(PolytopeModules "-undefined suppress -flat_namespace")
+  target_link_libraries(PolytopeModules "-undefined suppress -flat_namespace")
 endif()
 
-# Allow rpath linkage to the Module
-#set_target_properties(PolytopeModules PROPERTIES INSTALL_RPATH_USE_LINK_PATH true)
-
 # Library install targets
-install (TARGETS PolytopeModules DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
-install (FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
-install (TARGETS PolytopeModulesStatic DESTINATION lib)
+if (PYTHON_EXE)
+  install(FILES polytope.pth DESTINATION ${PYTHON_SITE_PACKAGES})
+  install(TARGETS PolytopeModules DESTINATION ${PYTHON_SITE_PACKAGES}/polytope)
+else()
+  install(FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
+  install(TARGETS PolytopeModules DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
+endif()
+
+install(TARGETS PolytopeModulesStatic DESTINATION lib)
+
+
+

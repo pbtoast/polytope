@@ -56,7 +56,7 @@ macro(POLYTOPE_ADD_DISTRIBUTED_TEST name dependency_list procs)
   # Check for MPI and determine if you have the necessary
   # components to build the test.
   set(BUILD_TEST true)
-  if(${HAVE_MPI} AND ${HAVE_MPIEXEC})
+  if(HAVE_MPI AND HAVE_MPIEXEC)
     # Every test links to the polytope library
     set(TEST_LINK_LIBRARIES polytope)
     foreach(_dependency ${dependency_list})
