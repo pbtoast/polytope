@@ -109,13 +109,14 @@ if (${APPLE})
 endif()
 
 # Library install targets
-if (PYTHON_EXE)
-  install(FILES polytope.pth DESTINATION ${PYTHON_SITE_PACKAGES})
-  install(TARGETS PolytopeModules DESTINATION ${PYTHON_SITE_PACKAGES}/polytope)
-else()
+# We can't count on installing in the PYTHON_SITE_PACKAGES when python is a system place.
+#if (PYTHON_EXE)
+#  install(FILES polytope.pth DESTINATION ${PYTHON_SITE_PACKAGES})
+#  install(TARGETS PolytopeModules DESTINATION ${PYTHON_SITE_PACKAGES}/polytope)
+#else()
   install(FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
   install(TARGETS PolytopeModules DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
-endif()
+#endif()
 
 install(TARGETS PolytopeModulesStatic DESTINATION lib)
 
