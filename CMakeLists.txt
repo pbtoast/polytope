@@ -209,6 +209,7 @@ if (EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.h AND
   set(HAVE_TRIANGLE 1)
   message(STATUS "Triangle has been found! TriangleTessellator is enabled.")
 else()
+  set(HAVE_TRIANGLE 0)
   message(STATUS "Triangle not found! TriangleTessellator is disabled.")
 endif ()
 
@@ -218,6 +219,7 @@ if (EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.h AND
   set(HAVE_TETGEN 1)
   message(STATUS "Tetgen has been found! TetgenTessellator is enabled.")
 else()
+  set(HAVE_TETGEN 0)
   message(STATUS "Tetgen not found! TetgenTessellator is disabled.")
 endif ()
 
