@@ -1,3 +1,16 @@
+Release 0.5.23
+
+changeset:
+  601:d1c0e34d09bc
+
+Changes:
+
+- This a bugfix revision of the 0.5.23 snapshot released previously.
+- There was a bug in the configuation/build logic that would cause the python
+  bindings for the DistributedTesselators not to be built.
+- As of 0.5.22 we have folded in Joachim's cmake build improvements as well.
+
+--------------------------------------------------------------------------------
 Release 0.5.22
 
 changeset:
