@@ -72,6 +72,7 @@ public:
   Boundary2D():
     Dimension(2),
     mType(square){
+    this->setDefaultBoundary(mType);
   }
   
   ~Boundary2D() {};
