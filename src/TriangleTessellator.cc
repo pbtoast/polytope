@@ -1495,7 +1495,7 @@ constructBoundedTopology(const vector<RealType>& points,
   for (unsigned ii = 0; ii < geometry.points.size()/2; ++ii) indices.insert(ii);
   for (set<unsigned>::iterator iitr = indices.begin();  
        iitr != indices.end();
-       ++iitr) {
+       ) {
     unsigned ipoint = *iitr;
     unsigned inode;
     const RealPoint rp = RealPoint(geometry.points[2*ipoint], geometry.points[2*ipoint+1]);
@@ -1507,11 +1507,14 @@ constructBoundedTopology(const vector<RealType>& points,
       ++nodeItr;
     }
     if (dist < tol) {
+      iitr++;
       plcNodes.insert(inode);
       mesh.nodes[2*inode  ] = rp.x;
       mesh.nodes[2*inode+1] = rp.y;
       boundaryNodes.erase(inode);
       indices.erase(ipoint);
+    } else {
+      ++iitr;
     }
   }
  
@@ -1537,7 +1540,7 @@ constructBoundedTopology(const vector<RealType>& points,
              << "  nearNode = " << inode << endl
              << "  node loc = (" << mesh.nodes[2*inode] << "," 
              << mesh.nodes[2*inode+1] << ")" << endl
-             << "  distance = " << dist << endl
+             << "  distance = " << dist << "      tol = " << tol << endl
              << "  boundaryNode? " 
              << (boundaryNodes.find(inode) != boundaryNodes.end() ? "YES" : "NO") 
              << endl;
