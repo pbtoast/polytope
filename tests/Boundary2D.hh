@@ -72,6 +72,7 @@ public:
   Boundary2D():
     Dimension(2),
     mType(square){
+    this->clear();
     this->setDefaultBoundary(mType);
   }
   
@@ -80,9 +81,9 @@ public:
   void clear() {
     mPLC.clear();
     mPLCpoints.clear();
-    mCenter(0);
-    mLow(0);
-    mHigh(0);
+    std::fill(mCenter, mCenter + 3, 0.0);
+    std::fill(mLow, mLow + 3, 0.0);
+    std::fill(mHigh, mHigh + 3, 0.0);
     boost::geometry::clear(mBGboundary);
   }
   
@@ -97,6 +98,7 @@ public:
   //------------------------------------------------------------------------
   void setCustomBoundary(const unsigned numVertices,
                          const RealType* vertices) {
+    this->clear();
     mPLCpoints.resize(2*numVertices);
     mPLC.facets.resize(numVertices, vector<int>(2));
     for (unsigned i = 0; i != numVertices; ++i) {
@@ -157,6 +159,7 @@ public:
   // setUnitSquare
   //------------------------------------------------------------------------
   void setUnitSquare() {
+    this->clear();
     const RealType x1 = mCenter[0] - 0.5;
     const RealType x2 = mCenter[0] + 0.5;
     const RealType y1 = mCenter[1] - 0.5;
@@ -166,6 +169,7 @@ public:
     mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y1 );
     mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y2 );
     mPLCpoints.push_back( x1 );   mPLCpoints.push_back( y2 );
+    POLY_ASSERT2(mPLCpoints.size() == 8, mPLCpoints.size());
     
     mPLC.facets.resize(4);
     for (unsigned f = 0; f < 4; ++f) {
@@ -181,6 +185,7 @@ public:
   // setUnitCircle
   //------------------------------------------------------------------------
   void setUnitCircle() {
+    this->clear();
     // Boundary generators.
     unsigned Nb = 90; // 4-degree resolution.
     for (unsigned b = 0; b < Nb; ++b) {
@@ -213,6 +218,7 @@ public:
     POLY_ASSERT2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
     
     // The outer circle
+    this->clear();
     this->setUnitCircle();
     
     // Inner circle.
@@ -245,6 +251,7 @@ public:
   // M-shaped domain with two square holes
   //------------------------------------------------------------------------
   void setMWithHoles() {
+    this->clear();
     // Outer boundary of the M-shape
     mPLCpoints.push_back(0.0); mPLCpoints.push_back(0.0);
     mPLCpoints.push_back(2.0); mPLCpoints.push_back(0.0);
@@ -289,6 +296,7 @@ public:
   // Star-shaped(-ish) region from Misha Shashkov's Voronoi test suite
   //------------------------------------------------------------------------
   void setFunkyStar() {
+    this->clear();
     // Get the boundary points, organized counterclockwise
     int Nsides = 10;
     for (int i = Nsides-1; i >= 0; --i ) {
@@ -315,6 +323,7 @@ public:
   // Unit circle with a hole shaped like a regular n-pointed star
   //------------------------------------------------------------------------
   void setCircleWithStarHole( int nPoints = 5 ) {
+    this->clear();
     // The outer boundary
     this->setUnitCircle();
     
@@ -363,6 +372,7 @@ public:
   //------------------------------------------------------------------------
   void setCardioid( RealType z = 2 ) {
     POLY_ASSERT2( z > 0, "Must provide a positive coefficient for the cardioid" );
+    this->clear();
     
     // Boundary generators.
     unsigned Nb = 90; // 4-degree resolution.
@@ -392,6 +402,7 @@ public:
   // No explanation necessary
   //------------------------------------------------------------------------
   void setTrogdor() {
+    this->clear();
     const unsigned nSides = 30;
     const RealType points[60] = {2.0, 9.0, 4.0, 8.9, 5.0, 9.2, 6.5, 8.8, 
 				 7.0, 8.0, 6.5, 7.0, 5.0, 6.3, 4.0, 5.5, 
@@ -421,6 +432,7 @@ public:
   // 5-pt star with hole in center from Misha Shashkov's Voronoi test suite
   //------------------------------------------------------------------------
   void setStarWithHole() {
+    this->clear();
     const unsigned nPoints = 5;
     const RealType theta0 = 2*M_PI/nPoints;
     const RealType outerRadius = 1.0;
@@ -479,6 +491,7 @@ public:
   // No explanation necessary
   //------------------------------------------------------------------------
   void setTrogdor2() {
+    this->clear();
     const unsigned nSides = 82;
     const RealType points[164]= {5.2, 2.0, 7.0, 1.5, 7.2, 2.7, 8.0, 1.2,
 				 8.5, 1.2, 8.5, 3.0, 9.5, 1.6, 10.4, 2.0,
