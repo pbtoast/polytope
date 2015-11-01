@@ -1373,7 +1373,7 @@ uniquePoints(const std::vector<RealType>& points,
     if (itr == uniqueHashes.end()) {
       uniqueHashes[hashi] = j;
       HasherType::unhashPosition(pos, xmin, xmax, xmin, xmax, hashi, tol);
-      std::copy(pos, pos + Dimension, std::back_inserter(uniquePointSet));
+      std::copy(&points[Dimension*i], &points[Dimension*(i+1)], std::back_inserter(uniquePointSet));
       indexMap.push_back(j++);
     } else {
       indexMap.push_back(itr->second);
