@@ -32,6 +32,7 @@ typedef boost::geometry::cs::cartesian cart;
 // Define our own local random number generator wrapping the standard srand &
 // rand methods.
 //------------------------------------------------------------------------------
+inline
 double random01() {
   return double(rand())/RAND_MAX;
 }
