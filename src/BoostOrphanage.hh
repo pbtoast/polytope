@@ -56,6 +56,15 @@ public:
   BoostOrphanage(const Tessellator<2, RealType>* tessellator);
   ~BoostOrphanage();
 
+  // Base virtual method is unused.
+  virtual void adoptOrphans(const std::vector<RealType>& points,
+                            const RealType* low,
+                            const RealType* high,
+                            const RealType dx) const
+  {
+    error("BoostOrphanage does not support cell adoption");
+  }
+
   // Re-tessellate the area in orphaned cells by modifying the existing cell rings
   void adoptOrphans_OLD(const std::vector<RealType>& points,
                         const QuantizedCoordinates<2, RealType>& coords,
