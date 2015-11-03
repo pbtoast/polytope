@@ -73,7 +73,7 @@ public:
     mCenter(),
     mCoordinatesModified(false),
     mUsingTwoBoundingBoxes(false),
-    mVerbose(verbose) {}
+    mVerbose(verbose) { this->clear(); }
    
   //! Constuctor + initialize
   QuantizedCoordinates(const std::vector<RealType>& points,
