@@ -39,7 +39,7 @@ class Tessellator:
             exec "self.objs.append(self.%s)" % name
         
         # --- The distributed tessellators
-        if "@HAVE_MPI@" == "true":
+        if "@HAVE_MPI@" in ("1", "true"):
             self.DistributedTessellator2d = addObject(polytope,
                                                       "DistributedTessellator2d",
                                                       parent=self.Tessellator2d,
