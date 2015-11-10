@@ -52,11 +52,13 @@ endif
 ifeq ($(MPI), 1)
   BUILDDIR := ${BUILDDIR}-MPI
   CONFIG_FLAGS += -DUSE_MPI=1
+  CONFIG_FLAGS += -DMPI_C_COMPILER='${CC}'
+  CONFIG_FLAGS += -DMPI_CXX_COMPILER='${CXX}'
 else
   CONFIG_FLAGS += -DUSE_MPI=0
 endif
 
-CONFIG_FLAGS += -DCC='${CC}' -DCXX='${CXX}'
+CONFIG_FLAGS += -DCC='${CC}'
 
 # Debugging symbols
 ifneq ($(debug), not-set)
