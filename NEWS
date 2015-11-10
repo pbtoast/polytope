@@ -1,3 +1,16 @@
+Release 0.5.24
+
+changeset:
+  613:49f868f0879d
+
+Changes:
+
+- This a bugfix revision of the 0.5.23 release.
+- Mostly building fixes (choice of MPI compiler, some missing initializations, etc.)
+- Also modified how tessellateDegenerate works, so that it does not modify the
+  the input positions.
+
+--------------------------------------------------------------------------------
 Release 0.5.23
 
 changeset:
