@@ -61,8 +61,9 @@ if (USE_MPI)
   find_package(MPI REQUIRED)
   set(HAVE_MPI 1)
   include_directories("${MPI_CXX_INCLUDE_PATH}")
+else()
+  set(HAVE_MPI 0)
 endif()
-
 
 ## Figure out MPI.
 #if (USE_MPI EQUAL 1)
