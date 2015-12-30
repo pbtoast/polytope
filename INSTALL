@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------------
+IMPORTANT NOTE:  The 2D clipping operations in Polytope use the Boost.Geoemtry
+library, but unfortunately there is currently a problem where any version of
+Boost newer than 1.55 causes Polytope to fail.  For the time being stick with
+Boost 1.55 until this issue can be resolved.
+
+------------------------------------------------------------------------------
 Building polytope requires CMake 2.8, found at http://www.cmake.org/, as
 well as GNU make. To build polytope on a UNIX-like system, use the following
 commands:
