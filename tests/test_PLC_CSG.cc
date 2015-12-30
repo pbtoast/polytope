@@ -15,7 +15,7 @@
 #include "polytope_write_OOGL.hh"
 #include "polytope_plc_canned_geometries.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   typedef Point3<double> PointType;
   typedef Point3<int64_t> IntPointType;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
 
   cout << "PASS" << endl;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
    MPI_Finalize();
 #endif
   return 0;

@@ -15,7 +15,7 @@
 #include "polytope.hh"
 #include "Point.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 // extern "C" {
 #include "mpi.h"
 // }
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 //       cout << " @ (" << xf << " " << yf << ")"  << endl;
 //     }
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
     // Blago!
     {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);

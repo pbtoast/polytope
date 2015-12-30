@@ -1,7 +1,7 @@
 #ifndef POLYTOPE_GENERATORS_HH
 #define POLYTOPE_GENERATORS_HH
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 
 #include <iostream>
 #include <vector>

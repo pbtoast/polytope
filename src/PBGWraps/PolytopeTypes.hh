@@ -17,7 +17,7 @@
 #include "SiloWriter.hh"
 #include "polytope_write_OOGL.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "DistributedTessellator.hh"
 #include "SerialDistributedTessellator.hh"
 #endif
@@ -48,19 +48,19 @@ typedef Tessellation<3, double> Tessellation3d;
 typedef Tessellator<2, double> Tessellator2d;
 typedef Tessellator<3, double> Tessellator3d;
 
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
 typedef TriangleTessellator<double> TriangleTessellator2d;
 #endif
 
-#if HAVE_TETGEN
+#ifdef HAVE_TETGEN
 typedef TetgenTessellator TetgenTessellator3d;
 #endif
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
 typedef BoostTessellator<double> BoostTessellator2d;
 #endif
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 typedef DistributedTessellator<2, double> DistributedTessellator2d;
 typedef DistributedTessellator<3, double> DistributedTessellator3d;
 typedef SerialDistributedTessellator<2, double> SerialDistributedTessellator2d;
@@ -287,7 +287,7 @@ writeTessellation(const Tessellation<Dimension, RealType>& mesh,
                   int cycle,
                   RealType time) {
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
   // Extract the various optional fields.
   std::map<std::string, RealType*> nodeFields = buildMapFromPyObject<RealType>(nodeFieldsDict, mesh.nodes.size()/Dimension);
   std::map<std::string, RealType*> faceFields = buildMapFromPyObject<RealType>(faceFieldsDict, mesh.faces.size());
@@ -338,7 +338,7 @@ writeTessellation(const Tessellation<Dimension, RealType>& mesh,
                   int cycle,
                   RealType time) {
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
   // Extract the various optional fields.
   std::map<std::string, RealType*> nodeFields = buildMapFromPyObject<RealType>(nodeFieldsDict, mesh.nodes.size()/Dimension);
   std::map<std::string, RealType*> faceFields = buildMapFromPyObject<RealType>(faceFieldsDict, mesh.faces.size());

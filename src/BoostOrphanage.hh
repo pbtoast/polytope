@@ -17,7 +17,7 @@
 #ifndef __Polytope_BoostOrphanage__
 #define __Polytope_BoostOrphanage__
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 
 #include <set>
 #include <map>

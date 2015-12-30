@@ -5,7 +5,7 @@
 #include "polytope_c.h"
 #include "polytope_test_utilities.h"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -129,7 +129,7 @@ void test2(polytope_tessellator_t* tessellator)
 int 
 main(int argc, char** argv) 
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
@@ -148,7 +148,7 @@ main(int argc, char** argv)
   polytope_tessellator_free(tessellator);
   printf("PASS\n");
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;

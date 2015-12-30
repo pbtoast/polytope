@@ -8,7 +8,7 @@ set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Check if we can include each of the serial tessellators:
-if (HAVE_BOOST)
+if (USE_BOOST)
   list(APPEND TESSELLATOR_SOURCES BoostOrphanage.cc MeshEditor.cc)
 endif()
 

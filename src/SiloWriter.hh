@@ -1,9 +1,9 @@
 #ifndef POLYTOPE_SILO_WRITER_HH
 #define POLYTOPE_SILO_WRITER_HH
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 // extern "C" {
 #include <mpi.h>
 // }

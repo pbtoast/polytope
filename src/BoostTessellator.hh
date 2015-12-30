@@ -7,7 +7,7 @@
 #ifndef __Polytope_BoostTessellator__
 #define __Polytope_BoostTessellator__
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
 
 #include <vector>
 #include <cmath>

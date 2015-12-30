@@ -19,7 +19,7 @@
 #include "polytope_test_utilities.hh"
 #include "checkDistributedTessellation.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -280,7 +280,7 @@ int main(int argc, char** argv)
   const int testBegin = 1;
   const int testEnd   = 5;
 
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
   {
     if (rank==0) cout << "\nTriangle Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator(new TriangleTessellator<double>(),
@@ -290,7 +290,7 @@ int main(int argc, char** argv)
 #endif   
 
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
   {
     if (rank==0) cout << "\nBoost Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator(new BoostTessellator<double>(),

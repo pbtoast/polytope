@@ -20,7 +20,7 @@
 
 #include "timingUtilities.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -99,12 +99,12 @@ void generateMesh(Tessellator<2,double>& tessellator)
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
 
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
   }
 #endif   
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 
   cout << "PASS" << endl;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;

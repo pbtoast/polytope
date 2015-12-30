@@ -1,7 +1,7 @@
 #ifndef POLYTOPE_BOUNDARY2D_HH
 #define POLYTOPE_BOUNDARY2D_HH
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 
 #include <iostream>
 #include <vector>

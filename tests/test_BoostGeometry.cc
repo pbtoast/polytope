@@ -10,7 +10,7 @@
 
 
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -171,7 +171,7 @@ void testIntersections(const IntType* pts1,
 //------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
 
   std::cout << "PASS" << std::endl;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;

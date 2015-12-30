@@ -10,7 +10,7 @@
 //       new algorithms. 9/19/2013
 //************************************************************************
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 
 #include <vector>
 

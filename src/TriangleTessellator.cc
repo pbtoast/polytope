@@ -533,7 +533,7 @@ dumpDelaunay(const triangulateio& delaunay,
   Tessellation<2, RealType> dmesh;
   constructDelaunayMesh(delaunay, dmesh);
   map<string, double*> fields;
-#if HAVE_SILO
+#ifdef HAVE_SILO
   SiloWriter<2,RealType>::write(dmesh, fields, fields, fields, fields, name, cycle, 0.0);
 #endif
 }
@@ -614,7 +614,7 @@ template<typename RealType>
 void  escapePod(const std::vector<RealType>& points) {
   std::ostringstream os;
   int rank;
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #else
   rank = 0;
@@ -737,7 +737,7 @@ tessellate(const vector<RealType>& points,
   POLY_ASSERT(not geometry.points.empty());
   POLY_ASSERT(mesh.empty());
 
-#if ENABLE_ESCAPE_POD
+#ifdef ENABLE_ESCAPE_POD
   escapePod(points);
 #endif
 
@@ -770,13 +770,13 @@ tessellate(const vector<RealType>& points,
   vector<ReducedPLC<2, CoordHash> > intOrphans;
 
 
-#if ENABLE_INTEGER_INTERSECTIONS
+#ifdef ENABLE_INTEGER_INTERSECTIONS
   const ReducedPLC<2, CoordHash> intGeometry = quantizeGeometry<RealType, CoordHash>(mCoords, geometry);
   for (int i = 0; i < numGenerators; ++i) {
     const IntPoint intGenerator = mCoords.quantize(&points[2*i]);
     ReducedPLC<2, CoordHash> intCell = plcOfCell<CoordHash>(cellNodes[i], id2node);
 
-#if ENABLE_SELF_INTERSECTION_CORRECTION
+#ifdef ENABLE_SELF_INTERSECTION_CORRECTION
     if (BG::boost_intersects(intCell)) {
       cerr << "Self-intersection detected in cell " 
            << i << ". Attempting to correct..." << endl;
@@ -970,7 +970,7 @@ computeDelaunayConnectivity(const vector<RealType>& points,
   POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);
   
   // Debugging
-#if OUTPUT_DELAUNAY_MESH
+#ifdef OUTPUT_DELAUNAY_MESH
   {
     triangulateio dtmp;
     computeDelaunay(points, dtmp, false);
@@ -1093,7 +1093,7 @@ computeCellNodes(const vector<RealType>& points,
 
 
 
-#if ENABLE_CIRCUMCENTER_DUPLICATE_CHECKING
+#ifdef ENABLE_CIRCUMCENTER_DUPLICATE_CHECKING
   // const int nCircs = circumcenters.size();
   // vector<RealPoint> sortedCircumcenters(circumcenters.begin(), circumcenters.end());
   // std::sort(sortedCircumcenters.begin(), sortedCircumcenters.end());

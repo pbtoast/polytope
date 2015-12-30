@@ -3,7 +3,7 @@
 #include "polytope_c.h"
 #include "polytope.hh"
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
 
 namespace polytope
 {

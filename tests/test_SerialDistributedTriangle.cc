@@ -17,7 +17,7 @@
 #include "checkDistributedTessellation.hh"
 #include "Point.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 // extern "C" {
 #include "mpi.h"
 // }
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
 //     }
 
     // Blago!
-#if USE_SILO
+#ifdef USE_SILO
     {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
       for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];

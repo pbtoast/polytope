@@ -5,7 +5,7 @@
 //
 // JMO:  Tue Dec  9 10:31:14 PST 2008
 //------------------------------------------------------------------------------
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 
 #define BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG     // Enable nanosecond timings.
 #include <boost/date_time/posix_time/posix_time.hpp>

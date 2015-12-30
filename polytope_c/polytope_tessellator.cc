@@ -351,7 +351,7 @@ int polytope_tessellator_dimension(polytope_tessellator_t* tessellator)
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 polytope_tessellator_t* boost_tessellator_new()
 {
   polytope_tessellator_t* t = (polytope_tessellator_t*)malloc(sizeof(polytope_tessellator_t));
@@ -363,7 +363,7 @@ polytope_tessellator_t* boost_tessellator_new()
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
 polytope_tessellator_t* triangle_tessellator_new()
 {
   polytope_tessellator_t* t = (polytope_tessellator_t*)malloc(sizeof(polytope_tessellator_t));
@@ -375,7 +375,7 @@ polytope_tessellator_t* triangle_tessellator_new()
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
-#if HAVE_TETGEN
+#ifdef HAVE_TETGEN
 polytope_tessellator_t* tetgen_tessellator_new()
 {
   polytope_tessellator_t* t = (polytope_tessellator_t*)malloc(sizeof(polytope_tessellator_t));

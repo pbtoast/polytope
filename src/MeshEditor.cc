@@ -262,7 +262,7 @@ flagEdgesForCleaning(const RealType edgeTol,
   replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
 
   
-#if HAVE_MPI
+#ifdef HAVE_MPI
   // Parallel configuration.
   int rank, numProcs;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -1109,7 +1109,7 @@ flagBoundaryEdgesForCleaning(const RealType edgeTol,
   replace_if(mNodeMask.begin(), mNodeMask.end(), bind2nd(equal_to<unsigned>(), 2), 1);
 
   
-#if HAVE_MPI
+#ifdef HAVE_MPI
   // Parallel configuration.
   int rank, numProcs;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

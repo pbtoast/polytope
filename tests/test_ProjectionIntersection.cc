@@ -7,7 +7,7 @@
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -19,7 +19,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
 #endif
 
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
   cout << "PASS" << endl;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;

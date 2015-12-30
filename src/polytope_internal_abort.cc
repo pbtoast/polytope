@@ -3,7 +3,7 @@
 
 #include "polytope_internal.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 // extern "C" {
 #include <mpi.h>
 // }
@@ -15,7 +15,7 @@ void internal_abort() {
   std::cout.flush();
   std::cerr.flush();
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   MPI_Abort(MPI_COMM_WORLD, -1);
 #else
   abort();
