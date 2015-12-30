@@ -1,9 +1,9 @@
 #ifndef POLYTOPE_C_WRITE_SILO_H
 #define POLYTOPE_C_WRITE_SILO_H
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include <mpi.h>
 #else
 #ifndef MPI_Comm

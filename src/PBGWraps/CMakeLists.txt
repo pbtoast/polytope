@@ -92,9 +92,16 @@ target_link_libraries(PolytopeModules
                       #${PYTHON_LINK}
                       ${POLYTOPE_STATIC_LIB} 
 		      ${TRIANGLE_STATIC_LIB}
-		      ${TETGEN_STATIC_LIB}
-		      ${SILO_LIBRARIES}
-		      ${HDF5_LIB})
+		      ${TETGEN_STATIC_LIB})
+
+if (HAVE_SILO)
+  target_link_libraries(PolytopeModules 
+                        ${SILO_LIBRARIES})
+endif()
+if (HAVE_HDF5)
+  target_link_libraries(PolytopeModules 
+                        ${HDF5_LIB})
+endif()
 
 # Remove the "lib" prefix convention from the library
 # NOTE: "init<modulename>" is not defined properly if it begins with "lib"

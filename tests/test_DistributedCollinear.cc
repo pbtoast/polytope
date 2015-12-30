@@ -27,7 +27,7 @@
 #include "polytope_test_utilities.hh"
 #include "checkDistributedTessellation.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     
     
    // Blago!
-#if HAVE_SILO
+#ifdef HAVE_SILO
    {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
       for (unsigned i = 0; i != nnodes; ++i) rownNodes[i] = ownNodes[i];

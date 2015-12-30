@@ -20,7 +20,7 @@
 #include "Boundary2D.hh"
 #include "Generators.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
   {
     if (rank == 0) cout << "\nTriangle Tessellator:\n" << endl;
     SerialDistributedTessellator<2, double> tessellator
@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
 #endif
 
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
   {
     if (rank == 0) cout << "\nBoost Tessellator:\n" << endl;
     DistributedTessellator<2, double> tessellator

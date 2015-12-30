@@ -17,7 +17,7 @@
 #include "checkDistributedTessellation.hh"
 #include "Point.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -224,7 +224,7 @@ void runTest(Tessellator<2,double>& tessellator) {
     
     
     // Blago!
-#if HAVE_SILO
+#ifdef HAVE_SILO
     {
       if (nx % 5 == 0) {
       vector<double> r2(mesh.cells.size(), rank), rownNodes(nnodes), rownFaces(nfaces);
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
   // Initialize MPI.
   MPI_Init(&argc, &argv);
 
-#if HAVE_TRIANGLE
+#ifdef HAVE_TRIANGLE
   {
     DistributedTessellator<2, double> tessellator
        (new TriangleTessellator<double>(), true, true);
@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-#if HAVE_BOOST_VORONOI
+#ifdef HAVE_BOOST_VORONOI
   {
     DistributedTessellator<2, double> tessellator
        (new BoostTessellator<double>(), true, true);

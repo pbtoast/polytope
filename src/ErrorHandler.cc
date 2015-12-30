@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 // extern "C" {
 #include "mpi.h"
 // }
@@ -22,7 +22,7 @@ static void (*errorHandler)(const std::string&, int) = 0;
 //------------------------------------------------------------------------
 void defaultErrorHandler(const std::string& message, int status)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0)

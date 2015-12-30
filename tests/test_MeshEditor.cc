@@ -14,7 +14,7 @@
 #include "Generators.hh"
 #include "polytope_test_utilities.hh"
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #include "checkDistributedTessellation.hh"
 #endif
@@ -28,7 +28,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
    MPI_Init(&argc, &argv);
 #endif
 
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
    }
 
    // Test 2: Distributed test: edge is small on one proc, but not on the other
-#if HAVE_MPI
+#ifdef HAVE_MPI
    {
      const double edgeTol = 0.001;
      cout << "\nTest 2: Edge is small on one proc, but not on the other" << endl;
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
        cout << mesh << endl;
        outputMesh(mesh, testName, itest);
        ++itest;
-#if HAVE_MPI
+#ifdef HAVE_MPI
        const string parCheck = checkDistributedTessellation(mesh);
        POLY_CHECK2(parCheck == "ok", parCheck);
 #endif
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
 
    cout << "PASS" << endl;
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
    MPI_Finalize();
 #endif
    return 0;

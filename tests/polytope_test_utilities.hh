@@ -10,7 +10,7 @@
 
 template<typename RealType> class Boundary2D;
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 // We use the Boost.Geometry library to handle polygon intersections and such.
 // #include <boost/geometry.hpp>
 // #include <boost/geometry/geometries/geometries.hpp>
@@ -24,7 +24,7 @@ namespace polytope {
 #define POLY_CHECK(x) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl; exit(-1); } }
 #define POLY_CHECK2(x, msg) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl << msg << std::endl; exit(-1); } }
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 typedef boost::geometry::cs::cartesian cart;
 #endif
 
@@ -50,7 +50,7 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 		const RealType time = 0.0) {
   POLY_ASSERT(points.empty() or
               points.size() == 2*mesh.cells.size());
-#if HAVE_SILO
+#ifdef HAVE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
@@ -83,7 +83,7 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
 		const RealType time = 0.0) {
   POLY_ASSERT(points.empty() ||
               points.size() == 3*mesh.cells.size());
-#if HAVE_SILO
+#ifdef HAVE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
@@ -139,7 +139,7 @@ void outputMesh(Tessellation<2,RealType>& mesh,
                 std::vector<RealType>& cellField,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-#if HAVE_SILO
+#ifdef HAVE_SILO
   POLY_ASSERT(cellField.size() == mesh.cells.size());
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
@@ -181,7 +181,7 @@ void tessellate2D(std::vector<RealType>& points,
    }
 }
 
-#if HAVE_BOOST
+#ifdef HAVE_BOOST
 //------------------------------------------------------------------------------
 // Make a 2D Boost.Geometry point
 //------------------------------------------------------------------------------

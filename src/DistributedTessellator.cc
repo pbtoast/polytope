@@ -81,7 +81,7 @@ outputTessellation(const polytope::Tessellation<Dimension, RealType>& mesh,
                    const int rank,
                    const vector<RealType>& cellField,
                    const string cellFieldName) {
-#if HAVE_SILO   
+#ifdef HAVE_SILO
   POLY_ASSERT(cellField.size() == mesh.cells.size());
   const string meshName = "DEBUG_DistributedTessellator_" + name;
   vector<RealType> r2(mesh.cells.size(), RealType(rank));
@@ -648,7 +648,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // // Blago!
 
     // Post the sends for any nodes we own, and note which nodes we expect to receive.
-#if DEBUG_MODE
+#ifdef DEBUG_MODE
     vector<unsigned> bufSizes(numNeighbors, 0);
 #endif
     list<vector<double> > sendCoords;
@@ -686,7 +686,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
 
       // Send any nodes we have for this neighbor.
-#if DEBUG_MODE
+#ifdef DEBUG_MODE
       bufSizes[idomain] = Dimension*sendNodes.size();
       sendRequests.push_back(MPI_Request());
       MPI_Isend(&bufSizes[idomain], 1, MPI_UNSIGNED,
@@ -709,7 +709,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       POLY_ASSERT(recvNodesItr != allRecvNodes.end());
       const vector<unsigned>& recvNodes = *recvNodesItr;
 
-#if DEBUG_MODE      
+#ifdef DEBUG_MODE
       unsigned otherSize;
       MPI_Status recvStatus;
       MPI_Recv(&otherSize, 1, MPI_UNSIGNED, mesh.neighborDomains[idomain], 9, MPI_COMM_WORLD, &recvStatus);
@@ -755,7 +755,7 @@ computeDistributedTessellation(const vector<RealType>& points,
   }
 
   // Post-conditions.
-#if DEBUG_MODE
+#ifdef DEBUG_MODE
   const string msg = checkDistributedTessellation(mesh);
   if (msg != "ok" and rank == 0) cerr << msg;
   POLY_ASSERT(msg == "ok");

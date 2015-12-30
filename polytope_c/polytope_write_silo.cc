@@ -2,9 +2,9 @@
 #include "polytope_c.h"
 #include "polytope.hh"
 
-#if HAVE_SILO
+#ifdef HAVE_SILO
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
 #include <mpi.h>
 #else
 #ifndef MPI_Comm
