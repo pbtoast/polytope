@@ -11,148 +11,70 @@
 
 #include <vector>
 #include <cmath>
+#include <limits>
+
+#include "boost/polygon/voronoi.hpp"
 
 #include "Tessellator.hh"
 #include "Clipper2d.hh"
 #include "BoostOrphanage.hh"
 #include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
-#include "BoostTessellatorTraits.hh"
-
-// The Voronoi tools in Boost.Polygon
-#include <boost/polygon/voronoi.hpp>
-
-// We use the Boost.Geometry library to handle polygon intersections and such.
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
-
-// Include Boost multiprecision types
-#include <boost/multiprecision/cpp_int.hpp>
-
-//------------------------------------------------------------------------
-// Map Polytope's point class to Boost.Polygon
-//------------------------------------------------------------------------
-namespace boost{
-namespace polygon{
-
-typedef double fptType;
-typedef polytope::DimensionTraits<2, double>::CoordHash CoordHash;
-typedef polytope::Point2<CoordHash> IntPoint;
-
-template <>
-struct geometry_concept<IntPoint> { typedef point_concept type; };
-  
-template <>
-struct point_traits<IntPoint> {
-  typedef IntPoint point_type;
-  typedef CoordHash coordinate_type;
-   
-  static inline coordinate_type get(const point_type& point, orientation_2d orient) {
-    return (orient == HORIZONTAL) ? point.x : point.y;
-  }
-};
-
-template <>
-struct point_mutable_traits<IntPoint> {
-  typedef IntPoint point_type;
-  typedef CoordHash coordinate_type;
-   
-  static inline void set(point_type& point, orientation_2d orient, coordinate_type value) {
-    if (orient == HORIZONTAL)
-      point.x = value;
-    else
-      point.y = value;
-  }
-  static inline point_type construct(coordinate_type x, coordinate_type y) {
-    return point_type(x,y);
-  }
-};
-
-//------------------------------------------------------------------------
-// Custom comparison operator
-//------------------------------------------------------------------------
-struct polytope_ulp_comparison {
-  enum Result {
-    LESS  = -1,
-    EQUAL =  0,
-    MORE  =  1
-  };
-  Result operator()(fptType a, fptType b, unsigned int maxUlps) const {
-    if (a > b) {
-      return a - b <= maxUlps ? EQUAL : LESS;
-    }
-    return b - a <= maxUlps ? EQUAL : MORE;
-  }
-};
-
-//------------------------------------------------------------------------
-// Custom floating point converter
-//------------------------------------------------------------------------
-struct polytope_fpt_converter {
-  template <typename T>
-  fptType operator()(const T& that) const {
-    return static_cast<fptType>(that);
-  }
-
-  template <size_t N>
-  fptType operator()(const typename detail::extended_int<N>& that) const {
-    fptType result = 0.0;
-    for (size_t i = 1; i <= (std::min)((size_t)3, that.size()); ++i) {
-      if (i != 1)
-        result *= static_cast<fptType>(0x100000000ULL);
-      result += that.chunks()[that.size() - i];
-    }
-    return (that.count() < 0) ? -result : result;
-  }
-};
-
-//------------------------------------------------------------------------
-// Custom voronoi diagram traits
-//------------------------------------------------------------------------
-struct polytope_voronoi_diagram_traits {
-  typedef fptType coordinate_type;
-  typedef voronoi_cell<coordinate_type> cell_type;
-  typedef voronoi_vertex<coordinate_type> vertex_type;
-  typedef voronoi_edge<coordinate_type> edge_type;
-  typedef struct {
-  public:
-    enum {ULPS = 128};
-    bool operator()(const vertex_type &v1, const vertex_type &v2) const {
-      return (ulp_cmp(v1.x(), v2.x(), ULPS) == polytope_ulp_comparison::EQUAL and
-              ulp_cmp(v1.y(), v2.y(), ULPS) == polytope_ulp_comparison::EQUAL);
-    }
-  private:
-     polytope_ulp_comparison ulp_cmp;
-  } vertex_equality_predicate_type;
-};
-
-//------------------------------------------------------------------------
-// Voronoi coordinate type traits
-//------------------------------------------------------------------------
-struct polytope_voronoi_ctype_traits {
-  typedef CoordHash int_type;
-  typedef detail::extended_int<3> int_x2_type;
-  typedef detail::extended_int<3> uint_x2_type;
-  typedef detail::extended_int<128> big_int_type;
-  typedef fptType fpt_type;
-  typedef fptType efpt_type;
-  typedef polytope_ulp_comparison ulp_cmp_type;
-  typedef polytope_fpt_converter to_fpt_converter_type;
-  typedef polytope_fpt_converter to_efpt_converter_type;
-};
-
-} //end boost namespace
-} //end polygon namespace
-
-
-// // The Boost.Polygon Voronoi diagram
-// typedef boost::polygon::voronoi_builder<polytope::DimensionTraits<2, RealType>::CoordHash, 
-// 					boost::polygon::polytope_voronoi_ctype_traits> VB;
-// typedef boost::polygon::voronoi_diagram<double, 
-// 					boost::polygon::polytope_voronoi_diagram_traits> VD;
 
 namespace polytope {
 
+//------------------------------------------------------------------------------
+// Define an intermediate struct to hold the quantized Voronoi.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+struct QuantizedTessellation {
+  typedef Point2<IntType> IntPoint;
+  typedef Point2<RealType> RealPoint;
+  
+  RealType xmin[2], xmax[2], length, infRadius;
+  std::vector<IntPoint> generators;
+
+  std::vector<IntPoint> nodes;
+  std::vector<std::pair<int, int> > edges;
+  std::vector<RealPoint> infEdgeDirection;
+  std::vector<std::vector<int> > cellEdges;
+
+  // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
+  // and sets the quantized generators.
+  QuantizedTessellation(const std::vector<RealType>& points) {
+    geometry::computeBoundingBox<2, RealType>(&points[0], points.size(), true, xmin, xmax);
+    length = std::max(result.xmax[0] - result.xmin[0], result.xmax[1] - result.xmin[1]);
+    xmin[0] -= 2.0*length;
+    xmin[1] -= 2.0*length;
+    xmax[0] += 2.0*length;
+    xmax[1] += 2.0*length;
+    infRadius = 1.5*length;
+    length *= 5.0;
+    const int numGenerators = points.size()/2;
+    generators.resize(numGenerators);
+    for (unsigned i = 0; i < numGenerators; ++i) {
+      this->quantize(&points[2*i], &generators[i].x);
+      generators[i].index = i;
+    }
+  }
+
+  // Convert real coordinates to integers.
+  void quantize(const RealType* realcoords, IntType* intcoords) const {
+    const RealType dx = length/(std::numeric_limits<IntType>::max() - std::numeric_limits<IntType>::min() + 1);
+    intcoords[0] = std::numeric_limits<IntType>::min() + IntType((realcoords[0] - xmin[0])/dx);
+    intcoords[1] = std::numeric_limits<IntType>::min() + IntType((realcoords[1] - xmin[1])/dx);
+  }
+
+  // Convert int coordinates to reals.
+  void dequantize(const IntType* intcoords, RealType* realcoords) {
+    const RealType dx = length/(std::numeric_limits<IntType>::max() - std::numeric_limits<IntType>::min() + 1);
+    realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min())*dx;
+    realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min())*dx;
+  }
+};
+
+// The actual class.
+  
 template<typename RealType>
 class BoostTessellator: public Tessellator<2, RealType> {
 public:
@@ -161,18 +83,12 @@ public:
   typedef boost::polygon::voronoi_diagram<RealType> VD;
 
   // Some useful typedefs
+  typedef int                 CoordHash;
   typedef std::pair<int, int> EdgeHash;
-  typedef typename polytope::DimensionTraits<2, RealType>::CoordHash CoordHash;
 
-  // The Big Switch: geometric operations in integers or doubles?
-  typedef BoostTessellatorTraits<RealType, RealType>  BTT;     // uncomment to use floating point
-  // typedef BoostTessellatorTraits<RealType, CoordHash> BTT;  // uncomment to use integers
-   
   // The typedefs that follow from this choice
-  typedef typename BTT::RealPoint RealPoint;
-  typedef typename BTT::IntPoint  IntPoint;
-  typedef typename BTT::PointType PointType;
-  typedef typename BTT::CoordType CoordType;
+  typedef Point2<RealType>  RealPoint;
+  typedef Point2<CoordHash> IntPoint;
 
   // Constructor, destructor.
   BoostTessellator();
@@ -222,56 +138,54 @@ private:
   // ------------------------------------------------- //
 
   // Compute the nodes around a collection of generators
-  void computeCellNodes(const std::vector<RealType>& points,
-                        std::vector<std::vector<unsigned> >& cellNodes,
-                        std::map<int, PointType>& id2node,
-                        std::vector<unsigned>& infNodes) const;
+  void computeQuantTessellation(const std::vector<RealType>& points,
+                                QuantizedTessellation<CoordHash, RealType>& result) const;
 
   // Compute the nodes around a linear, 1d collection of generators
   void computeCellNodesCollinear(const std::vector<RealType>& points,
-                                 std::vector<std::vector<unsigned> >& cellNodes,
-                                 std::map<int, PointType>& id2node,
-                                 std::vector<unsigned>& infNodes) const;
+                                 QuantizedTessellation<CoordHash, RealType>& result) const;
 
-  void constructBoundedTopology(const std::vector<RealType>& points,
-                                const ReducedPLC<2, RealType>& geometry,
-                                const std::vector<ReducedPLC<2, CoordType> >& cellRings,
-                                Tessellation<2, RealType>& mesh) const;
+  // void constructBoundedTopology(const std::vector<RealType>& points,
+  //                               const ReducedPLC<2, RealType>& geometry,
+  //                               const std::vector<ReducedPLC<2, CoordType> >& cellRings,
+  //                               Tessellation<2, RealType>& mesh) const;
 
-  // ----------------------------------------------------- //
-  // Private tessellate calls used by internal algorithms  //
-  // ----------------------------------------------------- //
+  // // ----------------------------------------------------- //
+  // // Private tessellate calls used by internal algorithms  //
+  // // ----------------------------------------------------- //
 
-  // Bounded tessellation with prescribed bounding box
-  void tessellate(const std::vector<RealType>& points,
-                  const ReducedPLC<2, CoordHash>& intGeometry,
-                  const QuantizedCoordinates<2,RealType>& coords,
-                  std::vector<ReducedPLC<2, CoordHash> >& intCells) const;
+  // // Bounded tessellation with prescribed bounding box
+  // void tessellate(const std::vector<RealType>& points,
+  //                 const ReducedPLC<2, CoordHash>& intGeometry,
+  //                 const QuantizedCoordinates<2,RealType>& coords,
+  //                 std::vector<ReducedPLC<2, CoordHash> >& intCells) const;
 
   // -------------------------- //
   // Private member variables   //
   // -------------------------- //
 
   // The quantized coordinates for this tessellator (inner and outer)
-  static CoordHash coordMax;
+  // static CoordHash coordMin, coordMax;
+  // static RealType mxmin[2], mxmax[2], mlength;
   static RealType mDegeneracy; 
-  mutable QuantizedCoordinates<2,RealType> mCoords;
 
   friend class BoostOrphanage<RealType>;
 };
 
-
-
 //------------------------------------------------------------------------------
 // Static initializations.
 //------------------------------------------------------------------------------
-template<typename RealType> 
-typename BoostTessellator<RealType>::CoordHash
-BoostTessellator<RealType>::coordMax = (1LL << 26);
+// template<typename RealType> 
+// typename BoostTessellator<RealType>::CoordHash
+// BoostTessellator<RealType>::coordMin = std::numeric_limits<CoordHash>::min();
+
+// template<typename RealType> 
+// typename BoostTessellator<RealType>::CoordHash
+// BoostTessellator<RealType>::coordMax = std::numeric_limits<CoordHash>::max();
 
 template<typename RealType> 
 RealType  
-BoostTessellator<RealType>::mDegeneracy = 1.0/BoostTessellator<RealType>::coordMax;
+BoostTessellator<RealType>::mDegeneracy = 1.0/std::numeric_limits<CoordHash>::max();
 
 } //end polytope namespace
 

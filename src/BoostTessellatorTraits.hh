@@ -31,10 +31,8 @@
 #include "Point.hh"
 #include "QuantizedCoordinates.hh"
 
-
 // The abstraction
 template<typename RealType, typename BaseType> struct BoostTessellatorTraits {};
-
 
 //------------------------------------------------------------------------
 // Floating Point Specialization
