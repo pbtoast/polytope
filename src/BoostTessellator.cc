@@ -234,7 +234,7 @@ tessellate(const vector<RealType>& points,
   const bool collinear = geometry::collinear<2, RealType>(points, 1.0e-10);
   
   // Use the appropriate cell node routine
-  QuantizedTessellation<CoordHash, double> quantmesh(points);
+  QuantizedTessellation2d<CoordHash, double> quantmesh(points);
   if (collinear) {
     this->computeCollinearQuantTessellation(quantmesh);
   } else {
@@ -407,7 +407,7 @@ tessellate(const vector<RealType>& points,
 template<typename RealType>
 void
 BoostTessellator<RealType>::
-computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const{
+computeQuantTessellation(QuantizedTessellation2d<CoordHash, RealType>& result) const{
 
   // Sort the input points by the first element of the generator-index pair.
   // The second element provides the pre-sort generator index. Shame on you,
@@ -510,7 +510,7 @@ computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) con
 template<typename RealType>
 void
 BoostTessellator<RealType>::
-computeCollinearQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const {
+computeCollinearQuantTessellation(QuantizedTessellation2d<CoordHash, RealType>& result) const {
 
   // // Call the 1d routine for projecting a line of points
   // vector<RealPoint> nodes;

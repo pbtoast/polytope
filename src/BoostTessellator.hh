@@ -16,64 +16,13 @@
 #include "boost/polygon/voronoi.hpp"
 
 #include "Tessellator.hh"
-#include "Clipper2d.hh"
+#include "QuantizedTessellation2d.hh"
 #include "BoostOrphanage.hh"
 #include "Point.hh"
 #include "polytope_tessellator_utilities.hh"
 
 namespace polytope {
 
-//------------------------------------------------------------------------------
-// Define an intermediate struct to hold the quantized Voronoi.
-//------------------------------------------------------------------------------
-template<typename IntType, typename RealType>
-struct QuantizedTessellation {
-  typedef Point2<IntType> IntPoint;
-  typedef Point2<RealType> RealPoint;
-  
-  RealType xmin[2], xmax[2], length, infRadius;
-  std::vector<IntPoint> generators;
-
-  std::vector<IntPoint> nodes;
-  std::vector<std::pair<int, int> > edges;
-  std::vector<std::vector<int> > cellEdges;
-
-  // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
-  // and sets the quantized generators.
-  QuantizedTessellation(const std::vector<RealType>& points) {
-    geometry::computeBoundingBox<2, RealType>(&points[0], points.size(), true, xmin, xmax);
-    length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
-    xmin[0] -= 2.0*length;
-    xmin[1] -= 2.0*length;
-    xmax[0] += 2.0*length;
-    xmax[1] += 2.0*length;
-    infRadius = 1.5*length;
-    length *= 5.0;
-    const int numGenerators = points.size()/2;
-    generators.resize(numGenerators);
-    for (unsigned i = 0; i < numGenerators; ++i) {
-      this->quantize(&points[2*i], &generators[i].x);
-      generators[i].index = i;
-    }
-  }
-
-  // Convert real coordinates to integers.
-  void quantize(const RealType* realcoords, IntType* intcoords) const {
-    const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
-    intcoords[0] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[0] - xmin[0])/dx);
-    intcoords[1] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[1] - xmin[1])/dx);
-  }
-
-  // Convert int coordinates to reals.
-  void dequantize(const IntType* intcoords, RealType* realcoords) {
-    const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
-    realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min()/4)*dx;
-    realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min()/4)*dx;
-  }
-};
-
-// The actual class.
-  
 template<typename RealType>
 class BoostTessellator: public Tessellator<2, RealType> {
 public:
@@ -137,10 +86,10 @@ private:
   // ------------------------------------------------- //
 
   // Compute the nodes around a collection of generators
-  void computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const;
+  void computeQuantTessellation(QuantizedTessellation2d<CoordHash, RealType>& result) const;
 
   // Compute the nodes around a linear, 1d collection of generators
-  void computeCollinearQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const;
+  void computeCollinearQuantTessellation(QuantizedTessellation2d<CoordHash, RealType>& result) const;
 
   // void constructBoundedTopology(const std::vector<RealType>& points,
   //                               const ReducedPLC<2, RealType>& geometry,
