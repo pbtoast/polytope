@@ -39,6 +39,9 @@ struct QuantizedTessellation2d {
 
   // Read out the current QuantizedTessellation to regular Tessellation.
   void fillTessellation(Tessellation<2, RealType>& mesh) const;
+
+  // Static properties about our coordinates.
+  static IntType coordMin, coordMax;
 };
 
 }

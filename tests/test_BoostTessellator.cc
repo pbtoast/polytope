@@ -29,8 +29,8 @@ void test1(Tessellator<2,double>& tessellator) {
   const double x1 = 0.0, y1 = 0.0;
   const double x2 = 1.0, y2 = 1.0;
   const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx;
-  double low [2] = { numeric_limits<double>::max(),  numeric_limits<double>::max()};
-  double high[2] = {-numeric_limits<double>::max(), -numeric_limits<double>::max()};
+  double low [2] = {-1.0, -1.0}; // { numeric_limits<double>::max(),  numeric_limits<double>::max()};
+  double high[2] = {1.0, 1.0}; // {-numeric_limits<double>::max(), -numeric_limits<double>::max()};
   unsigned ix, iy;
   double xi, yi;
   for (iy = 0; iy != nx; ++iy) {
@@ -67,9 +67,9 @@ void test1(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,0);
   mesh.clear();
 
-  // Tessellate bounded
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,1);
+  // // Tessellate bounded
+  // tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  // outputMesh(mesh,testName,points,1);
 }
 
 
@@ -110,9 +110,9 @@ void test2(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,2);
   mesh.clear();
 
-  // Tessellate bounded
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,3);
+  // // Tessellate bounded
+  // tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  // outputMesh(mesh,testName,points,3);
 }
 
 
@@ -174,9 +174,9 @@ void test3(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,4);
   mesh.clear();
 
-  // Tessellate bounded
-  tessellator.tessellate(points, plc.points, plc, mesh);
-  outputMesh(mesh,testName,points,5);
+  // // Tessellate bounded
+  // tessellator.tessellate(points, plc.points, plc, mesh);
+  // outputMesh(mesh,testName,points,5);
 }
 
 
@@ -197,15 +197,15 @@ main(int argc, char** argv)
     test1(tessellator);
   }
 
-  {
-    cout << "\nTest 2" << endl;
-    test2(tessellator);
-  }
+  // {
+  //   cout << "\nTest 2" << endl;
+  //   test2(tessellator);
+  // }
 
-  {
-    cout << "\nTest 3" << endl;
-    test3(tessellator);
-  }
+  // {
+  //   cout << "\nTest 3" << endl;
+  //   test3(tessellator);
+  // }
 
 
   cout << "PASS" << endl;

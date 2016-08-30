@@ -44,9 +44,9 @@ template<typename IntType, typename RealType>
 void
 QuantizedTessellation2d<IntType, RealType>::
 quantize(const RealType* realcoords, IntType* intcoords) const {
-  const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
-  intcoords[0] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[0] - xmin[0])/dx);
-  intcoords[1] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[1] - xmin[1])/dx);
+  const RealType dx = length/(coordMax - coordMin);
+  intcoords[0] = coordMin + IntType((realcoords[0] - xmin[0])/dx);
+  intcoords[1] = coordMin + IntType((realcoords[1] - xmin[1])/dx);
 }
 
 //------------------------------------------------------------------------------
@@ -56,9 +56,9 @@ template<typename IntType, typename RealType>
 void
 QuantizedTessellation2d<IntType, RealType>::
 dequantize(const IntType* intcoords, RealType* realcoords) const {
-  const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
-  realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min()/4)*dx;
-  realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min()/4)*dx;
+  const RealType dx = length/(coordMax - coordMin);
+  realcoords[0] = xmin[0] + (intcoords[0] - coordMin)*dx;
+  realcoords[1] = xmin[1] + (intcoords[1] - coordMin)*dx;
 }
 
 //------------------------------------------------------------------------------
@@ -102,6 +102,13 @@ fillTessellation(Tessellation<2, RealType>& mesh) const {
 //------------------------------------------------------------------------------
 // Instantiate versions we know we need.
 //------------------------------------------------------------------------------
-template struct QuantizedTessellation2d<int, double>;
+template<typename IntType, typename RealType> 
+IntType
+QuantizedTessellation2d<IntType, RealType>::coordMin = std::numeric_limits<IntType>::min()/2;
 
+template<typename IntType, typename RealType> 
+IntType
+QuantizedTessellation2d<IntType, RealType>::coordMax = std::numeric_limits<IntType>::max()/2;
+
+template struct QuantizedTessellation2d<int, double>;
 }
