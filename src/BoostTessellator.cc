@@ -390,8 +390,8 @@ computeQuantTessellation(QuantizedTessellation2d<CoordHash, RealType>& result) c
   // Build ourselves the segments representing our bounding box.
   typedef PolySegment<CoordHash> IntSegment;
   vector<IntSegment> bounds(4);
-  const CoordHash coordMin = std::numeric_limits<CoordHash>::min()/4;
-  const CoordHash coordMax = std::numeric_limits<CoordHash>::max()/4;
+  const CoordHash coordMin = QuantizedTessellation2d<CoordHash, RealType>::coordMin;
+  const CoordHash coordMax = QuantizedTessellation2d<CoordHash, RealType>::coordMax;
   bounds[0] = IntSegment(coordMin, coordMin, coordMax, coordMin);
   bounds[1] = IntSegment(coordMax, coordMin, coordMax, coordMax);
   bounds[2] = IntSegment(coordMax, coordMax, coordMin, coordMax);
