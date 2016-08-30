@@ -35,7 +35,10 @@ struct QuantizedTessellation2d {
   void quantize(const RealType* realcoords, IntType* intcoords) const;
 
   // Convert int coordinates to reals.
-  void dequantize(const IntType* intcoords, RealType* realcoords);
+  void dequantize(const IntType* intcoords, RealType* realcoords) const;
+
+  // Read out the current QuantizedTessellation to regular Tessellation.
+  void fillTessellation(Tessellation<2, RealType>& mesh) const;
 };
 
 }

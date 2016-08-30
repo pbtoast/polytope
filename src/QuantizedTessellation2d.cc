@@ -55,10 +55,48 @@ quantize(const RealType* realcoords, IntType* intcoords) const {
 template<typename IntType, typename RealType>
 void
 QuantizedTessellation2d<IntType, RealType>::
-dequantize(const IntType* intcoords, RealType* realcoords) {
+dequantize(const IntType* intcoords, RealType* realcoords) const {
   const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
   realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min()/4)*dx;
   realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min()/4)*dx;
+}
+
+//------------------------------------------------------------------------------
+// Read out the current quantized tessellation state to a regular tessellation.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+void
+QuantizedTessellation2d<IntType, RealType>::
+fillTessellation(Tessellation<2, RealType>& mesh) const {
+  const unsigned numNodes = nodes.size();
+  const unsigned numFaces = edges.size();
+  const unsigned numGenerators = generators.size();
+  mesh.nodes.resize(2*numNodes);
+  mesh.faces.resize(numFaces, std::vector<unsigned>(2));
+  mesh.faceCells.resize(numFaces);
+  mesh.cells = cellEdges;
+  Point2<RealType> p;
+  for (unsigned i = 0; i != numNodes; ++i) {
+    this->dequantize(&nodes[i].x, &mesh.nodes[2*i]);
+  }
+  for (unsigned i = 0; i != numFaces; ++i) {
+    POLY_ASSERT(mesh.faces[i].size() == 2);
+    mesh.faces[i][0] = edges[i].first;
+    mesh.faces[i][1] = edges[i].second;
+  }
+  for (unsigned i = 0; i != numGenerators; ++i) {
+    const unsigned nf = mesh.cells[i].size();
+    for (unsigned j = 0; j != nf; ++j) {
+      int k = mesh.cells[i][j];
+      if (k < 0) {
+        POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
+        mesh.faceCells[~k].push_back(~i);
+      } else {
+        POLY_ASSERT2(k < numFaces, k << " " << numFaces);
+        mesh.faceCells[k].push_back(i);
+      }
+    }
+  }
 }
 
 //------------------------------------------------------------------------------
