@@ -242,35 +242,7 @@ tessellate(const vector<RealType>& points,
   }
 
   // Copy the QuantTessellation to the output.
-  const unsigned numNodes = quantmesh.nodes.size();
-  const unsigned numFaces = quantmesh.edges.size();
-  const unsigned numGenerators = quantmesh.generators.size();
-  mesh.nodes.resize(2*numNodes);
-  mesh.faces.resize(numFaces, vector<unsigned>(2));
-  mesh.faceCells.resize(numFaces);
-  mesh.cells = quantmesh.cellEdges;
-  RealPoint p;
-  for (unsigned i = 0; i != numNodes; ++i) {
-    quantmesh.dequantize(&quantmesh.nodes[i].x, &mesh.nodes[2*i]);
-  }
-  for (unsigned i = 0; i != numFaces; ++i) {
-    POLY_ASSERT(mesh.faces[i].size() == 2);
-    mesh.faces[i][0] = quantmesh.edges[i].first;
-    mesh.faces[i][1] = quantmesh.edges[i].second;
-  }
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    const unsigned nf = mesh.cells[i].size();
-    for (unsigned j = 0; j != nf; ++j) {
-      int k = mesh.cells[i][j];
-      if (k < 0) {
-        POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
-        mesh.faceCells[~k].push_back(~i);
-      } else {
-        POLY_ASSERT2(k < numFaces, k << " " << numFaces);
-        mesh.faceCells[k].push_back(i);
-      }
-    }
-  }
+  quantmesh.fillTessellation(mesh);
 }
 
 //------------------------------------------------------------------------------
