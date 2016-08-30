@@ -245,21 +245,9 @@ tessellate(const vector<RealType>& points,
   mesh.faces.resize(numFaces, vector<unsigned>(2));
   mesh.faceCells.resize(numFaces);
   mesh.cells = quantmesh.cellEdges;
-  // BLAGO
-  {
-    for (unsigned i = 0; i != numGenerators; ++i) {
-      cerr << " Gen " << i << " : ";
-      for (unsigned j = 0; j != quantmesh.cellEdges[i].size(); ++j) {
-        cerr << " (" << quantmesh.cellEdges[i][j] << " " << mesh.cells[i][j] << ")";
-      }
-      cerr << endl;
-    }
-  }
-  // BLAGO
   RealPoint p;
   for (unsigned i = 0; i != numNodes; ++i) {
     quantmesh.dequantize(&quantmesh.nodes[i].x, &mesh.nodes[2*i]);
-    cerr << "vertex position: " << i << " " << quantmesh.nodes[i] << " (" << mesh.nodes[2*i] << " " << mesh.nodes[2*i+1] << ")" << endl;
   }
   for (unsigned i = 0; i != numFaces; ++i) {
     POLY_ASSERT(mesh.faces[i].size() == 2);
@@ -422,18 +410,6 @@ computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) con
   const int numGenerators = result.generators.size();
   sort(result.generators.begin(), result.generators.end());
   
-  // BLAGO!
-  {
-    cerr << result.xmin[0] << " " << result.xmin[1] << endl
-         << result.xmax[0] << " " << result.xmax[1] << endl
-         << result.length << endl
-         << result.infRadius << endl;
-    for (unsigned i = 0; i != numGenerators; ++i) {
-      cerr << " --> " << result.generators[i] << endl;
-    }
-  }
-  // BLAGO!
-
   // Build ourselves the segments representing our bounding box.
   typedef PolySegment<CoordHash> IntSegment;
   vector<IntSegment> bounds(4);
@@ -468,14 +444,12 @@ computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) con
       // POLY_ASSERT2(sortedIndex == cellItr->source_index(),
       //              sortedIndex << " != " << cellItr->source_index());
       // POLY_ASSERT(sortedIndex <  numGenerators + 4);
-      cerr << "Generator " << cellItr->source_index() << endl;
       POLY_ASSERT(cellItr->source_index() <  numGenerators);
       int cellIndex = result.generators[cellItr->source_index()].index;
       POLY_ASSERT(cellIndex   <  numGenerators);      
 
       // Start the chain walking the edges of this cell.
       const typename VD::edge_type* edge = cellItr->incident_edge();
-      cerr << " cell edge : ";
       do {
         edge = edge->next();
 
@@ -520,9 +494,7 @@ computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) con
         } else {
           result.cellEdges[cellIndex].push_back(~e1);
         }
-        cerr << " (" << e1 << " " << result.cellEdges[cellIndex].back() << ")";
       } while (edge != cellItr->incident_edge());
-      cerr << endl;
     }
   }
 }
