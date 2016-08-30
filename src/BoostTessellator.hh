@@ -36,14 +36,13 @@ struct QuantizedTessellation {
 
   std::vector<IntPoint> nodes;
   std::vector<std::pair<int, int> > edges;
-  std::vector<RealPoint> infEdgeDirection;
   std::vector<std::vector<int> > cellEdges;
 
   // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
   // and sets the quantized generators.
   QuantizedTessellation(const std::vector<RealType>& points) {
     geometry::computeBoundingBox<2, RealType>(&points[0], points.size(), true, xmin, xmax);
-    length = std::max(result.xmax[0] - result.xmin[0], result.xmax[1] - result.xmin[1]);
+    length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
     xmin[0] -= 2.0*length;
     xmin[1] -= 2.0*length;
     xmax[0] += 2.0*length;
@@ -60,16 +59,16 @@ struct QuantizedTessellation {
 
   // Convert real coordinates to integers.
   void quantize(const RealType* realcoords, IntType* intcoords) const {
-    const RealType dx = length/(std::numeric_limits<IntType>::max() - std::numeric_limits<IntType>::min() + 1);
-    intcoords[0] = std::numeric_limits<IntType>::min() + IntType((realcoords[0] - xmin[0])/dx);
-    intcoords[1] = std::numeric_limits<IntType>::min() + IntType((realcoords[1] - xmin[1])/dx);
+    const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
+    intcoords[0] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[0] - xmin[0])/dx);
+    intcoords[1] = std::numeric_limits<IntType>::min()/4 + IntType((realcoords[1] - xmin[1])/dx);
   }
 
   // Convert int coordinates to reals.
   void dequantize(const IntType* intcoords, RealType* realcoords) {
-    const RealType dx = length/(std::numeric_limits<IntType>::max() - std::numeric_limits<IntType>::min() + 1);
-    realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min())*dx;
-    realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min())*dx;
+    const RealType dx = length/(std::numeric_limits<IntType>::max()/4 - std::numeric_limits<IntType>::min()/4);
+    realcoords[0] = xmin[0] + (intcoords[0] - std::numeric_limits<IntType>::min()/4)*dx;
+    realcoords[1] = xmin[1] + (intcoords[1] - std::numeric_limits<IntType>::min()/4)*dx;
   }
 };
 
@@ -138,12 +137,10 @@ private:
   // ------------------------------------------------- //
 
   // Compute the nodes around a collection of generators
-  void computeQuantTessellation(const std::vector<RealType>& points,
-                                QuantizedTessellation<CoordHash, RealType>& result) const;
+  void computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const;
 
   // Compute the nodes around a linear, 1d collection of generators
-  void computeCellNodesCollinear(const std::vector<RealType>& points,
-                                 QuantizedTessellation<CoordHash, RealType>& result) const;
+  void computeCollinearQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) const;
 
   // void constructBoundedTopology(const std::vector<RealType>& points,
   //                               const ReducedPLC<2, RealType>& geometry,
@@ -177,15 +174,15 @@ private:
 //------------------------------------------------------------------------------
 // template<typename RealType> 
 // typename BoostTessellator<RealType>::CoordHash
-// BoostTessellator<RealType>::coordMin = std::numeric_limits<CoordHash>::min();
+// BoostTessellator<RealType>::coordMin = std::numeric_limits<CoordHash>::min()/2;
 
 // template<typename RealType> 
 // typename BoostTessellator<RealType>::CoordHash
-// BoostTessellator<RealType>::coordMax = std::numeric_limits<CoordHash>::max();
+// BoostTessellator<RealType>::coordMax = std::numeric_limits<CoordHash>::max()/2;
 
 template<typename RealType> 
 RealType  
-BoostTessellator<RealType>::mDegeneracy = 1.0/std::numeric_limits<CoordHash>::max();
+BoostTessellator<RealType>::mDegeneracy = 4.0/std::numeric_limits<CoordHash>::max();
 
 } //end polytope namespace
 
