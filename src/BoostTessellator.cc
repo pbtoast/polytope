@@ -201,20 +201,24 @@ using std::max;
 using std::abs;
 
 //------------------------------------------------------------------------------
+// Default constructor
+//------------------------------------------------------------------------------
 template<typename RealType>
 BoostTessellator<RealType>::
 BoostTessellator():
   Tessellator<2, RealType>() {
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Destructor
 //------------------------------------------------------------------------------
 template<typename RealType>
 BoostTessellator<RealType>::
 ~BoostTessellator() {
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Unbounded tessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
@@ -267,12 +271,10 @@ tessellate(const vector<RealType>& points,
       }
     }
   }
-
-  // // Finish constructing the cell-face-node topology
-  // constructUnboundedMeshTopology(cellNodes, points, mesh);
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Box bounded tessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
@@ -289,8 +291,9 @@ tessellate(const vector<RealType>& points,
   // ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
   // this->tessellate(points, box, mesh);
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// PLC bounded tessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
@@ -305,8 +308,9 @@ tessellate(const vector<RealType>& points,
   // boundary.points = plcPoints;
   // this->tessellate(points, boundary, mesh);
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Reduced PLC bounded tessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
@@ -390,7 +394,6 @@ tessellate(const vector<RealType>& points,
   // // Input nodes and construct the final mesh topology
   // this->constructBoundedTopology(points, geometry, cells, mesh);
 }
-//------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------
@@ -398,6 +401,8 @@ tessellate(const vector<RealType>& points,
 //------------------------------------------------------------------------------
 
 
+//------------------------------------------------------------------------------
+// Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
@@ -498,8 +503,9 @@ computeQuantTessellation(QuantizedTessellation<CoordHash, RealType>& result) con
     }
   }
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Specialized compute QuantizedTessellation for collinear generators
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
