@@ -173,7 +173,7 @@ void test3(Tessellator<2,double>& tessellator) {
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,points,4);
   mesh.clear();
-
+  
   // // Tessellate bounded
   // tessellator.tessellate(points, plc.points, plc, mesh);
   // outputMesh(mesh,testName,points,5);
@@ -197,15 +197,15 @@ main(int argc, char** argv)
     test1(tessellator);
   }
 
-  // {
-  //   cout << "\nTest 2" << endl;
-  //   test2(tessellator);
-  // }
+  {
+    cout << "\nTest 2" << endl;
+    test2(tessellator);
+  }
 
-  // {
-  //   cout << "\nTest 3" << endl;
-  //   test3(tessellator);
-  // }
+  {
+    cout << "\nTest 3" << endl;
+    test3(tessellator);
+  }
 
 
   cout << "PASS" << endl;

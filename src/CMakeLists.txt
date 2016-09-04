@@ -3,14 +3,14 @@ if (SILO_FOUND)
   set(IO_SOURCES SiloWriter_2d.cc SiloWriter_3d.cc SiloReader_2d.cc SiloReader_3d.cc SiloUtils.cc)
 endif()
 
-# By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc QuantizedTessellation2d.cc)
+# The tessellator sources we always build.
+set(TESSELLATOR_SOURCES KeyTraits.cc predicates.cc PLC_CSG.cc QuantizedTessellation2d.cc QuantizedTessellation3d.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Check if we can include each of the serial tessellators:
-if (USE_BOOST)
-  list(APPEND TESSELLATOR_SOURCES BoostOrphanage.cc MeshEditor.cc)
-endif()
+# # Check if we can include each of the serial tessellators:
+# if (USE_BOOST)
+#   list(APPEND TESSELLATOR_SOURCES BoostOrphanage.cc MeshEditor.cc)
+# endif()
 
 # TriangleTessellator and triangle source
 if (HAVE_TRIANGLE)
@@ -60,8 +60,6 @@ add_library(polytope STATIC
 	    ${HEADERS})
 
 target_link_libraries(polytope
-                      voro_2d 
-		      voro_3d 
 		      ${TRIANGLE_LIB} 
 		      ${TETGEN_LIB} 
 		      ${SILO_LIBRARIES}

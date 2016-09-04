@@ -86,6 +86,7 @@ class Tessellator:
         PLC          = "polytope::PLC%id" % ndim
         ReducedPLC   = "polytope::ReducedPLC%id" % ndim
         Tessellation = "polytope::Tessellation%id" % ndim
+        QuantizedTessellation = "polytope::QuantizedTessellation%id<int, double>" % ndim
         
         # Constructors
         x.add_constructor([])
@@ -141,33 +142,15 @@ class Tessellator:
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
 
-        # Tessellate with normalized generator positions
-        x.add_method("tessellateNormalized", None, 
-                     [constrefparam("vector_of_double", "points"),
-                      refparam(Tessellation, "mesh")],
-                     is_virtual=True, is_const=True)
-        x.add_method("tessellateNormalized", None, 
-                     [constrefparam("vector_of_double", "points"),
-                      param("double *", "low"),
-                      param("double *", "high"),
-                      refparam(Tessellation, "mesh")],
-                     is_virtual=True, is_const=True)
-        x.add_method("tessellateNormalized", None, 
-                     [constrefparam("vector_of_double", "points"),
-                      constrefparam("vector_of_double", "PLCpoints"),
-                      constrefparam(PLC, "geometry"),
-                      refparam(Tessellation, "mesh")],
-                     is_virtual=True, is_const=True)
-        x.add_method("tessellateNormalized", None, 
-                     [constrefparam("vector_of_double", "points"),
-                      constrefparam(ReducedPLC, "geometry"),
-                      refparam(Tessellation, "mesh")],
-                     is_virtual=True, is_const=True)
-
         x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_pure_virtual=True, is_const=True)
         x.add_method("degeneracy", None, [param("double", "val")], is_virtual=True, is_const=True)
+
+        # Pure virtual method for computing quantized tessellation
+        x.add_method("tessellateQuantized", None, 
+                     [refparam(QuantizedTessellation, "qmesh")],
+                     is_pure_virtual=True, is_const=True)
 
         return
 

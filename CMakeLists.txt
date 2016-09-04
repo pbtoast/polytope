@@ -206,11 +206,11 @@ if (NOT HEADER_ONLY)
 
   # Libraries
 
-  # Voro 2d/3d libraries.
-  include_directories(voro_2d)
-  add_subdirectory(voro_2d)
-  include_directories(voro_3d)
-  add_subdirectory(voro_3d)
+  # # Voro 2d/3d libraries.
+  #include_directories(voro_2d)
+  #add_subdirectory(voro_2d)
+  #include_directories(voro_3d)
+  #add_subdirectory(voro_3d)
 
   # Polytope proper.
   include_directories("${PROJECT_SOURCE_DIR}/src/")

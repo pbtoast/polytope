@@ -386,23 +386,5 @@ polytope_tessellator_t* tetgen_tessellator_new()
 #endif
 //------------------------------------------------------------------------
 
-//------------------------------------------------------------------------
-polytope_tessellator_t* voroplusplus_tessellator_new(int dimension)
-{
-  polytope_tessellator_t* t = (polytope_tessellator_t*)malloc(sizeof(polytope_tessellator_t));
-  if (dimension == 2)
-  {
-    t->tess2 = new VoroPP_2d<polytope_real_t>();
-    t->tess3 = NULL;
-  }
-  else
-  {
-    t->tess2 = NULL;
-    t->tess3 = new VoroPP_3d<polytope_real_t>();
-  }
-  return t;
-}
-//------------------------------------------------------------------------
-
 }
 
