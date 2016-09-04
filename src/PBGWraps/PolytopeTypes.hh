@@ -13,17 +13,15 @@
 #include "TriangleTessellator.hh"
 #include "BoostTessellator.hh"
 #include "TetgenTessellator.hh"
-#include "MeshEditor.hh"
 #include "SiloWriter.hh"
 #include "polytope_write_OOGL.hh"
+#include "QuantizedTessellation2d.hh"
+#include "QuantizedTessellation3d.hh"
 
 #ifdef HAVE_MPI
 #include "DistributedTessellator.hh"
 #include "SerialDistributedTessellator.hh"
 #endif
-
-//#include "VoroPP_2d.hh"
-//#include "VoroPP_3d.hh"
 
 namespace polytope {
 
@@ -66,16 +64,6 @@ typedef DistributedTessellator<3, double> DistributedTessellator3d;
 typedef SerialDistributedTessellator<2, double> SerialDistributedTessellator2d;
 typedef SerialDistributedTessellator<3, double> SerialDistributedTessellator3d;
 #endif
-
-// typedef VoroPP_2d<double> VoroTessellator2d;
-// typedef VoroPP_3d<double> VoroTessellator3d;
-
-//------------------------------------------------------------------------------
-// MeshEditor names
-//------------------------------------------------------------------------------
-typedef MeshEditor<2, double> MeshEditor2d;
-typedef MeshEditor<3, double> MeshEditor3d;
-
 
 //------------------------------------------------------------------------------
 // PLC pretty printing

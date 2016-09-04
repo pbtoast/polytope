@@ -23,8 +23,15 @@ class Tessellation:
         # Expose types
         self.Tessellation2d = addObject(polytope, "Tessellation2d")
         self.Tessellation3d = addObject(polytope, "Tessellation3d")
+        self.QuantizedTessellation2d = addObject(polytope, "QuantizedTessellation2d",
+                                                 template_parameters = ["int", "double"],
+                                                 custom_name = "QuantizedTessellation2d")
+        self.QuantizedTessellation3d = addObject(polytope, "QuantizedTessellation3d",
+                                                 template_parameters = ["int", "double"],
+                                                 custom_name = "QuantizedTessellation2d")
 
-        self.objs = [self.Tessellation2d, self.Tessellation3d]
+        self.objs = [self.Tessellation2d, self.Tessellation3d,
+                     self.QuantizedTessellation2d, self.QuantizedTessellation3d]
 
         return
     
@@ -36,6 +43,9 @@ class Tessellation:
         for (obj, dim) in ((self.Tessellation2d, 2),
                            (self.Tessellation3d, 3)):
             self.generateTessellationBindings(obj, dim)
+        for (obj, dim) in ((self.QuantizedTessellation2d, 2),
+                           (self.QuantizedTessellation3d, 3)):
+            self.generateQuantizedTessellationBindings(obj, dim)
 
         return
 
@@ -56,7 +66,7 @@ class Tessellation:
         x.add_method("empty", retval("bool"), [])
         x.add_method("computeNodeCells", retval("vector_of_set_of_unsigned"), [])
         x.add_method("computeCellToNodes", retval("vector_of_set_of_unsigned"), [])
-        
+
         # Attributes
         for (att,ret) in [("nodes",           "vector_of_double*"),              
                           ("cells",           "vector_of_vector_of_int*"),       
@@ -72,5 +82,21 @@ class Tessellation:
                                             setter="polytope::set"+att,
                                             getter_template_parameters=[str(ndim),"double"], 
                                             setter_template_parameters=[str(ndim),"double"])
+                
+        return
+
+    #---------------------------------------------------------------------------
+    # Bindings (QuantizedTessellation)
+    #---------------------------------------------------------------------------
+    def generateQuantizedTessellationBindings(self, x, ndim):
+        
+        # Object names
+        
+        # Constructors
+        x.add_constructor([param("vector_of_double", "points")])
+        
+        # Methods
+        
+        # Attributes
                 
         return

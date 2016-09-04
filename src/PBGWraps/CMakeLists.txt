@@ -10,7 +10,6 @@
 # The objects we are adding to our Python module
 set(PYTHONPKGS 
   "CXXContainers" 
-  "MeshEditor" 
   "PLC" 
   "Tessellation" 
   "Tessellator" 

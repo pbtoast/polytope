@@ -58,7 +58,7 @@ POLYTOPE_ADD_TEST( "hash"            "" )
 
 # 2D Triangle and Boost Tessellator tests
 POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
-POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
+#POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
 POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
 POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
