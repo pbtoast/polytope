@@ -67,9 +67,9 @@ void test1(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,0);
   mesh.clear();
 
-  // // Tessellate bounded
-  // tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  // outputMesh(mesh,testName,points,1);
+  // Tessellate bounded
+  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh,testName,points,1);
 }
 
 
@@ -110,9 +110,9 @@ void test2(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,2);
   mesh.clear();
 
-  // // Tessellate bounded
-  // tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  // outputMesh(mesh,testName,points,3);
+  // Tessellate bounded
+  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  outputMesh(mesh,testName,points,3);
 }
 
 
@@ -174,9 +174,9 @@ void test3(Tessellator<2,double>& tessellator) {
   outputMesh(mesh,testName,points,4);
   mesh.clear();
   
-  // // Tessellate bounded
-  // tessellator.tessellate(points, plc.points, plc, mesh);
-  // outputMesh(mesh,testName,points,5);
+  // Tessellate bounded
+  tessellator.tessellate(points, plc.points, plc, mesh);
+  outputMesh(mesh,testName,points,5);
 }
 
 
