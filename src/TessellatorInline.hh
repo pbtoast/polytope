@@ -1,3 +1,6 @@
+#include "clipQuantizedTessellation.hh"
+#include "makeBoxPLC.hh"
+
 namespace polytope {
 
 //----------------------------------------------------------------------------
@@ -34,7 +37,9 @@ tessellate(const std::vector<RealType>& points,
            RealType* low,
            RealType* high,
            Tessellation<nDim, RealType>& mesh) const {
-  POLY_ASSERT2(false, "Implement me!");
+  ReducedPLC<nDim, RealType> geometry;
+  internal::makeBoxPLC(geometry, low, high);
+  this->tessellate(points, geometry, mesh);
 }
 
 //----------------------------------------------------------------------------
@@ -48,7 +53,21 @@ tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<nDim, RealType>& geometry,
            Tessellation<nDim, RealType>& mesh) const {
-  POLY_ASSERT2(false, "Implement me!");
+  
+  // Pre-conditions
+  POLY_ASSERT(mesh.empty());
+  POLY_ASSERT(points.size() > 0);
+  POLY_ASSERT(points.size() % 2 == 0);
+
+  // Invoke the descendant method to fill the quant mesh.
+  QuantizedTessellation quantmesh(points);
+  this->tessellateQuantized(quantmesh);
+
+  // Clip against the boundary.
+  clipQuantizedTessellation(quantmesh, points, geometry);
+
+  // Copy the QuantTessellation to the output.
+  quantmesh.fillTessellation(mesh);
 }
 
 //----------------------------------------------------------------------------
@@ -61,7 +80,7 @@ Tessellator<nDim, RealType>::
 tessellate(const std::vector<RealType>& points,
            const ReducedPLC<nDim, RealType>& geometry,
            Tessellation<nDim, RealType>& mesh) const {
-  POLY_ASSERT2(false, "Implement me!");
+  this->tessellate(points, geometry.points, geometry, mesh);
 }
 
 //------------------------------------------------------------------------------
