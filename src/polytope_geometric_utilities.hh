@@ -4,7 +4,7 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
-//#include <cmath>
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <algorithm>
@@ -16,6 +16,10 @@
 #include "mpi.h"
 #include "polytope_parallel_utilities.hh"
 #endif
+
+using std::abs;
+using std::min;
+using std::max;
 
 // --- These live in predicates.cc
 // Compute the orientation of point c relative to points a and b
@@ -422,7 +426,7 @@ cross(const RealType* a, const RealType* b, RealType* c) {
 template<int Dimension, typename RealType>
 bool
 collinear(const RealType* a, const RealType* b, const RealType* c, const RealType tol) {
-  RealType ab[Dimension], ac[Dimension], abmag = 0.0, acmag = 0.0;
+  double ab[Dimension], ac[Dimension], abmag = 0.0, acmag = 0.0;
   for (unsigned j = 0; j != Dimension; ++j) {
     ab[j] = b[j] - a[j];
     ac[j] = c[j] - a[j];
@@ -436,7 +440,7 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
     ab[j] /= abmag;
     ac[j] /= acmag;
   }
-  return std::abs(std::abs(dot<Dimension, RealType>(ab, ac)) - 1.0) < tol;
+  return std::abs(std::abs(dot<Dimension, double>(ab, ac)) - 1.0) < tol;
 }
 
 //------------------------------------------------------------------------------
