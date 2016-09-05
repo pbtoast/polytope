@@ -188,7 +188,6 @@ exteriorPoints(std::vector<unsigned>& indices,
                const std::vector<TriangleFacet<RealType> >& facets, 
                const std::vector<Point3<RealType> >& points) {
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
 
   std::vector<unsigned> remainingPoints;
   for (std::vector<unsigned>::const_iterator iitr = indices.begin();
@@ -209,7 +208,6 @@ unsigned highestPoint(std::vector<unsigned>& indices,
                       const std::vector<TriangleFacet<RealType> >& facets, 
                       const std::vector<Point3<RealType> >& points) {
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
   int result = -1;
   RealType maxAltitude = 0.0;
   for (typename std::vector<unsigned>::const_iterator itr = indices.begin();
@@ -241,7 +239,6 @@ void cullVisibleFacets(std::vector<std::pair<int, int> >& horizonEdges,
 
   typedef std::pair<int, int> EdgeHash;
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
 
   FacetSet newFacets;
   internal::CounterMap<EdgeHash> edgeCount;
