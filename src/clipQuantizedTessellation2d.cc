@@ -43,12 +43,14 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   // TODO -- handle holes.
   
   // Prepare new mesh data.
+  const unsigned ncells = qmesh.cellEdges.size();
   std::vector<bp::IntPoint> newNodes;
   std::vector<std::pair<int, int> > newEdges;
-  std::vector<std::vector<int> > newCellEdges;
+  std::vector<std::vector<int> > newCellEdges(ncells);
+  std::map<bp::IntPoint, int> node2id;
+  std::map<std::pair<int, int>, int> edge2id;
 
   // Now walk each cell and clip it with the boundary.
-  const unsigned ncells = qmesh.cellEdges.size();
   for (unsigned i = 0; i != ncells; ++i) {
     unsigned nverts = qmesh.cellEdges[i].size();
 
@@ -74,12 +76,13 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
     std::cerr << "Final cell set: " << cellSet.size() << std::endl;
 
     // Read out the final cell geometry to the new QuantizedTessellation.
+    // It appears Boost.Polygon gives us back the same node for the beginning and ending nodes of the
+    // polygon.
     nverts = cellSet[0].size();
-    std::map<bp::IntPoint, int> node2id;
-    std::map<std::pair<int, int>, int> edge2id;
-    for (unsigned j = 0; j != nverts; ++j) {
+    POLY_ASSERT(nverts > 3);
+    for (unsigned j = 0; j != nverts-1; ++j) {
       const Point& v0 = *(cellSet[0].begin() + j);
-      const Point& v1 = *(cellSet[0].begin() + ((j + 1) % nverts));
+      const Point& v1 = *(cellSet[0].begin() + j + 1);
    
       // Insert vertex 0.
       p.x = v0.x();

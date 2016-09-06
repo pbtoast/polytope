@@ -30,7 +30,8 @@ struct QuantizedTessellation3d {
 
   // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
   // and sets the quantized generators.
-  QuantizedTessellation3d(const std::vector<RealType>& points);
+  QuantizedTessellation3d(const std::vector<RealType>& points,
+                          const std::vector<RealType>& boundaryPoints);
 
   // Convert real coordinates to integers.
   void quantize(const RealType* realcoords, IntType* intcoords) const;
