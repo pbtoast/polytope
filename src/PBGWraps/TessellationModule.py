@@ -93,7 +93,8 @@ class Tessellation:
         # Object names
         
         # Constructors
-        x.add_constructor([param("vector_of_double", "points")])
+        x.add_constructor([param("vector_of_double", "points"),
+                           param("vector_of_double", "boundaryPoints")])
         
         # Methods
         

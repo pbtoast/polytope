@@ -19,7 +19,7 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantizedTessellation quantmesh(points);
+  QuantizedTessellation quantmesh(points, points);
   this->tessellateQuantized(quantmesh);
 
   // Copy the QuantTessellation to the output.
@@ -60,11 +60,11 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % 2 == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantizedTessellation quantmesh(points);
+  QuantizedTessellation quantmesh(points, PLCpoints);
   this->tessellateQuantized(quantmesh);
 
   // Clip against the boundary.
-  clipQuantizedTessellation(quantmesh, points, geometry);
+  clipQuantizedTessellation(quantmesh, PLCpoints, geometry);
 
   // Copy the QuantTessellation to the output.
   quantmesh.fillTessellation(mesh);

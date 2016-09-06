@@ -20,8 +20,9 @@ namespace polytope {
 //------------------------------------------------------------------------------
 template<typename IntType, typename RealType>
 QuantizedTessellation2d<IntType, RealType>::
-QuantizedTessellation2d(const std::vector<RealType>& points) {
-  geometry::computeBoundingBox<2, RealType>(&points[0], points.size(), true, xmin, xmax);
+QuantizedTessellation2d(const std::vector<RealType>& points,
+                        const std::vector<RealType>& boundaryPoints) {
+  geometry::computeBoundingBox<2, RealType>(&boundaryPoints[0], boundaryPoints.size(), true, xmin, xmax);
   length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
   xmin[0] -= 2.0*length;
   xmin[1] -= 2.0*length;

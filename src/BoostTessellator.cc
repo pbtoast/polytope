@@ -139,19 +139,22 @@ tessellateQuantized(QuantizedTessellation& result) const {
         }
         
         // Now insert the edge.  Since we use oriented single edges between cells, a bit different than Boost.Polygon.
-        const pair<int, int> edge = internal::hashEdge(j0, j1);
-        POLY_ASSERT((edge.first == j0 and edge.second == j1) or
-                    (edge.first == j1 and edge.second == j0));
-        old_size = edge2id.size();
-        const int e1 = internal::addKeyToMap(edge, edge2id);
-        if (e1 == old_size) {
-          POLY_ASSERT(e1 == result.edges.size());
-          result.edges.push_back(edge);
-        }
-        if (edge.first == j0) {
-          result.cellEdges[cellIndex].push_back(e1);
-        } else {
-          result.cellEdges[cellIndex].push_back(~e1);
+        // We have to screen out zero-length edges apparently.
+        if (j0 != j1) {
+          const pair<int, int> edge = internal::hashEdge(j0, j1);
+          POLY_ASSERT((edge.first == j0 and edge.second == j1) or
+                      (edge.first == j1 and edge.second == j0));
+          old_size = edge2id.size();
+          const int e1 = internal::addKeyToMap(edge, edge2id);
+          if (e1 == old_size) {
+            POLY_ASSERT(e1 == result.edges.size());
+            result.edges.push_back(edge);
+          }
+          if (edge.first == j0) {
+            result.cellEdges[cellIndex].push_back(e1);
+          } else {
+            result.cellEdges[cellIndex].push_back(~e1);
+          }
         }
       } while (edge != cellItr->incident_edge());
     }
