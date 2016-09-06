@@ -6,6 +6,7 @@
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
+#include <boost/polygon/polygon.hpp>
 
 // Include Boost multiprecision types
 #include <boost/multiprecision/cpp_int.hpp>
@@ -23,6 +24,8 @@ typedef double fptType;
 typedef int CoordHash;
 typedef polytope::Point2<CoordHash> IntPoint;
 typedef polytope::Segment<2> IntSegment;
+typedef std::vector<IntPoint> IntPolygon;
+typedef std::list<IntPolygon> IntPolygonSet;
 
 template <>
 struct geometry_concept<IntPoint> { typedef point_concept type; };
@@ -66,6 +69,101 @@ struct segment_traits<IntSegment> {
 
   static inline point_type get(const IntSegment& segment, direction_1d dir) {
     return dir.to_int() ? segment.b : segment.a;
+  }
+};
+
+//------------------------------------------------------------------------------
+// Map a vector of our points to be a polygon in Boost.Polygon.
+//------------------------------------------------------------------------------
+template <>
+struct geometry_concept<IntPolygon>{ typedef polygon_concept type; };
+
+template <>
+struct polygon_traits<IntPolygon> {
+  typedef CoordHash coordinate_type;
+  typedef IntPolygon::const_iterator iterator_type;
+  typedef IntPoint point_type;
+
+  // Get the begin iterator
+  static inline iterator_type begin_points(const IntPolygon& t) {
+    return t.begin();
+  }
+
+  // Get the end iterator
+  static inline iterator_type end_points(const IntPolygon& t) {
+    return t.end();
+  }
+
+  // Get the number of sides of the polygon
+  static inline std::size_t size(const IntPolygon& t) {
+    return t.size();
+  }
+
+  // Get the winding direction of the polygon
+  static inline winding_direction winding(const IntPolygon& t) {
+    return unknown_winding;
+  }
+};
+
+template <>
+struct polygon_mutable_traits<IntPolygon> {
+  //expects stl style iterators
+  template <typename iT>
+  static inline IntPolygon& set_points(IntPolygon& t, 
+                                       iT input_begin, iT input_end) {
+    t.clear();
+    t.insert(t.end(), input_begin, input_end);
+    return t;
+  }
+
+};
+
+//------------------------------------------------------------------------------
+// Register our IntPolygonSet.
+//------------------------------------------------------------------------------
+//vector isn't automatically a polygon set in the library
+//because it is a standard container there is a shortcut
+//for mapping it to polygon set concept, but I'll do it
+//the long way that you would use in the general case.
+
+//first we register IntPolygonSet as a polygon set
+template <>
+struct geometry_concept<IntPolygonSet> { typedef polygon_set_concept type; };
+
+//next we map to the concept through traits
+template <>
+struct polygon_set_traits<IntPolygonSet> {
+  typedef int coordinate_type;
+  typedef IntPolygonSet::const_iterator iterator_type;
+  typedef IntPolygonSet operator_arg_type;
+
+  static inline iterator_type begin(const IntPolygonSet& polygon_set) {
+    return polygon_set.begin();
+  }
+
+  static inline iterator_type end(const IntPolygonSet& polygon_set) {
+    return polygon_set.end();
+  }
+
+  //don't worry about these, just return false from them
+  static inline bool clean(const IntPolygonSet& polygon_set) { return false; }
+  static inline bool sorted(const IntPolygonSet& polygon_set) { return false; }
+};
+
+template <>
+struct polygon_set_mutable_traits<IntPolygonSet> {
+  template <typename input_iterator_type>
+  static inline void set(IntPolygonSet& polygon_set, input_iterator_type input_begin, input_iterator_type input_end) {
+    polygon_set.clear();
+    //this is kind of cheesy. I am copying the unknown input geometry
+    //into my own polygon set and then calling get to populate the
+    //deque
+    polygon_set_data<int> ps;
+    ps.insert(input_begin, input_end);
+    ps.get(polygon_set);
+    //if you had your own odd-ball polygon set you would probably have
+    //to iterate through each polygon at this point and do something
+    //extra
   }
 };
 
