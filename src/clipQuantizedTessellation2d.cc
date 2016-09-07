@@ -73,7 +73,9 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
     PolygonSet cellSet;
     cellSet += cell;
     cellSet &= boundarySet;
-    std::cerr << "Final cell set: " << cellSet.size() << std::endl;
+    if (cellSet.size() > 1) {
+      std::cerr << "polytope clipping WARNING: detected " << (cellSet.size() - 1) << " orphan cell piece(s), ignoring." << std::endl;
+    }
 
     // Read out the final cell geometry to the new QuantizedTessellation.
     // It appears Boost.Polygon gives us back the same node for the beginning and ending nodes of the
