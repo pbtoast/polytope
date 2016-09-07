@@ -21,7 +21,7 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
                                const PLC<2, RealType>& geometry) {
 
   using namespace bp;
-  typedef polygon_data<CoordHash> Polygon;
+  typedef polygon_with_holes_data<CoordHash> Polygon;
   typedef polygon_traits<Polygon>::point_type Point;
   typedef std::vector<polygon_data<CoordHash> > PolygonSet;
 
@@ -32,16 +32,31 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   IntPoint p;
   for (unsigned i = 0; i != geometry.facets.size(); ++i) {
     POLY_ASSERT(geometry.facets[i].size() == 2);
-    qmesh.quantize(&PLCpoints[2*i], &p.x);
+    const int k = geometry.facets[i][0];
+    qmesh.quantize(&PLCpoints[2*k], &p.x);
     boundaryPoints[i] = bp::construct<Point>(p.x, p.y);
   }
   Polygon boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
+
+  // Add the holes.
+  std::vector<std::vector<Point> > holePoints(geometry.holes.size());
+  for (unsigned ihole = 0; ihole != geometry.holes.size(); ++ihole) {
+    const unsigned n = geometry.holes[ihole].size();
+    holePoints[ihole].resize(n);
+    for (unsigned i = 0; i != n; ++i) {
+      POLY_ASSERT(geometry.holes[ihole][i].size() == 2);
+      const int k = geometry.holes[ihole][i][0];
+      qmesh.quantize(&PLCpoints[2*k], &p.x);
+      holePoints[ihole][i] = bp::construct<Point>(p.x, p.y);
+    }
+  }
+  boundary.set_holes(holePoints.begin(), holePoints.end());
+  
+  // Make the polygon_set boundary.
   PolygonSet boundarySet;
   boundarySet += boundary;
 
-  // TODO -- handle holes.
-  
   // Prepare new mesh data.
   const unsigned ncells = qmesh.cellEdges.size();
   std::vector<bp::IntPoint> newNodes;
