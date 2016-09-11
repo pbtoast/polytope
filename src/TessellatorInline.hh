@@ -1,5 +1,6 @@
 #include "clipQuantizedTessellation.hh"
 #include "makeBoxPLC.hh"
+#include "snapToBoundary.hh"
 
 namespace polytope {
 
@@ -68,6 +69,9 @@ tessellate(const std::vector<RealType>& points,
 
   // Copy the QuantTessellation to the output.
   quantmesh.fillTessellation(mesh);
+
+  // Snap exactly to the bounding PLC.
+  snapToBoundary(mesh, PLCpoints, geometry, this->degeneracy());
 }
 
 //----------------------------------------------------------------------------

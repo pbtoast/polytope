@@ -10,6 +10,7 @@
 #include "clipQuantizedTessellation.hh"
 #include "RegisterBoostPolygonTypes.hh"
 
+using namespace std;
 namespace bp = boost::polygon;
 using namespace boost::polygon::operators;
 
@@ -21,9 +22,9 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
                                const PLC<2, RealType>& geometry) {
 
   using namespace bp;
-  typedef polygon_with_holes_data<CoordHash> Polygon;
-  typedef polygon_traits<Polygon>::point_type Point;
-  typedef std::vector<polygon_data<CoordHash> > PolygonSet;
+  typedef polygon_with_holes_data<IntType> Polygon;
+  typedef typename polygon_traits<Polygon>::point_type Point;
+  typedef std::vector<polygon_data<IntType> > PolygonSet;
 
   // Copy the input PLC geometry to a polygon Boost.Polygon will recognize.
   // We have registered a std::vector<IntPoint> as a polygon.
@@ -62,7 +63,7 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   std::vector<bp::IntPoint> newNodes;
   std::vector<std::pair<int, int> > newEdges;
   std::vector<std::vector<int> > newCellEdges(ncells);
-  std::map<bp::IntPoint, int> node2id;
+  std::map<bp::IntPoint, int, PointComparator<IntType> > node2id(PointComparator<IntType>(1));
   std::map<std::pair<int, int>, int> edge2id;
 
   // Now walk each cell and clip it with the boundary.
@@ -97,10 +98,21 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
     // polygon.
     nverts = cellSet[0].size();
     POLY_ASSERT(nverts > 3);
+    POLY_ASSERT(*(cellSet[0].begin()) == *(cellSet[0].begin() + nverts - 1));
     for (unsigned j = 0; j != nverts-1; ++j) {
       const Point& v0 = *(cellSet[0].begin() + j);
       const Point& v1 = *(cellSet[0].begin() + j + 1);
    
+      // {
+      //   const double mag2 = (double(v0.x()) - double(v1.x()))*(double(v0.x()) - double(v1.x())) + (double(v0.y()) - double(v1.y()))*(double(v0.y()) - double(v1.y()));
+      //   if (mag2 < 5) {
+      //     std::cerr << " Strange point: " << i << " " << nverts 
+      //               << " (" << v0.x() << " " << v0.y() << ")" 
+      //               << " (" << v1.x() << " " << v1.y() << ")"
+      //               << std::endl;
+      //   }
+      // }
+
       // Insert vertex 0.
       p.x = v0.x();
       p.y = v0.y();
@@ -121,20 +133,22 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
         newNodes.push_back(p);
       }
     
-      // Now insert the edge.
-      const std::pair<int, int> edge = internal::hashEdge(j0, j1);
-      POLY_ASSERT((edge.first == j0 and edge.second == j1) or
-                  (edge.first == j1 and edge.second == j0));
-      old_size = edge2id.size();
-      const int e1 = internal::addKeyToMap(edge, edge2id);
-      if (e1 == old_size) {
-        POLY_ASSERT(e1 == newEdges.size());
-        newEdges.push_back(edge);
-      }
-      if (edge.first == j0) {
-        newCellEdges[i].push_back(e1);
-      } else {
-        newCellEdges[i].push_back(~e1);
+      // Now insert the edge if non-degenerate.
+      if (j0 != j1) {
+        const std::pair<int, int> edge = internal::hashEdge(j0, j1);
+        POLY_ASSERT((edge.first == j0 and edge.second == j1) or
+                    (edge.first == j1 and edge.second == j0));
+        old_size = edge2id.size();
+        const int e1 = internal::addKeyToMap(edge, edge2id);
+        if (e1 == old_size) {
+          POLY_ASSERT(e1 == newEdges.size());
+          newEdges.push_back(edge);
+        }
+        if (edge.first == j0) {
+          newCellEdges[i].push_back(e1);
+        } else {
+          newCellEdges[i].push_back(~e1);
+        }
       }
     }
   }

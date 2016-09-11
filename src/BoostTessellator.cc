@@ -94,7 +94,7 @@ tessellateQuantized(QuantizedTessellation& result) const {
   result.cellEdges = vector<vector<int> >(numGenerators);
   result.edges.reserve(voronoi.num_edges());
   result.nodes.reserve(voronoi.num_vertices());
-  map<IntPoint, int> node2id;
+  map<IntPoint, int, PointComparator<CoordHash> > node2id(PointComparator<CoordHash>(1));
   map<std::pair<int, int>, int> edge2id;
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 

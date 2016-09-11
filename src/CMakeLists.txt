@@ -5,7 +5,8 @@ endif()
 
 # The tessellator sources we always build.
 set(TESSELLATOR_SOURCES KeyTraits.cc predicates.cc PLC_CSG.cc QuantizedTessellation2d.cc QuantizedTessellation3d.cc
-                        clipQuantizedTessellation2d.cc clipQuantizedTessellation3d.cc)
+                        clipQuantizedTessellation2d.cc clipQuantizedTessellation3d.cc
+                        snapToBoundary.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 # # Check if we can include each of the serial tessellators:
