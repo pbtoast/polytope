@@ -36,18 +36,13 @@ typedef struct
   int* face_offsets;
   unsigned* face_nodes;
 
-  // Array of node indices: 0 for interior nodes and 1 for nodes at
-  // "infinity" if this is an unbounded tessellation. The infinite node
-  // is the termination point on a spherical surface of a ray going
-  // out to infinity.
-  int num_inf_nodes;
-  unsigned* inf_nodes;
+  // Array of node indices: 0 for interior nodes and 1 for nodes on the boundary.
+  int num_boundary_nodes;
+  unsigned* boundary_nodes;
 
-  // Array of face indices: 0 for interior faces and 1 for faces at
-  // "infinity" for unbounded tessellations. The infinite face connects
-  // the collection of infinite nodes for a given unbounded cell.
-  int num_inf_faces;
-  unsigned* inf_faces;
+  // Array of face indices: 0 for interior faces and 1 for faces on the boundadry.
+  int num_boundary_faces;
+  unsigned* boundary_faces;
 
   // An array of cell indices for each face, i.e., the cells that share
   // the face. face_cells[2*i] is the index of the first cell for the ith 
