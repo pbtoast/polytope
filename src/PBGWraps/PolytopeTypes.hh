@@ -146,14 +146,24 @@ void setfaces( Tessellation<Dimension, RealType>& self,
 { self.faces = *facesIn; }
 
 
-// --- InfNodes
+// --- BoundaryNodes
 template<int Dimension, typename RealType>
-std::vector<unsigned>* getinfNodes( Tessellation<Dimension, RealType>& self )
-{ return &self.infNodes; }
+std::vector<unsigned>* getboundaryNodes( Tessellation<Dimension, RealType>& self )
+{ return &self.boundaryNodes; }
 template<int Dimension, typename RealType>
-void setinfNodes( Tessellation<Dimension, RealType>& self, 
-                  std::vector<unsigned>* infNodesIn )
-{ self.infNodes = *infNodesIn; }
+void setboundaryNodes( Tessellation<Dimension, RealType>& self, 
+                  std::vector<unsigned>* boundaryNodesIn )
+{ self.boundaryNodes = *boundaryNodesIn; }
+
+
+// --- BoundaryFaces
+template<int Dimension, typename RealType>
+std::vector<unsigned>* getboundaryFaces( Tessellation<Dimension, RealType>& self )
+{ return &self.boundaryFaces; }
+template<int Dimension, typename RealType>
+void setboundaryFaces( Tessellation<Dimension, RealType>& self, 
+                  std::vector<unsigned>* boundaryFacesIn )
+{ self.boundaryFaces = *boundaryFacesIn; }
 
 
 // --- faceCells

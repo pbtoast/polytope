@@ -63,7 +63,7 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   std::vector<bp::IntPoint> newNodes;
   std::vector<std::pair<int, int> > newEdges;
   std::vector<std::vector<int> > newCellEdges(ncells);
-  std::map<bp::IntPoint, int, PointComparator<IntType> > node2id(PointComparator<IntType>(1));
+  std::map<bp::IntPoint, int, PointComparator<IntType> > node2id(PointComparator<IntType>(2));
   std::map<std::pair<int, int>, int> edge2id;
 
   // Now walk each cell and clip it with the boundary.

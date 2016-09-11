@@ -33,10 +33,10 @@ polytope_tessellation_t* polytope_tessellation_new(int dimension)
   tess->node_cell_offsets = NULL;
   tess->node_cells = NULL;
   tess->convex_hull = NULL;
-  tess->inf_faces = NULL;
-  tess->num_inf_faces = NULL;
-  tess->inf_nodes = NULL;
-  tess->num_inf_nodes = NULL;
+  tess->boundary_faces = NULL;
+  tess->num_boundary_faces = NULL;
+  tess->boundary_nodes = NULL;
+  tess->num_boundary_nodes = NULL;
 
   return tess;
 }
@@ -75,13 +75,13 @@ void polytope_tessellation_clear(polytope_tessellation_t* tessellation)
     tessellation->face_offsets = NULL;
     tessellation->face_nodes = NULL;
   }
-  if (tessellation->inf_nodes != NULL)
+  if (tessellation->boundary_nodes != NULL)
   {
-    free(tessellation->inf_nodes);
+    free(tessellation->boundary_nodes);
   }
-  if (tessellation->inf_faces != NULL)
+  if (tessellation->boundary_faces != NULL)
   {
-    free(tessellation->inf_faces);
+    free(tessellation->boundary_faces);
   }
   if (tessellation->face_cells != NULL)
   {

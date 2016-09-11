@@ -33,21 +33,9 @@ void snapToBoundary(Tessellation<2, RealType>& mesh,
   length = std::max(xmax.x - xmin.x, xmax.y - xmin.y);
   const RealType tol = 4.0*degeneracy*length;
 
-  // Figure out which nodes are on the boundary
-  set<unsigned> boundaryNodes;
-  for (unsigned iface = 0; iface < mesh.faces.size(); ++iface) {
-    POLY_ASSERT(mesh.faceCells[iface].size() == 1 or
-                mesh.faceCells[iface].size() == 2 );
-    if (mesh.faceCells[iface].size() == 1) {
-      boundaryNodes.insert(mesh.faces[iface].begin(), mesh.faces[iface].end());
-      cerr << "Boundary face: " << mesh.faces[iface][0] << " " << mesh.faces[iface][1]
-           << " (" << mesh.nodes[2*(mesh.faces[iface][0])] << " " << mesh.nodes[2*(mesh.faces[iface][0]) + 1] << ") " 
-           << " (" << mesh.nodes[2*(mesh.faces[iface][1])] << " " << mesh.nodes[2*(mesh.faces[iface][1]) + 1] << ") " << endl;
-    }
-  }
-  POLY_ASSERT(boundaryNodes.size() > 0);
-  POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
-  
+  // Copy the boundary nodes to a std::set.
+  std::set<unsigned> boundaryNodes(mesh.boundaryNodes.begin(), mesh.boundaryNodes.end());
+
   // Snap a subset of the boundary nodes to the PLC boundary locations
   set<unsigned> plcNodes;
   set<unsigned> indices;
