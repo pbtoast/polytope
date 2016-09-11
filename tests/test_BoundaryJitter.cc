@@ -92,7 +92,10 @@ bool checkBoundary(const Tessellation<2,double>& mesh,
 		  "Node " << *nodeItr << " at (" 
                   << x      << "," << y       << ") is outside bounding box (" 
                   << low[0] << "," << high[0] << ")x("
-                  << low[1] << "," << high[1] << ").");
+                  << low[1] << "," << high[1] << ").\n"
+                  << "deltas: "
+                  << (x - low[0]) << " " << (high[0] - x) << " "
+                  << (y - low[1]) << " " << (high[1] - y));
    }
 
    return true;
