@@ -94,8 +94,9 @@ tessellateQuantized(QuantizedTessellation& result) const {
   result.cellEdges = vector<vector<int> >(numGenerators);
   result.edges.reserve(voronoi.num_edges());
   result.nodes.reserve(voronoi.num_vertices());
-  map<IntPoint, int, PointComparator<CoordHash> > node2id(PointComparator<CoordHash>(1));
+  map<IntPoint, int, PointComparator<CoordHash> > node2id(PointComparator<CoordHash>(2));
   map<std::pair<int, int>, int> edge2id;
+  double minedgelength2 = coordMax;
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 
        ++cellItr) {
@@ -155,10 +156,12 @@ tessellateQuantized(QuantizedTessellation& result) const {
           } else {
             result.cellEdges[cellIndex].push_back(~e1);
           }
+          minedgelength2 = std::min(minedgelength2, double(p1.x - p0.x)*double(p1.x - p0.x) + double(p1.y - p0.y)*double(p1.y - p0.y));
         }
       } while (edge != cellItr->incident_edge());
     }
   }
+  std::cerr << "BoostTessellator min edge: " << minedgelength2 << std::endl;
 }
 
 //------------------------------------------------------------------------------
