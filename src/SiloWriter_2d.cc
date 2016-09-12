@@ -251,6 +251,23 @@ write(const Tessellation<2, RealType>& mesh,
   coords[0] = &(x[0]);
   coords[1] = &(y[0]);
 
+  // Build the list of nodes describing the boundary faces.
+  int numBoundaryFaces = mesh.boundaryFaces.size();
+  vector<int> boundaryNodes(2*numBoundaryFaces);
+  for (int i = 0; i < numBoundaryFaces; ++i)
+  {
+    boundaryNodes[2*i] = mesh.faces[mesh.boundaryFaces[i]][0];
+    boundaryNodes[2*i+1] = mesh.faces[mesh.boundaryFaces[i]][1];
+  }
+
+  // Write the boundary face list.
+  {
+    vector<int> shapesize(size_t(1), 2), shapecnt(size_t(1), numBoundaryFaces);
+    DBPutFacelist(file, (char*)"boundary_faces", numBoundaryFaces,
+                  2, &boundaryNodes[0], boundaryNodes.size(), 0,
+                  0, &shapesize[0], &shapecnt[0], 1, 0, 0, 0);
+  }
+
   // All zones are polygonal.
   int numCells = mesh.cells.size();
   vector<int> shapesize(numCells, 0),
@@ -273,8 +290,9 @@ write(const Tessellation<2, RealType>& mesh,
 
   // Write out the 2D polygonal mesh.
   DBPutUcdmesh(file, (char*)"mesh", 2, coordnames, coords,
-      numNodes, numCells, 
-      (char *)"mesh_zonelist", 0, DB_DOUBLE, optlist); 
+               numNodes, numCells, 
+               (char *)"mesh_zonelist", NULL, DB_DOUBLE, optlist); 
+               // (char *)"mesh_zonelist", (char*)"boundary_faces", DB_DOUBLE, optlist); 
   DBPutZonelist2(file, (char*)"mesh_zonelist", numCells,
       2, &nodeList[0], nodeList.size(), 0, 0, 0,
       &shapetype[0], &shapesize[0], &shapecount[0],
