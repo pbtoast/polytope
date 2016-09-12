@@ -170,6 +170,7 @@ endif()
 
 if(HDF5_LIBRARIES)
   _remove_duplicates_from_beginning(HDF5_LIBRARIES)
+  set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
 endif()
 
 
