@@ -67,25 +67,27 @@ tessellateQuantized(QuantizedTessellation& result) const {
   // The second element provides the pre-sort generator index. Shame on you,
   // Boost, for making us do this.
   const int numGenerators = result.generators.size();
-  sort(result.generators.begin(), result.generators.end());
+  vector<IntPoint> generators(result.generators.begin(), result.generators.end());
+  std::copy(result.guardGenerators.begin(), result.guardGenerators.end(), std::back_inserter(generators));
+  // sort(generators.begin(), generators.end());
   
-  // Build ourselves the segments representing our bounding box.
-  typedef Segment<2> IntSegment;
-  vector<IntSegment> bounds(4);
-  const CoordHash coordMin = QuantizedTessellation2d<CoordHash, RealType>::coordMin;
-  const CoordHash coordMax = QuantizedTessellation2d<CoordHash, RealType>::coordMax;
-  bounds[0] = IntSegment(coordMin, coordMin, coordMax, coordMin);
-  bounds[1] = IntSegment(coordMax, coordMin, coordMax, coordMax);
-  bounds[2] = IntSegment(coordMax, coordMax, coordMin, coordMax);
-  bounds[3] = IntSegment(coordMin, coordMax, coordMin, coordMin);
-  // sort(bounds.begin(), bounds.end());  // Not sure if this is necessary
+  // // Build ourselves the segments representing our bounding box.
+  // typedef Segment<2> IntSegment;
+  // vector<IntSegment> bounds(4);
+  // const CoordHash coordMin = QuantizedTessellation2d<CoordHash, RealType>::coordMin;
+  // const CoordHash coordMax = QuantizedTessellation2d<CoordHash, RealType>::coordMax;
+  // bounds[0] = IntSegment(coordMin, coordMin, coordMax, coordMin);
+  // bounds[1] = IntSegment(coordMax, coordMin, coordMax, coordMax);
+  // bounds[2] = IntSegment(coordMax, coordMax, coordMin, coordMax);
+  // bounds[3] = IntSegment(coordMin, coordMax, coordMin, coordMin);
+  // // sort(bounds.begin(), bounds.end());  // Not sure if this is necessary
 
   // Invoke the Boost.Voronoi diagram constructor
   VD voronoi;
-  construct_voronoi(result.generators.begin(), result.generators.end(),
-                    bounds.begin(), bounds.end(),
+  construct_voronoi(generators.begin(), generators.end(),
+                    // bounds.begin(), bounds.end(),
                     &voronoi);  
-  // POLY_ASSERT2(voronoi.num_cells() == numGenerators + 4, numGenerators << " : " << voronoi.num_cells() << "!=" <<  (numGenerators + 4));
+  // POLY_ASSERT(voronoi.num_cells() == numGenerators + result.guardGenerators.size());
 
   // Read out the Voronoi topology to our intermediate QuantizedTessellation format.
   // Iterate over the edges.  Boost has organized them CCW around each generator.
@@ -94,19 +96,19 @@ tessellateQuantized(QuantizedTessellation& result) const {
   result.cellEdges = vector<vector<int> >(numGenerators);
   result.edges.reserve(voronoi.num_edges());
   result.nodes.reserve(voronoi.num_vertices());
-  map<IntPoint, int, PointComparator<CoordHash> > node2id(PointComparator<CoordHash>(2));
+  map<IntPoint, int> node2id;
   map<std::pair<int, int>, int> edge2id;
-  double minedgelength2 = coordMax;
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 
        ++cellItr) {
-    if (cellItr->contains_point() and cellItr->source_index() < numGenerators) {
+    int cellIndex = generators[cellItr->source_index()].index;
+    if (cellItr->contains_point() and cellIndex < numGenerators) {
+    // if (cellItr->contains_point() and cellItr->source_index() < numGenerators) {
       // POLY_ASSERT2(sortedIndex == cellItr->source_index(),
       //              sortedIndex << " != " << cellItr->source_index());
       // POLY_ASSERT(sortedIndex <  numGenerators + 4);
-      POLY_ASSERT(cellItr->source_index() <  numGenerators);
-      int cellIndex = result.generators[cellItr->source_index()].index;
-      POLY_ASSERT(cellIndex   <  numGenerators);      
+      // POLY_ASSERT(cellItr->source_index() <  numGenerators);
+      POLY_ASSERT2(cellIndex   <  numGenerators, cellIndex << " " << cellItr->source_index() << " " << numGenerators);
 
       // Start the chain walking the edges of this cell.
       const typename VD::edge_type* edge = cellItr->incident_edge();
@@ -118,6 +120,14 @@ tessellateQuantized(QuantizedTessellation& result) const {
         // since we added bounding segments.
         const typename VD::vertex_type* v0 = edge->vertex0();
         const typename VD::vertex_type* v1 = edge->vertex1();
+        if (not (v0 and v1)) {
+          cerr << "Bad news at generator " << generators[cellIndex] << " " << result.coordMin << " " << result.coordMax << endl;
+          if (v0) {
+            cerr << "v0 : " << v0->x() << " " << v0->y() << endl;
+          } else {
+            cerr << "v1 : " << v1->x() << " " << v1->y() << endl;
+          }
+        }
         POLY_ASSERT(v0 and v1);
 
         // Finite edge.  Add the edge to the cell, and any new nodes.
@@ -156,12 +166,10 @@ tessellateQuantized(QuantizedTessellation& result) const {
           } else {
             result.cellEdges[cellIndex].push_back(~e1);
           }
-          minedgelength2 = std::min(minedgelength2, double(p1.x - p0.x)*double(p1.x - p0.x) + double(p1.y - p0.y)*double(p1.y - p0.y));
         }
       } while (edge != cellItr->incident_edge());
     }
   }
-  std::cerr << "BoostTessellator min edge: " << minedgelength2 << std::endl;
 }
 
 //------------------------------------------------------------------------------

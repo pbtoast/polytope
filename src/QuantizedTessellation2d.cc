@@ -15,8 +15,8 @@
 namespace polytope {
   
 //------------------------------------------------------------------------------
-// Construct with the given generators.  Finds the bounding limits, sets the 
-// infRadius, and sets the quantized generators.
+// Construct with the given generators.  Finds the bounding limits
+// and sets the quantized generators.
 //------------------------------------------------------------------------------
 template<typename IntType, typename RealType>
 QuantizedTessellation2d<IntType, RealType>::
@@ -28,7 +28,6 @@ QuantizedTessellation2d(const std::vector<RealType>& points,
   xmin[1] -= 2.0*length;
   xmax[0] += 2.0*length;
   xmax[1] += 2.0*length;
-  infRadius = 1.5*length;
   length *= 5.0;
   const int numGenerators = points.size()/2;
   generators.resize(numGenerators);
@@ -36,6 +35,23 @@ QuantizedTessellation2d(const std::vector<RealType>& points,
     this->quantize(&points[2*i], &generators[i].x);
     generators[i].index = i;
   }
+  const unsigned nx = 2;
+  IntType dx = (coordMax - coordMin)/nx;
+  unsigned k = numGenerators;
+  for (unsigned ix = 0; ix <= nx; ++ix) {
+    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMin, k++));
+    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMax, k++));
+    guardGenerators.push_back(IntPoint(coordMin, coordMin + ix*dx, k++));
+    guardGenerators.push_back(IntPoint(coordMax, coordMin + ix*dx, k++));
+  }
+  // guardGenerators.push_back(IntPoint(coordMin, coordMin, numGenerators));
+  // guardGenerators.push_back(IntPoint(0,        coordMin, numGenerators + 1));
+  // guardGenerators.push_back(IntPoint(coordMax, coordMin, numGenerators + 2));
+  // guardGenerators.push_back(IntPoint(coordMax, 0,        numGenerators + 3));
+  // guardGenerators.push_back(IntPoint(coordMax, coordMax, numGenerators + 4));
+  // guardGenerators.push_back(IntPoint(0,        coordMax, numGenerators + 5));
+  // guardGenerators.push_back(IntPoint(coordMin, coordMax, numGenerators + 6));
+  // guardGenerators.push_back(IntPoint(coordMin, 0,        numGenerators + 7));
 }
 
 //------------------------------------------------------------------------------
