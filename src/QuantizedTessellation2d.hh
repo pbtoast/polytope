@@ -20,14 +20,15 @@ struct QuantizedTessellation2d {
   typedef Point2<IntType> IntPoint;
   typedef Point2<RealType> RealPoint;
   
-  RealType xmin[2], xmax[2], length, infRadius;
+  RealType xmin[2], xmax[2], length;
   std::vector<IntPoint> generators;
+  std::vector<IntPoint> guardGenerators;
 
   std::vector<IntPoint> nodes;
   std::vector<std::pair<int, int> > edges;
   std::vector<std::vector<int> > cellEdges;
 
-  // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
+  // Construct with the given generators.  Finds the bounding limits
   // and sets the quantized generators.
   QuantizedTessellation2d(const std::vector<RealType>& points,
                           const std::vector<RealType>& boundaryPoints);
