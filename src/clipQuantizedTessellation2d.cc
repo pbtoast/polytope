@@ -66,6 +66,9 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   std::map<bp::IntPoint, int, PointComparator<IntType> > node2id(PointComparator<IntType>(2));
   std::map<std::pair<int, int>, int> edge2id;
 
+  // We also prepare to keep track of the orphans for each cell.
+  std::map<unsigned, PolygonSet> orphans;
+
   // Now walk each cell and clip it with the boundary.
   for (unsigned i = 0; i != ncells; ++i) {
     unsigned nverts = qmesh.cellEdges[i].size();
@@ -89,14 +92,22 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
     PolygonSet cellSet;
     cellSet += cell;
     cellSet &= boundarySet;
+    unsigned polygonIndex = 0;
     if (cellSet.size() > 1) {
-      std::cerr << "polytope clipping WARNING: detected " << (cellSet.size() - 1) << " orphan cell piece(s), ignoring." << std::endl;
+      // This intersection generated orphans.  Find the polygon that contains the generator -- that becomes this new cell.
+      // The other fragments we hold onto for adoption.
+      Point gen = bp::construct<Point>(qmesh.generators[i].x, qmesh.generators[i].y);
+      while (polygonIndex < cellSet.size() and not bp::contains(cellSet[polygonIndex], gen)) ++polygonIndex;
+      POLY_ASSERT(polygonIndex < cellSet.size());
+      orphans[i] = cellSet;
+      orphans[i].erase(orphans[i].begin() + polygonIndex);
+      std::cerr << "polytope clipping WARNING: detected " << (cellSet.size() - 1) << " orphan cell piece(s): identified generator in fragment:" << polygonIndex << std::endl;
     }
 
     // Read out the final cell geometry to the new QuantizedTessellation.
     // It appears Boost.Polygon gives us back the same node for the beginning and ending nodes of the
     // polygon.
-    nverts = cellSet[0].size();
+    nverts = cellSet[polygonIndex].size();
     POLY_ASSERT(nverts > 3);
     POLY_ASSERT(*(cellSet[0].begin()) == *(cellSet[0].begin() + nverts - 1));
     for (unsigned j = 0; j != nverts-1; ++j) {
