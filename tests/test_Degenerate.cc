@@ -93,8 +93,8 @@ void test(Tessellator<2,double>& tessellator)
     generators.perturb(epsilon);              // perturb
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, 
-                           // boundary.mPLCpoints, 
-                           // boundary.mPLC, 
+                           boundary.mPLCpoints, 
+                           boundary.mPLC, 
                            mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
