@@ -181,15 +181,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
       IntType pp[2] = {gen.x(), gen.y()};
       qmesh.dequantize(pp, &rp.x);
       for (unsigned ipoly = 0; ipoly != cellSet.size(); ++ipoly) {
-        for (typename Polygon::iterator_type pitr = cellSet[ipoly].begin();
-             pitr != cellSet[ipoly].end();
-             ++pitr) {
-          IntType pp[2] = {pitr->x(), pitr->y()};
-          qmesh.dequantize(pp, &rp.x);
-          cerr << " " << rp;
-          // cerr << " (" << pitr->x() << " " << pitr->y() << ")";
-        }
-        cerr << endl;
         if (ipoly != polygonIndex) {
           for (k = 0; k != orphans.size(); ++k) {
             PolygonSet set1, set2, trialunion;
@@ -208,7 +199,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
           if (k == orphans.size()) orphans += cellSet[ipoly];
         }
       }
-      std::cerr << "polytope clipping WARNING: detected " << (cellSet.size() - 1) << " orphan cell piece(s) associated with generator " << i << ": identified generator in fragment: " << polygonIndex << std::endl;
     }
 
     // Read out the final cell geometry to the new QuantizedTessellation.
@@ -244,11 +234,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
         newNodeCells.push_back(std::set<int>());
       }
       newNodeCells[j0].insert(i);
-      { // BLAGO!
-        typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-        qmesh.dequantize(&p.x, &rp.x);
-        cerr << "Associating generator " << i << " with node " << j0 << " @ " << rp << endl;
-      } // BLAGO!
 
       // Insert vertex 1.
       p.x = v1.x();
@@ -261,11 +246,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
         newNodeCells.push_back(std::set<int>());
       }
       newNodeCells[j1].insert(i);
-      { // BLAGO!
-        typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-        qmesh.dequantize(&p.x, &rp.x);
-        cerr << "Associating generator " << i << " with node " << j1 << " @ " << rp << endl;
-      } // BLAGO!
     
       // Now insert the edge if non-degenerate.
       if (j0 != j1) {
@@ -311,35 +291,20 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
       if (p0itr != node2id.end()) {
         const int nodeID = p0itr->second;
         POLY_ASSERT(nodeID < newNodeCells.size());
-        {
-          typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-          qmesh.dequantize(&p0.x, &rp.x);
-          cerr << "Node " << nodeID << " @ " << rp << " attached to generators: ";
-          std::copy(newNodeCells[nodeID].begin(), newNodeCells[nodeID].end(), std::ostream_iterator<int>(cerr, " "));
-          cerr << endl;
-        }
         neighbors.insert(newNodeCells[nodeID].begin(), newNodeCells[nodeID].end());
       }
     }
     POLY_ASSERT(neighbors.size() > 0);
 
-    { // BLAGO!
-      cerr << "Found neighboring generators: ";
-      std::copy(neighbors.begin(), neighbors.end(), std::ostream_iterator<int>(std::cerr, " "));
-      cerr << endl;
-    } // BLAGO!
-
     // Find the overall boundary of the orphan unioned with all the neighbors, and accumulate the
     // local generator positions.
     vector<IntPoint> localgenerators;
-    cerr << "Starting size : " << localBoundary.size() << endl;
     std::set<unsigned>::const_iterator gitr = neighbors.begin();
     for (unsigned i = 0; i != neighbors.size(); ++i, ++gitr) {
       const unsigned igen = *gitr;
       PolygonSet oldcell;
       oldcell += cellPolygons[igen];
       bp::assign(localBoundary, localBoundary | oldcell);
-      cerr << "Combining generator " << igen << " boundary size " << localBoundary.size() << endl;
       localgenerators.push_back(qmesh.generators[igen]);
       localgenerators.back().index = i;
     }
@@ -347,33 +312,12 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
 
     // Construct the tessellation of the neighbor generators.
     QuantizedTessellation2d<IntType, RealType> localqmesh(localgenerators, qmesh);
-    { // BLAGO!
-      cerr << "local qmesh has " << localqmesh.generators.size() << " generators and " << localqmesh.guardGenerators.size() << " guard generators." << endl;
-      for (unsigned i = 0; i != localqmesh.generators.size(); ++i) {
-        typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-        qmesh.dequantize(&localqmesh.generators[i].x, &rp.x);
-        cerr << "  local generator " << i << " @ " << rp << endl;
-      }
-    } // BLAGO!
     tessellator.tessellateQuantized(localqmesh);
-
-    { // BLAGO!
-      cerr << "LOCAL BOUNDARY " << endl;
-      for (typename Polygon::iterator_type itr = localBoundary[0].begin();
-           itr != localBoundary[0].end();
-           ++itr) {
-        IntPoint p(itr->x(), itr->y());
-        typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-        qmesh.dequantize(&p.x, &rp.x);
-        cerr << "  vertex: " << p << " " << rp << endl;
-      }
-    } // BLAGO!
 
     // Clip each new cell geometry against the local boundary to obtain the final cell geometries.
     gitr = neighbors.begin();
     for (unsigned i = 0; i != localgenerators.size(); ++i, ++gitr) {
       const unsigned igen = *gitr; // localgenerators[i].index;
-      cerr << "Cell " << i << " " << igen << endl;
       Polygon cell;
       unsigned nverts = localqmesh.cellEdges[i].size();
       std::vector<Point> cellPoints(nverts);
@@ -387,7 +331,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
         }
         typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
         qmesh.dequantize(&p.x, &rp.x);
-        cerr << "  vertex: " << p << " " << rp << endl;
         cellPoints[j] = bp::construct<Point>(p.x, p.y);
       }
       bp::set_points(cell, cellPoints.begin(), cellPoints.end());
@@ -399,18 +342,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
       POLY_ASSERT2(cellSet.size() == 1, cellSet.size());  // Hopefully no more new orphans!
 
       removeCollinearPoints(cellSet[0]); // Get rid of any collinear points the intersection operation may have left behind.
-      { // BLAGO!
-        cerr << "Intersection num vertices: " << cellSet[0].size() << endl;
-        cerr << "AFTER CLIPPING LOCAL CELL: " << endl;
-        for (typename Polygon::iterator_type itr = cellSet[0].begin();
-             itr != cellSet[0].end();
-             ++itr) {
-          IntPoint p(itr->x(), itr->y());
-          typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-          qmesh.dequantize(&p.x, &rp.x);
-          cerr << "  vertex: " << p << " " << rp << endl;
-        }
-      } // BLAGO!
 
       // Read out the new cell geometry.
       cellPolygons[igen] = cellSet[0];
@@ -466,43 +397,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
   }
   POLY_ASSERT(newCellEdges.size() == ncells);
 
-  { // BLAGO!
-    // Dump the current state of the mesh.
-    typename QuantizedTessellation2d<IntType, RealType>::RealPoint rp;
-    cerr << "********************************************************************************" << endl
-         << "BEFORE REMOVING UNUSED EDGES" << endl
-         << "Nodes:" << endl;
-    for (unsigned i = 0; i != newNodes.size(); ++i) {
-      qmesh.dequantize(&newNodes[i].x, &rp.x);
-      cerr << "    " << i << " " << newNodes[i] << " " << rp << endl;
-    }
-    cerr << "Edges:" << endl;
-    for (unsigned i = 0; i != newEdges.size(); ++i) {
-      cerr << "    " << i << " (" << newEdges[i].first << " " << newEdges[i].second << ") == [";
-      qmesh.dequantize(&newNodes[newEdges[i].first].x, &rp.x);
-      cerr << rp << " ";
-      qmesh.dequantize(&newNodes[newEdges[i].second].x, &rp.x);
-      cerr << rp << "]" << endl;
-    }
-    cerr << "Cells: " << endl;
-    for (unsigned i = 0; i != newCellEdges.size(); ++i) {
-      cerr << "    " << i << " Edges={";
-      for (unsigned j = 0; j != newCellEdges[i].size(); ++j) cerr << internal::positiveID(newCellEdges[i][j]) << " ";
-      cerr << "]" << endl
-           << "    ";
-      for (unsigned j = 0; j != newCellEdges[i].size(); ++j) {
-        if (newCellEdges[i][j] < 0) {
-          qmesh.dequantize(&newNodes[newEdges[~newCellEdges[i][j]].second].x, &rp.x);
-        } else {
-          qmesh.dequantize(&newNodes[newEdges[newCellEdges[i][j]].first].x, &rp.x);
-        }
-        cerr << " " << rp;
-      }
-      cerr << endl;
-    }
-    cerr << "********************************************************************************" << endl;
-  } // BLAGO!
-
   // If we dealt with any orphans, there may be unused edges and nodes we should clear out before
   // copying the final topology.
   if (orphans.size() > 0) {
@@ -524,7 +418,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
       POLY_ASSERT(edgeUseCount[i] == 0 or edgeUseCount[i] == 1 or edgeUseCount[i] == 2);
       if (edgeUseCount[i] == 0) edges2kill.push_back(i);
     }
-    cerr << "Removing " << edges2kill.size() << " edges." << endl;
     const vector<int> old2new_edgeIDs = internal::removeElements(newEdges, edges2kill);
 
     // Patch up the cell->edge indexing.
@@ -553,7 +446,6 @@ void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh
     for (unsigned i = 0; i != newNodes.size(); ++i) {
       if (nodeUseCount[i] == 0) nodes2kill.push_back(i);
     }
-    cerr << "Removing " << nodes2kill.size() << " nodes." << endl;
     const vector<int> old2new_nodeIDs = internal::removeElements(newNodes, nodes2kill);
 
     // Patch the edge->node indexing.
