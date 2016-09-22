@@ -59,7 +59,7 @@ POLYTOPE_ADD_TEST( "hash"            "" )
 # 2D Triangle and Boost Tessellator tests
 POLYTOPE_ADD_TEST( "UnitSquare"                  ""              )
 #POLYTOPE_ADD_TEST( "MeshEditor"                 ""              )
-POLYTOPE_ADD_TEST( "Degenerate"                  ""              )
+POLYTOPE_ADD_TEST( "Degenerate"                  ""              )   # Possible Boost.Voronoi error
 POLYTOPE_ADD_TEST( "BoundaryJitter"              ""              )
 POLYTOPE_ADD_TEST( "RandomPoints"                ""              )
 POLYTOPE_ADD_TEST( "Area"                        ""              )
@@ -68,14 +68,14 @@ POLYTOPE_ADD_TEST( "TwoGenerators"               ""              )
 #POLYTOPE_ADD_TEST( "Centroidal"                  ""              )  # MeshEditor
 POLYTOPE_ADD_TEST( "Unbounded"                   ""              )
 POLYTOPE_ADD_TEST( "UnboundedToBounded"          ""              )
-POLYTOPE_ADD_TEST( "OrphanCases"                 ""              )
+POLYTOPE_ADD_TEST( "OrphanCases"                 ""              )   # Possible Boost.Voronoi error
 POLYTOPE_ADD_TEST( "StarBoundary"                ""              )
 POLYTOPE_ADD_TEST( "Circumcenters"               ""              )
 POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
 #POLYTOPE_ADD_TEST( "RotationTests"               ""              )  # MeshEditor
 #POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    ""              )  # MeshEditor
 POLYTOPE_ADD_TEST( "TiltedLattice"               ""              )
-POLYTOPE_ADD_TEST( "ProjectionIntersection"      "TRIANGLE"      )
+POLYTOPE_ADD_TEST( "ProjectionIntersection"      ""              )
 POLYTOPE_ADD_TEST( "BoostGeometry"               "BOOST"         )
 #POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
 #POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )

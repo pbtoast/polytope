@@ -18,7 +18,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
-void test(const Tessellator<double>& tessellator,
+void test(const Tessellator<2, double>& tessellator,
           const std::string label) {
   const int N = 40;
   for (int j = 0; j < N; ++j) {
