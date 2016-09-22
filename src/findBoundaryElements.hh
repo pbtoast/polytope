@@ -23,8 +23,9 @@ findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
   boundaryFaces.clear();
   boundaryNodes.clear();
   for (unsigned iface = 0; iface < mesh.faces.size(); ++iface) {
-    POLY_ASSERT(mesh.faceCells[iface].size() == 1 or
-                mesh.faceCells[iface].size() == 2 );
+    POLY_ASSERT2(mesh.faceCells[iface].size() == 1 or
+                 mesh.faceCells[iface].size() == 2,
+                 mesh.faceCells[iface].size());
     if (mesh.faceCells[iface].size() == 1) {
       boundaryFaces.push_back(iface);
       std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(boundaryNodes));

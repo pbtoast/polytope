@@ -33,6 +33,10 @@ struct QuantizedTessellation2d {
   QuantizedTessellation2d(const std::vector<RealType>& points,
                           const std::vector<RealType>& boundaryPoints);
 
+  // Construct as a copy of the given QuantizedMesh but with the given IntPoint generators.
+  QuantizedTessellation2d(const std::vector<IntPoint>& generators,
+                          const QuantizedTessellation2d& otherqmesh);
+
   // Convert real coordinates to integers.
   void quantize(const RealType* realcoords, IntType* intcoords) const;
 

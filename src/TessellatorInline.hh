@@ -69,7 +69,7 @@ tessellate(const std::vector<RealType>& points,
   this->tessellateQuantized(quantmesh);
 
   // Clip against the boundary.
-  clipQuantizedTessellation(quantmesh, PLCpoints, geometry);
+  clipQuantizedTessellation(quantmesh, PLCpoints, geometry, *this);
 
   // Copy the QuantTessellation to the output.
   quantmesh.fillTessellation(mesh);

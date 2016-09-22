@@ -55,6 +55,26 @@ QuantizedTessellation2d(const std::vector<RealType>& points,
 }
 
 //------------------------------------------------------------------------------
+// Special copy constructor -- take all the state of other QuantizedTessellation
+// except use the given integer generators.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+QuantizedTessellation2d<IntType, RealType>::
+QuantizedTessellation2d(const std::vector<IntPoint>& generators,
+                        const QuantizedTessellation2d<IntType, RealType>& otherqmesh):
+  length(otherqmesh.length),
+  generators(generators),
+  guardGenerators(otherqmesh.guardGenerators),
+  nodes(),
+  edges(),
+  cellEdges() {
+  xmin[0] = otherqmesh.xmin[0];
+  xmin[1] = otherqmesh.xmin[1];
+  xmax[0] = otherqmesh.xmax[0];
+  xmax[1] = otherqmesh.xmax[1];
+}
+
+//------------------------------------------------------------------------------
 // Convert real coordinates to integers.
 //------------------------------------------------------------------------------
 template<typename IntType, typename RealType>
