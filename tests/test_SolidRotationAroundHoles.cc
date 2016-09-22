@@ -156,12 +156,13 @@ int main(int argc, char** argv)
 #endif
 
 
+#ifdef HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
     test(tessellator);
   }
-
+#endif
 
 #ifdef HAVE_BOOST_VORONOI
   {

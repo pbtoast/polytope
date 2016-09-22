@@ -38,7 +38,7 @@ void runTest(Tessellator<2,double>& tessellator) {
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(bType);
   
-  if (addZeroAreaHole & bType==0) {
+  if (addZeroAreaHole && bType==0) {
     boundary.mPLCpoints.push_back(-0.4);  boundary.mPLCpoints.push_back( 0.0);
     boundary.mPLCpoints.push_back(-0.1);  boundary.mPLCpoints.push_back( 0.1);
     boundary.mPLCpoints.push_back( 0.2);  boundary.mPLCpoints.push_back(-0.2);
@@ -83,11 +83,13 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
+#ifdef HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
     runTest(tessellator);
   }
+#endif
    
 #ifdef HAVE_BOOST_VORONOI
   {
