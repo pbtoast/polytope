@@ -12,7 +12,8 @@ namespace polytope {
 template<typename IntType, typename RealType>
 void clipQuantizedTessellation(QuantizedTessellation3d<IntType, RealType>& qmesh,
                                const std::vector<RealType>& PLCpoints,
-                               const PLC<3, RealType>& geometry) {
+                               const PLC<3, RealType>& geometry,
+                               const Tessellator<3, RealType>& tessellator) {
   POLY_ASSERT2(false, "Implement me!");
 }
 
@@ -23,6 +24,6 @@ template
 void
 clipQuantizedTessellation<int, double>(QuantizedTessellation3d<int, double>& qmesh,
                                        const std::vector<double>& PLCpoints,
-                                       const PLC<3, double>& geometry);
-
+                                       const PLC<3, double>& geometry,
+                                       const Tessellator<3, double>& tessellator);
 }
