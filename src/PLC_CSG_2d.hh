@@ -399,7 +399,7 @@ ReducedPLCtoSegments(const ReducedPLC<2, RealType>& model) {
 template<typename RealType>
 ReducedPLC<2, RealType>
 ReducedPLCfromSegments(const std::vector<Segment<RealType> >& segments) {
-  typedef Point2<RealType> PointType;
+  // typedef Point2<RealType> PointType;
   ReducedPLC<2, RealType> result;
   const unsigned nfacets = segments.size();
   POLY_ASSERT(nfacets >= 3);

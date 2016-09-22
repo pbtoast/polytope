@@ -59,8 +59,6 @@ public:
       nPoints = nGenerators;
 
       mBoundary.getBoundingBox();
-      POLY_ASSERT(mBoundary.mLow  != 0);
-      POLY_ASSERT(mBoundary.mHigh != 0);
       
       for (unsigned iter = 0; iter < nGenerators; ++iter ){
          std::vector<RealType> pos(Dimension,0);
@@ -88,8 +86,6 @@ public:
       POLY_ASSERT( nCellsPerDimension.size() == Dimension );
 
       mBoundary.getBoundingBox();
-      POLY_ASSERT( mBoundary.mLow  != 0 );
-      POLY_ASSERT( mBoundary.mHigh != 0 );
 
       if( Dimension == 2 ){
          cartesian2D( nCellsPerDimension[0], nCellsPerDimension[1] );

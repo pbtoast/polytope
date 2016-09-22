@@ -78,7 +78,7 @@ tessellate(const std::vector<RealType>& points,
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 
   // Snap exactly to the bounding PLC.
-  snapToBoundary(mesh, PLCpoints, geometry, this->degeneracy());
+  // snapToBoundary(mesh, PLCpoints, geometry, this->degeneracy());
 }
 
 //----------------------------------------------------------------------------
