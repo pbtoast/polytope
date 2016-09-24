@@ -58,13 +58,6 @@ public:
 
 private:
   //-------------------- Private interface ---------------------- //
-  // -------------------------- //
-  // Private member variables   //
-  // -------------------------- //
-
-  // The quantized coordinates for this tessellator (inner and outer)
-  // static CoordHash coordMin, coordMax;
-  // static RealType mxmin[2], mxmax[2], mlength;
   static RealType mDegeneracy; 
 };
 
@@ -73,7 +66,7 @@ private:
 //------------------------------------------------------------------------------
 template<typename RealType> 
 RealType  
-BoostTessellator<RealType>::mDegeneracy = 4.0/std::numeric_limits<CoordHash>::max();
+BoostTessellator<RealType>::mDegeneracy = 4.0/std::numeric_limits<typename BoostTessellator<RealType>::CoordHash>::max();
 
 } //end polytope namespace
 

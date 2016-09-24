@@ -103,7 +103,7 @@ void generateMesh(Tessellator<2,double>& tessellator,
 
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, plcPoints, plc, mesh);
-    if (N % dumpEvery == 0)  outputMesh(mesh, "tiltedLattice_output", points, N);
+    if (N % dumpEvery == 0)  outputMesh(mesh, "tiltedLattice_" + tessellator.name(), points, N);
     
     // CHECKS:
     cout << "   num mesh nodes : " << mesh.nodes.size()/2 << endl;
