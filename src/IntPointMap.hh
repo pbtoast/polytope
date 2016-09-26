@@ -130,17 +130,43 @@ struct IntPointMap {
   //----------------------------------------------------------------------------
   bool have(const IntPoint& p) const {
     std::vector<typename Container::const_iterator> lowers(Dimension), uppers(Dimension);
-    bool empty = true;
+    bool empty = false;
     for (unsigned idim = 0; idim != Dimension; ++idim) {
-      lowers[idim] = std::lower_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(), 
+      lowers[idim] = std::lower_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(),
                                       make_pair(p[idim] - mtol, std::vector<size_t>()),
                                       pairCompareFirst<IntType, std::vector<size_t> >);
       uppers[idim] = std::upper_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(), 
                                       make_pair(p[idim] + mtol, std::vector<size_t>()),
                                       pairCompareFirst<IntType, std::vector<size_t> >);
-      empty &= (lowers[idim] == uppers[idim]);
+      empty |= (lowers[idim] == uppers[idim]);
     }
-    return (not empty);
+    if (empty) return true;
+
+    // There are points in each coordinate scan.  We need to check the intersections
+    // of these sets.
+    std::vector<size_t> matchingIDs;
+    for (unsigned idim = 0; idim != Dimension; ++idim) {
+      std::vector<size_t> dimIDs;
+      for (typename Container::const_iterator itr = lowers[idim]; itr != uppers[idim]; ++itr) {
+        std::copy(itr->second.begin(), itr->second.end(), std::back_inserter(dimIDs));
+      }
+      std::sort(dimIDs.begin(), dimIDs.end());
+      if (idim == 0) {
+        matchingIDs = dimIDs;
+      } else {
+        std::vector<size_t> intersection;
+        std::set_intersection(matchingIDs.begin(), matchingIDs.end(),
+                              dimIDs.begin(), dimIDs.end(),
+                              std::back_inserter(intersection));
+        if (intersection.size() == 0) {
+          // If the intersection is empty, we have a new distinct point.
+          return false;
+        }
+      }
+    }
+
+    // We must have the point.
+    return true;
   }
 
   //----------------------------------------------------------------------------
