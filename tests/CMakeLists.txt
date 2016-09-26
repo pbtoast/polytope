@@ -88,12 +88,12 @@ POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
 #-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     ""         "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     "TRIANGLE" "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   ""         "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  ""         "4")
+POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     ""         "4")
 POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCollinear"      "TRIANGLE" "4")
 #POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
 #POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")
