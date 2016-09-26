@@ -140,7 +140,7 @@ struct IntPointMap {
                                       pairCompareFirst<IntType, std::vector<size_t> >);
       empty |= (lowers[idim] == uppers[idim]);
     }
-    if (empty) return true;
+    if (empty) return false;
 
     // There are points in each coordinate scan.  We need to check the intersections
     // of these sets.
