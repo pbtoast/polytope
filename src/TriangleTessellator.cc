@@ -26,29 +26,6 @@
 #define ANSI_DECLARATORS 
 #define CDT_ONLY // Conforming Delaunay triangulations only! 
 
-// ----- Macros for testing/debugging ----- //
-
-// Do all geometric intersections using signed integers (default=true)
-#define ENABLE_INTEGER_INTERSECTIONS true
-
-// Dump out the Delaunay mesh as a silo file for visualization (default=false)
-#define OUTPUT_DELAUNARY_MESH false
-
-// Write out point locations to text file(s) for debugging (default=false)
-#define ENABLE_ESCAPE_POD false
-
-// Turn on a potentially-expensive loop that collapses circumcenters within
-// a 3x3 integer grid radius. (default = false)
-// NOTE: robustness issues when running with DistributedTessellator
-#define ENABLE_CIRCUMCENTER_DUPLICATE_CHECKING false
-
-// Turn on a correction step:
-// Before clipping each cell, check to see if it self-intersects.
-// If it does, remove the central vertex of any three collinear vertices
-// of the cell's polygon. (default = false)
-// NOTE: Can lead to faces erroneously labeled as boundary faces
-#define ENABLE_SELF_INTERSECTION_CORRECTION false
-
 // Because Hang Si has messed with some of Shewchuk's predicates and
 // included them with his own Tetgen library, we need to rename some of 
 // the symbols therein to prevent duplicate symbols from confusing the 
