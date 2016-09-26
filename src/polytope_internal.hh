@@ -55,15 +55,22 @@ void internal_abort();
 
 namespace internal {
 
+//------------------------------------------------------------------------------
+// Comparator to compare std::pair's by their first or second element.
+//------------------------------------------------------------------------------
+template<typename T1, typename T2>
+struct ComparePairByFirstElement {
+  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
+    return lhs.first < rhs.first;
+  }
+};
 
-//------------------------------------------------------------------------------
-// Pair comparator for first index only
-//------------------------------------------------------------------------------
-template <typename T1, typename T2>
-bool
-pairCompareFirst( std::pair<T1,T2> x, std::pair<T1,T2> y ) {
-  return (x.first < y.first);
-}
+template<typename T1, typename T2>
+struct ComparePairBySecondElement {
+  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
+    return lhs.second < rhs.second;
+  }
+};
 
 //------------------------------------------------------------------------------
 // Edge comparator
