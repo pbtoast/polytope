@@ -49,10 +49,10 @@ struct IntPointMap {
     for (unsigned idim = 0; idim != Dimension; ++idim) {
       lowers[idim] = std::lower_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(),
                                       make_pair(p[idim] - mtol, std::vector<size_t>()),
-                                      pairCompareFirst<IntType, std::vector<size_t> >);
+                                      ComparePairByFirstElement<IntType, std::vector<size_t> >());
       uppers[idim] = std::upper_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(), 
                                       make_pair(p[idim] + mtol, std::vector<size_t>()),
-                                      pairCompareFirst<IntType, std::vector<size_t> >);
+                                      ComparePairByFirstElement<IntType, std::vector<size_t> >());
       empty |= (lowers[idim] == uppers[idim]);
       // if (barf) std::cerr << " BARF: " << idim << " " << empty << " : " << std::distance(lowers[idim], uppers[idim]) << std::endl;
     }
@@ -63,7 +63,7 @@ struct IntPointMap {
       for (unsigned idim = 0; idim != Dimension; ++idim) {
         typename Container::iterator itr = std::lower_bound(lowers[idim], uppers[idim], 
                                                             make_pair(p[idim], std::vector<size_t>()),
-                                                            pairCompareFirst<IntType, std::vector<size_t> >);
+                                                            ComparePairByFirstElement<IntType, std::vector<size_t> >());
         if (itr == mCoords2IDs[idim].end() or itr->first != p[idim]) {
           mCoords2IDs[idim].insert(itr, std::make_pair(p[idim], std::vector<size_t>(1, mCurrentID)));
         } else {
@@ -100,7 +100,7 @@ struct IntPointMap {
           for (unsigned idim = 0; idim != Dimension; ++idim) {
             typename Container::iterator itr = std::lower_bound(lowers[idim], uppers[idim], 
                                                                 make_pair(p[idim], std::vector<size_t>()),
-                                                                pairCompareFirst<IntType, std::vector<size_t> >);
+                                                                ComparePairByFirstElement<IntType, std::vector<size_t> >());
             if (itr == mCoords2IDs[idim].end() or itr->first != p[idim]) {
               mCoords2IDs[idim].insert(itr, std::make_pair(p[idim], std::vector<size_t>(1, mCurrentID)));
             } else {
@@ -134,10 +134,10 @@ struct IntPointMap {
     for (unsigned idim = 0; idim != Dimension; ++idim) {
       lowers[idim] = std::lower_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(),
                                       make_pair(p[idim] - mtol, std::vector<size_t>()),
-                                      pairCompareFirst<IntType, std::vector<size_t> >);
+                                      ComparePairByFirstElement<IntType, std::vector<size_t> >());
       uppers[idim] = std::upper_bound(mCoords2IDs[idim].begin(), mCoords2IDs[idim].end(), 
                                       make_pair(p[idim] + mtol, std::vector<size_t>()),
-                                      pairCompareFirst<IntType, std::vector<size_t> >);
+                                      ComparePairByFirstElement<IntType, std::vector<size_t> >());
       empty |= (lowers[idim] == uppers[idim]);
     }
     if (empty) return false;
