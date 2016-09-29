@@ -9,10 +9,10 @@ set(TESSELLATOR_SOURCES KeyTraits.cc predicates.cc PLC_CSG.cc QuantizedTessellat
                         snapToBoundary.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
-# # Check if we can include each of the serial tessellators:
-# if (USE_BOOST)
-#   list(APPEND TESSELLATOR_SOURCES BoostOrphanage.cc MeshEditor.cc)
-# endif()
+# Check if we can include each of the serial tessellators:
+if (USE_BOOST)
+  list(APPEND TESSELLATOR_SOURCES MeshEditor.cc)
+endif()
 
 # TriangleTessellator and triangle source
 if (HAVE_TRIANGLE)

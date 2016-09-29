@@ -5,6 +5,7 @@
 #include <numeric>
 
 #include "polytope.hh"
+#include "MeshEditor.hh"
 
 namespace polytope {
 
