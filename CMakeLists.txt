@@ -286,6 +286,14 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
+               "${PROJECT_SOURCE_DIR}/src/QuantizedTessellation2d.hh" 
+               "${PROJECT_SOURCE_DIR}/src/QuantizedTessellation3d.hh" 
+               "${PROJECT_SOURCE_DIR}/src/IntPointMap.hh" 
+               "${PROJECT_SOURCE_DIR}/src/clipQuantizedTessellation.hh" 
+               "${PROJECT_SOURCE_DIR}/src/removeElements.hh" 
+               "${PROJECT_SOURCE_DIR}/src/findBoundaryElements.hh" 
+               "${PROJECT_SOURCE_DIR}/src/snapToBoundary.hh" 
+               "${PROJECT_SOURCE_DIR}/src/makeBoxPLC.hh" 
          DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.
