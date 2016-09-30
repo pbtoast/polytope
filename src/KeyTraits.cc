@@ -14,6 +14,7 @@ const uint32_t KeyTraits::numbits1d = 32U;
 const KeyTraits::Key KeyTraits::zero = 0;
 const KeyTraits::Key KeyTraits::one = 1;
 const KeyTraits::Key KeyTraits::two = 2;
+const KeyTraits::Key KeyTraits::minKey1d = std::numeric_limits<Key>::min()/2;
 const KeyTraits::Key KeyTraits::maxKey1d = std::numeric_limits<Key>::max()/2;
 const KeyTraits::Key KeyTraits::maxKey = std::numeric_limits<Key>::max()/2;
 
