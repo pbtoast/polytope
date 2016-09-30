@@ -18,6 +18,7 @@ struct KeyTraits {
   static const Key zero;
   static const Key one;
   static const Key two;
+  static const Key minKey1d;
   static const Key maxKey1d;
   static const Key maxKey;
 };
