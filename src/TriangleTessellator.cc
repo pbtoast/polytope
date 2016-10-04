@@ -456,8 +456,10 @@ tessellateQuantized(QuantizedTessellation& result) const {
       POLY_ASSERT(p != q and p != r);
       pq = internal::hashEdge(p,q);
       pr = internal::hashEdge(p,r);
-      POLY_ASSERT(dedge2tris[pq].size() == 2 and (dedge2tris[pq][0] == i or dedge2tris[pq][1] == i));
-      POLY_ASSERT(dedge2tris[pr].size() == 2 and (dedge2tris[pr][0] == i or dedge2tris[pr][1] == i));
+      POLY_ASSERT2(dedge2tris[pq].size() == 2 and (dedge2tris[pq][0] == i or dedge2tris[pq][1] == i),
+                   "(" << pq.first << " " << pq.second << ") " << dedge2tris[pq].size());
+      POLY_ASSERT2(dedge2tris[pr].size() == 2 and (dedge2tris[pr][0] == i or dedge2tris[pr][1] == i),
+                   "(" << pr.first << " " << pr.second << ") " << dedge2tris[pr].size());
 
       // Voronoi edge orthogonal to pq.
       k = (dedge2tris[pq][0] == i ? dedge2tris[pq][1] : dedge2tris[pq][0]);
