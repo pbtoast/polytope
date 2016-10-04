@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
   // Get the hull.
   cout << "Generating convex hull... ";
   t0 = clock();
-  const double tolerance = 1.0e-10;
+  const double tolerance = 1.0e-9;
   polytope::PLC<2, double> hull = polytope::convexHull_2d(points, low, tolerance);
   t1 = clock();
   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
