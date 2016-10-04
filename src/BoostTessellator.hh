@@ -66,7 +66,7 @@ private:
 //------------------------------------------------------------------------------
 template<typename RealType> 
 RealType  
-BoostTessellator<RealType>::mDegeneracy = 4.0/std::numeric_limits<typename BoostTessellator<RealType>::CoordHash>::max();
+BoostTessellator<RealType>::mDegeneracy = 8.0/std::numeric_limits<typename BoostTessellator<RealType>::CoordHash>::max();
 
 } //end polytope namespace
 
