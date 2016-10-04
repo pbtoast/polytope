@@ -61,7 +61,7 @@ private:
 //------------------------------------------------------------------------------
 template<typename RealType> 
 RealType  
-TriangleTessellator<RealType>::mDegeneracy = 4.0/std::numeric_limits<typename TriangleTessellator<RealType>::CoordHash>::max();
+TriangleTessellator<RealType>::mDegeneracy = 8.0/std::numeric_limits<typename TriangleTessellator<RealType>::CoordHash>::max();
 
 } //end polytope namespace
 
