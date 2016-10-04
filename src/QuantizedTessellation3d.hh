@@ -28,10 +28,15 @@ struct QuantizedTessellation3d {
   std::vector<std::vector<int> > faces;
   std::vector<std::vector<int> > cellFaces;
 
-  // Construct with the given generators.  Finds the bounding limits, sets the infRadius,
-  // and sets the quantized generators.
+  // Construct with the given generators.  Finds the bounding limits and sets the
+  // quantized generators.
   QuantizedTessellation3d(const std::vector<RealType>& points,
                           const std::vector<RealType>& boundaryPoints);
+
+  // Construct with the given generators using the specified bounds.
+  QuantizedTessellation3d(const std::vector<RealType>& points,
+                          const RealType xmin_in[3],
+                          const RealType xmax_in[3]);
 
   // Convert real coordinates to integers.
   void quantize(const RealType* realcoords, IntType* intcoords) const;
@@ -44,6 +49,10 @@ struct QuantizedTessellation3d {
 
   // Static properties about our coordinates.
   static IntType coordMin, coordMax;
+
+private:
+  // Internal construction method.
+  void construct(const std::vector<RealType>& points);
 };
 
 }

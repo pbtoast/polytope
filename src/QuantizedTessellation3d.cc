@@ -15,8 +15,8 @@
 namespace polytope {
   
 //------------------------------------------------------------------------------
-// Construct with the given generators.  Finds the bounding limits, sets the 
-// infRadius, and sets the quantized generators.
+// Construct with the given generators.  Finds the bounding limits and sets the
+// quantized generators.
 //------------------------------------------------------------------------------
 template<typename IntType, typename RealType>
 QuantizedTessellation3d<IntType, RealType>::
@@ -30,14 +30,26 @@ QuantizedTessellation3d(const std::vector<RealType>& points,
   xmax[0] += 2.0*length;
   xmax[1] += 2.0*length;
   xmax[2] += 2.0*length;
-  infRadius = 1.5*length;
   length *= 5.0;
-  const int numGenerators = points.size()/3;
-  generators.resize(numGenerators);
-  for (unsigned i = 0; i < numGenerators; ++i) {
-    this->quantize(&points[3*i], &generators[i].x);
-    generators[i].index = i;
-  }
+  this->construct(points);
+}
+
+//------------------------------------------------------------------------------
+// Construct with the given generators using the specified bounds.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+QuantizedTessellation3d<IntType, RealType>::
+QuantizedTessellation3d(const std::vector<RealType>& points,
+                        const RealType xmin_in[3],
+                        const RealType xmax_in[3]) {
+  xmin[0] = xmin_in[0];
+  xmin[1] = xmin_in[1];
+  xmin[2] = xmin_in[2];
+  xmax[0] = xmax_in[0];
+  xmax[1] = xmax_in[1];
+  xmax[2] = xmax_in[2];
+  length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
+  this->construct(points);
 }
 
 //------------------------------------------------------------------------------
@@ -74,6 +86,27 @@ void
 QuantizedTessellation3d<IntType, RealType>::
 fillTessellation(Tessellation<3, RealType>& mesh) const {
   POLY_ASSERT2(false, "Implement me!");
+}
+
+//------------------------------------------------------------------------------
+// Internal method to construct once we have the bounds set.
+// Assumes xmin, xmax, and length are already set.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+void
+QuantizedTessellation3d<IntType, RealType>::
+construct(const std::vector<RealType>& points) {
+  POLY_ASSERT(points.size() % 3 == 0);
+  POLY_ASSERT(std::abs(xmax[0] - xmin[0] - length) < 1e-10*length);
+  POLY_ASSERT(std::abs(xmax[1] - xmin[1] - length) < 1e-10*length);
+  POLY_ASSERT(std::abs(xmax[2] - xmin[2] - length) < 1e-10*length);
+  const int numGenerators = points.size()/3;
+  generators.resize(numGenerators);
+  for (unsigned i = 0; i < numGenerators; ++i) {
+    this->quantize(&points[3*i], &generators[i].x);
+    generators[i].index = i;
+  }
+  POLY_ASSERT2(false, "Implement 3D guard generators!");
 }
 
 //------------------------------------------------------------------------------
