@@ -28,10 +28,15 @@ struct QuantizedTessellation2d {
   std::vector<std::pair<int, int> > edges;
   std::vector<std::vector<int> > cellEdges;
 
-  // Construct with the given generators.  Finds the bounding limits
-  // and sets the quantized generators.
+  // Construct with the given generators.  Finds the bounding limits and sets the
+  // quantized generators.
   QuantizedTessellation2d(const std::vector<RealType>& points,
                           const std::vector<RealType>& boundaryPoints);
+
+  // Construct with the given generators using the specified bounds.
+  QuantizedTessellation2d(const std::vector<RealType>& points,
+                          const RealType xmin_in[2],
+                          const RealType xmax_in[2]);
 
   // Construct as a copy of the given QuantizedMesh but with the given IntPoint generators.
   QuantizedTessellation2d(const std::vector<IntPoint>& generators,
@@ -48,6 +53,10 @@ struct QuantizedTessellation2d {
 
   // Static properties about our coordinates.
   static IntType coordMin, coordMax;
+
+private:
+  // Internal construction method.
+  void construct(const std::vector<RealType>& points);
 };
 
 }

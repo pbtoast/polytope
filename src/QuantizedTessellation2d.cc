@@ -15,8 +15,8 @@
 namespace polytope {
   
 //------------------------------------------------------------------------------
-// Construct with the given generators.  Finds the bounding limits
-// and sets the quantized generators.
+// Construct with the given generators.  Finds the bounding limits and sets the
+// quantized generators.
 //------------------------------------------------------------------------------
 template<typename IntType, typename RealType>
 QuantizedTessellation2d<IntType, RealType>::
@@ -29,29 +29,23 @@ QuantizedTessellation2d(const std::vector<RealType>& points,
   xmax[0] += 2.0*length;
   xmax[1] += 2.0*length;
   length *= 5.0;
-  const int numGenerators = points.size()/2;
-  generators.resize(numGenerators);
-  for (unsigned i = 0; i < numGenerators; ++i) {
-    this->quantize(&points[2*i], &generators[i].x);
-    generators[i].index = i;
-  }
-  const unsigned nx = 2;
-  IntType dx = (coordMax - coordMin)/nx;
-  unsigned k = numGenerators;
-  for (unsigned ix = 0; ix <= nx; ++ix) {
-    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMin, k++));
-    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMax, k++));
-    guardGenerators.push_back(IntPoint(coordMin, coordMin + ix*dx, k++));
-    guardGenerators.push_back(IntPoint(coordMax, coordMin + ix*dx, k++));
-  }
-  // guardGenerators.push_back(IntPoint(coordMin, coordMin, numGenerators));
-  // guardGenerators.push_back(IntPoint(0,        coordMin, numGenerators + 1));
-  // guardGenerators.push_back(IntPoint(coordMax, coordMin, numGenerators + 2));
-  // guardGenerators.push_back(IntPoint(coordMax, 0,        numGenerators + 3));
-  // guardGenerators.push_back(IntPoint(coordMax, coordMax, numGenerators + 4));
-  // guardGenerators.push_back(IntPoint(0,        coordMax, numGenerators + 5));
-  // guardGenerators.push_back(IntPoint(coordMin, coordMax, numGenerators + 6));
-  // guardGenerators.push_back(IntPoint(coordMin, 0,        numGenerators + 7));
+  this->construct(points);
+}
+
+//------------------------------------------------------------------------------
+// Construct with the given generators using the specified bounds.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+QuantizedTessellation2d<IntType, RealType>::
+QuantizedTessellation2d(const std::vector<RealType>& points,
+                        const RealType xmin_in[2],
+                        const RealType xmax_in[2]) {
+  xmin[0] = xmin_in[0];
+  xmin[1] = xmin_in[1];
+  xmax[0] = xmax_in[0];
+  xmax[1] = xmax_in[1];
+  length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
+  this->construct(points);
 }
 
 //------------------------------------------------------------------------------
@@ -133,6 +127,34 @@ fillTessellation(Tessellation<2, RealType>& mesh) const {
         mesh.faceCells[k].push_back(i);
       }
     }
+  }
+}
+
+//------------------------------------------------------------------------------
+// Internal method to construct once we have the bounds set.
+// Assumes xmin, xmax, and length are already set.
+//------------------------------------------------------------------------------
+template<typename IntType, typename RealType>
+void
+QuantizedTessellation2d<IntType, RealType>::
+construct(const std::vector<RealType>& points) {
+  POLY_ASSERT(points.size() % 2 == 0);
+  POLY_ASSERT(std::abs(xmax[0] - xmin[0] - length) < 1e-10*length);
+  POLY_ASSERT(std::abs(xmax[1] - xmin[1] - length) < 1e-10*length);
+  const int numGenerators = points.size()/2;
+  generators.resize(numGenerators);
+  for (unsigned i = 0; i < numGenerators; ++i) {
+    this->quantize(&points[2*i], &generators[i].x);
+    generators[i].index = i;
+  }
+  const unsigned nx = 2;
+  IntType dx = (coordMax - coordMin)/nx;
+  unsigned k = numGenerators;
+  for (unsigned ix = 0; ix <= nx; ++ix) {
+    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMin, k++));
+    guardGenerators.push_back(IntPoint(coordMin + ix*dx, coordMax, k++));
+    guardGenerators.push_back(IntPoint(coordMin, coordMin + ix*dx, k++));
+    guardGenerators.push_back(IntPoint(coordMax, coordMin + ix*dx, k++));
   }
 }
 
