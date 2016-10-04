@@ -10,6 +10,7 @@
 #include "mpi.h"
 
 #include "polytope.hh"
+#include "polytope_internal.hh"
 #include "Point.hh"
 #include "ReducedPLC.hh"
 #include "convexHull_2d.hh"
@@ -36,24 +37,8 @@ using std::min;
 using std::max;
 using std::abs;
 
+namespace polytope {
 namespace {  // We hide internal functions in an anonymous namespace
-
-//------------------------------------------------------------------------------
-// Comparator to compare std::pair's by their first or second element.
-//------------------------------------------------------------------------------
-template<typename T1, typename T2>
-struct ComparePairByFirstElement {
-  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
-    return lhs.first < rhs.first;
-  }
-};
-
-template<typename T1, typename T2>
-struct ComparePairBySecondElement {
-  bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const {
-    return lhs.second < rhs.second;
-  }
-};
 
 //------------------------------------------------------------------------------
 // Sort a vector of stuff by the given keys.
@@ -66,7 +51,7 @@ sortByKeys(vector<Value>& values, const vector<Key>& keys) {
   stuff.reserve(values.size());
   for (unsigned i = 0; i != values.size(); ++i) stuff.push_back(make_pair(keys[i], values[i]));
   POLY_ASSERT(stuff.size() == values.size());
-  sort(stuff.begin(), stuff.end(), ComparePairByFirstElement<Key, Value>());
+  std::sort(stuff.begin(), stuff.end(), internal::ComparePairByFirstElement<Key, Value>());
   for (unsigned i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
 }
 
@@ -106,8 +91,6 @@ outputTessellation(const polytope::Tessellation<Dimension, RealType>& mesh,
 
 
 } // end anonymous namespace
-
-namespace polytope {
 
 //------------------------------------------------------------------------------
 // Constructor.
@@ -585,8 +568,6 @@ computeDistributedTessellation(const vector<RealType>& points,
   // cerr << endl;
   // MPI_Barrier(MPI_COMM_WORLD);
   // // Blago!
-
-
 
   // // Blago!
   // for (unsigned procID = 0; procID != numProcs; ++procID) {
