@@ -168,9 +168,9 @@ if (USE_SILO)
   endif()
 endif()
 
-if(HDF5_LIBRARIES)
-  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
-endif()
+#if(HDF5_LIBRARIES)
+#  _remove_duplicates_from_beginning(HDF5_LIBRARIES)
+#endif()
 
 
 # Enable Triangle if triangle.h and triangle.c are found.
