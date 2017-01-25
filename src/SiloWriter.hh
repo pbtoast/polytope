@@ -7,9 +7,11 @@
 // extern "C" {
 #include <mpi.h>
 // }
+#define MMPI_Comm MPI_Comm
+#define MMPI_COMM_WORLD MPI_COMM_WORLD
 #else
-#define MPI_Comm int
-#define MPI_COMM_WORLD 0
+#define MMPI_Comm int
+#define MMPI_COMM_WORLD 0
 #endif 
 
 #include "Tessellation.hh"
@@ -53,7 +55,7 @@ class SiloWriter<2, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -70,7 +72,7 @@ class SiloWriter<2, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -95,7 +97,7 @@ class SiloWriter<2, RealType>
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -110,7 +112,7 @@ class SiloWriter<2, RealType>
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -126,7 +128,7 @@ class SiloWriter<2, RealType>
                     const std::map<std::string, RealType*>& faceFields,
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -160,7 +162,7 @@ class SiloWriter<3, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -177,7 +179,7 @@ class SiloWriter<3, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -202,7 +204,7 @@ class SiloWriter<3, RealType>
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -217,7 +219,7 @@ class SiloWriter<3, RealType>
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -233,7 +235,7 @@ class SiloWriter<3, RealType>
                     const std::map<std::string, RealType*>& faceFields,
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
-                    MPI_Comm comm = MPI_COMM_WORLD,
+                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
