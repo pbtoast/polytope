@@ -142,6 +142,10 @@ class Tessellator:
                       refparam(Tessellation, "mesh")],
                      is_virtual=True, is_const=True)
 
+        x.add_method("tessellateQuantized", None,
+                     [refparam(QuantizedTessellation, "qmesh")],
+                     is_pure_virtual=True, is_const=True)
+
         x.add_method("handlesPLCs", retval("bool"), [], is_pure_virtual=True, is_const=True)
         x.add_method("name", retval("std::string"), [], is_pure_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_pure_virtual=True, is_const=True)
@@ -159,6 +163,8 @@ class Tessellator:
     #---------------------------------------------------------------------------
     def generateTriangleTessellatorBindings(self, x, ndim):
 
+        QuantizedTessellation = "polytope::QuantizedTessellation%id<int, double>" % ndim
+
         # Constructors
         x.add_constructor([])
 
@@ -168,6 +174,10 @@ class Tessellator:
         x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
         x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
         
+        x.add_method("tessellateQuantized", None,
+                     [refparam(QuantizedTessellation, "qmesh")],
+                     is_virtual=True, is_const=True)
+
         return
 
     #---------------------------------------------------------------------------
@@ -175,6 +185,8 @@ class Tessellator:
     #---------------------------------------------------------------------------
     def generateBoostTessellatorBindings(self, x, ndim):
 
+        QuantizedTessellation = "polytope::QuantizedTessellation%id<int, double>" % ndim
+
         # Constructors
         x.add_constructor([])
 
@@ -184,12 +196,18 @@ class Tessellator:
         x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
         x.add_method("degeneracy", None, [param("double", "val")], is_virtual=False, is_const=True)
         
+        x.add_method("tessellateQuantized", None,
+                     [refparam(QuantizedTessellation, "qmesh")],
+                     is_virtual=True, is_const=True)
+
         return
 
     #---------------------------------------------------------------------------
     # Bindings (TetgenTessellator)
     #---------------------------------------------------------------------------
     def generateTetgenTessellatorBindings(self, x, ndim):
+
+        QuantizedTessellation = "polytope::QuantizedTessellation%id<int, double>" % ndim
 
         # Constructors
         x.add_constructor([])
@@ -199,6 +217,10 @@ class Tessellator:
         x.add_method("name", retval("std::string"), [], is_virtual=True, is_const=True)
         x.add_method("degeneracy", "double", [], is_virtual=True, is_const=True)
         
+        x.add_method("tessellateQuantized", None,
+                     [refparam(QuantizedTessellation, "qmesh")],
+                     is_virtual=True, is_const=True)
+
         return    
     
     #---------------------------------------------------------------------------
