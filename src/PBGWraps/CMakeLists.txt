@@ -46,7 +46,7 @@ add_library(PolytopeModules SHARED ${PYBINDGEN_GENERATED_SOURCE})
 
 # Change .dylib suffix to .so on OSX and add additional python linking
 if (${APPLE})
-  set(PYTHON_LINK "python")
+  set(PYTHON_LINK "python${PYTHON_VERSION} -undefined dynamic_lookup")
   set_target_properties(PolytopeModules PROPERTIES SUFFIX ".so")
 else()
   set(PYTHON_LINK "")
