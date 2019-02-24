@@ -31,7 +31,7 @@ void output_mesh(polytope_tessellation_t* mesh,
                  unsigned test_cycle,
                  polytope_real_t time) 
 {
-#if HAVE_SILO
+#ifdef HAVE_SILO
   double* index = (double*)malloc(sizeof(double) * mesh->num_cells);
   double* genx = (double*)malloc(sizeof(double) * mesh->num_cells);
   double* geny = (double*)malloc(sizeof(double) * mesh->num_cells);
