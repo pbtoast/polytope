@@ -1,7 +1,12 @@
 # Minimum CMake version.
-cmake_minimum_required (VERSION 2.8.5)
+cmake_minimum_required (VERSION 3.1)
 
 project(Polytope)
+
+# We require at least C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 ##set(CMAKE_SKIP_RPATH ON)
 
@@ -111,14 +116,12 @@ if (USE_PYTHON)
   
   if (PYTHON_EXECUTABLE)
     include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
-    find_python_module(pybindgen REQUIRED)
-    set(PYBINDGEN_DIR "${PROJECT_SOURCE_DIR}/src/PBGWraps")
-    set(PYBINDGEN_MODULE_NAME "PolytopeModules")
-    if (PY_PYBINDGEN)
-      set(HAVE_PYTHON 1)
-      message(STATUS "Found Python version ${PYTHON_VERSION}")
-      message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
-    endif()
+    find_python_module(PYB11Generator REQUIRED)
+    set(PYB11_DIR "${PROJECT_SOURCE_DIR}/src/PYB11")
+    set(PYB11_MODULE_NAME "polytope")
+    set(HAVE_PYTHON 1)
+    message(STATUS "Found Python version ${PYTHON_VERSION}")
+    message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
   endif()
 
   if (HAVE_PYTHON)
@@ -207,34 +210,36 @@ if (NOT HEADER_ONLY)
   # Libraries
 
   # Voro 2d/3d libraries.
-  include_directories(voro_2d)
-  add_subdirectory(voro_2d)
-  include_directories(voro_3d)
-  add_subdirectory(voro_3d)
+  include_directories(${PROJECT_SOURCE_DIR}/voro_2d)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/voro_2d)
+  include_directories(${PROJECT_SOURCE_DIR}/voro_3d)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/voro_3d)
 
   # Polytope proper.
   include_directories("${PROJECT_SOURCE_DIR}/src/")
-  add_subdirectory(src)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/src)
 
   # Tests directory
   option(TESTING "Generate tests" ON)
   if (TESTING)
     enable_testing()
-    add_subdirectory(tests)
-    include(CTest)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
+    include(${PROJECT_SOURCE_DIR}/CTest)
   endif ()
   
   # Polytope C library.
   if (BUILD_C_INTERFACE EQUAL 1)
     include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-    add_subdirectory(polytope_c)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/polytope_c)
   endif()
 
   # Python bindings.
+  message(STATUS "Checking for python... ${HAVE_PYTHON}")
   if(HAVE_PYTHON)
-    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps")
-    include_directories("${PROJECT_SOURCE_DIR}/src/PBGWraps/")
-    add_subdirectory(src/PBGWraps)
+    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11")
+    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11/")
+    add_subdirectory(${PROJECT_SOURCE_DIR}/src/PYB11)
+    message(STATUS "Adding src/PYB11")
   endif()
 endif()
 
@@ -285,14 +290,14 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
-         DESTINATION include/polytope)
+         DESTINATION ${PROJECT_BINARY_DIR}/include/polytope)
 
 # If we're parallel we have a few extra install items.
 if (USE_MPI)
   install(FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
                 "${PROJECT_SOURCE_DIR}/src/SerialDistributedTessellator.hh" 
                 "${PROJECT_SOURCE_DIR}/src/checkDistributedTessellation.hh" 
-          DESTINATION include/polytope)
+          DESTINATION ${PROJECT_BINARY_DIR}/include/polytope)
 endif ()
 
 # build a CPack driven installer package

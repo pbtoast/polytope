@@ -42,33 +42,28 @@ macro(PYB11_REGISTER_MODULE _module)
   if (EXISTS "${PYB11_DIR}/${_module}MOD.py")
     set(_source "${PYB11_DIR}/${_module}MOD.py")
   else()
-    if (EXISTS "${PROJECT_BINARY_DIR}/src/PBGWraps/${_module}MOD.py")
-      set(_source "${PROJECT_BINARY_DIR}/src/PBGWraps/${_module}MOD.py")
+    if (EXISTS "${PROJECT_BINARY_DIR}/src/PYB11/${_module}MOD.py")
+      set(_source "${PROJECT_BINARY_DIR}/src/PYB11/${_module}MOD.py")
     else()
       message(FATAL_ERROR "Could not find source file ${_module}MOD.py")
     endif()
   endif()
   list(APPEND PYB11_SOURCE ${_source})
-  list(APPEND PYB11_GENERATED_SOURCE "${PYB11_MODULE_NAME}_${_module}.C")
+  list(APPEND PYB11_GENERATED_SOURCE "${PYB11_MODULE_NAME}_${_module}.cc")
 endmacro()
 
 #
-# Runs "Python PolytopeMOD.py" to generate the bindings.
+# Runs "python polytopeMOD.py" to generate the bindings.
 # This is where the PYB11Generator module is actually used. Calls the previous
 # internal macros to generate the source file lists
 #
-macro(PYB11_GENERATE_BINDINGS module_list)
+macro(PYB11_GENERATE_BINDINGS)
   list(APPEND PYB11_SOURCE "${PYB11_MODULE_NAME}MOD.py")
-  list(APPEND PYB11_GENERATED_SOURCE "${PYB11_MODULE_NAME}.C")
-  set(PYB11_GENERATED_HEADER "${PYB11_MODULE_NAME}.hh")
-  foreach(it ${module_list})
-    PYB11_REGISTER_MODULE(${it})
-  endforeach()
+  list(APPEND PYB11_GENERATED_SOURCE "${PYB11_MODULE_NAME}.cc")
   add_custom_command(
     OUTPUT ${PYB11_GENERATED_SOURCE} ${PYB11_GENERATED_HEADER}
     COMMAND ${PYTHON_EXECUTABLE} 
-      ${PYB11_DIR}/${PYB11_MODULE_NAME}MOD.py
-      ${PYB11_ADDITIONAL_ARGS}
+      -c 'from PYB11Generator import * \; import sys \; sys.path.append(\"${PYB11_DIR}\") \; import ${PYB11_MODULE_NAME}MOD \; PYB11generateModule(${PYB11_MODULE_NAME}MOD, \"${PYB11_MODULE_NAME}\" ) ' 
     DEPENDS ${PYB11_SOURCE}
     )
 endmacro()
