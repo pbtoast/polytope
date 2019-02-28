@@ -1,5 +1,5 @@
 # Minimum CMake version.
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.1.0)
 
 project(Polytope)
 
@@ -152,6 +152,9 @@ if (USE_SILO)
     list(REVERSE HDF5_LIBRARIES)
     message(STATUS "Found HDF5 files in ${HDF5_INCLUDE_DIRS}")
 
+    # Remove "." from the include directories if it's in there.
+    list(REMOVE_ITEM HDF5_INCLUDE_DIRS ".")
+
     # Do we have parallel HDF5?
     if (USE_MPI)
       if (HDF5_IS_PARALLEL)
@@ -223,8 +226,7 @@ if (NOT HEADER_ONLY)
   option(TESTING "Generate tests" ON)
   if (TESTING)
     enable_testing()
-    add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
-    include(${PROJECT_SOURCE_DIR}/CTest)
+    add_subdirectory(tests)
   endif ()
   
   # Polytope C library.
