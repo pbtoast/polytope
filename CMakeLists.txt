@@ -149,6 +149,9 @@ if (USE_SILO)
     list(REVERSE HDF5_LIBRARIES)
     message(STATUS "Found HDF5 files in ${HDF5_INCLUDE_DIRS}")
 
+    # Remove "." from the include directories if it's in there.
+    list(REMOVE_ITEM HDF5_INCLUDE_DIRS ".")
+
     # Do we have parallel HDF5?
     if (USE_MPI)
       if (HDF5_IS_PARALLEL)
@@ -221,7 +224,6 @@ if (NOT HEADER_ONLY)
   if (TESTING)
     enable_testing()
     add_subdirectory(tests)
-    include(CTest)
   endif ()
   
   # Polytope C library.
