@@ -119,9 +119,11 @@ if (USE_PYTHON)
     find_python_module(PYB11Generator REQUIRED)
     set(PYB11_DIR "${PROJECT_SOURCE_DIR}/src/PYB11")
     set(PYB11_MODULE_NAME "polytope")
-    set(HAVE_PYTHON 1)
-    message(STATUS "Found Python version ${PYTHON_VERSION}")
-    message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
+    if (PY_PYB11) 
+      set(HAVE_PYTHON 1)
+      message(STATUS "Found Python version ${PYTHON_VERSION}")
+      message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
+    endif()
   endif()
 
   if (HAVE_PYTHON)
@@ -213,14 +215,14 @@ if (NOT HEADER_ONLY)
   # Libraries
 
   # Voro 2d/3d libraries.
-  include_directories(${PROJECT_SOURCE_DIR}/voro_2d)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/voro_2d)
-  include_directories(${PROJECT_SOURCE_DIR}/voro_3d)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/voro_3d)
+  include_directories(voro_2d)
+  add_subdirectory(voro_2d)
+  include_directories(voro_3d)
+  add_subdirectory(voro_3d)
 
   # Polytope proper.
   include_directories("${PROJECT_SOURCE_DIR}/src/")
-  add_subdirectory(${PROJECT_SOURCE_DIR}/src)
+  add_subdirectory(src)
 
   # Tests directory
   option(TESTING "Generate tests" ON)
@@ -232,7 +234,7 @@ if (NOT HEADER_ONLY)
   # Polytope C library.
   if (BUILD_C_INTERFACE EQUAL 1)
     include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
-    add_subdirectory(${PROJECT_SOURCE_DIR}/polytope_c)
+    add_subdirectory(polytope_c)
   endif()
 
   # Python bindings.
@@ -240,7 +242,7 @@ if (NOT HEADER_ONLY)
   if(HAVE_PYTHON)
     include_directories("${PROJECT_SOURCE_DIR}/src/PYB11")
     include_directories("${PROJECT_SOURCE_DIR}/src/PYB11/")
-    add_subdirectory(${PROJECT_SOURCE_DIR}/src/PYB11)
+    add_subdirectory(src/PYB11)
     message(STATUS "Adding src/PYB11")
   endif()
 endif()
@@ -292,14 +294,14 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
                "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
                "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
                "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
-         DESTINATION ${PROJECT_BINARY_DIR}/include/polytope)
+         DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.
 if (USE_MPI)
   install(FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
                 "${PROJECT_SOURCE_DIR}/src/SerialDistributedTessellator.hh" 
                 "${PROJECT_SOURCE_DIR}/src/checkDistributedTessellation.hh" 
-          DESTINATION ${PROJECT_BINARY_DIR}/include/polytope)
+          DESTINATION include/polytope)
 endif ()
 
 # build a CPack driven installer package
