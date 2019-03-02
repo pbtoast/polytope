@@ -65,7 +65,9 @@ if (USE_MPI)
   # CC and CXX should already have been set in Makefile or wherever.
   find_package(MPI REQUIRED)
   set(HAVE_MPI 1)
-  include_directories("${MPI_CXX_INCLUDE_PATH}")
+  if(NOT MPI_CXX_INCLUDE_PATH STREQUAL "")
+    include_directories("${MPI_CXX_INCLUDE_PATH}")
+  endif()
 endif()
 
 # Find Boost.
