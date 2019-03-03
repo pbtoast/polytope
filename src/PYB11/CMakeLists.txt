@@ -6,6 +6,12 @@
 # The PYB11Generator module file.
 set(PYB11_MODULE_NAME "polytope")
 
+#
+set (PYB11_SRC
+     PLC.py
+     ReducedPLC.py
+     Tessellation.py)
+
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePYB11Generator.cmake)
 

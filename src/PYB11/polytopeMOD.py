@@ -7,3 +7,4 @@ PYB11namespaces = ["polytope"]
 
 from PLC import *
 from ReducedPLC import *
+from Tessellation import *
