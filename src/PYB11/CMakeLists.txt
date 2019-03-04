@@ -12,6 +12,9 @@ set (PYB11_SRC
      ReducedPLC.py
      Tessellation.py)
 
+# Generate the Tessellators.py script with the tessellators we're building
+configure_file(Tessellators.py.in ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py)
+
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePYB11Generator.cmake)
 
