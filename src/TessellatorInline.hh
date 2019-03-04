@@ -6,31 +6,31 @@ namespace polytope
 //! representing the bounding box containing the given points and 
 //! adds the corners of the bounding box to \a points.
 //------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-inline
-PLC<Dimension, RealType>
-Tessellator<Dimension, RealType>::
-boundingBox(std::vector<RealType>& points) const
-{
-  // Find the minimum and maximum coordinates within the point set and 
-  // their point indices.
-  RealType Min[Dimension], Max[Dimension];
-  for (int d = 0; d < Dimension; ++d)
-  {
-    Min[d] = FLT_MAX; 
-    Max[d] = -FLT_MAX;
-  }
-  for (size_t i = 0; i < points.size()/Dimension; ++i)
-  {
-    for (int d = 0; d < Dimension; ++d)
-    {
-      Min[d] = std::min(Min[d], points[Dimension*i+d]);
-      Max[d] = std::max(Max[d], points[Dimension*i+d]);
-    }
-  }
-  // Now create the PLC and add the new generators for the corners.
-  return boundingBox(Min, Max, points);
-}
+// template<int Dimension, typename RealType>
+// inline
+// PLC<Dimension, RealType>
+// Tessellator<Dimension, RealType>::
+// boundingBox(std::vector<RealType>& points) const
+// {
+//   // Find the minimum and maximum coordinates within the point set and 
+//   // their point indices.
+//   RealType Min[Dimension], Max[Dimension];
+//   for (int d = 0; d < Dimension; ++d)
+//   {
+//     Min[d] = FLT_MAX; 
+//     Max[d] = -FLT_MAX;
+//   }
+//   for (size_t i = 0; i < points.size()/Dimension; ++i)
+//   {
+//     for (int d = 0; d < Dimension; ++d)
+//     {
+//       Min[d] = std::min(Min[d], points[Dimension*i+d]);
+//       Max[d] = std::max(Max[d], points[Dimension*i+d]);
+//     }
+//   }
+//   // Now create the PLC and add the new generators for the corners.
+//   return boundingBox(Min, Max, points);
+// }
 
 //------------------------------------------------------------------------------
 //! This helper method returns a normalized collection of points

@@ -185,10 +185,10 @@ public:
 
   protected:
 
-  //! This helper method creates a piecewise linear complex (PLC) 
-  //! representing the bounding box containing the given points and 
-  //! adds the corners of the bounding box to \a points.
-  PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const;
+  // //! This helper method creates a piecewise linear complex (PLC) 
+  // //! representing the bounding box containing the given points and 
+  // //! adds the corners of the bounding box to \a points.
+  // PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const;
 
   //! Return a normalized set of coordinates, also returning the bounding low/high points.
   std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,

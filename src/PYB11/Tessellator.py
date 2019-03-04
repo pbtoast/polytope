@@ -1,8 +1,6 @@
 from PYB11Generator import *
 
-@PYB11template("Dimension", "RealType")
-@PYB11template_dict({"int" : "Dimension",
-                     "typename" : "RealType"})
+@PYB11template("int Dimension", "RealType")
 class Tessellator:
     """An abstract base class for objects that generate 
 Voronoi and Voronoi-like tessellations for sets of points and/or 
@@ -184,20 +182,21 @@ delta in x."""
 
     @PYB11virtual
     @PYB11const
-    def degeneracy(self,
-                   val = "const %(RealType)s"):
+    @PYB11pycppname("degeneracy")
+    def setdegeneracy(self,
+                      val = "const %(RealType)s"):
         return "void"
 
     #...........................................................................
     # Protected methods
-    @PYB11protected
-    @PYB11const
-    def boundingBox(self,
-                    points = "std::vector<%(RealType)s>&"):
-        """This helper method creates a piecewise linear complex (PLC) 
-representing the bounding box containing the given points and 
-adds the corners of the bounding box to \a points."""
-        return "PLC<%(Dimension)s, %(RealType)s>"
+#     @PYB11protected
+#     @PYB11const
+#     def boundingBox(self,
+#                     points = "std::vector<%(RealType)s>&"):
+#         """This helper method creates a piecewise linear complex (PLC) 
+# representing the bounding box containing the given points and 
+# adds the corners of the bounding box to \a points."""
+#         return "PLC<%(Dimension)s, %(RealType)s>"
 
     @PYB11protected
     @PYB11const
