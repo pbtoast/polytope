@@ -171,7 +171,7 @@ hell associated with elaborate inheritance hierarchies."""
         "A unique name string per tessellation instance."
         return "std::string"
 
-    @PYB11virtual
+    @PYB11pure_virtual
     @PYB11const
     def degeneracy(self):
         """Returns the accuracy to which this tessellator can distinguish coordinates.
