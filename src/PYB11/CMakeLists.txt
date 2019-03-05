@@ -12,23 +12,23 @@ set (PYB11_SRC
      ReducedPLC.py
      Tessellation.py)
 
+# The serial tessellators to be wrapped
+set(SERIAL_TESSELLATORS "")
+if(HAVE_TRIANGLE)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TriangleTessellator2d")
+endif()
+if(HAVE_BOOST_VORONOI)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "BoostTessellator2d")
+endif()
+if(HAVE_TETGEN)
+  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TetgenTessellator3d")
+endif()
+
 # Generate the Tessellators.py script with the tessellators we're building
 configure_file(Tessellators.py.in ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py)
 
 # The macros for creating Python bindings
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePYB11Generator.cmake)
-
-# The serial tessellators to be wrapped
-set(PYB11_ADDITIONAL_ARGS "")
-if(HAVE_TRIANGLE)
-  set(PYB11_ADDITIONAL_ARGS ${PYB11_ADDITIONAL_ARGS} "TriangleTessellator2d")
-endif()
-if(HAVE_BOOST_VORONOI)
-  set(PYB11_ADDITIONAL_ARGS ${PYB11_ADDITIONAL_ARGS} "BoostTessellator2d")
-endif()
-if(HAVE_TETGEN)
-  set(PYB11_ADDITIONAL_ARGS ${PYB11_ADDITIONAL_ARGS} "TetgenTessellator3d")
-endif()
 
 # Use PYB11Generator to create the pybind11 bindings
 PYB11_GENERATE_BINDINGS()
