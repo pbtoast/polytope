@@ -4,9 +4,9 @@ from TessellatorCommonMethods import *
 
 @PYB11template("RealType")                                 # Override base class template parameters
 @PYB11template_dict({"Dimension" : "2"})
-class TriangleTessellator(Tessellator):
-    """An implemenation of the Tessellator interface that uses the Triangle
-library by Jonathan Shewchuk."""
+class BoostTessellator(Tessellator):
+    """Polytope wrapper for the native 2D Voronoi tessellator in Boost.Polygon
+v1.52 or greater"""
 
     #...........................................................................
     # Constructors
@@ -47,8 +47,8 @@ delta in x."""
 
 #-------------------------------------------------------------------------------
 # Inject the common methods
-PYB11inject(TessellatorCommonMethods, TriangleTessellator)
+PYB11inject(TessellatorCommonMethods, BoostTessellator)
 
 #-------------------------------------------------------------------------------
 # Template instantiations
-TriangleTessellator2d = PYB11TemplateClass(TriangleTessellator, template_parameters="double")
+BoostTessellator2d = PYB11TemplateClass(BoostTessellator, template_parameters="double", pyname="BoostTessellator")

@@ -2,11 +2,15 @@ from PYB11Generator import *
 from Tessellator import *
 from TessellatorCommonMethods import *
 
-@PYB11template("RealType")                                 # Override base class template parameters
-@PYB11template_dict({"Dimension" : "2"})
-class TriangleTessellator(Tessellator):
-    """An implemenation of the Tessellator interface that uses the Triangle
-library by Jonathan Shewchuk."""
+@PYB11template()                                 # Override base class template parameters
+@PYB11template_dict({"Dimension" : "3",
+                     "RealType"  : "double"})
+@PYB11cppname("TetgenTessellator")
+class TetgenTessellator3d(Tessellator):
+    """An implemenation of the Tessellator interface that uses the Tetgen
+library by Hang Si.
+By default tetgen is built assuming double coordinates, so we only
+provide that implementation as our RealType."""
 
     #...........................................................................
     # Constructors
@@ -47,8 +51,4 @@ delta in x."""
 
 #-------------------------------------------------------------------------------
 # Inject the common methods
-PYB11inject(TessellatorCommonMethods, TriangleTessellator)
-
-#-------------------------------------------------------------------------------
-# Template instantiations
-TriangleTessellator2d = PYB11TemplateClass(TriangleTessellator, template_parameters="double")
+PYB11inject(TessellatorCommonMethods, TetgenTessellator3d)
