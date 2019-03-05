@@ -10,3 +10,4 @@ from ReducedPLC import *
 from Tessellation import *
 from Tessellator import *
 
+from TriangleTessellator import *
