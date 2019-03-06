@@ -12,8 +12,8 @@ class TessellatorCommonMethods:
         """Generate a Voronoi tessellation for the given set of generator points.
 The coordinates of these points are stored in point-major order and 
 the 0th component of the ith point appears in points[Dimension*i].
-\param points A (Dimension*numPoints) array containing point coordinates.
-\param mesh This will store the resulting tessellation."""
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param mesh This will store the resulting tessellation."""
         return "void"
 
     @PYB11const
@@ -30,10 +30,10 @@ bounding box in 2D or 3D, and high[i] contains the corresponding
 opposite corner. The coordinates of these points are stored in 
 point-major order and the 0th component of the ith point appears in 
 points[Dimension*i].
-\param points A (Dimension*numPoints) array containing point coordinates.
-\param low The coordinates of the "lower-left-near" bounding box corner.
-\param high The coordinates of the "upper-right-far" bounding box corner.
-\param mesh This will store the resulting tessellation."""
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param low The coordinates of the "lower-left-near" bounding box corner.
+\\\\param high The coordinates of the "upper-right-far" bounding box corner.
+\\\\param mesh This will store the resulting tessellation."""
         return "void"
 
     @PYB11const
@@ -49,10 +49,10 @@ The coordinates of these points are stored in point-major order and
 the 0th component of the ith point appears in points[Dimension*i].
 This default implementation issues an error explaining that the 
 Tessellator does not support PLCs.
-\param points A (Dimension*numPoints) array containing point coordinates.
-\param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
-\param geometry A description of the geometry in Piecewise Linear Complex form.
-\param mesh This will store the resulting tessellation.
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
+\\\\param geometry A description of the geometry in Piecewise Linear Complex form.
+\\\\param mesh This will store the resulting tessellation.
 """
         return "void"
 
@@ -66,8 +66,8 @@ Tessellator does not support PLCs.
 points and a description of the geometry in which they exist.
 The geometry description uses the ReducedPLC to combine vertex
 coordinates and facet topology into a single struct out of convenience.
-\param points A (Dimension*numPoints) array containing point coordinates.
-\param geometry A description of the geometry in Reduced Piecewise Linear Complex form.
-\param mesh This will store the resulting tessellation."""
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param geometry A description of the geometry in Reduced Piecewise Linear Complex form.
+\\\\param mesh This will store the resulting tessellation."""
         return "void"
 

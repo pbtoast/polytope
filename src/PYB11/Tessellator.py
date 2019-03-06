@@ -116,7 +116,7 @@ hell associated with elaborate inheritance hierarchies."""
     def degeneracy(self):
         """Returns the accuracy to which this tessellator can distinguish coordinates.
 Should be returned appropriately for normalized coordinates, i.e., if all
-coordinates are in the range xi \in [0,1], what is the minimum allowed 
+coordinates are in the range xi \\\\in [0,1], what is the minimum allowed 
 delta in x."""
         return "%(RealType)s"
 
