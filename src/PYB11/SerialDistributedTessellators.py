@@ -34,5 +34,5 @@ PYB11inject(TessellatorCommonMethods, SerialDistributedTessellator)
 
 #-------------------------------------------------------------------------------
 # Template instantiations
-DistributedTessellator2d = PYB11TemplateClass(SerialDistributedTessellator, template_parameters=("2", "double"))
-DistributedTessellator3d = PYB11TemplateClass(SerialDistributedTessellator, template_parameters=("3", "double"))
+SerialDistributedTessellator2d = PYB11TemplateClass(SerialDistributedTessellator, template_parameters=("2", "double"))
+SerialDistributedTessellator3d = PYB11TemplateClass(SerialDistributedTessellator, template_parameters=("3", "double"))
