@@ -1,7 +1,7 @@
 from numpy import *
 from mpi4py import *
 from PyPolytope_utilities import *
-from PolytopeModules import *
+from polytope import *
 
 #=============================================================================
 # PyPartitioner

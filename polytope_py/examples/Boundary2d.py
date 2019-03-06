@@ -1,7 +1,7 @@
 from numpy import pi, sin, cos, array
-from PolytopeModules import polytope
-from PolytopeModules import vector_of_double as vecd
-from PolytopeModules import vector_of_vector_of_int as vecveci
+from polytope import *
+from polytope import vector_of_double as vecd
+from polytope import vector_of_vector_of_int as vecveci
 
 # Simply class for handling construction of simple
 # boundaries with simple holes. Includes routines for

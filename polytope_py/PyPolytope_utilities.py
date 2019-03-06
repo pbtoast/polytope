@@ -1,6 +1,6 @@
 from numpy import *
 from mpi4py import *
-from PolytopeModules import *
+from polytope import *
 
 #-------------------------------------------------------------------------------
 # Convert a list to Pybindgen-wrapped std vector

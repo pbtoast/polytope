@@ -1,5 +1,5 @@
 from mpi4py import *
-from PolytopeModules import *
+from polytope import *
 from numpy import random
 
 def checkCartesian(mesh, N):
