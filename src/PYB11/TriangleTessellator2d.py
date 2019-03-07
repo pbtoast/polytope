@@ -8,6 +8,10 @@ class TriangleTessellator(Tessellator):
     """An implemenation of the Tessellator interface that uses the Triangle
 library by Jonathan Shewchuk."""
 
+    PYB11typedefs = """
+typedef typename DimensionTraits<%(Dimension)s, %(RealType)s>::QuantizedTessellation QuantizedTessellation;
+"""
+
     #...........................................................................
     # Constructors
     def pyinit(self):

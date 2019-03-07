@@ -16,7 +16,7 @@ from ReducedPLC import *
 from Tessellation import *
 from Tessellator import *
 from Tessellators import *
-from MeshEditor import *
+#from MeshEditor import *
 
 #-------------------------------------------------------------------------------
 # Polytope functions

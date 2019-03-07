@@ -8,6 +8,10 @@ class BoostTessellator(Tessellator):
     """Polytope wrapper for the native 2D Voronoi tessellator in Boost.Polygon
 v1.52 or greater"""
 
+    PYB11typedefs = """
+typedef typename DimensionTraits<%(Dimension)s, %(RealType)s>::QuantizedTessellation QuantizedTessellation;
+"""
+
     #...........................................................................
     # Constructors
     def pyinit(self):

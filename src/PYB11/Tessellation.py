@@ -52,14 +52,6 @@ faces[i][j] gives the index of the jth node of the ith face.
 Nodes for a given face are arranged counterclockwise around the face
 viewed from the "positive" (outside) direction.""")
 
-    infNodes = PYB11readwrite(doc="""Indices of all nodes in an unbounded tessellation that are
-"infinite." An infinite node is the termination point on a spherical
-surface of a ray (tessellation edge) going out to infinity.""")
-
-    infFaces = PYB11readwrite(doc="""Array of face indices: 0 for interior faces and 1 for faces at
-"infinity" for unbounded tessellations. The infinite face connects
-the collection of infinite nodes for a given unbounded cell.""")
-
     faceCells = PYB11readwrite(doc="""An array of cell indices for each face, i.e., the cells that share
 the face.
 For a given cell there will be either 1 or 2 cells -- the cases with 1
