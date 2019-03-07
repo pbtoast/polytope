@@ -47,29 +47,13 @@ endif()
 file(GLOB HEADERS *.hh)
 list(APPEND HEADERS "${PROJECT_BINARY_DIR}/polytope.hh")
 
-# On some Linux machines we get messed up with the HDF5 libs including
-# things like libdl and libm, so we try to cut down the list here to the
-# first couple of elements.
-list(LENGTH HDF5_LIBRARIES NUM_HDF5_LIBRARIES)
-if (NUM_HDF5_LIBRARIES GREATER 2)
-  list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
-endif()
-
 add_library(polytope STATIC
-            ${TESSELLATOR_SOURCES}
-	    ${IO_SOURCES}
-	    ErrorHandler.cc
-	    polytope_internal_abort.cc
-	    ${HEADERS})
+            ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc
+      	    polytope_internal_abort.cc)
 
-target_link_libraries(polytope
-                      voro_2d
-		      voro_3d
-		      ${TRIANGLE_LIB}
-		      ${TETGEN_LIB}
-		      ${SILO_LIBRARIES}
-		      ${HDF5_LIBRARIES}
-		      ${MPI_C_LIBRARIES})
+target_link_libraries(polytope voro_2d voro_3d
+            		      ${TRIANGLE_LIB} ${TETGEN_LIB} ${SILO_LIBRARIES}
+                      ${HDF5_LIBRARIES} ${MPI_C_LIBRARIES})
 
 # Library install targets
 install(TARGETS polytope ${TRIANGLE_LIB} ${TETGEN_LIB} DESTINATION lib)
