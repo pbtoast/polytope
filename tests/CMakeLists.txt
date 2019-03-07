@@ -1,11 +1,11 @@
 #-----------------------------------------------------------------------------
 # Adding a C++ test to Polytope
-# 
+#
 # The polytope test directory assumes all tests follow the naming convention
 #      "test_<name>.cc"
 #
 # To add a test, the user must register the test <name> and a list of the
-# dependencies needed to build it: 
+# dependencies needed to build it:
 #      POLYTOPE_ADD_TEST( name dependency_list )
 #
 # The current set of dependencies is
@@ -26,22 +26,21 @@
 #-----------------------------------------------------------------------------
 
 
-# The POLYTOPE_ADD_TEST macro
-include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
-
+# The polytope_add_test macro
+include(PolytopeAddTests)
 
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-POLYTOPE_ADD_TEST( "serialize"       "" )
-POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
-POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
-POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
-POLYTOPE_ADD_TEST( "within_2d"       "" )
-POLYTOPE_ADD_TEST( "intersect_2d"    "" )
-POLYTOPE_ADD_TEST( "convexIntersect" "" )
-#POLYTOPE_ADD_TEST( "PLC_CSG"         "" )  #  <-- Suspending 'til we think it works
-POLYTOPE_ADD_TEST( "hash"            "" )
+polytope_add_test( "serialize"       "" )
+polytope_add_test( "convexHull_2d"   "" )
+polytope_add_test( "convexHull_3d"   "" )
+polytope_add_test( "nearestPoint_2d" "" )
+polytope_add_test( "within_2d"       "" )
+polytope_add_test( "intersect_2d"    "" )
+polytope_add_test( "convexIntersect" "" )
+#polytope_add_test( "PLC_CSG"         "" )  #  <-- Suspending 'til we think it works
+polytope_add_test( "hash"            "" )
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests
@@ -52,48 +51,43 @@ POLYTOPE_ADD_TEST( "hash"            "" )
 # NOTE: Temporarily suspending their build until more work can be
 #       done making their output toplogically consistent
 #
-#POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""              )
-#POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""              )
-
+#polytope_add_test( "VoroPP_2d"                   ""              )
+#polytope_add_test( "VoroPP_3d"                   ""              )
 
 # 2D Triangle and Boost Tessellator tests
-POLYTOPE_ADD_TEST( "UnitSquare"                  "BOOST"         )
-POLYTOPE_ADD_TEST( "MeshEditor"                  "BOOST"         )
-POLYTOPE_ADD_TEST( "Degenerate"                  "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "BoundaryJitter"              "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "RandomPoints"                "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "Area"                        "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "OrphanedCell"                "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "TwoGenerators"               "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "Centroidal"                  "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "Unbounded"                   "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "UnboundedToBounded"          "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "OrphanCases"                 "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "StarBoundary"                "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "Circumcenters"               "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
-POLYTOPE_ADD_TEST( "RotationTests"               "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "TiltedLattice"               "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "ProjectionIntersection"      "TRIANGLE"      )
-POLYTOPE_ADD_TEST( "BoostGeometry"               "BOOST"         )
-#POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )
+polytope_add_test( "UnitSquare"                  "BOOST"         )
+polytope_add_test( "MeshEditor"                  "BOOST"         )
+polytope_add_test( "Degenerate"                  "TRIANGLE"      )
+polytope_add_test( "BoundaryJitter"              "TRIANGLE"      )
+polytope_add_test( "RandomPoints"                "TRIANGLE"      )
+polytope_add_test( "Area"                        "TRIANGLE"      )
+polytope_add_test( "OrphanedCell"                "TRIANGLE"      )
+polytope_add_test( "TwoGenerators"               "TRIANGLE"      )
+polytope_add_test( "Centroidal"                  "TRIANGLE"      )
+polytope_add_test( "Unbounded"                   "TRIANGLE"      )
+polytope_add_test( "UnboundedToBounded"          "TRIANGLE"      )
+polytope_add_test( "OrphanCases"                 "TRIANGLE"      )
+polytope_add_test( "StarBoundary"                "TRIANGLE"      )
+polytope_add_test( "Circumcenters"               "TRIANGLE"      )
+polytope_add_test( "BoostTessellator"            "BOOST_VORONOI" )
+polytope_add_test( "RotationTests"               "TRIANGLE"      )
+polytope_add_test( "SolidRotationAroundHoles"    "TRIANGLE"      )
+polytope_add_test( "TiltedLattice"               "TRIANGLE"      )
+polytope_add_test( "ProjectionIntersection"      "TRIANGLE"      )
+polytope_add_test( "BoostGeometry"               "BOOST"         )
+#polytope_add_test( "plot"                        "TRIANGLE"      )
+#polytope_add_test( "AspectRatio"                 "TRIANGLE"      )
 
 # 3D Tetgen Tessellator tests
-POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
+polytope_add_test( "TetgenTessellator"           "TETGEN"        )
 
-
-
-#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
-#-----------------------------------------------------------------------------
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCollinear"      "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")
+polytope_add_distributed_test( "DistributedUnitSquare"     "TRIANGLE" "4")
+polytope_add_distributed_test( "SerialDistributedTriangle" "TRIANGLE" "4")
+polytope_add_distributed_test( "FailedCommunication"       "TRIANGLE" "4")
+polytope_add_distributed_test( "DistributedRandomPoints"   "TRIANGLE" "4")
+polytope_add_distributed_test( "DistributedRotationTests"  "TRIANGLE" "4")
+polytope_add_distributed_test( "DistributedCentroidal"     "TRIANGLE" "4")
+polytope_add_distributed_test( "DistributedCollinear"      "TRIANGLE" "4")
+#polytope_add_distributed_test( "DistributedVoroPP_2d"      ""         "4")
+#polytope_add_distributed_test( "DistributedVoroPP_3d"      ""         "4")
