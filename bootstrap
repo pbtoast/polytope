@@ -95,13 +95,14 @@ TESTING=ON
 # Uncomment this to provide the root location for the Boost C++ libraries.
 #BOOST_ROOT=
 
-# Uncomment this to provide the root location for the HDF5 I/O libraries.
-#HDF5_ROOT=
-
-# Change this to set whether we use the Silo I/O library.
+# Change this to enable support for the Silo I/O library.
 USE_SILO=ON
 
-# Change this to set whether Python bindings are built.
+# Set this to provide the root location for the HDF5 I/O libraries.
+# Only used if Silo is enabled.
+HDF5_ROOT=
+
+# Change this to enable support for Python bindings.
 USE_PYTHON=OFF
 
 # Change this to provide an absolute path for the Python interpreter.
@@ -163,6 +164,10 @@ if [ "\$USE_PYTHON" = "ON" ]; then
   OPTIONS="\$OPTIONS -DUSE_PYTHON=ON -DPYTHON_EXE=\$PYTHON_EXE"
 fi
 
+# Remove any existing cached data.
+rm -f CMakeCache.txt
+
+# Configure the build.
 cmake \
  -DCMAKE_INSTALL_PREFIX:PATH=\$PREFIX \
  -DCMAKE_BUILD_TYPE=\$BUILD_TYPE \

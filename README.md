@@ -26,7 +26,7 @@ Polytope works on most Linux and Mac systems.
 + A C++11 compiler.
 + MPI for parallelism
 + The Bourne Again SHell (bash), for bootstrapping
-+ CMake 3.10+, for configuring and generating build files
++ CMake 3.1+, for configuring and generating build files
 + GNU Make or Ninja, for performing the actual build
 + A recent version of Perl, for HDF5's installation process
 

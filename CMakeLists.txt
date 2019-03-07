@@ -1,6 +1,12 @@
 # Minimum CMake version.
 cmake_minimum_required (VERSION 3.1.0)
 
+# Use XXX_ROOT variables to find third-party libs.
+cmake_policy(SET CMP0074 NEW)
+
+# Set Polytope's module path.
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 project(Polytope)
 
 # We require at least C++11
@@ -13,9 +19,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project version numbers.
 set(POLYTOPE_VERSION_MAJOR 1)
 set(POLYTOPE_VERSION_MINOR 0)
-
-# Adjust Polytope's module path.
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Set compilers. This must be done before enabling languages.
 if (CC)
@@ -62,7 +65,6 @@ endif (MSVC)
 # Figure out MPI.
 option(USE_MPI "Compile MPI parallel tessellator" OFF)
 if (USE_MPI)
-  # CC and CXX should already have been set in Makefile or wherever.
   find_package(MPI REQUIRED)
   set(HAVE_MPI 1)
   if(NOT MPI_CXX_INCLUDE_PATH STREQUAL "")
@@ -72,12 +74,6 @@ endif()
 
 # Find Boost.
 option(USE_BOOST "Use Boost Voronoi tessellator" ON)
-
-### Disable this on IBM xlC since Boost.Geometry does not compile correctly there.
-##if (USE_BOOST AND USING_XLC)
-##  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
-##  set(USE_BOOST OFF)0
-##endif ()
 
 if (USE_BOOST)
   set(Boost_ADDITIONAL_VERSIONS "1.51" "1.51.0" "1.52" "1.52.0" "1.53" "1.53.0" "1.60")
@@ -99,12 +95,12 @@ if (USE_BOOST)
 endif ()
 
 # Find Python
-option(USE_PYTHON "Generate Python interace" OFF)
+option(USE_PYTHON "Generate Python interface" OFF)
 if (USE_PYTHON)
-  
+
   if (PYTHON_EXE)
     set(PYTHON_EXECUTABLE ${PYTHON_EXE})
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonVersion.cmake)
+    include(FindPythonVersion)
     find_python_version()
     string(REPLACE "/bin/python" "" PYTHON_ROOT ${PYTHON_EXE})
     set(PYTHON_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION}")
@@ -115,15 +111,15 @@ if (USE_PYTHON)
     find_package(PythonInterp REQUIRED)
     set(PYTHON_VERSION "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
   endif()
-  
+
   if (PYTHON_EXECUTABLE)
-    message("Looking for PYTHON...")
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
+    message(STATUS "Looking for Python...")
+    include(FindPythonModule)
     find_python_module(PYB11Generator REQUIRED)
     set(PYB11_DIR "${PROJECT_SOURCE_DIR}/src/PYB11")
     set(PYB11_MODULE_NAME "polytope")
     set(PY_PYB11 1)
-    if (PY_PYB11) 
+    if (PY_PYB11)
       set(HAVE_PYTHON 1)
       message(STATUS "Found Python version ${PYTHON_VERSION}")
       message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
@@ -131,7 +127,7 @@ if (USE_PYTHON)
   endif()
 
   if (HAVE_PYTHON)
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonSitePackages.cmake)
+    include(FindPythonSitePackages)
     find_python_site_packages()
   endif()
 endif()
@@ -141,7 +137,6 @@ option(USE_SILO "Use SILO reader/writer" OFF)
 if (USE_SILO)
   # Find HDF5.
   set(HDF5_USE_STATIC_LIBRARIES 1)
-  set(ENV{HDF5_ROOT} ${HDF5_ROOT})
   find_package(HDF5 REQUIRED)
   if (HDF5_FOUND)
     set(HAVE_HDF5 1)
@@ -156,7 +151,8 @@ if (USE_SILO)
     list(REVERSE HDF5_LIBRARIES)
     list(REMOVE_DUPLICATES HDF5_LIBRARIES)
     list(REVERSE HDF5_LIBRARIES)
-    message(STATUS "Found HDF5 files in ${HDF5_INCLUDE_DIRS}")
+    message(STATUS "Found HDF5 headers in ${HDF5_INCLUDE_DIRS}")
+    message(STATUS "HDF5 libraries: ${HDF5_LIBRARIES}")
 
     # Remove "." from the include directories if it's in there.
     list(REMOVE_ITEM HDF5_INCLUDE_DIRS ".")
@@ -169,14 +165,14 @@ if (USE_SILO)
     endif ()
   endif()
 
+  # Try to find Silo. For simplicity, we assume it lives with HDF5.
   find_package(Silo REQUIRED)
   if (SILO_FOUND)
     set(HAVE_SILO 1)
+    message(STATUS "Found Silo headers in ${SILO_INCLUDE_DIRS}")
+    message(STATUS "Silo libraries: ${SILO_LIBRARIES}")
     include_directories("${SILO_INCLUDE_DIRS}")
     include_directories("${HDF5_INCLUDE_DIRS}")
-#         FIXME: For now, we assume libsiloh5 lives with libhdf5.
-#         link_directories("${SILO_LIBRARY_DIRS}")
-    link_directories("${HDF5_LIBRARY_DIRS}")
   endif()
 endif()
 
@@ -186,7 +182,7 @@ endif()
 
 
 # Enable Triangle if triangle.h and triangle.c are found.
-if (EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.h AND 
+if (EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.h AND
     EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.c AND
     Boost_FOUND)
   set(HAVE_TRIANGLE 1)
@@ -196,8 +192,8 @@ else()
 endif ()
 
 # Enable Tetgen if the proper files are found.
-if (EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.h AND 
-    EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.cxx)  
+if (EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.h AND
+    EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.cxx)
   set(HAVE_TETGEN 1)
   message(STATUS "Tetgen has been found! TetgenTessellator is enabled.")
 else()
@@ -234,83 +230,60 @@ if (NOT HEADER_ONLY)
     enable_testing()
     add_subdirectory(tests)
   endif ()
-  
+
   # Polytope C library.
-  if (BUILD_C_INTERFACE EQUAL 1)
-    include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+  if (BUILD_C_INTERFACE)
+    message(STATUS "C interface (polytope_c) is enabled.")
     add_subdirectory(polytope_c)
   endif()
 
   # Python bindings.
   message(STATUS "Checking for python... ${HAVE_PYTHON}")
   if(HAVE_PYTHON)
-    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11")
-    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11/")
+    include_directories(src/PYB11)
+    include_directories(src/PYB11)
     add_subdirectory(src/PYB11)
     message(STATUS "Adding src/PYB11")
   endif()
 endif()
 
 # Library install targets
-install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
-               "${PROJECT_SOURCE_DIR}/src/TessellatorInline.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Tessellation.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
-               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
-               "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
-               "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
-               "${PROJECT_SOURCE_DIR}/src/simplifyPLCfacets.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
-               "${PROJECT_SOURCE_DIR}/src/QuantTessellation.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/QuantizedCoordinates.hh"
-               "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostTessellatorTraits.hh"
-               "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/OrphanageBase.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostOrphanage.hh"
-	       "${PROJECT_SOURCE_DIR}/src/Clipper2d.hh"
-               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
-               "${PROJECT_SOURCE_DIR}/src/convexHull_2d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/convexHull_3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Point.hh" 
-               "${PROJECT_SOURCE_DIR}/src/KeyTraits.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/DimensionTraits.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
-	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
-               "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
-               "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
+install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
+               src/Tessellator.hh src/TessellatorInline.hh
+               src/Tessellation.hh src/MeshEditor.hh
+               src/ErrorHandler.hh src/PLC.hh src/PLC_CSG_2d.hh
+	             src/PLC_CSG_3d.hh src/ReducedPLC.hh src/simplifyPLCfacets.hh
+               src/polytope_internal.hh src/QuantTessellation.hh
+	             src/QuantizedCoordinates.hh src/VoroPP_2d.hh src/VoroPP_3d.hh
+               src/TriangleTessellator.hh src/BoostTessellator.hh
+	             src/BoostTessellatorTraits.hh src/TetgenTessellator.hh
+	             src/MeshEditor.hh src/polytope_internal.hh
+               src/polytope_geometric_utilities.hh
+               src/polytope_parallel_utilities.hh src/polytope_serialize.hh
+	             src/polytope_tessellator_utilities.hh
+               src/polytope_write_OOGL.hh src/OrphanageBase.hh
+	             src/BoostOrphanage.hh src/Clipper2d.hh
+               src/ErrorHandler.hh src/convexHull_2d.hh
+               src/convexHull_3d.hh src/Point.hh src/KeyTraits.hh
+	             src/DimensionTraits.hh src/polytope_serialize.hh
+               src/polytope_geometric_utilities.hh
+               src/polytope_parallel_utilities.hh
+      	       src/polytope_tessellator_utilities.hh
+      	       src/PLC_CSG_2d.hh src/PLC_CSG_3d.hh src/PLC_Boost_2d.hh
+               src/SiloWriter.hh src/SiloReader.hh src/polytope_write_OOGL.hh
          DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.
 if (USE_MPI)
-  install(FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
-                "${PROJECT_SOURCE_DIR}/src/SerialDistributedTessellator.hh" 
-                "${PROJECT_SOURCE_DIR}/src/checkDistributedTessellation.hh" 
+  install(FILES src/DistributedTessellator.hh
+                src/SerialDistributedTessellator.hh
+                src/checkDistributedTessellation.hh
           DESTINATION include/polytope)
 endif ()
 
 # build a CPack driven installer package
 include(InstallRequiredSystemLibraries)
-set(CPACK_RESOURCE_FILE_LICENSE  
+set(CPACK_RESOURCE_FILE_LICENSE
   "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR "${POLYTOPE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${POLYTOPE_VERSION_MINOR}")

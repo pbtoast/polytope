@@ -34,7 +34,7 @@ if (HAVE_TETGEN)
   add_library(tetgen tetgen.cxx predicates.cc)
   #set(TETGEN_LIB tetgen PARENT_SCOPE)
   set(TETGEN_LIB tetgen)
-  set_target_properties(${TETGEN_LIB} PROPERTIES 
+  set_target_properties(${TETGEN_LIB} PROPERTIES
     COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY -Wuninitialized")
 endif ()
 
@@ -47,10 +47,13 @@ endif()
 file(GLOB HEADERS *.hh)
 list(APPEND HEADERS "${PROJECT_BINARY_DIR}/polytope.hh")
 
-# On some Linux machines we get messed up with the HDF5 libs including 
-# things like libdl and libm, so we try to cut down the list here to the 
+# On some Linux machines we get messed up with the HDF5 libs including
+# things like libdl and libm, so we try to cut down the list here to the
 # first couple of elements.
-list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+list(LENGTH HDF5_LIBRARIES NUM_HDF5_LIBRARIES)
+if (NUM_HDF5_LIBRARIES GREATER 2)
+  list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+endif()
 
 add_library(polytope STATIC
             ${TESSELLATOR_SOURCES}
@@ -60,10 +63,10 @@ add_library(polytope STATIC
 	    ${HEADERS})
 
 target_link_libraries(polytope
-                      voro_2d 
-		      voro_3d 
-		      ${TRIANGLE_LIB} 
-		      ${TETGEN_LIB} 
+                      voro_2d
+		      voro_3d
+		      ${TRIANGLE_LIB}
+		      ${TETGEN_LIB}
 		      ${SILO_LIBRARIES}
 		      ${HDF5_LIBRARIES}
 		      ${MPI_C_LIBRARIES})
