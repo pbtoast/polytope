@@ -60,12 +60,12 @@ writePLCtoOFF3d = PYB11TemplateFunction(writePLCtoOFF, pyname="writePLCtoOFF", t
                            }""")
 def writeTessellation(mesh = "const Tessellation<%(Dimension)s, %(RealType)s>&",
                       filePrefix = "std::string",
-                      nodeFieldsDict = "py::dict",
-                      edgeFieldsDict = "py::dict",
-                      faceFieldsDict = "py::dict",
-                      cellFieldsDict = "py::dict",
-                      cycle = "int",
-                      time = "%(RealType)s"):
+                      nodeFieldsDict = ("py::dict", "py::dict()"),
+                      edgeFieldsDict = ("py::dict", "py::dict()"),
+                      faceFieldsDict = ("py::dict", "py::dict()"),
+                      cellFieldsDict = ("py::dict", "py::dict()"),
+                      cycle = ("int", "0"),
+                      time = ("%(RealType)s", "0.0")):
     "Write a tessellation (and arbitrary fields) to a silo file."
     return "void"
 
@@ -101,12 +101,12 @@ writeTessellation3d = PYB11TemplateFunction(writeTessellation, template_paramete
 def writeTessellationDir(mesh = "const Tessellation<%(Dimension)s, %(RealType)s>&",
                          filePrefix = "std::string",
                          directory = "std::string",
-                         nodeFieldsDict = "py::dict",
-                         edgeFieldsDict = "py::dict",
-                         faceFieldsDict = "py::dict",
-                         cellFieldsDict = "py::dict",
-                         cycle = "int",
-                         time = "%(RealType)s"):
+                         nodeFieldsDict = ("py::dict", "py::dict()"),
+                         edgeFieldsDict = ("py::dict", "py::dict()"),
+                         faceFieldsDict = ("py::dict", "py::dict()"),
+                         cellFieldsDict = ("py::dict", "py::dict()"),
+                         cycle = ("int", "0"),
+                         time = ("%(RealType)s", "0.0")):
     "Write a tessellation (and arbitrary fields) to a silo file.  This version supports specifying the output directory."
     return "void"
 
