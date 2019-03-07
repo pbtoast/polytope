@@ -151,7 +151,21 @@ public:
   virtual RealType degeneracy() const = 0;
   virtual void degeneracy(const RealType val) const {};
 
-private:
+  protected:
+
+  // //! This helper method creates a piecewise linear complex (PLC) 
+  // //! representing the bounding box containing the given points and 
+  // //! adds the corners of the bounding box to \a points.
+  // PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const;
+
+  //! Return a normalized set of coordinates, also returning the bounding low/high points.
+  std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,
+                                                const std::vector<RealType>& PLCpoints,
+                                                const bool computeBounds,
+                                                RealType* low,
+                                                RealType* high) const;
+
+  private:
 
   // Disallowed.
   Tessellator(const Tessellator&);

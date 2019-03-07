@@ -1,6 +1,6 @@
 from polytope_test_utilities import *
 from mpi4py import *
-from PolytopeModules import *
+from polytope import *
 
 def outputTessellation(tessellation, points, name,
                        nodeFields = None,

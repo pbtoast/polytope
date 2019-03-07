@@ -451,7 +451,7 @@ private:
                  << "integer grid. Robustness issues can result when using "
                  << "Boost.Geometry to perform intersections." << std::endl;
     }
-    POLY_VERIFY2(mCoordMax < std::numeric_limits<CoordHash>::max(),
+    POLY_VERIFY2(maxCoord < std::numeric_limits<CoordHash>::max(),
                  "Quantization Error: The floating point degeneracy tolerance " <<
                  "specified of " << mDegeneracy << " overflows the integer grid. " <<
                  "Please specify a coarser tolerance or use a longer integer."); 

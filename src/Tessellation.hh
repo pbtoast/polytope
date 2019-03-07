@@ -64,7 +64,7 @@ class Tessellation
   //! cells[i][j] gives the index of the jth face of the ith cell.
   //! A negative face index indicates the actual face index is the 1's 
   //! complement of the value (~cells[i][j]) and the face is oriented
-  //! witih an inward pointing normal for cells[i].
+  //! with an inward pointing normal for cells[i].
   std::vector<std::vector<int> > cells;
 
   //! This two-dimensional array defines the topology of the faces of the 
