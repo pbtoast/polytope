@@ -23,10 +23,15 @@ cat <<EOT >> $1/config.sh
 # Edit this file to change the parameters in your build. Uncomment exactly one
 # value for each parameter.
 
-#-----------------------------------------------------------------------------
-#                             Installation prefix
-#-----------------------------------------------------------------------------
+# Set this to the location where you want to install polytope.
 PREFIX=\$HOME/opt
+
+#-----------------------------------------------------------------------------
+#                                Parallelism
+#-----------------------------------------------------------------------------
+
+# Build with MPI for parallel simulations.
+#MPI=ON
 
 #-----------------------------------------------------------------------------
 #                                   Compilers
@@ -47,13 +52,6 @@ fi
 
 # C++ compiler.
 #CXX=c++
-
-#-----------------------------------------------------------------------------
-#                                Parallelism
-#-----------------------------------------------------------------------------
-
-# Build with MPI for parallel simulations.
-#MPI=ON
 
 #-----------------------------------------------------------------------------
 #                                Build type
