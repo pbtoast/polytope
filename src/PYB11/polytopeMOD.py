@@ -14,8 +14,10 @@ PYB11namespaces = ["polytope"]
 from PLC import *
 from ReducedPLC import *
 from Tessellation import *
+from QuantizedTessellation2d import *
 from Tessellator import *
 from Tessellators import *
+
 #from MeshEditor import *
 
 #-------------------------------------------------------------------------------
