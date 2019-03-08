@@ -139,8 +139,8 @@ void
 QuantizedTessellation2d<IntType, RealType>::
 construct(const std::vector<RealType>& points) {
   POLY_ASSERT(points.size() % 2 == 0);
-  POLY_ASSERT(std::abs(xmax[0] - xmin[0] - length) < 1e-10*length);
-  POLY_ASSERT(std::abs(xmax[1] - xmin[1] - length) < 1e-10*length);
+  // POLY_ASSERT(std::abs(xmax[0] - xmin[0] - length) < 1e-10*length);
+  // POLY_ASSERT(std::abs(xmax[1] - xmin[1] - length) < 1e-10*length);
   const int numGenerators = points.size()/2;
   generators.resize(numGenerators);
   for (unsigned i = 0; i < numGenerators; ++i) {
