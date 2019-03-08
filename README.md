@@ -31,11 +31,11 @@ Polytope works on most Linux and Mac systems.
 
 If you want to build Python bindings, you also need the following:
 + A [Python 2](https://www.python.org/downloads) interpreter
-+ The [pybind11](https://github.com/pybind/pybind11) Python/C++11
++ [pybind11](https://github.com/pybind/pybind11), a Python/C++11
   interoperability layer
-+ The [PYB11Generator](https://github.com/jmikeowen/PYB11Generator) tool,
-  a code generator that processes binding definitions in Python. PYB11Generator
-  produces C++ code that uses pybind11 to expose your C++ classes as Python 
++ [PYB11Generator](https://github.com/jmikeowen/PYB11Generator), a code
+  generator that processes binding definitions in Python. PYB11Generator
+  produces C++ code that uses pybind11 to expose your C++ classes as Python
   classes.
 
 ### Building
@@ -55,7 +55,7 @@ is just `make`. For Ninja (recommended if you have it), it's `ninja`.
 
 ### Installing
 
-To install polymec, use the install command for the generator you've selected.
+To install polytope, use the install command for the generator you've selected.
 For example, if you're using a generator that writes UNIX makefiles, run
 
 ```
@@ -68,7 +68,8 @@ from your build directory.
 
 These targets all work with Make and Ninja.
 
-+ `test` - Runs all unit tests for the library. Use `ctest -j #threads` instead, though, to run the tests in parallel.
++ `test` - Runs all unit tests for the library. Use `ctest -j #threads`
+   instead, though, to run the tests in parallel.
 + `clean` - Removes all build assets but retains configuration options.
 + `distclean` - Performs clean and completely removes the build directory.
 
