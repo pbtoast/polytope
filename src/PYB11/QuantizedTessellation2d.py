@@ -60,7 +60,7 @@ coordinates."""
                                py::tuple& intcoords) {
                                    %(IntType)s icoords[2] = {intcoords[0].cast<%(IntType)s>(),
                                                              intcoords[1].cast<%(IntType)s>()};
-                                   %(RealType) rcoords[2];
+                                   %(RealType)s rcoords[2];
                                    self.dequantize(icoords, rcoords);
                                    return py::make_tuple(rcoords[0], rcoords[1]);
                                }""")
@@ -71,7 +71,7 @@ coordinates."""
 
     @PYB11const
     def fillTessellation(self,
-                         mesh = "Tessellation<2, RealType>&"):
+                         mesh = "Tessellation<2, %(RealType)s>&"):
         "Read out the current QuantizedTessellation to regular Tessellation."
         return "void"
 
