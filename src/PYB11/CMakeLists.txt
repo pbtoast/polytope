@@ -69,7 +69,10 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 # On some Linux machines we get messed up with the HDF5 libs including 
 # things like libdl and libm, so we try to cut down the list here to the 
 # first couple of elements.
-list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+list(LENGTH HDF5_LIBRARIES NUM_HDF5_LIBRARIES)
+if (NUM_HDF5_LIBRARIES GREATER 2)
+  list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
+endif()
 
 link_directories("${PYTHON_LIB_DIR}")
 
