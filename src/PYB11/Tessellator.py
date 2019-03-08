@@ -210,16 +210,16 @@ delta in x."""
 # adds the corners of the bounding box to \a points."""
 #         return "PLC<%(Dimension)s, %(RealType)s>"
 
-    @PYB11protected
-    @PYB11const
-    def computeNormalizedPoints(self,
-                                points = "const std::vector<%(RealType)s>&",
-                                PLCpoints = "const std::vector<%(RealType)s>&",
-                                computeBounds = "const bool",
-                                low = "%(RealType)s*",
-                                high = "%(RealType)s*"):
-        "Return a normalized set of coordinates, also returning the bounding low/high points."
-        return "std::vector<%(RealType)s>"
+    # @PYB11protected
+    # @PYB11const
+    # def computeNormalizedPoints(self,
+    #                             points = "const std::vector<%(RealType)s>&",
+    #                             PLCpoints = "const std::vector<%(RealType)s>&",
+    #                             computeBounds = "const bool",
+    #                             low = "%(RealType)s*",
+    #                             high = "%(RealType)s*"):
+    #     "Return a normalized set of coordinates, also returning the bounding low/high points."
+    #     return "std::vector<%(RealType)s>"
 
 #-------------------------------------------------------------------------------
 # Inject the common methods
