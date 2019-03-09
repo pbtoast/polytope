@@ -13,6 +13,40 @@ geometries."""
         "Default constructor"
         return
 
+    # We provide this alias for tessellating in a box since the native polytope
+    # representation of the (lower, upper) coordinates are just C-array pointers,
+    # which are cumbersome for python
+    @PYB11const
+    @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,
+                               const std::vector<%(RealType)s>& points,
+                               py::tuple low,
+                               py::tuple high,
+                               Tessellation<%(Dimension)s, %(RealType)s>& mesh) {
+                                   std::vector<double> clow, chigh;
+                                   for (auto i = 0; i < %(Dimension)s; ++i) {
+                                     clow.push_back(low[i].cast<double>());
+                                     chigh.push_back(high[i].cast<double>());
+                                   }
+                                   self.tessellate(points, &clow.front(), &chigh.front(), mesh);
+                               }""")
+    def tessellateBox(self,
+                      points = "const std::vector<%(RealType)s>&",
+                      low = "py::tuple",
+                      high = "py::tuple",
+                      mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi tessellation for the given set of generator points
+with a bounding box specified by \a low and \a high. Here, low[i]
+contains the ith coordinate for the "lower-left-near" corner of the 
+bounding box in 2D or 3D, and high[i] contains the corresponding 
+opposite corner. The coordinates of these points are stored in 
+point-major order and the 0th component of the ith point appears in 
+points[Dimension*i].
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param low The coordinates of the "lower-left-near" bounding box corner.
+\\\\param high The coordinates of the "upper-right-far" bounding box corner.
+\\\\param mesh This will store the resulting tessellation."""
+        return "void"
+
     #...........................................................................
     # Virtual methods
     @PYB11virtual
