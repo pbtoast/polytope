@@ -112,4 +112,4 @@ endif()
 install(FILES polytope.pth DESTINATION lib/python${PYTHON_VERSION}/site-packages)
 install(TARGETS pypolytope DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
 
-install(TARGETS pypolytopeStatic DESTINATION lib)
+install(TARGETS pypolytopeStatic DESTINATION lib/python${PYTHON_VERSION}/site-packages/polytope)
