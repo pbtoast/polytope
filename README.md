@@ -77,10 +77,13 @@ These targets all work with Make and Ninja.
 
 Polytope provides interfaces for a number of geometry-related tools:
 
-+ Voro++ by Chris Rycroft (now at Harvard)
-+ Triangle by Jonathan Shewchuck at Berkeley
-+ Tetgen by Hang Si
-+ Boost.Polygon.Voronoi, part of the Boost C++ Library
++ [Voro++](http://math.lbl.gov/voro++) by Chris Rycroft (now at Harvard)
++ [Triangle](http://www.cs.cmu.edu/~quake/triangle.html) by Jonathan Shewchuk
+  at Berkeley
++ [Tetgen](http://www.wias-berlin.de/software/index.jsp?id=TetGen&lang=1) by
+  Hang Si at Weierstrass Institute for Applied Analysis and Stochastics
++ [Boost.Polygon.Voronoi](https://www.boost.org/doc/libs/1_61_0/libs/polygon/doc/voronoi_main.htm),
+  part of the Boost C++ Library
 
 ### Using Triangle and Tetgen
 
