@@ -1,4 +1,4 @@
-"Master module for polytope"
+"Master module for polytope -- a library for creating Voronoi tessellations"
 
 from PYB11Generator import *
 
