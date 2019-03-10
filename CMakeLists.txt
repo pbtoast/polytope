@@ -2,7 +2,7 @@
 cmake_minimum_required (VERSION 3.1.0)
 
 # Use XXX_ROOT variables to find third-party libs.
-cmake_policy(SET CMP0074 NEW)
+#cmake_policy(SET CMP0074 NEW)
 
 # Set Polytope's module path.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")

@@ -166,7 +166,7 @@ fi
 rm -f CMakeCache.txt
 
 # Configure the build.
-cmake \
+cmake -Wno-dev \
  -DCMAKE_INSTALL_PREFIX:PATH=\$PREFIX \
  -DCMAKE_BUILD_TYPE=\$BUILD_TYPE \
  -DCMAKE_C_COMPILER=\$CC \
