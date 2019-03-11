@@ -1,6 +1,12 @@
 # Minimum CMake version.
 cmake_minimum_required (VERSION 3.1.0)
 
+# Use XXX_ROOT variables to find third-party libs.
+#cmake_policy(SET CMP0074 NEW)
+
+# Set Polytope's module path.
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 project(Polytope)
 
 # We require at least C++11
@@ -13,9 +19,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project version numbers.
 set(POLYTOPE_VERSION_MAJOR 1)
 set(POLYTOPE_VERSION_MINOR 0)
-
-# Adjust Polytope's module path.
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Set compilers. This must be done before enabling languages.
 if (CC)
@@ -43,9 +46,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SYS_FLAGS}")
 # General compiler flags.
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -ansi -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation")
 endif()
 if (CMAKE_CXX_COMPILER_ID STREQUAL "XL")
-  set(USING_XLC 1)
+  set(USING_XLC ON)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qPIC")
 else()
   if (NOT MSVC)
@@ -54,6 +59,8 @@ else()
 endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation")
 endif()
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES)
@@ -62,9 +69,9 @@ endif (MSVC)
 # Figure out MPI.
 option(USE_MPI "Compile MPI parallel tessellator" OFF)
 if (USE_MPI)
-  # CC and CXX should already have been set in Makefile or wherever.
   find_package(MPI REQUIRED)
-  set(HAVE_MPI 1)
+  message(STATUS "Using MPI for parallel tessellation.")
+  set(HAVE_MPI ON)
   if(NOT MPI_CXX_INCLUDE_PATH STREQUAL "")
     include_directories("${MPI_CXX_INCLUDE_PATH}")
     find_program(SLURM_SRUN_COMMAND srun 
@@ -87,46 +94,43 @@ if (USE_MPI)
       endif()
     endif()
   endif()
-else ()
-  set(HAVE_MPI 0)
-  set(HAVE_MPIEXEC false)
-endif ()
+else()
+  set(HAVE_MPI OFF)
+endif()
 
 # Find Boost.
 option(USE_BOOST "Use Boost Voronoi tessellator" ON)
-
-### Disable this on IBM xlC since Boost.Geometry does not compile correctly there.
-##if (USE_BOOST AND USING_XLC)
-##  message("-- Boost being disabled on IBM for now due to incompatibility with xlC")
-##  set(USE_BOOST OFF)0
-##endif ()
 
 if (USE_BOOST)
   set(Boost_ADDITIONAL_VERSIONS "1.51" "1.51.0" "1.52" "1.52.0" "1.53" "1.53.0" "1.60")
   find_package(Boost 1.50 REQUIRED)
   if (Boost_FOUND)
     include_directories("${Boost_INCLUDE_DIR}")
-    set(HAVE_BOOST 1)
+    set(HAVE_BOOST ON)
     message(STATUS "Found Boost installation at ${Boost_INCLUDE_DIR}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBoost_FOUND=1")
     if (Boost_MINOR_VERSION GREATER 51 AND
 	EXISTS ${Boost_INCLUDE_DIR}/boost/polygon/voronoi.hpp)
-      set(HAVE_BOOST_VORONOI 1)
+      set(HAVE_BOOST_VORONOI ON)
       message(STATUS "Found Boost Voronoi in ${Boost_INCLUDE_DIR}/boost/polygon")
     else ()
+      set(HAVE_BOOST_VORONOI OFF)
       message(STATUS "Boost Voronoi not found. BoostTessellator is disabled.")
     endif ()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBoost_FOUND=1")
+  else()
+    set(HAVE_BOOST OFF)
   endif ()
+else()
+  set(HAVE_BOOST OFF)
 endif ()
 
 # Find Python
-option(USE_PYTHON "Generate Python interace" OFF)
+option(USE_PYTHON "Generate Python interface" OFF)
 if (USE_PYTHON)
-  
   if (PYTHON_EXE)
     set(PYTHON_EXECUTABLE ${PYTHON_EXE})
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonVersion.cmake)
+    include(FindPythonVersion)
     find_python_version()
     string(REPLACE "/bin/python" "" PYTHON_ROOT ${PYTHON_EXE})
     set(PYTHON_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION}")
@@ -137,25 +141,29 @@ if (USE_PYTHON)
     find_package(PythonInterp REQUIRED)
     set(PYTHON_VERSION "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
   endif()
-  
+
   if (PYTHON_EXECUTABLE)
-    message("Looking for PYTHON...")
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonModule.cmake)
+    message(STATUS "Looking for Python...")
+    include(FindPythonModule)
     find_python_module(PYB11Generator REQUIRED)
     set(PYB11_DIR "${PROJECT_SOURCE_DIR}/src/PYB11")
     set(PYB11_MODULE_NAME "polytope")
     set(PY_PYB11 1)
-    if (PY_PYB11) 
-      set(HAVE_PYTHON 1)
+    if (PY_PYB11)
+      set(HAVE_PYTHON ON)
       message(STATUS "Found Python version ${PYTHON_VERSION}")
       message(STATUS "Using Python executable ${PYTHON_EXECUTABLE}")
+    else()
+      set(HAVE_PYTHON OFF)
     endif()
   endif()
 
   if (HAVE_PYTHON)
-    include(${PROJECT_SOURCE_DIR}/cmake/Modules/FindPythonSitePackages.cmake)
+    include(FindPythonSitePackages)
     find_python_site_packages()
   endif()
+else()
+  set(HAVE_PYTHON OFF)
 endif()
 
 #Check for HDF5 and Silo
@@ -163,10 +171,9 @@ option(USE_SILO "Use SILO reader/writer" OFF)
 if (USE_SILO)
   # Find HDF5.
   set(HDF5_USE_STATIC_LIBRARIES 1)
-  set(ENV{HDF5_ROOT} ${HDF5_ROOT})
   find_package(HDF5 REQUIRED)
   if (HDF5_FOUND)
-    set(HAVE_HDF5 1)
+    set(HAVE_HDF5 ON)
     # Get rid of'debug' and 'optimized' detritis.
     list(REMOVE_ITEM HDF5_LIBRARIES debug optimized)
     list(REMOVE_ITEM HDF5_INCLUDE_DIRS debug optimized)
@@ -178,7 +185,8 @@ if (USE_SILO)
     list(REVERSE HDF5_LIBRARIES)
     list(REMOVE_DUPLICATES HDF5_LIBRARIES)
     list(REVERSE HDF5_LIBRARIES)
-    message(STATUS "Found HDF5 files in ${HDF5_INCLUDE_DIRS}")
+    message(STATUS "Found HDF5 headers in ${HDF5_INCLUDE_DIRS}")
+    message(STATUS "HDF5 libraries: ${HDF5_LIBRARIES}")
 
     # Remove "." from the include directories if it's in there.
     list(REMOVE_ITEM HDF5_INCLUDE_DIRS ".")
@@ -186,44 +194,43 @@ if (USE_SILO)
     # Do we have parallel HDF5?
     if (USE_MPI)
       if (HDF5_IS_PARALLEL)
-        set(HAVE_PARALLEL_HDF5 1)
+        set(HAVE_PARALLEL_HDF5 ON)
       endif ()
     endif ()
   endif()
 
+  # Try to find Silo. For simplicity, we assume it lives with HDF5.
   find_package(Silo REQUIRED)
   if (SILO_FOUND)
-    set(HAVE_SILO 1)
+    set(HAVE_SILO ON)
+    message(STATUS "Found Silo headers in ${SILO_INCLUDE_DIRS}")
+    message(STATUS "Silo libraries: ${SILO_LIBRARIES}")
     include_directories("${SILO_INCLUDE_DIRS}")
     include_directories("${HDF5_INCLUDE_DIRS}")
-#         FIXME: For now, we assume libsiloh5 lives with libhdf5.
-#         link_directories("${SILO_LIBRARY_DIRS}")
-    link_directories("${HDF5_LIBRARY_DIRS}")
   endif()
+else()
+  set(HAVE_HDF5 OFF)
+  set(HAVE_SILO OFF)
 endif()
 
-# if(HDF5_LIBRARIES)
-#   _remove_duplicates_from_beginning(HDF5_LIBRARIES)
-#   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
-# endif()
-
-
 # Enable Triangle if triangle.h and triangle.c are found.
-if (EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.h AND 
+if (EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.h AND
     EXISTS ${PROJECT_SOURCE_DIR}/src/triangle.c AND
     Boost_FOUND)
-  set(HAVE_TRIANGLE 1)
+  set(HAVE_TRIANGLE ON)
   message(STATUS "Triangle has been found! TriangleTessellator is enabled.")
 else()
+  set(HAVE_TRIANGLE OFF)
   message(STATUS "Triangle not found! TriangleTessellator is disabled.")
 endif ()
 
 # Enable Tetgen if the proper files are found.
-if (EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.h AND 
-    EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.cxx)  
-  set(HAVE_TETGEN 1)
+if (EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.h AND
+    EXISTS ${PROJECT_SOURCE_DIR}/src/tetgen.cxx)
+  set(HAVE_TETGEN ON)
   message(STATUS "Tetgen has been found! TetgenTessellator is enabled.")
 else()
+  set(HAVE_TETGEN OFF)
   message(STATUS "Tetgen not found! TetgenTessellator is disabled.")
 endif ()
 
@@ -257,18 +264,18 @@ if (NOT HEADER_ONLY)
     enable_testing()
     add_subdirectory(tests)
   endif ()
-  
+
   # Polytope C library.
-  if (BUILD_C_INTERFACE EQUAL 1)
-    include_directories("${PROJECT_SOURCE_DIR}/polytope_c/")
+  if (BUILD_C_INTERFACE)
+    message(STATUS "C interface (polytope_c) is enabled.")
     add_subdirectory(polytope_c)
   endif()
 
   # Python bindings.
   message(STATUS "Checking for python... ${HAVE_PYTHON}")
   if(HAVE_PYTHON)
-    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11")
-    include_directories("${PROJECT_SOURCE_DIR}/src/PYB11/")
+    include_directories(src/PYB11)
+    include_directories(src/PYB11)
     add_subdirectory(src/PYB11)
     message(STATUS "Adding src/PYB11")
   endif()
@@ -333,15 +340,15 @@ install (FILES "${PROJECT_BINARY_DIR}/polytope.hh"
 
 # If we're parallel we have a few extra install items.
 if (USE_MPI)
-  install(FILES "${PROJECT_SOURCE_DIR}/src/DistributedTessellator.hh" 
-                "${PROJECT_SOURCE_DIR}/src/SerialDistributedTessellator.hh" 
-                "${PROJECT_SOURCE_DIR}/src/checkDistributedTessellation.hh" 
+  install(FILES src/DistributedTessellator.hh
+                src/SerialDistributedTessellator.hh
+                src/checkDistributedTessellation.hh
           DESTINATION include/polytope)
 endif ()
 
 # build a CPack driven installer package
 include(InstallRequiredSystemLibraries)
-set(CPACK_RESOURCE_FILE_LICENSE  
+set(CPACK_RESOURCE_FILE_LICENSE
   "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR "${POLYTOPE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${POLYTOPE_VERSION_MINOR}")

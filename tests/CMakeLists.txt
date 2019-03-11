@@ -1,11 +1,11 @@
 #-----------------------------------------------------------------------------
 # Adding a C++ test to Polytope
-# 
+#
 # The polytope test directory assumes all tests follow the naming convention
 #      "test_<name>.cc"
 #
 # To add a test, the user must register the test <name> and a list of the
-# dependencies needed to build it: 
+# dependencies needed to build it:
 #      POLYTOPE_ADD_TEST( name dependency_list )
 #
 # The current set of dependencies is
@@ -26,22 +26,21 @@
 #-----------------------------------------------------------------------------
 
 
-# The POLYTOPE_ADD_TEST macro
-include(${PROJECT_SOURCE_DIR}/cmake/Modules/PolytopeAddTests.cmake)
-
+# The polytope_add_test macro
+include(PolytopeAddTests)
 
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-POLYTOPE_ADD_TEST( "serialize"       "" )
-POLYTOPE_ADD_TEST( "convexHull_2d"   "" )
-POLYTOPE_ADD_TEST( "convexHull_3d"   "" )
-POLYTOPE_ADD_TEST( "nearestPoint_2d" "" )
-POLYTOPE_ADD_TEST( "within_2d"       "" )
-POLYTOPE_ADD_TEST( "intersect_2d"    "" )
-POLYTOPE_ADD_TEST( "convexIntersect" "" )
-#POLYTOPE_ADD_TEST( "PLC_CSG"         "" )  #  <-- Suspending 'til we think it works
-POLYTOPE_ADD_TEST( "hash"            "" )
+polytope_add_test( "serialize"       "" )
+polytope_add_test( "convexHull_2d"   "" )
+polytope_add_test( "convexHull_3d"   "" )
+polytope_add_test( "nearestPoint_2d" "" )
+polytope_add_test( "within_2d"       "" )
+polytope_add_test( "intersect_2d"    "" )
+polytope_add_test( "convexIntersect" "" )
+#polytope_add_test( "PLC_CSG"         "" )  #  <-- Suspending 'til we think it works
+polytope_add_test( "hash"            "" )
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests
@@ -52,9 +51,8 @@ POLYTOPE_ADD_TEST( "hash"            "" )
 # NOTE: Temporarily suspending their build until more work can be
 #       done making their output toplogically consistent
 #
-#POLYTOPE_ADD_TEST( "VoroPP_2d"                   ""              )
-#POLYTOPE_ADD_TEST( "VoroPP_3d"                   ""              )
-
+#polytope_add_test( "VoroPP_2d"                   ""              )
+#polytope_add_test( "VoroPP_3d"                   ""              )
 
 # 2D Triangle and Boost Tessellator tests
 POLYTOPE_ADD_TEST( "UnitSquare"                  ""              )
@@ -81,11 +79,8 @@ POLYTOPE_ADD_TEST( "BoostGeometry"               "BOOST"         )
 #POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )
 
 # 3D Tetgen Tessellator tests
-POLYTOPE_ADD_TEST( "TetgenTessellator"           "TETGEN"        )
+polytope_add_test( "TetgenTessellator"           "TETGEN"        )
 
-
-
-#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     ""         "4")

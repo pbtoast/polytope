@@ -13,7 +13,7 @@
 #include "ReducedPLC.hh"
 
 #ifdef HAVE_MPI
-#include "mpi.h"
+#include <mpi.h>
 #include "polytope_parallel_utilities.hh"
 #endif
 
