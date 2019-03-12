@@ -28,7 +28,7 @@ endif()
 configure_file(Tessellators.py.in ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py)
 
 # The macros for creating Python bindings
-include(${PROJECT_SOURCE_DIR}/cmake/Modules/UsePYB11Generator.cmake)
+include(UsePYB11Generator)
 
 # Use PYB11Generator to create the pybind11 bindings
 PYB11_GENERATE_BINDINGS()
@@ -66,8 +66,8 @@ set(PYTHON_LINK "python${PYTHON_VERSION}")
 ## FIXME: A better solution is to allow users to specify a list of
 ##        additional link args when configuring Polytope.
 
-# On some Linux machines we get messed up with the HDF5 libs including 
-# things like libdl and libm, so we try to cut down the list here to the 
+# On some Linux machines we get messed up with the HDF5 libs including
+# things like libdl and libm, so we try to cut down the list here to the
 # first couple of elements.
 list(LENGTH HDF5_LIBRARIES NUM_HDF5_LIBRARIES)
 if (NUM_HDF5_LIBRARIES GREATER 2)
@@ -83,18 +83,18 @@ set_target_properties(pypolytopeStatic PROPERTIES OUTPUT_NAME polytope)
 # The dynamic Python library of wrapped methods
 add_library(pypolytope SHARED ${PYB11_GENERATED_SOURCE})
 set_target_properties(pypolytope PROPERTIES OUTPUT_NAME polytope)
-target_link_libraries(pypolytope 
+target_link_libraries(pypolytope
                       #${PYTHON_LINK}
-                      ${POLYTOPE_STATIC_LIB} 
-		      ${TRIANGLE_STATIC_LIB}
-		      ${TETGEN_STATIC_LIB})
+                      ${POLYTOPE_STATIC_LIB}
+                      ${TRIANGLE_STATIC_LIB}
+                      ${TETGEN_STATIC_LIB})
 
 if (HAVE_SILO)
-  target_link_libraries(pypolytope 
+  target_link_libraries(pypolytope
                         ${SILO_LIBRARIES})
 endif()
 if (HAVE_HDF5)
-  target_link_libraries(pypolytope 
+  target_link_libraries(pypolytope
                         ${HDF5_LIB})
 endif()
 

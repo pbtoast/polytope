@@ -74,7 +74,7 @@ if (USE_MPI)
   set(HAVE_MPI ON)
   if(NOT MPI_CXX_INCLUDE_PATH STREQUAL "")
     include_directories("${MPI_CXX_INCLUDE_PATH}")
-    find_program(SLURM_SRUN_COMMAND srun 
+    find_program(SLURM_SRUN_COMMAND srun
       DOC "Path to Slurm's srun executable")
     if(SLURM_SRUN_COMMAND)
       set(MPIEXEC ${SLURM_SRUN_COMMAND})
@@ -243,8 +243,8 @@ configure_file(
 option(HEADER_ONLY "Header only installation" OFF)
 if (NOT HEADER_ONLY)
   # Include the binary directory in the header file search path.
-  include_directories("${PROJECT_BINARY_DIR}")
-  include_directories("${PROJECT_SOURCE_DIR}/src")
+  include_directories(${PROJECT_BINARY_DIR})
+  include_directories(${PROJECT_BINARY_DIR}/src)
 
   # Libraries
 
@@ -255,7 +255,7 @@ if (NOT HEADER_ONLY)
   #add_subdirectory(voro_3d)
 
   # Polytope proper.
-  include_directories("${PROJECT_SOURCE_DIR}/src/")
+  include_directories(src)
   add_subdirectory(src)
 
   # Tests directory
@@ -282,60 +282,32 @@ if (NOT HEADER_ONLY)
 endif()
 
 # Library install targets
-install (FILES "${PROJECT_BINARY_DIR}/polytope.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Tessellator.hh" 
-               "${PROJECT_SOURCE_DIR}/src/TessellatorInline.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Tessellation.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
-               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
-               "${PROJECT_SOURCE_DIR}/src/PLC.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
-               "${PROJECT_SOURCE_DIR}/src/ReducedPLC.hh"
-               "${PROJECT_SOURCE_DIR}/src/simplifyPLCfacets.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
-               "${PROJECT_SOURCE_DIR}/src/QuantTessellation.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/QuantizedCoordinates.hh"
-               "${PROJECT_SOURCE_DIR}/src/VoroPP_2d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/VoroPP_3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/TriangleTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostTessellatorTraits.hh"
-               "${PROJECT_SOURCE_DIR}/src/TetgenTessellator.hh"
-	       "${PROJECT_SOURCE_DIR}/src/MeshEditor.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_internal.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/OrphanageBase.hh"
-	       "${PROJECT_SOURCE_DIR}/src/BoostOrphanage.hh"
-	       "${PROJECT_SOURCE_DIR}/src/Clipper2d.hh"
-               "${PROJECT_SOURCE_DIR}/src/ErrorHandler.hh" 
-               "${PROJECT_SOURCE_DIR}/src/convexHull_2d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/convexHull_3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/Point.hh" 
-               "${PROJECT_SOURCE_DIR}/src/KeyTraits.hh" 
-	       "${PROJECT_SOURCE_DIR}/src/DimensionTraits.hh"
-               "${PROJECT_SOURCE_DIR}/src/polytope_serialize.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_geometric_utilities.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_parallel_utilities.hh"
-	       "${PROJECT_SOURCE_DIR}/src/polytope_tessellator_utilities.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_2d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_CSG_3d.hh"
-	       "${PROJECT_SOURCE_DIR}/src/PLC_Boost_2d.hh"
-               "${PROJECT_SOURCE_DIR}/src/SiloWriter.hh" 
-               "${PROJECT_SOURCE_DIR}/src/SiloReader.hh" 
-               "${PROJECT_SOURCE_DIR}/src/polytope_write_OOGL.hh" 
-               "${PROJECT_SOURCE_DIR}/src/QuantizedTessellation2d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/QuantizedTessellation3d.hh" 
-               "${PROJECT_SOURCE_DIR}/src/IntPointMap.hh" 
-               "${PROJECT_SOURCE_DIR}/src/clipQuantizedTessellation.hh" 
-               "${PROJECT_SOURCE_DIR}/src/removeElements.hh" 
-               "${PROJECT_SOURCE_DIR}/src/findBoundaryElements.hh" 
-               "${PROJECT_SOURCE_DIR}/src/snapToBoundary.hh" 
-               "${PROJECT_SOURCE_DIR}/src/makeBoxPLC.hh" 
+install (FILES polytope.hh src/Tessellator.hh src/TessellatorInline.hh
+               src/Tessellation.hh src/MeshEditor.hh src/ErrorHandler.hh
+               src/PLC.hh src/PLC_CSG_2d.hh src/PLC_CSG_3d.hh
+               src/ReducedPLC.hh src/simplifyPLCfacets.hh
+               src/polytope_internal.hh src/QuantTessellation.hh
+      	       src/QuantizedCoordinates.hh src/VoroPP_2d.hh src/VoroPP_3d.hh
+               src/TriangleTessellator.hh src/BoostTessellator.hh
+       	       src/BoostTessellatorTraits.hh src/TetgenTessellator.hh
+      	       src/MeshEditor.hh src/polytope_internal.hh
+               src/polytope_geometric_utilities.hh
+               src/polytope_parallel_utilities.hh
+               src/polytope_serialize.hh
+      	       src/polytope_tessellator_utilities.hh
+               src/polytope_write_OOGL.hh
+      	       src/OrphanageBase.hh src/BoostOrphanage.hh src/Clipper2d.hh
+               src/ErrorHandler.hh src/convexHull_2d.hh src/convexHull_3d.hh
+               src/Point.hh src/KeyTraits.hh src/DimensionTraits.hh
+               src/polytope_serialize.hh src/polytope_geometric_utilities.hh
+               src/polytope_parallel_utilities.hh
+      	       src/polytope_tessellator_utilities.hh
+      	       src/PLC_CSG_2d.hh src/PLC_CSG_3d.hh src/PLC_Boost_2d.hh
+               src/SiloWriter.hh src/SiloReader.hh src/polytope_write_OOGL.hh
+               src/QuantizedTessellation2d.hh src/QuantizedTessellation3d.hh
+               src/IntPointMap.hh src/clipQuantizedTessellation.hh
+               src/removeElements.hh src/findBoundaryElements.hh
+               src/snapToBoundary.hh src/makeBoxPLC.hh
          DESTINATION include/polytope)
 
 # If we're parallel we have a few extra install items.

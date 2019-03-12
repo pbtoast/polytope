@@ -54,11 +54,8 @@ add_library(polytope STATIC
       	    polytope_internal_abort.cc)
 
 target_link_libraries(polytope
-		      ${TRIANGLE_LIB} 
-		      ${TETGEN_LIB} 
-		      ${SILO_LIBRARIES}
-		      ${HDF5_LIBRARIES}
-		      ${MPI_C_LIBRARIES})
+                      ${TRIANGLE_LIB} ${TETGEN_LIB} ${SILO_LIBRARIES}
+                      ${HDF5_LIBRARIES} ${MPI_C_LIBRARIES})
 
 # Library install targets
 install(TARGETS polytope ${TRIANGLE_LIB} ${TETGEN_LIB} DESTINATION lib)

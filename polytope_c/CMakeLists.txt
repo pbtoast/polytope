@@ -7,7 +7,7 @@ configure_file(
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(polytope_c polytope_c.cc polytope_plc.cc polytope_tessellator.cc 
+add_library(polytope_c polytope_c.cc polytope_plc.cc polytope_tessellator.cc
             polytope_tessellation.cc polytope_read_silo.cc polytope_write_silo.cc)
 target_link_libraries(polytope_c polytope)
 
