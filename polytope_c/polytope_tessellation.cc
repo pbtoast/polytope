@@ -34,9 +34,9 @@ polytope_tessellation_t* polytope_tessellation_new(int dimension)
   tess->node_cells = NULL;
   tess->convex_hull = NULL;
   tess->boundary_faces = NULL;
-  tess->num_boundary_faces = NULL;
+  tess->num_boundary_faces = 0;
   tess->boundary_nodes = NULL;
-  tess->num_boundary_nodes = NULL;
+  tess->num_boundary_nodes = 0;
 
   return tess;
 }
@@ -130,7 +130,7 @@ void polytope_tessellation_snprintf(polytope_tessellation_t* tessellation, char*
   POLY_ASSERT(tessellation != NULL);
 
   char fmt[128];
-  snprintf(fmt, 128, "Tessellation (%d)", sizeof(str) - strlen(str) - 1);
+  snprintf(fmt, 128, "Tessellation (%d)", static_cast<int>(sizeof(str) - strlen(str) - 1));
   strncat(str, fmt, sizeof(str) - strlen(str));
 }
 //------------------------------------------------------------------------
@@ -139,7 +139,7 @@ void polytope_tessellation_snprintf(polytope_tessellation_t* tessellation, char*
 void polytope_tessellation_fprintf(polytope_tessellation_t* tessellation, FILE* stream)
 {
   POLY_ASSERT(tessellation != NULL);
-  // Let's assume, for the moment, that the output of our tessellation scales with the 
+  // Let's assume, for the moment, that the output of our tessellation scales with the
   // number of cells.
   int n = 512 * tessellation->num_cells;
   char* str = (char*)malloc(n * sizeof(char));
