@@ -282,7 +282,7 @@ if (NOT HEADER_ONLY)
 endif()
 
 # Library install targets
-install (FILES polytope.hh src/Tessellator.hh src/TessellatorInline.hh
+install (FILES ${PROJECT_BINARY_DIR}/polytope.hh src/Tessellator.hh src/TessellatorInline.hh
                src/Tessellation.hh src/MeshEditor.hh src/ErrorHandler.hh
                src/PLC.hh src/PLC_CSG_2d.hh src/PLC_CSG_3d.hh
                src/ReducedPLC.hh src/simplifyPLCfacets.hh
