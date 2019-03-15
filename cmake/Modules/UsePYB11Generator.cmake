@@ -35,7 +35,7 @@
 #
 macro(PYB11_GENERATE_BINDINGS)
   # Make a list of Python modules that our MODule depends on.
-  execute_process(COMMAND python3 -c "from modulefinder import ModuleFinder as MF; finder = MF(); finder.run_script('polytopeMOD.py'); mods = [x[1].__file__ for x in finder.modules.items() if x[0] != '__main__']; print(*mods, sep=';')"
+  execute_process(COMMAND python3 -c "from modulefinder import ModuleFinder as MF; finder = MF(); finder.run_script('polytopeMOD.py'); mods = [x[1].__file__ for x in finder.modules.items() if x[0] != '__main__']; for m in mods: print m + ';',"
                   OUTPUT PYB11_ЅOURCE)
   # The generated C++ bindings have the same names with a different suffix
   string(REPLACE ".py" ".cc" PYB11_GENERATED_SOURCE ${PYB11_SOURCE})
