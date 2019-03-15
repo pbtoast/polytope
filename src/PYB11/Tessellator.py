@@ -7,14 +7,122 @@ class Tessellator:
 Voronoi and Voronoi-like tessellations for sets of points and/or 
 geometries."""
 
+    PYB11typedefs = """
+  typedef typename DimensionTraits<%(Dimension)s, %(RealType)s>::QuantizedTessellation QuantizedTessellation;
+"""
+
     #...........................................................................
     # Constructors
     def pyinit(self):
         "Default constructor"
         return
 
+    # We provide this alias for tessellating in a box since the native polytope
+    # representation of the (lower, upper) coordinates are just C-array pointers,
+    # which are cumbersome for python
+    @PYB11const
+    @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,
+                               const std::vector<%(RealType)s>& points,
+                               py::tuple low,
+                               py::tuple high,
+                               Tessellation<%(Dimension)s, %(RealType)s>& mesh) {
+                                   std::vector<double> clow, chigh;
+                                   for (auto i = 0; i < %(Dimension)s; ++i) {
+                                     clow.push_back(low[i].cast<double>());
+                                     chigh.push_back(high[i].cast<double>());
+                                   }
+                                   self.tessellate(points, &clow.front(), &chigh.front(), mesh);
+                               }""")
+    def tessellateBox(self,
+                      points = "const std::vector<%(RealType)s>&",
+                      low = "py::tuple",
+                      high = "py::tuple",
+                      mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi tessellation for the given set of generator points
+with a bounding box specified by \a low and \a high. Here, low[i]
+contains the ith coordinate for the "lower-left-near" corner of the 
+bounding box in 2D or 3D, and high[i] contains the corresponding 
+opposite corner. The coordinates of these points are stored in 
+point-major order and the 0th component of the ith point appears in 
+points[Dimension*i].
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param low The coordinates of the "lower-left-near" bounding box corner.
+\\\\param high The coordinates of the "upper-right-far" bounding box corner.
+\\\\param mesh This will store the resulting tessellation."""
+        return "void"
+
     #...........................................................................
     # Virtual methods
+    @PYB11virtual
+    @PYB11const
+    def tessellate(self,
+                   points = "const std::vector<%(RealType)s>&",
+                   mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi tessellation for the given set of generator points.
+The coordinates of these points are stored in point-major order and 
+the 0th component of the ith point appears in points[Dimension*i].
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param mesh This will store the resulting tessellation."""
+        return "void"
+
+    @PYB11virtual
+    @PYB11const
+    @PYB11pycppname("tessellate")
+    def tessellate1(self,
+                    points = "const std::vector<%(RealType)s>&",
+                    low = "%(RealType)s*",
+                    high = "%(RealType)s*",
+                    mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi tessellation for the given set of generator points
+with a bounding box specified by \a low and \a high. Here, low[i]
+contains the ith coordinate for the "lower-left-near" corner of the 
+bounding box in 2D or 3D, and high[i] contains the corresponding 
+opposite corner. The coordinates of these points are stored in 
+point-major order and the 0th component of the ith point appears in 
+points[Dimension*i].
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param low The coordinates of the "lower-left-near" bounding box corner.
+\\\\param high The coordinates of the "upper-right-far" bounding box corner.
+\\\\param mesh This will store the resulting tessellation."""
+        return "void"
+
+    @PYB11virtual
+    @PYB11const
+    @PYB11pycppname("tessellate")
+    def tessellate2(self,
+                    points = "const std::vector<%(RealType)s>&",
+                    PLCpoints = "const std::vector<%(RealType)s>&",
+                    geometry = "const PLC<%(Dimension)s, %(RealType)s>&",
+                    mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi-like tessellation for the given set of generator 
+points and a description of the geometry in which they exist.
+The coordinates of these points are stored in point-major order and 
+the 0th component of the ith point appears in points[Dimension*i].
+This default implementation issues an error explaining that the 
+Tessellator does not support PLCs.
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
+\\\\param geometry A description of the geometry in Piecewise Linear Complex form.
+\\\\param mesh This will store the resulting tessellation.
+"""
+        return "void"
+
+    @PYB11virtual
+    @PYB11const
+    @PYB11pycppname("tessellate")
+    def tessellate3(self,
+                    points = "const std::vector<%(RealType)s>&",
+                    geometry = "const ReducedPLC<%(Dimension)s, %(RealType)s>&",
+                    mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
+        """Generate a Voronoi-like tessellation for the given set of generator 
+points and a description of the geometry in which they exist.
+The geometry description uses the ReducedPLC to combine vertex
+coordinates and facet topology into a single struct out of convenience.
+\\\\param points A (Dimension*numPoints) array containing point coordinates.
+\\\\param geometry A description of the geometry in Reduced Piecewise Linear Complex form.
+\\\\param mesh This will store the resulting tessellation."""
+        return "void"
+
     @PYB11virtual
     @PYB11const
     def tessellateDegenerate(self,
@@ -55,42 +163,6 @@ geometries."""
                               mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
         return "std::vector<unsigned>"
 
-    @PYB11virtual
-    @PYB11const
-    def tessellateNormalized(self,
-                             points = "const std::vector<%(RealType)s>&",
-                             mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
-        return "void"
-
-    @PYB11virtual
-    @PYB11const
-    @PYB11pycppname("tessellateNormalized")
-    def tessellateNormalized1(self,
-                              points = "const std::vector<%(RealType)s>&",
-                              low = "%(RealType)s*",
-                              high = "%(RealType)s*",
-                              mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
-        return "void"
-
-    @PYB11virtual
-    @PYB11const
-    @PYB11pycppname("tessellateNormalized")
-    def tessellateNormalized2(self,
-                              points = "const std::vector<%(RealType)s>&",
-                              PLCpoints = "const std::vector<%(RealType)s>&",
-                              geometry = "const PLC<%(Dimension)s, %(RealType)s>&",
-                              mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
-        return "void"
-
-    @PYB11virtual
-    @PYB11const
-    @PYB11pycppname("tessellateNormalized")
-    def tessellateNormalized3(self,
-                              points = "const std::vector<%(RealType)s>&",
-                              geometry = "const ReducedPLC<%(Dimension)s, %(RealType)s>&",
-                              mesh = "Tessellation<%(Dimension)s, %(RealType)s>&"):
-        return "void"
-
     @PYB11pure_virtual
     @PYB11const
     def handlesPLCs(self):
@@ -116,7 +188,7 @@ hell associated with elaborate inheritance hierarchies."""
     def degeneracy(self):
         """Returns the accuracy to which this tessellator can distinguish coordinates.
 Should be returned appropriately for normalized coordinates, i.e., if all
-coordinates are in the range xi \in [0,1], what is the minimum allowed 
+coordinates are in the range xi \\\\in [0,1], what is the minimum allowed 
 delta in x."""
         return "%(RealType)s"
 
@@ -138,20 +210,20 @@ delta in x."""
 # adds the corners of the bounding box to \a points."""
 #         return "PLC<%(Dimension)s, %(RealType)s>"
 
-    @PYB11protected
-    @PYB11const
-    def computeNormalizedPoints(self,
-                                points = "const std::vector<%(RealType)s>&",
-                                PLCpoints = "const std::vector<%(RealType)s>&",
-                                computeBounds = "const bool",
-                                low = "%(RealType)s*",
-                                high = "%(RealType)s*"):
-        "Return a normalized set of coordinates, also returning the bounding low/high points."
-        return "std::vector<%(RealType)s>"
+    # @PYB11protected
+    # @PYB11const
+    # def computeNormalizedPoints(self,
+    #                             points = "const std::vector<%(RealType)s>&",
+    #                             PLCpoints = "const std::vector<%(RealType)s>&",
+    #                             computeBounds = "const bool",
+    #                             low = "%(RealType)s*",
+    #                             high = "%(RealType)s*"):
+    #     "Return a normalized set of coordinates, also returning the bounding low/high points."
+    #     return "std::vector<%(RealType)s>"
 
 #-------------------------------------------------------------------------------
 # Inject the common methods
-PYB11inject(TessellatorCommonMethods, Tessellator, virtual=True)
+PYB11inject(TessellatorCommonMethods, Tessellator, pure_virtual=True)
 
 #-------------------------------------------------------------------------------
 # Template instantiations

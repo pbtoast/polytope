@@ -218,7 +218,12 @@ checkAllSharedElementsFound(const std::string& label,
           std::stringstream os;
           os << "Domain " << sendProc << " shares " << commonHashes.size()
              << " positions overlaps with domain " << rank << ", but " << rank << " has found "
-             << sharedIDs[k].size() << " values.";
+             << sharedIDs[k].size() << " values.  Common hashes: ";
+          for (typename std::vector<Point>::const_iterator itr = commonHashes.begin();
+               itr != commonHashes.end();
+               ++itr) {
+            os << " " << (*itr);
+          }
           result = os.str();
         }
 
@@ -280,7 +285,7 @@ checkDistributedTessellation(const Tessellation<Dimension, RealType>& mesh) {
   // Compute the bounding box for normalizing our coordinates.
   RealType xmin[Dimension], xmax[Dimension];
   geometry::computeBoundingBox<Dimension, RealType>(mesh.nodes, true, xmin, xmax);
-  const RealType dxhash = Traits::maxLength(xmin, xmax)/(1LL << 34);
+  const RealType dxhash = Traits::maxLength(xmin, xmax)/(KeyTraits::maxKey1d - KeyTraits::minKey1d);
 
   // First check that all processors agree about who is talking to whom.
   for (unsigned sendProc = 0; sendProc != numDomains; ++sendProc) {

@@ -101,33 +101,33 @@ struct CompareAbsPlaneDistance {
   }
 };
 
-//------------------------------------------------------------------------------
-// Borrow the Point3 type as a tuple to create 3 node facets hashes.
-//------------------------------------------------------------------------------
-Point3<unsigned>
-hashFacet(const unsigned i, const unsigned j, const unsigned k) {
-  typedef Point3<unsigned> Tuple3;
-  POLY_ASSERT(i != j and i != k and j != k);
-  if (i < j and i < k) {
-    if (j < k) {
-      return Tuple3(i, j, k);
-    } else {
-      return Tuple3(i, k, j);
-    }
-  } else if (j < i and j < k) {
-    if (i < k) {
-      return Tuple3(j, i, k);
-    } else {
-      return Tuple3(j, k, i);
-    }
-  } else {
-    if (i < j) {
-      return Tuple3(k, i, j);
-    } else {
-      return Tuple3(k, j, i);
-    }
-  }
-}
+// //------------------------------------------------------------------------------
+// // Borrow the Point3 type as a tuple to create 3 node facets hashes.
+// //------------------------------------------------------------------------------
+// Point3<unsigned>
+// hashFacet(const unsigned i, const unsigned j, const unsigned k) {
+//   typedef Point3<unsigned> Tuple3;
+//   POLY_ASSERT(i != j and i != k and j != k);
+//   if (i < j and i < k) {
+//     if (j < k) {
+//       return Tuple3(i, j, k);
+//     } else {
+//       return Tuple3(i, k, j);
+//     }
+//   } else if (j < i and j < k) {
+//     if (i < k) {
+//       return Tuple3(j, i, k);
+//     } else {
+//       return Tuple3(j, k, i);
+//     }
+//   } else {
+//     if (i < j) {
+//       return Tuple3(k, i, j);
+//     } else {
+//       return Tuple3(k, j, i);
+//     }
+//   }
+// }
 
 //------------------------------------------------------------------------------
 // Hold one of our triangular facets.
@@ -168,8 +168,8 @@ struct TriangleFacet {
   }
 
   void flip() { std::swap(inode, jnode); normal *= -1; }
-  bool operator==(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) == hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
-  bool operator<(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) < hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
+  // bool operator==(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) == hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
+  // bool operator<(const TriangleFacet& rhs) const { return hashFacet(inode, jnode, knode) < hashFacet(rhs.inode, rhs.jnode, rhs.knode); }
 
   // output operator
   friend std::ostream& operator<<(std::ostream& os, const TriangleFacet& facet) {
@@ -188,7 +188,6 @@ exteriorPoints(std::vector<unsigned>& indices,
                const std::vector<TriangleFacet<RealType> >& facets, 
                const std::vector<Point3<RealType> >& points) {
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
 
   std::vector<unsigned> remainingPoints;
   for (std::vector<unsigned>::const_iterator iitr = indices.begin();
@@ -209,7 +208,6 @@ unsigned highestPoint(std::vector<unsigned>& indices,
                       const std::vector<TriangleFacet<RealType> >& facets, 
                       const std::vector<Point3<RealType> >& points) {
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
   int result = -1;
   RealType maxAltitude = 0.0;
   for (typename std::vector<unsigned>::const_iterator itr = indices.begin();
@@ -241,7 +239,6 @@ void cullVisibleFacets(std::vector<std::pair<int, int> >& horizonEdges,
 
   typedef std::pair<int, int> EdgeHash;
   typedef std::vector<TriangleFacet<RealType> > FacetSet;
-  typedef Point3<RealType> PointType;
 
   FacetSet newFacets;
   internal::CounterMap<EdgeHash> edgeCount;

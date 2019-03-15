@@ -3,13 +3,15 @@ if (SILO_FOUND)
   set(IO_SOURCES SiloWriter_2d.cc SiloWriter_3d.cc SiloReader_2d.cc SiloReader_3d.cc SiloUtils.cc)
 endif()
 
-# By default, we include the Voro tessellator(s).
-set(TESSELLATOR_SOURCES VoroPP_2d.cc VoroPP_3d.cc KeyTraits.cc predicates.cc PLC_CSG.cc)
+# The tessellator sources we always build.
+set(TESSELLATOR_SOURCES KeyTraits.cc predicates.cc PLC_CSG.cc QuantizedTessellation2d.cc QuantizedTessellation3d.cc
+                        clipQuantizedTessellation2d.cc clipQuantizedTessellation3d.cc
+                        snapToBoundary.cc)
 set(CWD ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Check if we can include each of the serial tessellators:
 if (USE_BOOST)
-  list(APPEND TESSELLATOR_SOURCES BoostOrphanage.cc MeshEditor.cc)
+  list(APPEND TESSELLATOR_SOURCES MeshEditor.cc)
 endif()
 
 # TriangleTessellator and triangle source
@@ -34,7 +36,7 @@ if (HAVE_TETGEN)
   add_library(tetgen tetgen.cxx predicates.cc)
   #set(TETGEN_LIB tetgen PARENT_SCOPE)
   set(TETGEN_LIB tetgen)
-  set_target_properties(${TETGEN_LIB} PROPERTIES 
+  set_target_properties(${TETGEN_LIB} PROPERTIES
     COMPILE_FLAGS "${COMPILE_FLAGS} -DTETLIBRARY -Wuninitialized")
 endif ()
 
@@ -47,26 +49,13 @@ endif()
 file(GLOB HEADERS *.hh)
 list(APPEND HEADERS "${PROJECT_BINARY_DIR}/polytope.hh")
 
-# On some Linux machines we get messed up with the HDF5 libs including 
-# things like libdl and libm, so we try to cut down the list here to the 
-# first couple of elements.
-list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
-
 add_library(polytope STATIC
-            ${TESSELLATOR_SOURCES}
-	    ${IO_SOURCES}
-	    ErrorHandler.cc
-	    polytope_internal_abort.cc
-	    ${HEADERS})
+            ${TESSELLATOR_SOURCES} ${IO_SOURCES} ErrorHandler.cc
+      	    polytope_internal_abort.cc)
 
 target_link_libraries(polytope
-                      voro_2d 
-		      voro_3d 
-		      ${TRIANGLE_LIB} 
-		      ${TETGEN_LIB} 
-		      ${SILO_LIBRARIES}
-		      ${HDF5_LIBRARIES}
-		      ${MPI_C_LIBRARIES})
+                      ${TRIANGLE_LIB} ${TETGEN_LIB} ${SILO_LIBRARIES}
+                      ${HDF5_LIBRARIES} ${MPI_C_LIBRARIES})
 
 # Library install targets
 install(TARGETS polytope ${TRIANGLE_LIB} ${TETGEN_LIB} DESTINATION lib)

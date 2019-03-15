@@ -5,10 +5,9 @@
 #include <float.h>
 #include "Tessellation.hh"
 #include "Tessellator.hh"
-#include "OrphanageBase.hh"
 #include "PLC.hh"
 #include "ReducedPLC.hh"
-#include "QuantizedCoordinates.hh"
+#include "DimensionTraits.hh"
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 
@@ -25,6 +24,9 @@ class Tessellator
 {
 public:
 
+  // The type of QuantizedTessellation we'll be using.
+  typedef typename DimensionTraits<Dimension, RealType>::QuantizedTessellation QuantizedTessellation;
+
   //! Default constructor.
   Tessellator() {}
 
@@ -37,10 +39,7 @@ public:
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
-                          Tessellation<Dimension, RealType>& mesh) const 
-  {
-    error("This Tessellator does not support unbounded point tessellations.");
-  }
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi tessellation for the given set of generator points
   //! with a bounding box specified by \a low and \a high. Here, low[i]
@@ -56,10 +55,7 @@ public:
   virtual void tessellate(const std::vector<RealType>& points,
                           RealType* low,
                           RealType* high,
-                          Tessellation<Dimension, RealType>& mesh) const
-  {
-    error("This Tessellator does not support point tessellations with a bounding box.");
-  }
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -74,10 +70,7 @@ public:
   virtual void tessellate(const std::vector<RealType>& points,
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension, RealType>& geometry,
-                          Tessellation<Dimension, RealType>& mesh) const
-  {
-    error("This Tessellator does not support boundaries specified as PLCs.");
-  }
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -88,10 +81,7 @@ public:
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
                           const ReducedPLC<Dimension, RealType>& geometry,
-                          Tessellation<Dimension, RealType>& mesh) const
-  {
-    error("This Tessellator does not support boundaries specified as PLCs.");
-  }
+                          Tessellation<Dimension, RealType>& mesh) const;
 
   //! The following methods all return the same sort of tessellation as the 
   //! above versions, except these versions do not assume that the input
@@ -131,37 +121,6 @@ public:
                        Tessellation<Dimension, RealType>& mesh) const;
 
 
-  //! The following methods all return the same sort of tessellation as the 
-  //! above versions. The input points and geometry are first normalized 
-  //! with respect to the same maximal bounds across all dimensions. This is
-  //! done to maintain aspect ratios between points. After tessellating, the
-  //! mesh nodes are scaled back to the original frame.
-
-  //! Unbounded case.
-  virtual void
-  tessellateNormalized(const std::vector<RealType>& points,
-                       Tessellation<Dimension, RealType>& mesh) const;
-  //! Bounded by a box.
-  virtual void
-  tessellateNormalized(const std::vector<RealType>& points,
-                       RealType* low,
-                       RealType* high,
-                       Tessellation<Dimension, RealType>& mesh) const;
-
-  //! Bounded by a PLC.
-  virtual void
-  tessellateNormalized(const std::vector<RealType>& points,
-                       const std::vector<RealType>& PLCpoints,
-                       const PLC<Dimension, RealType>& geometry,
-                       Tessellation<Dimension, RealType>& mesh) const;
-
-  //! Bounded by a ReducedPLC.
-  virtual void
-  tessellateNormalized(const std::vector<RealType>& points,
-                       const ReducedPLC<Dimension, RealType>& geometry,
-                       Tessellation<Dimension, RealType>& mesh) const;
-
-
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
   //! tessellate method, above), and false if it does not. Some algorithms 
@@ -171,11 +130,20 @@ public:
   //! tessellation is provided for convenience.
   //! This query mechanism prevents us from descending into the taxonomic 
   //! hell associated with elaborate inheritance hierarchies.
-  virtual bool handlesPLCs() const = 0;
+  virtual bool handlesPLCs() const { return true; }
 
+  //! Required for all tessellators:
+  //! Compute the quantized tessellation.  This is the basic method all
+  //! Tessellator implementations must provide, on which the other tessellation methods
+  //! in polytope build.
+  virtual void
+  tessellateQuantized(QuantizedTessellation& qmesh) const = 0;
+
+  //! Required for all tessellators:
   //! A unique name string per tessellation instance.
   virtual std::string name() const = 0;
 
+  //! Required for all tessellators:
   //! Returns the accuracy to which this tessellator can distinguish coordinates.
   //! Should be returned appropriately for normalized coordinates, i.e., if all
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
@@ -202,19 +170,6 @@ public:
   // Disallowed.
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);
-
-  // Private bounded tessellate to set bounding box and degeneracy spacing
-  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  virtual void tessellate(const std::vector<RealType>& points,
-                          const ReducedPLC<Dimension, CoordHash>& intGeometry,
-                          const QuantizedCoordinates<Dimension, RealType>& coords,
-                          std::vector<ReducedPLC<Dimension, CoordHash> >& IntCells) const
-  {
-    error("This Tessellator does not support this tessellate routine");
-  }
-  
-  // Allow the orphanage base class to call any private tessellate(s)
-  friend class OrphanageBase<Dimension, RealType>;
 };
 
 }

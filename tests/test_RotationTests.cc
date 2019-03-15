@@ -16,6 +16,7 @@
 #include <sstream>
 
 #include "polytope.hh"
+#include "MeshEditor.hh"
 #include "polytope_test_utilities.hh"
 
 #ifdef HAVE_MPI

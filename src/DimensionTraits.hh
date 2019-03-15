@@ -8,8 +8,11 @@
 #include <vector>
 
 #include "KeyTraits.hh"
+#include "DimensionTraits.hh"
 #include "convexHull_2d.hh"
 #include "convexHull_3d.hh"
+#include "QuantizedTessellation2d.hh"
+#include "QuantizedTessellation3d.hh"
 
 namespace polytope {
 
@@ -23,6 +26,7 @@ struct DimensionTraits<2, RealType> {
   typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point2<CoordHash> IntPoint;
   typedef polytope::Point2<RealType> RealPoint;
+  typedef polytope::QuantizedTessellation2d<CoordHash, RealType> QuantizedTessellation;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,
@@ -88,6 +92,7 @@ struct DimensionTraits<3, RealType> {
   typedef polytope::KeyTraits::Key CoordHash;
   typedef polytope::Point3<CoordHash> IntPoint;
   typedef polytope::Point3<RealType> RealPoint;
+  typedef polytope::QuantizedTessellation3d<CoordHash, RealType> QuantizedTessellation;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,

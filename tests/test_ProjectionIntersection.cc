@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <vector>
+#include <string>
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
 
@@ -15,15 +16,10 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// main
+// test
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#ifdef HAVE_MPI
-  MPI_Init(&argc, &argv);
-#endif
-
-  TriangleTessellator<double> tessellator;
+void test(const Tessellator<2, double>& tessellator,
+          const std::string label) {
   const int N = 40;
   for (int j = 0; j < N; ++j) {
     const double eps = 0.005 + j*0.001;
@@ -58,15 +54,39 @@ int main(int argc, char** argv)
     {
       Tessellation<2,double> mesh;
       tessellator.tessellate(points, mesh);
-      outputMesh(mesh, "ProjectionIntersection", points, j);
+      outputMesh(mesh, "ProjectionIntersection_" + label, points, j);
     }
 
     {
       Tessellation<2,double> mesh;
       tessellator.tessellate(points, boundary, mesh);
-      outputMesh(mesh, "ProjectionIntersection", points, N+j);     
+      outputMesh(mesh, "ProjectionIntersection_" + label, points, N+j);     
     }
   }
+}
+
+// -----------------------------------------------------------------------
+// main
+// -----------------------------------------------------------------------
+int main(int argc, char** argv)
+{
+#ifdef HAVE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+
+#ifdef HAVE_TRIANGLE
+  {
+    TriangleTessellator<double> tessellator;
+    test(tessellator, "triangle");
+  }
+#endif
+  
+#ifdef HAVE_BOOST_VORONOI
+  {
+    BoostTessellator<double> tessellator;
+    test(tessellator, "boost");
+  }
+#endif
 
   cout << "PASS" << endl;
 

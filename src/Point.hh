@@ -165,6 +165,26 @@ struct Serializer<Point3<CoordType> > {
   }
 };
 
+//------------------------------------------------------------------------------
+// Provide a special comparator for point types with some fuzz.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+struct PointComparator {
+  CoordType mfuzz;
+  PointComparator(const CoordType fuzz): mfuzz(fuzz) {}
+  bool operator()(const Point2<CoordType>& lhs, const Point2<CoordType>& rhs) const {
+    return (rhs.x - lhs.x > mfuzz                                      ? true :
+            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz ? true :
+            false);
+  }
+  bool operator()(const Point3<CoordType>& lhs, const Point3<CoordType>& rhs) const {
+    return (rhs.x - lhs.x > mfuzz                                                                           ? true :
+            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz                                      ? true :
+            std::abs(rhs.x - lhs.x) <= mfuzz and std::abs(rhs.y - lhs.y) <= mfuzz and rhs.z - lhs.z > mfuzz ? true :
+            false);
+  }
+};
+
 }
 
 #endif

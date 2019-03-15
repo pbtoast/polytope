@@ -12,6 +12,9 @@
 #include "mpi.h"
 #include "pmpio.h"
 // }
+#else
+#define MPI_Comm int
+#define MPI_COMM_WORLD 0
 #endif
 
 namespace polytope

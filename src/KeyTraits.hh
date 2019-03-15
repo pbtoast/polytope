@@ -12,13 +12,13 @@
 namespace polytope {
 
 struct KeyTraits {
-  // typedef uint64_t Key;
-  typedef int64_t Key;
+  typedef int Key;
   static const uint32_t numbits;
   static const uint32_t numbits1d;
   static const Key zero;
   static const Key one;
   static const Key two;
+  static const Key minKey1d;
   static const Key maxKey1d;
   static const Key maxKey;
 };

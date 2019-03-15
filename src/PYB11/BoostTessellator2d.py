@@ -8,6 +8,10 @@ class BoostTessellator(Tessellator):
     """Polytope wrapper for the native 2D Voronoi tessellator in Boost.Polygon
 v1.52 or greater"""
 
+    PYB11typedefs = """
+typedef typename DimensionTraits<%(Dimension)s, %(RealType)s>::QuantizedTessellation QuantizedTessellation;
+"""
+
     #...........................................................................
     # Constructors
     def pyinit(self):
@@ -41,7 +45,7 @@ hell associated with elaborate inheritance hierarchies."""
     def degeneracy(self):
         """Returns the accuracy to which this tessellator can distinguish coordinates.
 Should be returned appropriately for normalized coordinates, i.e., if all
-coordinates are in the range xi \in [0,1], what is the minimum allowed 
+coordinates are in the range xi \\\\in [0,1], what is the minimum allowed 
 delta in x."""
         return "%(RealType)s"
 

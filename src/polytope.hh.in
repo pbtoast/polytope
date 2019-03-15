@@ -15,12 +15,9 @@
 #cmakedefine HAVE_BOOST_VORONOI
 
 // Classes within the library.
-#include "VoroPP_2d.hh"
-#include "VoroPP_3d.hh"
 #include "TriangleTessellator.hh"
 #include "BoostTessellator.hh"
 #include "TetgenTessellator.hh"
-#include "MeshEditor.hh"
 #include "SiloWriter.hh"
 #include "SiloReader.hh"
 

@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "polytope.hh"
+#include "MeshEditor.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
 #include "polytope_test_utilities.hh"

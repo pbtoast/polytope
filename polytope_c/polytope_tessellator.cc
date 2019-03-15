@@ -62,14 +62,14 @@ void fill_tessellation(const Tessellation<Dimension, polytope_real_t>& t, polyto
     tess->face_offsets[t.faces.size()] = offset;
   }
 
-  // Inf nodes and faces.
-  tess->num_inf_nodes = (int)t.infNodes.size();
-  tess->inf_nodes = (unsigned*)malloc(sizeof(unsigned) * tess->num_inf_nodes);
-  copy(t.infNodes.begin(), t.infNodes.end(), tess->inf_nodes);
+  // Boundary nodes and faces.
+  tess->num_boundary_nodes = (int)t.boundaryNodes.size();
+  tess->boundary_nodes = (unsigned*)malloc(sizeof(unsigned) * tess->num_boundary_nodes);
+  copy(t.boundaryNodes.begin(), t.boundaryNodes.end(), tess->boundary_nodes);
 
-  tess->num_inf_faces = (int)t.infFaces.size();
-  tess->inf_faces = (unsigned*)malloc(sizeof(unsigned) * tess->num_inf_faces);
-  copy(t.infFaces.begin(), t.infFaces.end(), tess->inf_faces);
+  tess->num_boundary_faces = (int)t.boundaryFaces.size();
+  tess->boundary_faces = (unsigned*)malloc(sizeof(unsigned) * tess->num_boundary_faces);
+  copy(t.boundaryFaces.begin(), t.boundaryFaces.end(), tess->boundary_faces);
 
   // Cells attached to faces.
   POLY_ASSERT(tess->num_faces == (int)t.faceCells.size());
@@ -157,12 +157,12 @@ void fill_tessellation(polytope_tessellation_t* tess, Tessellation<Dimension, po
       t.faces[i][j] = tess->face_nodes[tess->face_offsets[i] + j];
   }
 
-  // Inf nodes and faces.
-  t.infNodes.resize(tess->num_inf_nodes);
-  copy(tess->inf_nodes, tess->inf_nodes + tess->num_inf_nodes, t.infNodes.begin());
+  // Boundary nodes and faces.
+  t.boundaryNodes.resize(tess->num_boundary_nodes);
+  copy(tess->boundary_nodes, tess->boundary_nodes + tess->num_boundary_nodes, t.boundaryNodes.begin());
 
-  t.infFaces.resize(tess->num_inf_faces);
-  copy(tess->inf_faces, tess->inf_faces + tess->num_inf_faces, t.infFaces.begin());
+  t.boundaryFaces.resize(tess->num_boundary_faces);
+  copy(tess->boundary_faces, tess->boundary_faces + tess->num_boundary_faces, t.boundaryFaces.begin());
 
   // Cells attached to faces.
   t.faceCells.resize(tess->num_faces);
@@ -384,24 +384,6 @@ polytope_tessellator_t* tetgen_tessellator_new()
   return t;
 }
 #endif
-//------------------------------------------------------------------------
-
-//------------------------------------------------------------------------
-polytope_tessellator_t* voroplusplus_tessellator_new(int dimension)
-{
-  polytope_tessellator_t* t = (polytope_tessellator_t*)malloc(sizeof(polytope_tessellator_t));
-  if (dimension == 2)
-  {
-    t->tess2 = new VoroPP_2d<polytope_real_t>();
-    t->tess3 = NULL;
-  }
-  else
-  {
-    t->tess2 = NULL;
-    t->tess3 = new VoroPP_3d<polytope_real_t>();
-  }
-  return t;
-}
 //------------------------------------------------------------------------
 
 }

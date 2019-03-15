@@ -22,8 +22,8 @@ class Tessellation
     nodes(),
     cells(),
     faces(),
-    infNodes(),
-    infFaces(),
+    boundaryNodes(),
+    boundaryFaces(),
     faceCells(),
     convexHull() {}
 
@@ -36,8 +36,8 @@ class Tessellation
     nodes.clear();
     cells.clear();
     faces.clear();
-    infNodes.clear();
-    infFaces.clear();
+    boundaryNodes.clear();
+    boundaryFaces.clear();
     faceCells.clear();
     convexHull.clear();
     neighborDomains.clear();
@@ -50,7 +50,7 @@ class Tessellation
   virtual bool empty() const
   {
     return nodes.empty() and cells.empty() and faces.empty() and 
-       infNodes.empty() and infFaces.empty() and faceCells.empty() and 
+       boundaryNodes.empty() and boundaryFaces.empty() and faceCells.empty() and 
        convexHull.empty();
   }
 
@@ -74,15 +74,11 @@ class Tessellation
   //! viewed from the "positive" (outside) direction. 
   std::vector<std::vector<unsigned> > faces;
 
-  //! Indices of all nodes in an unbounded tessellation that are
-  //! "infinite." An infinite node is the termination point on a spherical
-  //! surface of a ray (tessellation edge) going out to infinity.
-  std::vector<unsigned> infNodes;
+  //! Indices of all nodes that are on the boundary of the tessellation.
+  std::vector<unsigned> boundaryNodes;
 
-  //! Array of face indices: 0 for interior faces and 1 for faces at
-  //! "infinity" for unbounded tessellations. The infinite face connects
-  //! the collection of infinite nodes for a given unbounded cell.
-  std::vector<unsigned> infFaces;
+  //! Indices of all faces on the boundary of the tessellation.
+  std::vector<unsigned> boundaryFaces;
 
   //! An array of cell indices for each face, i.e., the cells that share
   //! the face.
@@ -198,8 +194,8 @@ class Tessellation
       s << ")" << std::endl;
     }
 
-    s << mesh.infNodes.size() << " infinite surface nodes:" << std::endl;
-    for (int i = 0; i != mesh.infNodes.size(); ++i) s << " " << mesh.infNodes[i];
+    s << mesh.boundaryNodes.size() << " boundary nodes:" << std::endl;
+    for (int i = 0; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
     s << std::endl;
 
     return s;

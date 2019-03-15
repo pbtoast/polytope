@@ -12,6 +12,9 @@
 #include "mpi.h"
 #include "pmpio.h"
 // }
+#else
+#define MPI_Comm int
+#define MPI_COMM_WORLD 0
 #endif
 
 #include "SiloUtils.hh"
@@ -291,15 +294,14 @@ write(const Tessellation<3, RealType>& mesh,
   }
   POLY_ASSERT(faceNodeCounts.size() == numFaces);
 
-  // Create flags indicating any exterior faces.  For our purposes we'll just 
-  // flag infFaces as exterior.
-  vector<char> infFaceFlags(numFaces, 0x0);
-  for (vector<unsigned>::const_iterator itr = mesh.infFaces.begin();
-       itr != mesh.infFaces.end();
+  // Create flags indicating any exterior faces and nodes.
+  vector<char> boundaryFaceFlags(numFaces, 0x0);
+  for (vector<unsigned>::const_iterator itr = mesh.boundaryFaces.begin();
+       itr != mesh.boundaryFaces.end();
        ++itr) 
   {
     POLY_ASSERT(*itr < numFaces);
-    infFaceFlags[*itr] = 0x1;
+    boundaryFaceFlags[*itr] = 0x1;
   }
 
   // Construct the silo cell-face info.  Silo uses the same 1's complement
@@ -329,7 +331,7 @@ write(const Tessellation<3, RealType>& mesh,
   DBPutPHZonelist(file, (char*)"mesh_zonelist", 
                   faceNodeCounts.size(), &faceNodeCounts[0], 
                   allFaceNodes.size(), &allFaceNodes[0], 
-                  &infFaceFlags[0], 
+                  &boundaryFaceFlags[0], 
                   cellFaceCounts.size(), &cellFaceCounts[0],
                   allCellFaces.size(), &allCellFaces[0], 
                   0, 0, numCells-1, optlist);

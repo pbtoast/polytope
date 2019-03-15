@@ -144,7 +144,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    test(tessellator, false);
+    test(tessellator, true);
   }
 #endif
 

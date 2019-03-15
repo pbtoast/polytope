@@ -29,8 +29,8 @@ void test1(Tessellator<2,double>& tessellator) {
   const double x1 = 0.0, y1 = 0.0;
   const double x2 = 1.0, y2 = 1.0;
   const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx;
-  double low [2] = { numeric_limits<double>::max(),  numeric_limits<double>::max()};
-  double high[2] = {-numeric_limits<double>::max(), -numeric_limits<double>::max()};
+  double low [2] = {-1.0, -1.0}; // { numeric_limits<double>::max(),  numeric_limits<double>::max()};
+  double high[2] = {1.0, 1.0}; // {-numeric_limits<double>::max(), -numeric_limits<double>::max()};
   unsigned ix, iy;
   double xi, yi;
   for (iy = 0; iy != nx; ++iy) {
@@ -173,10 +173,100 @@ void test3(Tessellator<2,double>& tessellator) {
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,points,4);
   mesh.clear();
-
+  
   // Tessellate bounded
   tessellator.tessellate(points, plc.points, plc, mesh);
   outputMesh(mesh,testName,points,5);
+}
+
+
+//------------------------------------------------------------------------
+// test4
+//------------------------------------------------------------------------
+void test4(Tessellator<2,double>& tessellator) {
+  
+  // Output name
+  string testName = "BoostTessellator";
+
+  // Constants
+  const double degToRad = 2.0*M_PI/360.0;
+
+  // Parameters
+  const int nx = 20;
+  const double degrees = 2.5;
+  const double x1 = 0.0, y1 = 0.0;
+  const double x2 = 1.0, y2 = 1.0;
+  
+  // Derived params
+  const double angle = degrees * degToRad;
+  const double dx = (x2 - x1)/nx, dy = (y2 - y1)/nx;
+  const double xcen = 0.5*(x1+x2), ycen = 0.5*(y1+y2);
+  const double cosAngle = cos(angle);
+  const double sinAngle = sin(angle);
+
+  // PLC coordinates.
+  const double xbc1 = x1 - 4.0*dx;
+  const double ybc1 = y1 - 4.0*dx;
+  const double xbc2 = x2 + 4.0*dx;
+  const double ybc2 = y2 + 4.0*dx;
+  const double xhole1 = x1 + 4.0*dx;
+  const double yhole1 = y1 + 4.0*dx;
+  const double xhole2 = x2 - 4.0*dx;
+  const double yhole2 = y2 - 4.0*dx;
+  
+  // Create the generators.
+  vector<double> points;
+  double xi, yi, xii, yii;
+  for (int iy = 0; iy != nx; ++iy) {
+    yi = y1 + (iy + 0.5)*dy - ycen;
+    for (int ix = 0; ix != nx; ++ix) {
+      xi = x1 + (ix + 0.5)*dx - xcen;
+      xii = xcen + cosAngle*xi - sinAngle*yi;
+      yii = ycen + cosAngle*yi + sinAngle*xi;
+      if (xii < xhole1 or xii > xhole2 or
+          yii < yhole1 or yii > yhole2) {
+        points.push_back(xii);
+        points.push_back(yii);
+      }
+    }
+  }
+
+  // Create the boundary
+  ReducedPLC<2, double> plc;
+  plc.points.push_back(xbc1);  plc.points.push_back(ybc1);
+  plc.points.push_back(xbc2);  plc.points.push_back(ybc1);
+  plc.points.push_back(xbc2);  plc.points.push_back(ybc2);
+  plc.points.push_back(xbc1);  plc.points.push_back(ybc2);
+
+  plc.points.push_back(xhole1);  plc.points.push_back(yhole1);
+  plc.points.push_back(xhole1);  plc.points.push_back(yhole2);
+  plc.points.push_back(xhole2);  plc.points.push_back(yhole2);
+  plc.points.push_back(xhole2);  plc.points.push_back(yhole1);
+
+  plc.facets.resize(4, vector<int>(2));
+  for (int i = 0; i != 4; ++i) {
+    plc.facets[i][0] = i;
+    plc.facets[i][1] = (i+1)%4;
+  }
+
+  plc.holes.resize(1);
+  plc.holes[0].resize(4, vector<int>(2));
+  for (int i = 0; i != 4; ++i) {
+    plc.holes[0][i][0] = 4 + i;
+    plc.holes[0][i][1] = 4 + (i+1)%4;
+  }
+
+  // The mesh
+  Tessellation<2,double> mesh;
+
+  // Tessellate unbounded
+  tessellator.tessellate(points, mesh);
+  outputMesh(mesh,testName,points,6);
+  mesh.clear();
+  
+  // Tessellate bounded
+  tessellator.tessellate(points, plc.points, plc, mesh);
+  outputMesh(mesh,testName,points,7);
 }
 
 
@@ -205,6 +295,11 @@ main(int argc, char** argv)
   {
     cout << "\nTest 3" << endl;
     test3(tessellator);
+  }
+
+  {
+    cout << "\nTest 4" << endl;
+    test4(tessellator);
   }
 
 

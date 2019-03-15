@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "polytope.hh"
+#include "MeshEditor.hh"
 #include "Boundary2D.hh"
 #include "polytope_test_utilities.hh"
 
@@ -156,12 +157,13 @@ int main(int argc, char** argv)
 #endif
 
 
+#ifdef HAVE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
     test(tessellator);
   }
-
+#endif
 
 #ifdef HAVE_BOOST_VORONOI
   {

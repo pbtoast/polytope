@@ -57,7 +57,6 @@ void testBoundary(Boundary2D<double>& boundary,
 // testAllBoundaries
 // -----------------------------------------------------------------------
 void testAllBoundaries(Tessellator<2,double>& tessellator) {
-  int plotIndex = 0;
   for (int bid = 0; bid < 10; ++bid){
     cout << "Testing boundary type " << bid << endl;
     Boundary2D<double> boundary;
@@ -76,11 +75,13 @@ int main(int argc, char** argv)
 #endif
 
 
+#ifdef HAVE_TRIANGLE
    {
      cout << "\nTriangle Tessellator:\n" << endl;
      TriangleTessellator<double> tessellator;
      testAllBoundaries(tessellator);
    }
+#endif
    
 #ifdef HAVE_BOOST_VORONOI
    {

@@ -21,9 +21,15 @@
 #include "intersect.hh"
 #include "polytope_plc_canned_geometries.hh"
 #include "PLC_Boost_2d.hh"
+#include "Segment.hh"
+
+#include "RegisterBoostPolygonTypes.hh"
 
 // Fast predicate for determining colinearity of points.
 extern double orient2d(double* pa, double* pb, double* pc);
+
+// The Voronoi tools in Boost.Polygon
+#include <boost/polygon/voronoi.hpp>
 
 namespace polytope {
 
@@ -32,748 +38,143 @@ using std::min;
 using std::max;
 using std::abs;
 
-//------------------------------------------------------------------------
-// A collection of helper functions
-//------------------------------------------------------------------------
-
-namespace {
-
 //------------------------------------------------------------------------------
-// Output an pair of node-index lists as a ReducedPLC for the cell
-//------------------------------------------------------------------------------
-template<typename RealType>
-ReducedPLC<2, RealType>
-plcOfCell(const vector<unsigned>& nodeIndices,
-          map<int, Point2<RealType> >& nodeMap) {
-  typedef Point2<RealType> PointType;
-  ReducedPLC<2, RealType> result;
-  const unsigned nnodes = nodeIndices.size();
-  result.points.resize(2*nnodes);
-  result.facets.resize(nnodes, vector<int>(2));
-  for (unsigned i = 0; i < nnodes; ++i) {
-    result.facets[i][0] = i;
-    result.facets[i][1] = (i + 1)%nnodes;
-    POLY_ASSERT(nodeMap.find(nodeIndices[i]) != nodeMap.end());
-    const PointType pt = nodeMap[nodeIndices[i]];
-    result.points[2*i  ] = pt.x;
-    result.points[2*i+1] = pt.y;
-  }
-  return result;
-}
-
-//------------------------------------------------------------------------------
-// Check the orientation of a cell. If CCW, return True.
-//------------------------------------------------------------------------------
-template<typename RealType>
-bool
-checkCellOrientation(const RealType* pt, const ReducedPLC<2, RealType>& cell) {
-  double orientation = 0.0;
-  double pta[2] = {double(pt[0]), double(pt[1])};
-  for (int ifacet = 0; ifacet < cell.facets.size(); ++ifacet) {
-    double ptb[2] = {double(cell.points[2*cell.facets[ifacet][0]  ]),
-                     double(cell.points[2*cell.facets[ifacet][0]+1])};
-    double ptc[2] = {double(cell.points[2*cell.facets[ifacet][1]  ]),
-                     double(cell.points[2*cell.facets[ifacet][1]+1])};
-    orientation += orient2d(pta, ptb, ptc);
-  }
-  return (orientation > 0.0);
-}
-
-//------------------------------------------------------------------------------
-// Comparison operator for two points. They're equal if one lives inside the
-// 3x3 region around the other:    _ _ _
-//                                |_|_|_|
-//                                |_|_|_|
-//                                |_|_|_|
-//------------------------------------------------------------------------------
-template<typename RealType>
-class ThreeByThreeCompare {
-public:
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
-    return (pt1.x < pt2.x-1 ? true :
-            (pt1.x == pt2.x-1 or pt1.x == pt2.x or pt1.x == pt2.x+1) and 
-            pt1.y < pt2.y-1 ? true : false);
-  }
-};
-
-//------------------------------------------------------------------------------
-// Comparison operator for two points. They're equal if one lives inside the
-// 3x3 region around the other:    _ _ _
-//                                |_|_|_|
-//                                |_|_|_|
-//                                |_|_|_|
-//------------------------------------------------------------------------------
-template<typename RealType>
-class ThreeByThreeTolCompare {
-public:
-  ThreeByThreeTolCompare(RealType tol_) : tol(tol_) {};
-  bool operator()(const Point2<RealType> pt1, const Point2<RealType> pt2) const {
-    return (pt1.x < pt2.x-tol ? true :
-            (pt1.x >= pt2.x-tol and pt1.x <= pt2.x+tol) and 
-            pt1.y < pt2.y-tol ? true : false);
-  }
-private:
-  RealType tol;
-};
-
-
-} //end anonymous namespace
-
-
-
+// Default constructor
 //------------------------------------------------------------------------------
 template<typename RealType>
 BoostTessellator<RealType>::
 BoostTessellator():
   Tessellator<2, RealType>() {
 }
-//------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// Destructor
 //------------------------------------------------------------------------------
 template<typename RealType>
 BoostTessellator<RealType>::
 ~BoostTessellator() {
 }
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           Tessellation<2, RealType>& mesh) const {
-  // Pre-conditions
-  POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % 2 == 0);
-
-  // Initialize quantized coordinate system
-  mCoords.initialize(points, mDegeneracy);
-  
-  // Check for collinear generators
-  const bool collinear = geometry::collinear<2, RealType>(points, 1.0e-10);
-  
-  // Use the appropriate cell node routine
-  vector<vector<unsigned> > cellNodes;
-  map<int, PointType> id2node;
-  vector<unsigned> infNodes;
-  if (collinear) 
-  {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
-  }
-  else 
-  {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
-  }
-  POLY_ASSERT(cellNodes.size() == points.size()/2);
-
-  // Copy the quantized nodes to the final tessellation.
-  const unsigned numNodes = id2node.size();
-  RealPoint node;
-  mesh.nodes.resize(2*numNodes);
-  mesh.infNodes = infNodes;
-  for (typename map<int, PointType>::const_iterator itr = id2node.begin();
-       itr != id2node.end();
-       ++itr) {
-    const unsigned inode = itr->first;
-    POLY_ASSERT(inode >= 0 and inode < numNodes);
-    node = BTT::dequantize(mCoords, itr->second);
-    mesh.nodes[2*inode  ] = node.x;
-    mesh.nodes[2*inode+1] = node.y;
-  }
-
-  // Finish constructing the cell-face-node topology
-  constructUnboundedMeshTopology(cellNodes, points, mesh);
-}
-//------------------------------------------------------------------------------
-
+// Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
 template<typename RealType>
 void
 BoostTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           RealType* low,
-           RealType* high,
-           Tessellation<2, RealType>& mesh) const {
-  // Pre-conditions
-  POLY_ASSERT(low != 0 and high != 0);
-  POLY_ASSERT(low[0] <= high[0] and low[1] <= high[1]);
-  
-  // Build a PLC with the bounding box, and then use the PLC method.
-  ReducedPLC<2, RealType> box = plc_box<2, RealType>(low, high);
-  this->tessellate(points, box, mesh);
-}
-//------------------------------------------------------------------------------
+tessellateQuantized(QuantizedTessellation& result) const {
 
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           const vector<RealType>& plcPoints,
-           const PLC<2, RealType>& geometry,
-           Tessellation<2, RealType>& mesh) const {
-  ReducedPLC<2, RealType> boundary;
-  boundary.facets = geometry.facets;
-  boundary.holes  = geometry.holes;
-  boundary.points = plcPoints;
-  this->tessellate(points, boundary, mesh);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-tessellate(const vector<RealType>& points,
-           const ReducedPLC<2, RealType>& geometry,
-           Tessellation<2, RealType>& mesh) const {
-  // Pre-conditions
-  POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(not points.empty());
-  POLY_ASSERT(not geometry.points.empty());
-
-  // Initialize quantized coordinate system
-  mCoords.initialize(geometry.points, mDegeneracy);
-  mCoords.points = geometry.points;
-  mCoords.facets = geometry.facets;
-  mCoords.holes  = geometry.holes;
-
-  // Check that the coordinates don't overflow 32-bit integers. Boost.Voronoi
-  // expects integer input and defaults to 32 bits. This can be extended to
-  // greater precision using custom trait classes but has not been tested
-  // yet.  -DPS 01/19/2015
-  POLY_VERIFY2(mCoords.coordMax() < std::numeric_limits<int32_t>::max(),
-               "BoostTessellator Error: the specified degeneracy spacing "
-               << mDegeneracy << " is too small to be represented using "
-               << "32-bit integers given the scale of the input generators. "
-               << "Please reduce the degeneracy spacing to tessellate.");
-
-  // Check for collinear generators
-  const bool collinear = geometry::collinear<2, RealType>(points, 1.0e-10);
-  const unsigned numGenerators = points.size()/2;
-
-  // Use the appropriate cell node routine
-  vector<vector<unsigned> > cellNodes;
-  map<int, PointType> id2node;
-  vector<unsigned> infNodes;
-  if (collinear) 
-  {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
-  }
-  else 
-  {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
-  }
-  POLY_ASSERT(cellNodes.size() == numGenerators);
-
-  vector<ReducedPLC<2, CoordType> > orphans;
-  vector<ReducedPLC<2, CoordType> > cells(numGenerators);
-
-  // Convert boundary to proper point type to compute intersections
-  ReducedPLC<2, CoordType> boundary;
-  boundary.facets = geometry.facets;
-  boundary.holes  = geometry.holes;
-  boundary.points.resize(geometry.points.size());
-  for (int j = 0; j < geometry.points.size()/2; ++j) {
-    const PointType pp = BTT::quantize(mCoords, &geometry.points[2*j]);
-    boundary.points[2*j  ] = pp.x;
-    boundary.points[2*j+1] = pp.y;
-  }
-
-  // Compute cell-boundary intersections
-  for (int i = 0; i < numGenerators; ++i) {
-    const PointType generator = BTT::quantize(mCoords, &points[2*i]);
-    ReducedPLC<2, CoordType> cell = plcOfCell<CoordType>(cellNodes[i], id2node);
-
-    //TODO
-    //TODO implement the bi-infinite edge fix
-    //TODO
-    
-    POLY_ASSERT2(not BG::boost_intersects<CoordType>(cell),
-		 "Cell " << i << " self-intersects before clipping"
-		 << endl << cell);
-    cells[i] = BG::boost_clip<CoordType>(boundary, cell, generator, orphans);
-    POLY_ASSERT(not BG::boost_intersects<CoordType>(cells[i]));
-  }
-
-  if (not orphans.empty()) {
-    cerr << "Orphans detected. Taking no actions." << endl;
-  }
-
-  // Input nodes and construct the final mesh topology
-  this->constructBoundedTopology(points, geometry, cells, mesh);
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Private routines called by tessellate:
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-computeCellNodes(const vector<RealType>& points,
-                 vector<vector<unsigned> >& cellNodes,
-                 map<int, PointType>& id2node,
-                 vector<unsigned>& infNodes) const{
-  const int numGenerators = points.size()/2;
-  // The Boost.Polygon Voronoi Diagram object
-  // VB voroBuilder;
-  VD voronoi;
-
-  // Convert point generators to Polytope integer points
-  vector<IntPoint> generators(numGenerators);
-  for (unsigned i = 0; i < numGenerators; ++i) {
-    IntPoint ip = mCoords.quantize(&points[2*i]);
-    ip.index = i;
-    generators[i] = ip;
-  }
-  
   // Sort the input points by the first element of the generator-index pair.
   // The second element provides the pre-sort generator index. Shame on you,
   // Boost, for making us do this.
-  sort(generators.begin(), generators.end());
+  const int numGenerators = result.generators.size();
+  vector<IntPoint> generators(result.generators.begin(), result.generators.end());
+  std::copy(result.guardGenerators.begin(), result.guardGenerators.end(), std::back_inserter(generators));
+  // sort(generators.begin(), generators.end());
   
-  // for (unsigned i = 0; i < numGenerators; ++i) {
-  //   voroBuilder.insert_point(generators[i].x, generators[i].y);
-  // }
-  // voroBuilder.construct(&voronoi);
-  construct_voronoi(generators.begin(), generators.end(), &voronoi);  
-  POLY_ASSERT(voronoi.num_cells() == numGenerators);
+  // // Build ourselves the segments representing our bounding box.
+  // typedef Segment<2> IntSegment;
+  // vector<IntSegment> bounds(4);
+  // const CoordHash coordMin = QuantizedTessellation2d<CoordHash, RealType>::coordMin;
+  // const CoordHash coordMax = QuantizedTessellation2d<CoordHash, RealType>::coordMax;
+  // bounds[0] = IntSegment(coordMin, coordMin, coordMax, coordMin);
+  // bounds[1] = IntSegment(coordMax, coordMin, coordMax, coordMax);
+  // bounds[2] = IntSegment(coordMax, coordMax, coordMin, coordMax);
+  // bounds[3] = IntSegment(coordMin, coordMax, coordMin, coordMin);
+  // // sort(bounds.begin(), bounds.end());  // Not sure if this is necessary
 
-  // Compute a bounding box for the floating point vertex positions
-  RealPoint vlow  = RealPoint( numeric_limits<RealType>::max(),  
-                               numeric_limits<RealType>::max());
-  RealPoint vhigh = RealPoint(-numeric_limits<RealType>::max(), 
-			      -numeric_limits<RealType>::max());
-  for (typename VD::const_vertex_iterator itr = voronoi.vertices().begin();
-       itr != voronoi.vertices().end(); 
-       ++itr) {
-    RealPoint rp = RealPoint(itr->x(), itr->y());
-    PointType pp = BTT::deboost(mCoords, &rp.x);
-    RealPoint p  = BTT::dequantize(mCoords, pp);
-    vlow.x = min(vlow.x, p.x);  vhigh.x = max(vhigh.x, p.x);
-    vlow.y = min(vlow.y, p.y);  vhigh.y = max(vhigh.y, p.y);
-  }
-  
-  // Expand the bounding box to include
-  mCoords.expand(&vlow.x, &vhigh.x, true);
+  // Invoke the Boost.Voronoi diagram constructor
+  VD voronoi;
+  construct_voronoi(generators.begin(), generators.end(),
+                    // bounds.begin(), bounds.end(),
+                    &voronoi);  
+  // POLY_ASSERT(voronoi.num_cells() == numGenerators + result.guardGenerators.size());
 
-  // Iterate over the edges. Boost has organized them CCW around each generator.
-  int sortedIndex=0, cellIndex;
-  PointType node, pinf, endpt;
-  RealPoint direction, vert;
-  map<PointType, int> node2id;
-  cellNodes.resize(numGenerators);
+  // Read out the Voronoi topology to our intermediate QuantizedTessellation format.
+  // Iterate over the edges.  Boost has organized them CCW around each generator.
+  // Note here we just extract information about the point generators, and build straight
+  // edges where those interface with our segment boundaries.
+  result.cellEdges = vector<vector<int> >(numGenerators);
+  result.edges.reserve(voronoi.num_edges());
+  result.nodes.reserve(voronoi.num_vertices());
+  map<IntPoint, int> node2id;
+  map<std::pair<int, int>, int> edge2id;
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
        cellItr != voronoi.cells().end(); 
-       ++cellItr, ++sortedIndex) {
-    const typename VD::edge_type* edge = cellItr->incident_edge();
-    vector<unsigned> nodeChain;
-    bool boundedCell = true;
-    int infBegin = -1;
-    int infEnd = -1;
-    POLY_CONTRACT_VAR(infEnd);
-    do {
-      // Some pre-conditions
-      POLY_ASSERT2(sortedIndex == cellItr->source_index(),
-                   sortedIndex << " != " << cellItr->source_index());
-      POLY_ASSERT(sortedIndex <  numGenerators);
-      cellIndex = generators[sortedIndex].index;
-      POLY_ASSERT(cellIndex   <  numGenerators);      
+       ++cellItr) {
+    int cellIndex = generators[cellItr->source_index()].index;
+    if (cellItr->contains_point() and cellIndex < numGenerators) {
+    // if (cellItr->contains_point() and cellItr->source_index() < numGenerators) {
+      // POLY_ASSERT2(sortedIndex == cellItr->source_index(),
+      //              sortedIndex << " != " << cellItr->source_index());
+      // POLY_ASSERT(sortedIndex <  numGenerators + 4);
+      // POLY_ASSERT(cellItr->source_index() <  numGenerators);
+      POLY_ASSERT2(cellIndex   <  numGenerators, cellIndex << " " << cellItr->source_index() << " " << numGenerators);
 
-      // The two vertex pointers for this edge
-      // NOTE: If edge is infinite, one of these pointers is null
-      const typename VD::vertex_type* v0 = edge->vertex0();
-      const typename VD::vertex_type* v1 = edge->vertex1();
+      // Start the chain walking the edges of this cell.
+      const typename VD::edge_type* edge = cellItr->incident_edge();
+      do {
+        edge = edge->next();
 
-      // Finite edge: just add vertex 0 to the cell nodes
-      if (v0 and v1) {
-        vert = RealPoint(v0->x(), v0->y());
-        node = BTT::deboost(mCoords, &vert.x);
-        const unsigned old_size = node2id.size();
-        const unsigned j = internal::addKeyToMap(node, node2id);
-        nodeChain.push_back(j);
-        if (j == old_size) id2node[j] = node;
-      }
-      
-      // Infinite edge: Determine the direction of the ray pointing to infinity.
-      // Add the origin vertex of the ray and the projected point
-      else {
-        POLY_ASSERT(v0 or v1);
-        boundedCell *= false;
-        const typename VD::vertex_type* vfin = v0 ? v0 : v1;
-        vert  = RealPoint(vfin->x(), vfin->y());
-        node  = BTT::deboost(mCoords, &vert.x);
-        endpt = node;
-
-        // Determine the edge direction pointing to infinity
-        const typename VD::cell_type* cell1 = edge->cell();
-        const typename VD::cell_type* cell2 = edge->twin()->cell();
-
-        // Assume only point-generators for the time being
-        POLY_ASSERT(cell1->contains_point() and cell2->contains_point());
-        const size_t index1 = cell1->source_index();
-        const size_t index2 = cell2->source_index();
-        POLY_ASSERT(index1 < numGenerators and index2 < numGenerators);
-        const unsigned cellIndex1 = generators[index1].index;
-        const unsigned cellIndex2 = generators[index2].index;
-        RealPoint r = RealPoint(points[2*cellIndex2  ] - points[2*cellIndex1  ],
-                                points[2*cellIndex2+1] - points[2*cellIndex1+1]);
-        direction = v0 ? RealPoint(-r.y, r.x) : RealPoint(r.y, -r.x);
-	geometry::unitVector<2, RealType>(&direction.x);
-        
-        // Project the finite vertex to the infinite shell
-        pinf = BTT::project(mCoords, &endpt.x, &direction.x);
-
-        // Vertex 0 is finite, vertex 1 is the projected infNode. Add them in order
-        if (v0) {
-          { // Vertex 0
-            const unsigned old_size = node2id.size();
-            const unsigned j = internal::addKeyToMap(node, node2id);
-            nodeChain.push_back(j);
-            if (j == old_size)  id2node[j] = node;
-          }
-          
-          { // Vertex 1
-            node = pinf;
-            const unsigned old_size = node2id.size();
-            const unsigned j = internal::addKeyToMap(node, node2id);
-            nodeChain.push_back(j);
-            if (j == old_size)  id2node[j] = node;
-            if (j == old_size)  infNodes.push_back(j);
-            infEnd = j;
+        // The two vertex pointers for this edge
+        // NOTE: If edge is infinite, one of these pointers is null.  This should never happen
+        // since we added bounding segments.
+        const typename VD::vertex_type* v0 = edge->vertex0();
+        const typename VD::vertex_type* v1 = edge->vertex1();
+        if (not (v0 and v1)) {
+          cerr << "Bad news at generator " << generators[cellIndex] << " " << result.coordMin << " " << result.coordMax << endl;
+          if (v0) {
+            cerr << "v0 : " << v0->x() << " " << v0->y() << endl;
+          } else {
+            cerr << "v1 : " << v1->x() << " " << v1->y() << endl;
           }
         }
-        
-        // Vertex 0 is the projected infNode. Only add vertex 0.
-        else {
-          node = pinf;
-          const unsigned old_size = node2id.size();
-          const unsigned j = internal::addKeyToMap(node, node2id);
-          nodeChain.push_back(j);
-          if (j == old_size) id2node[j] = node;
-          if (j == old_size) infNodes.push_back(j);
-          infBegin = j;
+        POLY_ASSERT(v0 and v1);
+
+        // Finite edge.  Add the edge to the cell, and any new nodes.
+        // Insert vertex 0.
+        const IntPoint p0(v0->x(), v0->y());
+        int old_size = node2id.size();
+        const int j0 = internal::addKeyToMap(p0, node2id);
+        if (j0 == old_size) {
+          POLY_ASSERT(j0 == result.nodes.size());
+          result.nodes.push_back(p0);
         }
-      }
 
-      edge = edge->next();
-    } while (edge != cellItr->incident_edge());
-    POLY_ASSERT2(not nodeChain.empty(), "Cell " << cellIndex);
-    
-    // Remove repeated node indices in the chain
-    vector<unsigned>::iterator it = std::unique(nodeChain.begin(), nodeChain.end());
-    nodeChain.resize(std::distance(nodeChain.begin(), it));
-    if (nodeChain.front() == nodeChain.back()) nodeChain.resize(nodeChain.size()-1);
-    POLY_ASSERT2(not nodeChain.empty(), "Cell " << cellIndex);
-
-    // Do some intersection checks for robustness purposes
-    if (not boundedCell) {
-      // Rotate the chain of nodes so it begins and ends with a projected node
-      POLY_ASSERT(infBegin != -1 and infEnd != -1);
-      POLY_ASSERT(std::find(nodeChain.begin(), nodeChain.end(), infBegin) != nodeChain.end());
-      POLY_ASSERT(std::find(nodeChain.begin(), nodeChain.end(), infEnd  ) != nodeChain.end());
-      vector<unsigned>::iterator beginIt = std::find(nodeChain.begin(), nodeChain.end(), infBegin);
-      std::rotate(nodeChain.begin(), beginIt, nodeChain.end());
-      POLY_ASSERT(nodeChain.front() == infBegin);
-      POLY_ASSERT(nodeChain.back()  == infEnd  );
-      
-      // Edge 1
-      const unsigned n11 = *(nodeChain.begin()  );     //Projected
-      const unsigned n12 = *(nodeChain.begin()+1);
-      POLY_ASSERT(n11 != n12);
-      POLY_ASSERT(id2node.find(n11) != id2node.end());
-      POLY_ASSERT(id2node.find(n12) != id2node.end());
-      RealPoint rp11 = BTT::dequantize(mCoords, id2node[n11]);
-      RealPoint rp12 = BTT::dequantize(mCoords, id2node[n12]);
-
-      // Edge 2
-      const unsigned n21 = *(nodeChain.end()-2);
-      const unsigned n22 = *(nodeChain.end()-1);       //Projected
-      POLY_ASSERT(n21 != n22);
-      POLY_ASSERT(id2node.find(n21) != id2node.end());
-      POLY_ASSERT(id2node.find(n22) != id2node.end());
-      RealPoint rp21 = BTT::dequantize(mCoords, id2node[n21]);
-      RealPoint rp22 = BTT::dequantize(mCoords, id2node[n22]);
-
-      // Compute self-intersections
-      {
-        RealPoint result;
-        bool intersects;
-        if (n12 == n21) intersects = false;
-        else            intersects = geometry::segmentIntersection2D(&rp11.x, &rp12.x,
-                                                                     &rp21.x, &rp22.x,
-                                                                     &result.x,
-                                                                     mDegeneracy);
+        // Insert vertex 1.
+        const IntPoint p1(v1->x(), v1->y());
+        old_size = node2id.size();
+        const int j1 = internal::addKeyToMap(p1, node2id);
+        if (j1 == old_size) {
+          POLY_ASSERT(j1 == result.nodes.size());
+          result.nodes.push_back(p1);
+        }
         
-        if (intersects) {
-          // // Blago!
-          // cerr << "Self-intersection detected:" << endl
-          //      << "  Cell " << cellIndex << endl
-          //      << "  " << rp11 << "  " << rp12 << endl
-          //      << "  " << rp21 << "  " << rp22 << endl
-          //      << "  Intersection pt = " << result << endl;
-          // // Blago!
-           
-          if (geometry::distance<2,RealType>(&rp12.x, &result.x) > mDegeneracy and
-              geometry::distance<2,RealType>(&rp21.x, &result.x) > mDegeneracy) {
-            const PointType newNode = BTT::quantize(mCoords, &result.x);
-            id2node[n11] = newNode;
-            id2node[n22] = newNode;
+        // Now insert the edge.  Since we use oriented single edges between cells, a bit different than Boost.Polygon.
+        // We have to screen out zero-length edges apparently.
+        if (j0 != j1) {
+          const pair<int, int> edge = internal::hashEdge(j0, j1);
+          POLY_ASSERT((edge.first == j0 and edge.second == j1) or
+                      (edge.first == j1 and edge.second == j0));
+          old_size = edge2id.size();
+          const int e1 = internal::addKeyToMap(edge, edge2id);
+          if (e1 == old_size) {
+            POLY_ASSERT(e1 == result.edges.size());
+            result.edges.push_back(edge);
+          }
+          if (edge.first == j0) {
+            result.cellEdges[cellIndex].push_back(e1);
+          } else {
+            result.cellEdges[cellIndex].push_back(~e1);
           }
         }
-      }
-
-      // Compute intersections with a boundary
-      {
-        vector<RealType> result;
-        const int numIntersections = intersect(&rp11.x, &rp22.x, mCoords.facets.size(), 
-                                               &mCoords.points[0], mCoords, result);
-        
-        if (numIntersections > 0) {
-          POLY_ASSERT(result.size()/2 == numIntersections);
-          const RealPoint r = rp22 - rp11;
-          RealPoint rperp = RealPoint(-r.y, r.x);
-          geometry::unitVector<2,RealType>(&rperp.x);
-          const PointType pp = BTT::project(mCoords, &points[2*cellIndex], &rperp.x);
-          const unsigned old_size = node2id.size();
-          const unsigned j = internal::addKeyToMap(pp, node2id);
-          if (old_size != node2id.size()) {
-            id2node[j] = pp;
-            infNodes.push_back(j);
-          }
-          nodeChain.push_back(j);
-          
-          // // Blago!
-          // cerr << "Projected points re-intersect boundary" << endl
-          //      << rp11 << "  " << rp22 << endl
-          //      << pp << endl;
-          // // Blago!
-        }
-      }
+      } while (edge != cellItr->incident_edge());
     }
-    cellNodes[cellIndex] = nodeChain;
   }
-
-  POLY_ASSERT(cellNodes.size() == numGenerators);
 }
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-computeCellNodesCollinear(const vector<RealType>& points,
-                          vector<vector<unsigned> >& cellNodes,
-                          map<int, PointType>& id2node,
-                          vector<unsigned>& infNodes) const{
-
-  // A dummy expansion just in case we're doing a distributed mesh construction.
-  mCoords.expand(&mCoords.low_inner.x, &mCoords.high_inner.x);
-
-  // Call the 1d routine for projecting a line of points
-  vector<RealPoint> nodes;
-  const RealPoint center = mCoords.center();
-  constructCells1d(points, &center.x, mCoords.infiniteRadius(), cellNodes, nodes);
-  POLY_ASSERT(cellNodes.size() == points.size()/2);
-  POLY_ASSERT(nodes.size() == points.size());
-
-  // Quantize nodes and assign indices
-  std::set<PointType> uniqueNodes;
-  infNodes.resize(nodes.size());
-  for (unsigned i = 0; i < nodes.size(); ++i) {
-    const PointType p = BTT::quantize(mCoords, &(nodes[i]).x);
-    uniqueNodes.insert(p);
-    POLY_ASSERT(uniqueNodes.size() == i+1);
-    id2node[i] = p;
-    infNodes[i] = i;   // All nodes are projected inf nodes
-  }
-  POLY_ASSERT(uniqueNodes.size() == nodes.size());
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-constructBoundedTopology(const vector<RealType>& points,
-			 const ReducedPLC<2, RealType>& geometry,
-			 const vector<ReducedPLC<2, CoordType> >& cellRings,
-			 Tessellation<2, RealType>& mesh) const {
-  // Pre-conditions
-  POLY_ASSERT(mesh.empty());
-  
-  // Now build the unique mesh nodes and cell info.
-  const unsigned numGenerators = cellRings.size();
-  // map<PointType, int> point2node;
-  map<IntPoint, int> point2node;
-  map<EdgeHash, int> edgeHash2id;
-  map<int, vector<int> > edgeCells;
-  int i, j, k, iedge;
-  mesh.cells = std::vector<std::vector<int> >(numGenerators);
-  for (i = 0; i != numGenerators; ++i) { 
-    POLY_ASSERT(cellRings[i].facets.size() > 2);
-    for (unsigned ifacet = 0; ifacet < cellRings[i].facets.size(); ++ifacet) {
-      POLY_ASSERT(cellRings[i].facets[ifacet].size() == 2);
-      const int i1 = cellRings[i].facets[ifacet][0];
-      const int i2 = cellRings[i].facets[ifacet][1];
-      POLY_ASSERT(i1 != i2);
-      const PointType p1 = PointType(cellRings[i].points[2*i1],
-				     cellRings[i].points[2*i1+1]);
-      const PointType p2 = PointType(cellRings[i].points[2*i2],
-				     cellRings[i].points[2*i2+1]);
-      POLY_ASSERT(p1 != p2);
-      const IntPoint ip1 = mCoords.quantize(&p1.x);
-      const IntPoint ip2 = mCoords.quantize(&p2.x);
-      // j = internal::addKeyToMap(p1, point2node);
-      // k = internal::addKeyToMap(p2, point2node);
-      j = internal::addKeyToMap(ip1, point2node);
-      k = internal::addKeyToMap(ip2, point2node);
-      if (j != k) {
-      POLY_ASSERT(j != k);
-      iedge = internal::addKeyToMap(internal::hashEdge(j,k), edgeHash2id);
-      edgeCells[iedge].push_back(j < k ? i : ~i);
-      POLY_ASSERT2(edgeCells[iedge].size() == 1 or edgeCells[iedge][0]*edgeCells[iedge][1] <= 0,
-                   "BLAGO: " << iedge << " " << j << " " << k << " " << edgeCells[iedge][0] 
-                   << " " << edgeCells[iedge][1]);
-      mesh.cells[i].push_back(j < k ? iedge : ~iedge);
-      }
-    }
-    POLY_ASSERT(mesh.cells[i].size() >= 3);
-  }
-  POLY_ASSERT(edgeCells.size() == edgeHash2id.size());
-  
-  // Fill in the mesh nodes.
-  RealPoint node;
-  mesh.nodes = std::vector<RealType>(2*point2node.size());
-  // for (typename std::map<PointType, int>::const_iterator itr = point2node.begin();
-  for (typename std::map<IntPoint, int>::const_iterator itr = point2node.begin();
-       itr != point2node.end(); 
-       ++itr) {
-    // const RealPoint p = BTT::dequantize(mCoords, itr->first);
-    const RealPoint p = mCoords.dequantize(&(itr->first).x);
-    i = itr->second;
-    POLY_ASSERT(i < mesh.nodes.size()/2);
-    // if (not BG::boost_within(p, geometry)) {
-    //   RealPoint result;
-    //   RealType dist = nearestPoint(&node.x, 
-    // 				      geometry.points.size()/2,
-    // 				      &geometry.points[0],
-    // 				      geometry,
-    // 				      &result.x);
-    //   POLY_ASSERT(dist < 1.0e-10);
-    //   node = result;
-    // }
-    node = p;
-    mesh.nodes[2*i]   = node.x;
-    mesh.nodes[2*i+1] = node.y;
-  }
-  
-  // Fill in the mesh faces.
-  mesh.faces = std::vector<std::vector<unsigned> >(edgeHash2id.size());
-  for (typename std::map<EdgeHash, int>::const_iterator itr = edgeHash2id.begin();
-       itr != edgeHash2id.end(); 
-       ++itr) {
-    const EdgeHash& ehash = itr->first;
-    i = itr->second;
-    POLY_ASSERT(i < mesh.faces.size());
-    POLY_ASSERT(mesh.faces[i].size() == 0);
-    mesh.faces[i].push_back(ehash.first);
-    mesh.faces[i].push_back(ehash.second);
-  }
-
-  // Fill in the mesh faceCells.
-  mesh.faceCells = std::vector<std::vector<int> >(edgeHash2id.size());
-  for (i = 0; i != mesh.faces.size(); ++i) {
-    if (not(edgeCells[i].size() == 1 or edgeCells[i].size() == 2)) {
-      const int n1 = mesh.faces[i][0], n2 = mesh.faces[i][1];
-      std::cerr << "Blago! " << i << " "
-		<< edgeCells[i].size() << " : " << n1 << " " << n2 << " : ("
-                << mesh.nodes[2*n1] << " " << mesh.nodes[2*n1 + 1] << ") ("
-                << mesh.nodes[2*n2] << " " << mesh.nodes[2*n2 + 1] << ")" << std::endl;
-      for (j = 0; j != edgeCells[i].size(); ++j) {
-        std::cerr << " --> " << edgeCells[i][j] << " " 
-                  << points[2*edgeCells[i][j]] << " " 
-                  << points[2*edgeCells[i][j]+1] << std::endl;
-      }
-    }
-    POLY_ASSERT(edgeCells[i].size() == 1 or edgeCells[i].size() == 2);
-    mesh.faceCells[i] = edgeCells[i];
-  }
-
-  // Post-conditions
-  POLY_ASSERT(mesh.faceCells.size() == mesh.faces.size());
-  POLY_ASSERT(mesh.cells.size()     == numGenerators    );
-}
-//------------------------------------------------------------------------------
-
-
-
-
-
-//------------------------------------------------------------------------------
-// Private tessellate routines
-//------------------------------------------------------------------------------
-
-
-
-
-
-
-//------------------------------------------------------------------------------
-template<typename RealType>
-void
-BoostTessellator<RealType>::
-tessellate(const std::vector<RealType>& points,
-           const ReducedPLC<2, CoordHash>& intGeometry,
-           const QuantizedCoordinates<2, RealType>& coords,
-           vector<ReducedPLC<2, CoordHash> >& intCells) const {
-  // Pre-conditions
-  POLY_ASSERT(not intGeometry.empty());
-  POLY_ASSERT(not points.empty() > 0);
-  POLY_ASSERT(points.size() % 2 == 0);
-  POLY_ASSERT(not coords.empty());
-
-  // The Quantized coordinates
-  mCoords = coords;
-  
-  const bool collinear = geometry::collinear<2, RealType>(points, mDegeneracy);
-  vector<vector<unsigned> > cellNodes;
-  map<int, PointType> id2node;
-  vector<unsigned> infNodes;
-  
-  // Use the appropriate cell node routine
-  if (collinear)
-  {
-    this->computeCellNodesCollinear(points, cellNodes, id2node, infNodes);
-  }
-  else 
-  {
-    this->computeCellNodes(points, cellNodes, id2node, infNodes);
-  }
-  POLY_ASSERT(cellNodes.size() == points.size()/2);
-
-  // vector<ReducedPLC<2, CoordHash> > dummy;
-  // intCells.resize(numGenerators);
-  // for (int i = 0; i < numGenerators; ++i) {
-  //    const IntPoint intGenerator 
-  // }
-}
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 // Explicit instantiation.
 //------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
 template class BoostTessellator<double>;
-
 
 } //end polytope namespace

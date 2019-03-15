@@ -12,6 +12,8 @@
 #include <stdint.h>
 
 #include "polytope_internal.hh"
+#include "PLC.hh"
+#include "ReducedPLC.hh"
 
 namespace polytope {
 

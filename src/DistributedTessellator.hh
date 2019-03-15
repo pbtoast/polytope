@@ -24,6 +24,7 @@ class DistributedTessellator: public Tessellator<Dimension, RealType> {
 
   //--------------------------- Public Interface ---------------------------//
 public:
+  typedef typename Tessellator<Dimension, RealType>::QuantizedTessellation QuantizedTessellation;
 
   //! Constructor.
   //! \param serialTessellator A serial implementation of Tessellator.
@@ -97,6 +98,13 @@ public:
   //! This query mechanism prevents us from descending into the taxonomic 
   //! hell associated with elaborate inheritance hierarchies.
   virtual bool handlesPLCs() const { return mSerialTessellator->handlesPLCs(); }
+
+  //! Required for all tessellators:
+  //! Compute the quantized tessellation.  This is the basic method all
+  //! Tessellator implementations must provide, on which the other tessellation methods
+  //! in polytope build.
+  virtual void
+  tessellateQuantized(QuantizedTessellation& qmesh) const { POLY_ASSERT2(false, "Need to convert DistributedTessellator to use QuantizedTessellation."); }
 
   virtual std::string name() const { return mSerialTessellator->name(); }
 

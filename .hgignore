@@ -6,6 +6,8 @@ syntax: glob
 *.a
 *.orig
 *.pyc
+*.silo
+*.exe
 
 # Ignore our build output
 build

@@ -1,0 +1,43 @@
+sudo: required
+
+services:
+  - docker
+
+language: c++
+
+env:
+  matrix:
+    - BUILD_TYPE=Debug MPI=ON USE_SILO=OFF
+    - BUILD_TYPE=Release MPI=ON USE_SILO=OFF
+
+before_install:
+  - docker run -d --name polytope-build -v $PWD:/travis ubuntu:bionic tail -f /dev/null
+  - docker ps
+
+install:
+  - docker exec -t polytope-build bash -c "apt-get update;
+    apt-get install -y openmpi-bin libopenmpi-dev ssh g++ gfortran cmake autotools-dev ninja-build bash git libboost-all-dev libsilo-dev libhdf5-dev"
+
+before_script:
+  - if [ "$MPI" = "ON" ]; then export CC=mpicc; export CXX=mpic++; else export CC=cc; export CXX=c++; fi
+  - docker exec -t polytope-build bash -c "cd travis;
+    mkdir build && cd build;
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAVE_MPI=$MPI \
+    -DBUILD_C_INTERFACE=ON -DC_REAL_TYPE=double -DTESTING=ON \
+    -DBOOST_ROOT=/usr -DHDF5_ROOT=/usr -DUSE_SILO=$USE_SILO \
+    -DUSE_PYTHON=ON -DPYTHON_EXE=/usr/bin/python \
+    -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX .."
+
+script:
+  - docker exec -t polytope-build bash -c "cd travis/build;
+    ninja -j3 install;
+    ctest -j2 -T test"
+
+after_failure:
+  - docker exec -t polytope-build bash -c "cd travis;
+    cat build/Testing/Temporary/LastTest.log"
+
+after_script:
+  - docker exec -t polytope-build bash -c "cd travis;
+    cat build/Testing/Temporary/LastTest.log;"
+
