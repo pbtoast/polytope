@@ -42,17 +42,19 @@ If you want to build Python bindings, you also need the following:
 ### Building
 
 To build polytope on a UNIX-like system, change to your `polytope` source
-directory and type the following commands:
+directory and type the following:
 
 ```
 ./bootstrap build_dir
 ```
 
-where `build_dir` is the directory in which you want to build. Then just
-follow the onscreen directions: you change to that build directory, edit
-`config.sh` to define your build, and then start the build using your
-generator's build process. For the default generator (UNIX makefiles), this
-is just `make`. For Ninja (recommended if you have it), it's `ninja`.
+where `build_dir` is the directory in which you want to build.
+
+Then just follow the onscreen directions: you change to that build directory,
+edit `config.sh` to define your build, run it with `sh config.sh`, and start
+the build using your generator's build process. For the default generator
+(UNIX makefiles), this is just `make`. For Ninja (recommended if you have it),
+it's `ninja`.
 
 ### Installing
 
