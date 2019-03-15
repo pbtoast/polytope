@@ -147,6 +147,8 @@ if [ "\$BUILD_C_INTERFACE" = "ON" ]; then
 fi
 if [ "\$TESTING" = "ON" ]; then
   OPTIONS="\$OPTIONS -DTESTING=ON"
+else
+  OPTIONS="\$OPTIONS -DTESTING=OFF"
 fi
 if [ "\$VERBOSE" = "ON" ]; then
   OPTIONS="\$OPTIONS -DCMAKE_VERBOSE_MAKEFILE=ON"
