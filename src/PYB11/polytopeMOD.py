@@ -9,6 +9,27 @@ PYB11includes = ['"polytope.hh"',
 PYB11namespaces = ["polytope"]
 
 #-------------------------------------------------------------------------------
+# STL
+#-------------------------------------------------------------------------------
+# std::vector
+vector_of_char     = PYB11_bind_vector("char", opaque=True, local=True)
+vector_of_unsigned = PYB11_bind_vector("unsigned", opaque=True, local=True)
+vector_of_ULL      = PYB11_bind_vector("uint64_t", opaque=True, local=True)
+vector_of_int      = PYB11_bind_vector("int", opaque=True, local=True)
+vector_of_float    = PYB11_bind_vector("float", opaque=True, local=True)
+vector_of_double   = PYB11_bind_vector("double", opaque=True, local=True)
+vector_of_string   = PYB11_bind_vector("std::string", opaque=True, local=True)
+
+# std::vector<std::vector>
+vector_of_vector_of_char     = PYB11_bind_vector("std::vector<char>", opaque=True, local=True)
+vector_of_vector_of_unsigned = PYB11_bind_vector("std::vector<unsigned>", opaque=True, local=True)
+vector_of_vector_of_ULL      = PYB11_bind_vector("std::vector<uint64_t>", opaque=True, local=True)
+vector_of_vector_of_int      = PYB11_bind_vector("std::vector<int>", opaque=True, local=True)
+vector_of_vector_of_float    = PYB11_bind_vector("std::vector<float>", opaque=True, local=True)
+vector_of_vector_of_double   = PYB11_bind_vector("std::vector<double>", opaque=True, local=True)
+vector_of_vector_of_string   = PYB11_bind_vector("std::vector<std::string>", opaque=True, local=True)
+
+#-------------------------------------------------------------------------------
 # Add the polytope classes
 #-------------------------------------------------------------------------------
 from PLC import *

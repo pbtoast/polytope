@@ -35,43 +35,51 @@ false otherwise."""
 
     #...........................................................................
     # Attributes
-    nodes = PYB11readwrite(doc="""An array of (Dimension*numNodes) values containing components of 
+    nodes = PYB11readwrite(returnpolicy = "reference",
+                           doc="""An array of (Dimension*numNodes) values containing components of 
 node positions. The components are stored in node-major order and 
 the 0th component of the ith node appears in nodes[Dimension*i].""")
 
-    cells = PYB11readwrite(doc="""This two-dimensional array defines the cell-face topology of the 
+    cells = PYB11readwrite(returnpolicy = "reference",
+                           doc="""This two-dimensional array defines the cell-face topology of the 
 mesh. A cell has an arbitrary number of faces in 2D and 3D.
 cells[i][j] gives the index of the jth face of the ith cell.
 A negative face index indicates the actual face index is the 1's 
 complement of the value (~cells[i][j]) and the face is oriented
 with an inward pointing normal for cells[i].""")
 
-    faces = PYB11readwrite(doc="""This two-dimensional array defines the topology of the faces of the 
+    faces = PYB11readwrite(returnpolicy = "reference",
+                           doc="""This two-dimensional array defines the topology of the faces of the 
 mesh. A face has an arbitrary number of nodes in 3D and 2 nodes in 2D. 
 faces[i][j] gives the index of the jth node of the ith face.
 Nodes for a given face are arranged counterclockwise around the face
 viewed from the "positive" (outside) direction.""")
 
-    faceCells = PYB11readwrite(doc="""An array of cell indices for each face, i.e., the cells that share
+    faceCells = PYB11readwrite(returnpolicy = "reference",
+                               doc="""An array of cell indices for each face, i.e., the cells that share
 the face.
 For a given cell there will be either 1 or 2 cells -- the cases with 1
 cell indicate a face on a boundary of the tessellation.""")
 
-    convexHull = PYB11readwrite(doc="""A PLC connecting the generating points belonging to the convex hull 
+    convexHull = PYB11readwrite(returnpolicy = "reference",
+                                doc="""A PLC connecting the generating points belonging to the convex hull 
 of the point distribution. Not all Tessellators hand back the convex 
 hull, so this may be empty, in which case you must compute the convex 
 hull yourself.""")
 
-    neighborDomains = PYB11readwrite(doc="""Parallel data structure: the set of neighbor domains this portion of
+    neighborDomains = PYB11readwrite(returnpolicy = "reference",
+                                     doc="""Parallel data structure: the set of neighbor domains this portion of
 the tessellation is in contact with.""")
 
-    sharedNodes = PYB11readwrite(doc="""Parallel data structure: the nodes this domain shares with
+    sharedNodes = PYB11readwrite(returnpolicy = "reference",
+                                 doc="""Parallel data structure: the nodes this domain shares with
 each neighbor domain.
 NOTE: we implicitly assume that any domains of rank less than ours we
       are receiving from, while any domains of greater rank we send
       to.""")
 
-    sharedFaces = PYB11readwrite(doc="""Parallel data structure: the faces this domain shares with
+    sharedFaces = PYB11readwrite(returnpolicy = "reference",
+                                 doc="""Parallel data structure: the faces this domain shares with
 each neighbor domain.
 NOTE: we implicitly assume that any domains of rank less than ours we
       are receiving from, while any domains of greater rank we send
