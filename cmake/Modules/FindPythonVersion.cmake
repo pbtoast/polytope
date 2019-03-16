@@ -1,7 +1,7 @@
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
 function(find_python_version)
   if(PYTHON_EXECUTABLE)
-    set(CMDSTRING "import sys; print sys.version.split(' ')[0]")
+    set(CMDSTRING "import sys; print sys.version.split(' ')[0].split('rc')[0]")
     execute_process(COMMAND ${PYTHON_EXECUTABLE} "-c" "${CMDSTRING}"
                     RESULT_VARIABLE _python_version_status
 		    OUTPUT_VARIABLE _python_version_string
