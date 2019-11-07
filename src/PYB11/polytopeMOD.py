@@ -181,3 +181,44 @@ def convexHull3d(points = "py::list",
     return "PLC<3, %(RealType)s>"
 
 constructConvexHull3d = PYB11TemplateFunction(convexHull3d, template_parameters="double")
+
+#...............................................................................
+@PYB11template("int Dimension", "RealType")
+@PYB11implementation("""[](const Tessellation<%(Dimension)s, %(RealType)s>& mesh,
+                           std::string filePrefix,
+                           std::string directory,
+                           py::dict nodeFieldsDict,
+                           py::dict edgeFieldsDict,
+                           py::dict faceFieldsDict,
+                           py::dict cellFieldsDict,
+                           int cycle,
+                           %(RealType)s time) {
+#ifdef HAVE_SILO
+                               std::map<std::string, %(RealType)s*> nodeFields, edgeFields, faceFields, cellFields;
+                               auto nodeVals = pybind11_helpers::copyDictToMap<std::string, double>(nodeFieldsDict);
+                               auto edgeVals = pybind11_helpers::copyDictToMap<std::string, double>(edgeFieldsDict);
+                               auto faceVals = pybind11_helpers::copyDictToMap<std::string, double>(faceFieldsDict);
+                               auto cellVals = pybind11_helpers::copyDictToMap<std::string, double>(cellFieldsDict);
+                               for (auto& kv: nodeVals) nodeFields[kv.first] = &(kv.second.front());
+                               for (auto& kv: edgeVals) edgeFields[kv.first] = &(kv.second.front());
+                               for (auto& kv: faceVals) faceFields[kv.first] = &(kv.second.front());
+                               for (auto& kv: cellVals) cellFields[kv.first] = &(kv.second.front());
+                               SiloWriter<%(Dimension)s, %(RealType)s>::writeKULLMesh(mesh, filePrefix, directory, nodeFields, edgeFields, faceFields, cellFields, cycle, time);
+
+#else
+                               throw std::runtime_error("Polytope built without SILO support");
+#endif
+                           }""")
+def writeKullMeshAsSILO(mesh = "const Tessellation<%(Dimension)s, %(RealType)s>&",
+                        filePrefix = "std::string",
+                        directory = "std::string",
+                        nodeFieldsDict = ("py::dict", "py::dict()"),
+                        edgeFieldsDict = ("py::dict", "py::dict()"),
+                        faceFieldsDict = ("py::dict", "py::dict()"),
+                        cellFieldsDict = ("py::dict", "py::dict()"),
+                        cycle = ("int", "0"),
+                        time = ("%(RealType)s", "0.0")):
+    "Write a mesh (and arbitrary fields) to a silo file that KULL can read.  This version supports specifying the output directory."
+    return "void"
+
+writeKullMeshAsSILO2d = PYB11TemplateFunction(writeKullMeshAsSILO, template_parameters=("2", "double"), pyname="writeKullMesh2d")

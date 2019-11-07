@@ -76,6 +76,11 @@ class SiloWriter<2, RealType>
                     int numFiles = -1,
                     int mpiTag = 0)
   {
+
+     // DEBUG 
+     std::cerr << " SiloWriter.hh: write w/ no tags " << std::endl;
+     // DEBUG
+
     // Just call the general function with no tags.
     std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
     write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
@@ -136,6 +141,45 @@ class SiloWriter<2, RealType>
           comm, numFiles, mpiTag);
   }
 
+  //! This function writes a KULL mesh
+  static void writeKULLMesh(const Tessellation<2, RealType>& mesh, 
+                            const std::string& filePrefix,
+                            const std::string& directory,
+                            const std::map<std::string, RealType*>& nodeFields,
+                            const std::map<std::string, std::vector<int>*>& nodeTags,
+                            const std::map<std::string, RealType*>& edgeFields,
+                            const std::map<std::string, std::vector<int>*>& edgeTags,
+                            const std::map<std::string, RealType*>& faceFields,
+                            const std::map<std::string, std::vector<int>*>& faceTags,
+                            const std::map<std::string, RealType*>& cellFields,
+                            const std::map<std::string, std::vector<int>*>& cellTags,
+                            int cycle,
+                            RealType time,
+                            MMPI_Comm comm = MMPI_COMM_WORLD,
+                            int numFiles = -1,
+                            int mpiTag = 0);
+
+  //! This function writes a KULL mesh, and fits the existing wrapping in polytopeMOD.py
+  //! THIS IS A BIG FIXME -- we should have a wrapping that handles the tags.
+  static void writeKULLMesh(const Tessellation<2, RealType>& mesh, 
+                            const std::string& filePrefix,
+                            const std::string& directory,
+                            const std::map<std::string, RealType*>& nodeFields,
+                            const std::map<std::string, RealType*>& edgeFields,
+                            const std::map<std::string, RealType*>& faceFields,
+                            const std::map<std::string, RealType*>& cellFields,
+                            int cycle,
+                            RealType time,
+                            MMPI_Comm comm = MMPI_COMM_WORLD,
+                            int numFiles = -1,
+                            int mpiTag = 0)
+   {
+      // Just call the general function with no tags.
+      std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
+      writeKULLMesh(mesh, filePrefix, directory, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
+                    cellFields, cellTags, cycle, time, comm, numFiles, mpiTag);
+   }
+   
 };
 
 //! Partial specialization for 3D tessellations.
