@@ -1,4 +1,4 @@
-from PYB11Generator import *
+from PYB11Generator3 import *
 
 @PYB11template("int Dimension", "RealType")
 class MeshEditor:

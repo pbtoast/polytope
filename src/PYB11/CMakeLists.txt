@@ -87,7 +87,8 @@ target_link_libraries(pypolytope
                       #${PYTHON_LINK}
                       ${POLYTOPE_STATIC_LIB}
                       ${TRIANGLE_STATIC_LIB}
-                      ${TETGEN_STATIC_LIB})
+                      ${TETGEN_STATIC_LIB}
+                      ${ZLIB_LIBRARIES})
 
 if (HAVE_SILO)
   target_link_libraries(pypolytope

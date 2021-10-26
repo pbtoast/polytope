@@ -11,14 +11,14 @@ include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
 
 # Try to find the Silo header file.
 find_path( SILO_INCLUDE_DIRS silo.h
-           HINTS ${HDF5_INCLUDE_DIRS} ${CMAKE_INSTALL_PREFIX} ${possible_inc_dir}
+           HINTS ${SILO_ROOT} ${HDF5_INCLUDE_DIRS} ${CMAKE_INSTALL_PREFIX} ${possible_inc_dir}
            PATHS ${HDF5_INCLUDE_DIRS}
            PATH_SUFFIXES include)
 
 # Try to find the Silo library file.
 find_library( SILO_LIBRARIES
               NAMES siloh5
-              HINTS ${HDF5_ROOT}/lib ${CMAKE_INSTALL_PREFIX} ${possible_lib_dir}
+              HINTS ${SILO_ROOT} ${HDF5_ROOT}/lib ${CMAKE_INSTALL_PREFIX} ${possible_lib_dir}
               PATHS ${HDF5_ROOT}/lib
               PATH_SUFFIXES lib)
 

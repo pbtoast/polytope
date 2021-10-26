@@ -63,7 +63,7 @@ macro(PYB11_GENERATE_BINDINGS)
   add_custom_command(
     OUTPUT ${PYB11_GENERATED_SOURCE} ${PYB11_GENERATED_HEADER}
     COMMAND ${PYTHON_EXECUTABLE} 
-      -c 'from PYB11Generator import * \; import sys \; sys.path.append(\"${PYB11_DIR}\") \; sys.path.append(\"${PROJECT_BINARY_DIR}/src/PYB11\") \; import ${PYB11_MODULE_NAME}MOD \; PYB11generateModule(${PYB11_MODULE_NAME}MOD, \"${PYB11_MODULE_NAME}\" ) ' 
+      -c 'import sys \; sys.path.append(\"${PY_PYB11GENERATOR3}\") \; sys.path.append(\"${PYB11_DIR}\") \; sys.path.append(\"${PROJECT_BINARY_DIR}/src/PYB11\") \; from PYB11Generator3 import * \; import ${PYB11_MODULE_NAME}MOD \; PYB11generateModule(${PYB11_MODULE_NAME}MOD, \"${PYB11_MODULE_NAME}\" ) ' 
     DEPENDS ${PYB11_SOURCE}
     )
 endmacro()
