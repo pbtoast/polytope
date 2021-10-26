@@ -84,7 +84,8 @@ set_target_properties(pypolytopeStatic PROPERTIES OUTPUT_NAME polytope)
 add_library(pypolytope SHARED ${PYB11_GENERATED_SOURCE})
 set_target_properties(pypolytope PROPERTIES OUTPUT_NAME polytope)
 target_link_libraries(pypolytope
-                      #${PYTHON_LINK}
+                      ${MPI_C_LIBRARIES}
+                      ${PYTHON_LIBRARIES}
                       ${POLYTOPE_STATIC_LIB}
                       ${TRIANGLE_STATIC_LIB}
                       ${TETGEN_STATIC_LIB}
@@ -96,7 +97,7 @@ if (HAVE_SILO)
 endif()
 if (HAVE_HDF5)
   target_link_libraries(pypolytope
-                        ${HDF5_LIB})
+                        ${HDF5_LIBRARIES})
 endif()
 
 # Remove the "lib" prefix convention from the library
