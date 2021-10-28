@@ -53,8 +53,6 @@ endif()
 # Include directories in the header file search path
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/src")
-include_directories("${PYTHON_INCLUDE_DIR}")
-include_directories("${PYB11_DIR}")
 include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
 set(PYTHON_LINK "python${PYTHON_VERSION}")

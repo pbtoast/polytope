@@ -15,10 +15,8 @@
 # Variables that must be set before calling PYB11_GENERATE_BINDINGS:
 #   PYB11_DIR
 #     - Location of the python source code to build the bindings
-#   PYTHON_EXECUTABLE
+#   Python_EXECUTABLE
 #     - Python executable
-#   PYTHON_LIB_DIR
-#     - Python lib (typically obtained from the executable root)
 #
 # Optional variables
 #   PYB11_ADDITIONAL_ARGS
@@ -62,8 +60,8 @@ macro(PYB11_GENERATE_BINDINGS)
   list(APPEND PYB11_GENERATED_SOURCE "${PYB11_MODULE_NAME}.cc")
   add_custom_command(
     OUTPUT ${PYB11_GENERATED_SOURCE} ${PYB11_GENERATED_HEADER}
-    COMMAND ${PYTHON_EXECUTABLE} 
-      -c 'import sys \; sys.path.append(\"${PY_PYB11GENERATOR3}\") \; sys.path.append(\"${PYB11_DIR}\") \; sys.path.append(\"${PROJECT_BINARY_DIR}/src/PYB11\") \; from PYB11Generator3 import * \; import ${PYB11_MODULE_NAME}MOD \; PYB11generateModule(${PYB11_MODULE_NAME}MOD, \"${PYB11_MODULE_NAME}\" ) ' 
+    COMMAND ${Python_EXECUTABLE} 
+      -c 'import sys \; sys.path.append(\"${PYB11GEN_PATH}\") \; sys.path.append(\"${PYB11_DIR}\") \; sys.path.append(\"${PROJECT_BINARY_DIR}/src/PYB11\") \; from PYB11Generator3 import * \; import ${PYB11_MODULE_NAME}MOD \; PYB11generateModule(${PYB11_MODULE_NAME}MOD, \"${PYB11_MODULE_NAME}\" ) ' 
     DEPENDS ${PYB11_SOURCE}
     )
 endmacro()
