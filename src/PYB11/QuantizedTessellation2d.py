@@ -1,4 +1,4 @@
-from PYB11Generator3 import *
+from PYB11Generator import *
 
 @PYB11template("IntType", "RealType")
 class QuantizedTessellation2d:

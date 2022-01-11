@@ -7,7 +7,7 @@
 #  SILO_LIBRARY_DIRS - the full set of library directories
 #------------------------------------------------------------------------
 include(SelectLibraryConfigurations)
-include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
+#include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
 
 # Try to find the Silo header file.
 find_path( SILO_INCLUDE_DIRS silo.h

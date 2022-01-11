@@ -1,4 +1,4 @@
-from PYB11Generator3 import *
+from PYB11Generator import *
 from TessellatorCommonMethods import *
 
 @PYB11template("int Dimension", "RealType")

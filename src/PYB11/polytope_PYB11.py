@@ -1,6 +1,6 @@
 "Master module for polytope -- a library for creating Voronoi tessellations"
 
-from PYB11Generator3 import *
+from PYB11Generator import *
 
 PYB11includes = ['"polytope.hh"',
                  '"polytope_write_OOGL.hh"',
