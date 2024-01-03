@@ -113,6 +113,7 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
   //! delta in x.
   virtual RealType degeneracy() const { return mSerialTessellator->degeneracy(); }
+  void degeneracy(RealType degeneracy) const { mSerialTessellator->degeneracy(degeneracy); }
 
 protected:
   // Define an enum to keep track of which type of tessellation is currently
