@@ -145,13 +145,20 @@ if(POLYTOPE_ENABLE_TRIANGLE)
     HEADERS ${triangle_headers}
     SOURCES ${triangle_sources}
     SHARED TRUE)
+  blt_convert_to_system_includes(TARGET triangle)
   target_compile_definitions(triangle PRIVATE TRILIBRARY ANSI_DECLARATORS CDT_ONLY)
   target_compile_definitions(triangle PRIVATE REAL=double VOID=void)
+  # Hacky way to suppress warnings for the Triangle library
+  target_compile_options(triangle PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-w>
+    $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-w>
+    $<$<CXX_COMPILER_ID:MSVC>:/W0>
+    $<$<C_COMPILER_ID:MSVC>:/W0>
+  )
   install(TARGETS triangle EXPORT polytope-targets DESTINATION lib)
   install(FILES ${triangle_headers} DESTINATION include/triangle)
   list(APPEND POLYTOPE_TPL_DEPENDS triangle)
   include_directories(${triangle_SRC_DIR})
-  blt_convert_to_system_includes(TARGETS triangle)
 endif()
 
 # Tetgen
