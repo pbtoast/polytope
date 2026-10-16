@@ -120,7 +120,7 @@ void runTest(Tessellator<2, double>& tessellator,
   int root = Communicator::getRoot();
   const int seed = 10489592;
 
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
   boundary.setDefaultBoundary(0);
@@ -131,7 +131,7 @@ void runTest(Tessellator<2, double>& tessellator,
   auto procIndex = generators.assignRandomPointToRank();
   auto finalRanks = generators.distributePointsAmongRanks(procIndex);
   POLY_CONTRACT_VAR(finalRanks);
-  auto& Q = Quantizer<2>::instance();
+  auto& Q = boundary.mQ;
   auto bHigh = Q.domHiOrig();
   auto bLow = Q.domLoOrig();
   double dx = (bHigh[0] - bLow[0]) / nx;
@@ -183,7 +183,7 @@ void runTest(Tessellator<2, double>& tessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  tessellator.tessellate(generators.mPoints, mesh);
+  mesh = tessellator.tessellate(generators.mPoints);
   outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
@@ -204,7 +204,7 @@ void runTest(Tessellator<2, double>& tessellator,
     }
     time += dt;
     ++step;
-    tessellator.tessellate(generators.mPoints, mesh);
+    mesh = tessellator.tessellate(generators.mPoints);
     outputMesh(mesh, testName, step, time);
 
     // Check the correctness of the parallel data structures

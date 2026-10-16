@@ -61,7 +61,7 @@ void test(Tessellator<2, double>& tessellator) {
   const auto allPoints = generatorPoints();
   const auto localPoints = rankLocalPoints(allPoints, rank, nranks);
   const auto expectedCells = static_cast<int>(allPoints.size()/2);
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.mPad = 0.04;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
@@ -73,7 +73,7 @@ void test(Tessellator<2, double>& tessellator) {
   int totalCells = 0;
   if (rank == Communicator::getRoot()) {
     Tessellation<2, double> serialMesh;
-    tessellator.tessellate(allPoints, serialMesh);
+    serialMesh = tessellator.tessellate(allPoints);
     serialArea = computeTessellationArea(serialMesh);
     localCells = static_cast<int>(serialMesh.cells.size());
     outputMesh(serialMesh, serial_mesh_name, 0, 0., 1);
@@ -86,7 +86,7 @@ void test(Tessellator<2, double>& tessellator) {
     MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
     DistributedTessellator<2> distributed(tessellator);
     Tessellation<2, double> localMesh;
-    distributed.tessellate(localPoints, localMesh);
+    localMesh = distributed.tessellate(localPoints);
     localCells = static_cast<int>(localMesh.cells.size());
     MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 

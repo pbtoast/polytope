@@ -30,39 +30,51 @@ public:
   using RealPoint = Point<Dimension, RealType>;
   using QuantizerType = Quantizer<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
-  using QuantizedCell = Cell<Dimension, QuantizedCoordinate<Dimension>>;
+  using QCoord = QuantizedCoordinate<Dimension>;
+  using QuantizedCell = Cell<Dimension, QCoord>;
 
-  // Default constructor
-  QuantTessellation() :
-    m_keyEncode(QuantizerType::instance().keyEncoding()) { }
+  // The caller that constructs a quantized mesh owns this context and must
+  // keep it alive for the lifetime of the quantized mesh.
+  const Quantizer<Dimension>& quantizer() const { return m_Q; }
+
+  // Constructor
+  QuantTessellation(const Quantizer<Dimension>& Q) :
+    m_Q(Q),
+    convexHull(Q) { }
   QuantTessellation& operator=(const QuantTessellation& other) = default;
   QuantTessellation(const QuantTessellation& other) = default;
-  virtual ~QuantTessellation() {};
+  virtual ~QuantTessellation() = default;
 
   //------------------------------------------------------------------------------
   // Constructor - common for all dimensions
   //------------------------------------------------------------------------------
   // Construct from flattened points
-  QuantTessellation(const std::vector<RealType>& genpoints,
+  QuantTessellation(const Quantizer<Dimension>& Q,
+                    const std::vector<RealType>& genpoints,
                     bool doSort = true) :
+    m_Q(Q),
+    convexHull(Q),
     m_doSort(doSort) {
-    genInit();
     init(genpoints);
   }
 
   // Construct from vector of points
-  QuantTessellation(const std::vector<RealPoint>& genpoints,
+  QuantTessellation(const Quantizer<Dimension>& Q,
+                    const std::vector<RealPoint>& genpoints,
                     bool doSort = true) :
+    m_Q(Q),
+    convexHull(Q),
     m_doSort(doSort) {
-    genInit();
     init(genpoints);
   }
 
   // Construct a smaller instance, useful during clipping
-  QuantTessellation(const std::vector<QuantizedPoint<Dimension>>& qgenpoints,
+  QuantTessellation(const Quantizer<Dimension>& Q,
+                    const std::vector<QuantizedPoint<Dimension>>& qgenpoints,
                     bool doSort = true) :
+    m_Q(Q),
+    convexHull(Q),
     m_doSort(doSort) {
-    genInit();
     init(qgenpoints);
   }
 
@@ -71,17 +83,16 @@ public:
   }
 
   void init(const std::vector<RealPoint>& genpoints) {
-    const auto& Q = QuantizerType::instance();
     // Extract the unrolled coordinates
     auto N = genpoints.size();
     hashes.reserve(N);
     points.reserve(N);
     size_t i = 0;
     for (const auto& rp : genpoints) {
-      auto ip = Q.quantize(rp);
-      POLY_CHECK2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
+      auto ip = m_Q.quantize(rp);
+      POLY_CHECK2(m_Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
       ip.index = i++;
-      hashes.push_back(Q.encode(ip));
+      hashes.push_back(m_Q.encode(ip));
       points.push_back(ip);
     }
     if (m_doSort) {
@@ -92,13 +103,12 @@ public:
 
   void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
     points = qgenpoints;
-    const auto& Q = QuantizerType::instance();
     auto N = points.size();
     hashes.reserve(N);
     unsigned i = 0;
     for (auto& ip : points) {
       ip.index = i++;
-      hashes.push_back(Q.encode(ip));
+      hashes.push_back(m_Q.encode(ip));
     }
   }
 
@@ -160,11 +170,10 @@ public:
 
   // Returns dequantized points
   std::vector<RealPoint> getRealPoints() const {
-    const auto& Q = QuantizerType::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
-      realPoints.push_back(Q.dequantize(p));
+      realPoints.push_back(m_Q.dequantize(p));
     }
     return realPoints;
   }
@@ -412,9 +421,6 @@ public:
   // Remove any external generator points
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
 
-  // Return the encoding scheme used for this instance
-  KeyEncoding keyEncoding() const { return m_keyEncode; }
-
   //------------------------------------------------------------------------------
   // Output method
   //------------------------------------------------------------------------------
@@ -426,11 +432,6 @@ public:
   }
 
 private:
-  // General initialization routines used inside other init calls
-  void genInit() {
-    const auto& Q = QuantizerType::instance();
-    m_keyEncode = Q.keyEncoding();
-  }
 
   // Encoding is reversible, so duplicate hashes are duplicate quantized
   // generator coordinates. Ensure hashes have been sorted before.
@@ -447,12 +448,11 @@ private:
 
   // Extend the generator points from rank hashes communicated from ranks
   void extendHashes(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
-    const auto& Q = Quantizer<Dimension>::instance();
     POLY_CHECK2(points.size() == hashes.size(), "Points and hashes no longer align");
     unsigned i = points.size();
     for (auto source = 0u; source < rankHashes.size(); ++source) {
       for (auto& ch : rankHashes[source]) {
-        auto ip = Q.decode(ch);
+        auto ip = m_Q.decode(ch);
         ip.index = i++;
         hashes.push_back(ch);
         points.push_back(ip);
@@ -473,22 +473,21 @@ private:
       }
     }
   }
-
+protected:
+  const Quantizer<Dimension>& m_Q;
 public:
 
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
   bool m_isEscapePod = false;
-  // Store the key encode type to make sure it does not change during tessellation
-  KeyEncoding m_keyEncode;
   std::vector<QuantizedKey<Dimension>> hashes;
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::points; // Generator points
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::nodes; // Nodes that make up the Voronoi
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faces; // Faces made up of indices into nodes
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::cells; // Cells made up of indices into faces
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faceCells;
-  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::cellRank;
+  using Tessellation<Dimension, QCoord>::points; // Generator points
+  using Tessellation<Dimension, QCoord>::nodes; // Nodes that make up the Voronoi
+  using Tessellation<Dimension, QCoord>::faces; // Faces made up of indices into nodes
+  using Tessellation<Dimension, QCoord>::cells; // Cells made up of indices into faces
+  using Tessellation<Dimension, QCoord>::faceCells;
+  using Tessellation<Dimension, QCoord>::cellRank;
   QuantPLC<Dimension> convexHull;
   // Disable to keep points in the same order
   bool m_doSort = true;

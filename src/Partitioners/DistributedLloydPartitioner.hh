@@ -26,7 +26,9 @@ public:
   using RealPoint = typename Partitioner<Dimension>::RealPoint;
 
   explicit DistributedLloydPartitioner(const unsigned Niter = 100):
-    m_Niter(Niter) { }
+    m_Niter(Niter) {
+    m_Q.setParallel(true);
+  }
 
   std::string name() const override { return "DistributedLloydPartitioner"; }
 
@@ -41,11 +43,13 @@ public:
   //! and indices are preserved exactly during every exchange.
   std::vector<RealPoint>
   partition(const std::vector<RealPoint>& localPoints) const override {
-    auto& Q = Quantizer<Dimension>::instance();
-    if (!Q.m_init && !localPoints.empty()) Q.init(localPoints);
+    // Every MPI rank participates in initialization so the local bounds are
+    // reduced to one partitioning domain, including ranks with no points.
+    m_Q.init(localPoints);
 #ifdef POLYTOPE_ENABLE_MPI
     const auto nranks = Communicator::getNRanks();
     LatticePartitioner<Dimension> lattice(static_cast<unsigned>(nranks));
+    lattice.setParallel(true);
     auto points = redistribute(localPoints, lattice.computeOwners(localPoints));
 
     // Start with the geometric centers of the lattice tiles.  This leaves the
@@ -67,13 +71,12 @@ public:
     }
     return points;
 #else
-    // In a non-MPI build there is one logical partition, so redistribution is
-    // a no-op.  Initialize the Quantizer consistently with other serial APIs.
     return localPoints;
 #endif
   }
 
 private:
+  mutable Quantizer<Dimension> m_Q;
 #ifdef POLYTOPE_ENABLE_MPI
   std::vector<RealPoint>
   redistribute(const std::vector<RealPoint>& points,
@@ -91,7 +94,7 @@ private:
 
   std::vector<RealPoint>
   latticeSites(const LatticePartitioner<Dimension>& lattice) const {
-    const auto& Q = Quantizer<Dimension>::instance();
+    const auto& Q = m_Q;
     const auto lower = Q.dequantize(Q.minBound);
     const auto upper = Q.dequantize(Q.maxBound);
     const auto nranks = lattice.m_numPartitions;

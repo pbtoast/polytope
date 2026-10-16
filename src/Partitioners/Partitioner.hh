@@ -69,7 +69,7 @@ public:
 
   //! The number of logical partitions.  These are MPI ranks only when used
   //! by DistributedTessellator.
-  ReplicatedPartitioner(const unsigned numPartitions = Communicator::getNRanks()) :
+  explicit ReplicatedPartitioner(const unsigned numPartitions = Communicator::getNRanks()) :
     m_numPartitions(numPartitions) {
     POLY_VERIFY(m_numPartitions > 0);
   }
@@ -112,8 +112,14 @@ public:
   template<typename CoordType>
   PartitionResult<CoordType>
   computePartitionResult(const std::vector<Point<Dimension, CoordType>>& globalPoints) const {
+    if constexpr (std::is_same_v<CoordType, double>) {
+      m_Q.init(globalPoints);
+    } else {
+      POLY_VERIFY2(m_Q.m_init,
+                   "Partitioning quantized points requires an initialized partitioner quantizer");
+    }
     // To ensure consistency, hash and sort the points
-    QuantTessellation<Dimension> qmesh(globalPoints);
+    QuantTessellation<Dimension> qmesh(m_Q, globalPoints);
     std::vector<Point<Dimension, CoordType>> sortedPoints;
     if constexpr (std::is_same_v<CoordType, double>) {
       sortedPoints = qmesh.getRealPoints();
@@ -180,14 +186,17 @@ public:
 
   unsigned m_numPartitions;
 protected:
+  // Independent partitioning domain. It is initialized from real-valued
+  // partition inputs and need not match a tessellator's quantizer.
+  mutable Quantizer<Dimension> m_Q;
+
   template<typename CoordType>
-  static std::vector<RealPoint>
-  realPoints(const std::vector<Point<Dimension, CoordType>>& points) {
+  std::vector<RealPoint>
+  realPoints(const std::vector<Point<Dimension, CoordType>>& points) const {
     std::vector<RealPoint> result;
     result.reserve(points.size());
     if constexpr (std::is_same_v<CoordType, QuantizedCoordinate<Dimension>>) {
-      const auto& Q = Quantizer<Dimension>::instance();
-      for (const auto& point : points) result.push_back(Q.dequantize(point));
+      for (const auto& point : points) result.push_back(m_Q.dequantize(point));
     } else {
       for (const auto& point : points) result.push_back(point.template type_cast<double>());
     }

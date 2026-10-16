@@ -36,7 +36,7 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   const int Ngen = 16;
   const int activeRanks = 6;
   int seed = 1049609;
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
   boundary.setDefaultBoundary(0);
@@ -76,7 +76,7 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
   Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, localMesh);
+  localMesh = distributed.tessellate(generators.mPoints);
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
@@ -86,7 +86,8 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   outputMesh(localMesh, outname, testNum, 0.);
 
   // Now get the current mesh including all it's neighbor generators
-  QuantTessellation<2> qmesh(generators.mPoints);
+  auto& quantizer = distributed.getQuantizer();
+  QuantTessellation<2> qmesh(quantizer, generators.mPoints);
   distributed.tessellateQuantized(qmesh);
   if (rank < activeRanks && nranks == 6) {
     Tessellation<2, double> procMesh;

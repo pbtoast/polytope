@@ -14,8 +14,6 @@ def test_distributed_2d_tessellators(Ngen):
     rank = comm.getRank()
     nranks = comm.getNRanks()
     tessellator_types = _available_tessellators()
-    Q = polytope.Quantizer2d.instance()
-
     # Seed for generating points randomly
     seed = 19001
     # Seed for partitioning points randomly
@@ -35,10 +33,9 @@ def test_distributed_2d_tessellators(Ngen):
         assert tess_name
 
         ptu.rootprint(f"Testing unbounded {tess_name}")
-        mesh = polytope.Tessellation2d()
         tessellator = polytope.DistributedTessellator2d(serial_tessellator)
         with ptu.timer("Unbounded tessellate"):
-            tessellator.tessellate(points, mesh)
+            mesh = tessellator.tessellate(points)
         ptu.outputMesh2d(mesh=mesh, 
                          filePrefix=f"PyDist{tess_name}",
                          cycle=0,
@@ -46,9 +43,8 @@ def test_distributed_2d_tessellators(Ngen):
 
         if (tessellator.clippingEnabled()):
             ptu.rootprint(f"Testing clipped {tess_name}")
-            clipped_mesh = polytope.Tessellation2d()
             with ptu.timer("Clipped tessellation"):
-                tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
+                clipped_mesh = tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC)
             ptu.outputMesh2d(mesh=clipped_mesh,
                              filePrefix=f"PyDist{tess_name}",
                              cycle=1,

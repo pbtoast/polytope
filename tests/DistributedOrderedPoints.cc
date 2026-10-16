@@ -13,7 +13,7 @@
 
 #include "polytope.hh"
 
-#include "Communicator.hh" 
+#include "Communicator.hh"
 
 #include "BoostTessellator.hh"
 #include "DistributedTessellator.hh"
@@ -37,7 +37,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
 
   const int Ngen = 4*nranks;
   int seed = 1049600;
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.setDefaultBoundary(btype);
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
@@ -48,8 +48,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
 
   double serialArea = 0.0;
   if (rank == root) {
-    Tessellation<2, double> serialMesh;    
-    tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
+    Tessellation<2, double> serialMesh =
+      tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
     serialArea = computeTessellationArea(serialMesh);
     std::string serialoutname = "SerialOrdered_" + tessellator.name();
     std::vector<int> finalRanksD;
@@ -68,9 +68,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
 
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
-  Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, boundary.mPLCpoints,
-                         boundary.mPLC, localMesh);
+  Tessellation<2, double> localMesh =
+    distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
   std::string outname = "DistributedOrdered_" + tessellator.name();
   outputMesh(localMesh, outname, btype, static_cast<double>(btype));
 

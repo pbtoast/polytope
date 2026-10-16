@@ -19,16 +19,7 @@ public:
 
   static constexpr int numDims() { return Dimension; }
 
-  // Default constructor.
-  Tessellation():
-    points(),
-    nodes(),
-    cells(),
-    faces(),
-    boundaryNodes(),
-    boundaryFaces(),
-    faceCells(),
-    convexHull() {}
+  Tessellation() = default;
 
   Tessellation(const Tessellation&) = default;
   Tessellation& operator=(const Tessellation&) = default;
@@ -95,10 +86,7 @@ public:
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<int> > faceCells;
 
-  //! A PLC connecting the generating points belonging to the convex hull
-  //! of the point distribution. Not all Tessellators hand back the convex
-  //! hull, so this may be empty, in which case you must compute the convex
-  //! hull yourself.
+  //! A PLC connecting the generating points belonging to the convex hull.
   PLC<Dimension> convexHull;
 
   //! Rank associated with each cell. For distributed tessellation.
@@ -230,6 +218,7 @@ public:
       }
     }
   }
+
 };
 
 template<int Dimension, typename CoordType>

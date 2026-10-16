@@ -11,7 +11,7 @@ class Tessellation:
     numDims = PYB11property(constexpr=True, static=True, doc="Number of dimensions")
 
     def pyinit(self):
-        "Default constructor"
+        "Construct an empty mesh."
 
     def clear(self):
         return "void"

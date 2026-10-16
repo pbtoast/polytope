@@ -44,7 +44,7 @@ void computeConstantVorticityFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 void test(const int N_time, Tessellator<2,double>& tessellator) {
   // Initialize star-hole boundary, tessellator, and generator set
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.setDefaultBoundary(5);
   vector<double> points;
 
@@ -118,7 +118,7 @@ void test(const int N_time, Tessellator<2,double>& tessellator) {
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+  mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
   outputMesh(mesh, testName, step, time);
   compareArea(boundary, mesh);
 
@@ -137,7 +137,7 @@ void test(const int N_time, Tessellator<2,double>& tessellator) {
     }
     time += dt;
     ++step;
-    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, step, time);
     compareArea(boundary, mesh);
   }

@@ -59,17 +59,16 @@ void test1(Tessellator<2, double>& tessellator) {
     boundary.facets[i][1] = (i+1)%nSides;
   }
 
-  auto& Q = Quantizer<2>::instance();
-  Q.init(PLCpoints);
+  Quantizer<2> Q(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  tessellator.tessellate(points, mesh);
+  mesh = tessellator.tessellate(points);
   outputMesh(mesh,testName,0);
   mesh.clear();
 
   // Tessellate bounded
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  mesh = tessellator.tessellate(points, PLCpoints, boundary);
   outputMesh(mesh,testName,1);
 }
 
@@ -104,17 +103,16 @@ void test2(Tessellator<2,double>& tessellator) {
     boundary.facets[i][1] = (i+1)%nSides;
   }
 
-  auto& Q = Quantizer<2>::instance();
-  Q.init(PLCpoints);
+  Quantizer<2> Q(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  tessellator.tessellate(points, mesh);
+  mesh = tessellator.tessellate(points);
   outputMesh(mesh,testName,2);
   mesh.clear();
 
   // Tessellate bounded
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  mesh = tessellator.tessellate(points, PLCpoints, boundary);
   outputMesh(mesh,testName,3);
 }
 
@@ -170,18 +168,17 @@ void test3(Tessellator<2,double>& tessellator) {
     plc.facets[i][1] = (i+1)%4;
   }
 
-  auto& Q = Quantizer<2>::instance();
-  Q.init(plcpoints);
+  Quantizer<2> Q(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  tessellator.tessellate(points, mesh);
+  mesh = tessellator.tessellate(points);
   outputMesh(mesh,testName,4);
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plcpoints, plc, mesh);
+  mesh = tessellator.tessellate(points, plcpoints, plc);
   outputMesh(mesh,testName,5);
 }
 
@@ -263,18 +260,17 @@ void test4(Tessellator<2,double>& tessellator) {
     plc.holes[0][i][1] = 4 + (i+1)%4;
   }
 
-  auto& Q = Quantizer<2>::instance();
-  Q.init(plcpoints);
+  Quantizer<2> Q(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  tessellator.tessellate(points, mesh);
+  mesh = tessellator.tessellate(points);
   outputMesh(mesh,testName,6);
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plcpoints, plc, mesh);
+  mesh = tessellator.tessellate(points, plcpoints, plc);
   outputMesh(mesh,testName,7);
 }
 

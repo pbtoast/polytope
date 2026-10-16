@@ -22,9 +22,11 @@
 namespace polytope {
 
 template<int Dimension>
-QuantPLC<Dimension>::QuantPLC(const std::vector<Point<Dimension, RealType>>& allpoints,
+QuantPLC<Dimension>::QuantPLC(const Quant& Q,
+                              const std::vector<Point<Dimension, RealType>>& allpoints,
                               const PLC<Dimension>& plc) :
-  PLC<Dimension>(plc) {
+  PLC<Dimension>(plc),
+  m_Q(Q) {
   init(allpoints);
 }
 
@@ -40,7 +42,7 @@ QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoin
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints) {
-  const auto& Q = Quantizer<Dimension>::instance();
+  const auto& Q = m_Q;
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
 
@@ -64,7 +66,7 @@ QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoin
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
-  const auto& Q = Quantizer<Dimension>::instance();
+  const auto& Q = m_Q;
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
 
@@ -97,7 +99,7 @@ QuantPLC<Dimension>::reduce() {
     std::copy(f.begin(), f.end(), std::inserter(indices, indices.end()));
   }
 
-  const auto& Q = Quantizer<Dimension>::instance();
+  const auto& Q = m_Q;
   unsigned newIdx = 0;
   std::map<unsigned, unsigned> old2new;
   std::map<QuantizedKey<Dimension>, unsigned> hashToIndex;
@@ -325,7 +327,7 @@ QuantPLC<Dimension>::orderFacets3D() {
 template<int Dimension>
 bool
 QuantPLC<Dimension>::within(const RealPoint& point) const {
-  const auto& Q = Quantizer<Dimension>::instance();
+  const auto& Q = m_Q;
   if (!Q.inBounds(point)) {
     return false;
   }

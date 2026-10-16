@@ -49,7 +49,7 @@ QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
 template<>
 void
 QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
-  auto& Q = Quantizer<3>::instance();
+  const auto& Q = m_Q;
   compactUnusedNodesAndFaces();
   const unsigned numNodes = nodes.size();
   const unsigned numFaces = faces.size();

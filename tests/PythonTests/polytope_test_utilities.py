@@ -25,11 +25,12 @@ def outputMesh2d(mesh,
                             vals)
     writer.write(filePrefix, cycle, time, numFiles)
 
-def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
-    if (dim == 2):
-        Q = polytope.Quantizer2d.instance()
-    else:
-        Q = polytope.Quantizer3d.instance()
+def generate_random_points(N, seed = -1, boundary2d = None, dim = 2, quantizer = None):
+    if quantizer is None:
+        if boundary2d is None:
+            raise ValueError("A quantizer or Boundary2d is required")
+        quantizer = boundary2d.Q
+    Q = quantizer
     xmin = Q.domLoOrig
     xmax = Q.domHiOrig
     if (seed >= 0):
@@ -49,11 +50,13 @@ def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
 def generate_normal_random_points(N, seed = -1,
                                   mu = 0.5, sigma = 1./6.17737,
                                   boundary2d = None,
-                                  dim = 2):
-    if (dim == 2):
-        Q = polytope.Quantizer2d.instance()
-    else:
-        Q = polytope.Quantizer3d.instance()
+                                  dim = 2,
+                                  quantizer = None):
+    if quantizer is None:
+        if boundary2d is None:
+            raise ValueError("A quantizer or Boundary2d is required")
+        quantizer = boundary2d.Q
+    Q = quantizer
     xmin = Q.domLoOrig
     xmax = Q.domHiOrig
     if (seed >= 0):

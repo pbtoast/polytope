@@ -17,14 +17,17 @@ class QuantTessellation:
   using QuantCoord = polytope::QuantizedCoordinate<%(Dimension)s>;
 """
 
-    def pyinit(self):
-        "Construct an empty quantized tessellation."
+    @PYB11keepalive(1, 2)
+    def pyinit(self, quantizer="const Quantizer<%(Dimension)s>&"):
+        "Construct an empty quantized tessellation that references quantizer."
 
-    @PYB11implementation("""[](const py::object& points) {
+    @PYB11keepalive(1, 2)
+    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points) {
                                  return QuantTessellation<%(Dimension)s>(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
+                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
                                }""")
     def pyinitFromPoints(self,
+                         quantizer="const Quantizer<%(Dimension)s>&",
                          points="const py::object&"):
         "Construct from flattened coordinates or coordinate tuples."
 
@@ -81,11 +84,6 @@ class QuantTessellation:
     def getRealPoints(self):
         "Return generator coordinates dequantized to physical space."
         return "py::list"
-
-    @PYB11const
-    def keyEncoding(self):
-        "Return the key encoding captured when this instance was created."
-        return "KeyEncoding"
 
     numGenerators = PYB11property(
         getterraw="[](const QuantTessellation<%(Dimension)s>& self) { return self.points.size(); }",

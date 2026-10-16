@@ -31,7 +31,7 @@ class FakeTessellator(polytope.SerialTessellator2d):
             self.nodes.append(closest)
 
     def tessellateQuantizedImpl(self, quantMesh):
-        Q = polytope.Quantizer2d.instance()
+        Q = self.getQuantizer()
         assembler = polytope.VoronoiAssembler2d(quantMesh)
         qnodes = [Q.quantizeReal(x) for x in self.nodes]
         assembler.fillTessNodes(qnodes)
@@ -53,8 +53,6 @@ class FakeTessellator(polytope.SerialTessellator2d):
         return assembler
 
 def test_python_2d_tessellators():
-    Q = polytope.Quantizer2d.instance()
-
     boundary = Boundary2d(0, 0.01)
     boundary.mDiff = 10.
     boundary.mCenter = [0., 0.]
@@ -71,8 +69,7 @@ def test_python_2d_tessellators():
     tessellator = polytope.BoostTessellator()
     tess_name = tessellator.name()
     print(f"Testing unbounded {tess_name}")
-    boost_mesh = polytope.Tessellation2d()
-    tessellator.tessellate(points, boost_mesh)
+    boost_mesh = tessellator.tessellate(points)
     ptu.outputMesh2d(mesh=boost_mesh,
                      filePrefix=f"boost",
                      cycle=0,
@@ -84,8 +81,7 @@ def test_python_2d_tessellators():
     tessellator.setNodes(boost_mesh.nodes)
     tess_name = tessellator.name()
     print(f"Testing unbounded {tess_name}")
-    mesh = polytope.Tessellation2d()
-    tessellator.tessellate(points, mesh)
+    mesh = tessellator.tessellate(points)
     ptu.outputMesh2d(mesh=mesh,
                      filePrefix=f"pyfake",
                      cycle=0,

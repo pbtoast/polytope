@@ -26,7 +26,7 @@ public:
   // Number of generators
   unsigned nPoints;
   vector<double> mPoints;
-  Boundary2D mBoundary;
+  Boundary2D* mBoundary = nullptr;
   Cube<double> mCube;
 
   //------------------------------------------------------------------------
@@ -35,21 +35,19 @@ public:
   Generators(const Point<3, double>& min,
              const Point<3, double>& max) :
     mCube(min, max) {
-    auto& Q = Quantizer<3>::instance();
-    Q.init(min, max);
   }
 
   Generators(Boundary2D& boundary) :
     nPoints(0),
     mPoints(0),
-    mBoundary(boundary) {};
+    mBoundary(&boundary) { };
 
   ~Generators() {};
 
   bool isInside(Point<Dimension, double>& pos) {
     if constexpr (Dimension == 2) {
       return boost::geometry::within(makeBGPoint(pos),
-                                     mBoundary.mBGboundary);
+                                     mBoundary->mBGboundary);
     } else {
       return mCube.within(pos);
     }
@@ -64,9 +62,8 @@ public:
     srand(seed);
     // std::mt19937 gen(seed);
     // std::uniform_real_distribution<double> distrib(0., 1.);
-    auto& Q = Quantizer<Dimension>::instance();
-    auto bHigh = Q.domHiOrig();
-    auto bLow = Q.domLoOrig();
+    auto bHigh = mBoundary->maxBound;
+    auto bLow = mBoundary->minBound;
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
       Point<Dimension, double> pos;
@@ -85,6 +82,32 @@ public:
   }
 
   //------------------------------------------------------------------------
+  // Place random generators into a 3D spatial domain.
+  //------------------------------------------------------------------------
+  void randomPoints(const Quantizer<Dimension>& Q,
+                    unsigned nGenerators,
+                    unsigned seed = 0) {
+    mPoints.clear();
+    nPoints = nGenerators;
+    srand(seed);
+    const auto bHigh = Q.domHiOrig();
+    const auto bLow = Q.domLoOrig();
+
+    for (unsigned iter = 0; iter < nGenerators; ++iter) {
+      Point<Dimension, double> pos;
+      bool inside = false;
+      while (!inside) {
+        for (unsigned n = 0; n < Dimension; ++n) {
+          pos[n] = (bHigh[n] - bLow[n])*random01() + bLow[n];
+        }
+        inside = isInside(pos);
+      }
+      for (unsigned n = 0; n < Dimension; ++n) mPoints.push_back(pos[n]);
+    }
+    POLY_CHECK(mPoints.size()/Dimension == nGenerators);
+  }
+
+  //------------------------------------------------------------------------
   // Place random generators into spatial domain using a normal distribution
   // Focuses more points near the center of the domain
   //------------------------------------------------------------------------
@@ -95,9 +118,8 @@ public:
     double sigma = 1./6.17737; // Provides a 99.9% confidence interval to fall between 0 and 1
     std::mt19937 gen(seed);
     std::normal_distribution<double> distrib(mean, sigma);
-    auto& Q = Quantizer<Dimension>::instance();
-    auto bHigh = Q.domHiOrig();
-    auto bLow = Q.domLoOrig();
+    auto bHigh = mBoundary->maxBound;
+    auto bLow = mBoundary->minBound;
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
       Point<Dimension, double> pos;
@@ -122,10 +144,10 @@ public:
     mPoints.clear();
     POLY_CHECK( nCellsPerDimension.size() == Dimension );
 
-    if (Dimension == 2){
-      cartesian2D( nCellsPerDimension[0], nCellsPerDimension[1] );
+    if constexpr (Dimension == 2) {
+      cartesian2D(nCellsPerDimension[0], nCellsPerDimension[1]);
     } else {
-      cartesian3D( nCellsPerDimension[0], nCellsPerDimension[1], nCellsPerDimension[2] );
+      POLY_CHECK2(false, "Cartesian generation is only supported for 2D boundaries");
     }
     nPoints = mPoints.size()/Dimension;
   }
@@ -136,7 +158,7 @@ public:
   void addGenerator(double* pos) {
     std::vector<double> point;
     for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
-    bool inside = boost::geometry::within( makeBGPoint(point), mBoundary.mBGboundary );
+    bool inside = boost::geometry::within( makeBGPoint(point), mBoundary->mBGboundary );
     POLY_CHECK( inside );
     mPoints.insert( mPoints.end(), point.begin(), point.end() );
   }
@@ -145,9 +167,8 @@ public:
   // for 2D problems
   //------------------------------------------------------------------------
   void cartesian2D(const unsigned nx, const unsigned ny) {
-    auto& Q = Quantizer<2>::instance();
-    auto bHigh = Q.domHiOrig();
-    auto bLow = Q.domLoOrig();
+    auto bHigh = mBoundary->maxBound;
+    auto bLow = mBoundary->minBound;
     double x, y;
     double dx = (bHigh[0] - bLow[0]) / nx;
     double dy = (bHigh[1] - bLow[1]) / ny;
@@ -158,7 +179,7 @@ public:
         x = bLow[0] + (ix + 0.5)*dx;
         pos[0] = x;
         pos[1] = y;
-        if( boost::geometry::within( makeBGPoint(pos), mBoundary.mBGboundary) ){
+        if( boost::geometry::within( makeBGPoint(pos), mBoundary->mBGboundary) ){
           mPoints.push_back( x );
           mPoints.push_back( y );
         }
@@ -170,28 +191,30 @@ public:
   //------------------------------------------------------------------------
   // for 3D problems
   //------------------------------------------------------------------------
-  void cartesian3D(const unsigned nx, const unsigned ny, const unsigned nz) {
-    auto& Q = Quantizer<3>::instance();
-    auto bHigh = Q.domHiOrig();
-    auto bLow = Q.domLoOrig();
-    double x, y, z;
-    double dx = (bHigh[0] - bLow[0]) / nx;
-    double dy = (bHigh[1] - bLow[1]) / ny;
-    double dz = (bHigh[2] - bLow[2]) / nz;
-    for (unsigned iz = 0; iz != nz; ++iz) {
-      z = bLow[2] + (iz + 0.5)*dz;
-      for (unsigned iy = 0; iy != ny; ++iy) {
-        y = bLow[1] + (iy + 0.5)*dy;
-        for (unsigned ix = 0; ix != nx; ++ix) {
-          x = bLow[0] + (ix + 0.5)*dx;
-          mPoints.push_back( x );
-          mPoints.push_back( y );
-          mPoints.push_back( z );
-        }
-      }
-    }
-    nPoints = mPoints.size()/Dimension;
-  }
+  // void cartesian3D(const Quantizer<3>& Q,
+  //                  const unsigned nx,
+  //                  const unsigned ny,
+  //                  const unsigned nz) {
+  //   auto bHigh = Q.domHiOrig();
+  //   auto bLow = Q.domLoOrig();
+  //   double x, y, z;
+  //   double dx = (bHigh[0] - bLow[0]) / nx;
+  //   double dy = (bHigh[1] - bLow[1]) / ny;
+  //   double dz = (bHigh[2] - bLow[2]) / nz;
+  //   for (unsigned iz = 0; iz != nz; ++iz) {
+  //     z = bLow[2] + (iz + 0.5)*dz;
+  //     for (unsigned iy = 0; iy != ny; ++iy) {
+  //       y = bLow[1] + (iy + 0.5)*dy;
+  //       for (unsigned ix = 0; ix != nx; ++ix) {
+  //         x = bLow[0] + (ix + 0.5)*dx;
+  //         mPoints.push_back( x );
+  //         mPoints.push_back( y );
+  //         mPoints.push_back( z );
+  //       }
+  //     }
+  //   }
+  //   nPoints = mPoints.size()/Dimension;
+  // }
 
   //------------------------------------------------------------------------
   // perturb the locations of the generators by +/- epsilon/2 in each direction
@@ -254,8 +277,9 @@ public:
   // Assign points based on processor by removing non-local points
   // Returns a map from each original point to its assigned rank
   //------------------------------------------------------------------------
-  std::map<Point<Dimension, double>, int> distributePointsAmongRanks(const std::vector<unsigned>& procIndex) {
-    auto& Q = Quantizer<Dimension>::instance();
+  std::map<Point<Dimension, double>, int>
+  distributePointsAmongRanks(const std::vector<unsigned>& procIndex) {
+    const auto& Q = mBoundary->mQ;
     std::map<Point<Dimension, double>, int> finalRanks;
     // Figure out parallel configuration
     int rank = Communicator::getRank();

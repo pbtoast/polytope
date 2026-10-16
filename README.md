@@ -127,15 +127,17 @@ tools. Only use these tools after you've made arrangements to comply with the li
 This library currently only works in 2D. The C++ interface has methods to use either Boost or Triangle
 tessellators. The python interface can work with python based tessellators. See tests/PythonTests/ScipyTessellator2D.cc
 for a demonstration on how to do taht.
-Currently, the Voronoi is clipped by a bounding box determined by the bounds provided to
-the Quantizer class, plus a padding on the top and bottom relative to the length (default is 4%).
+Currently, the Voronoi is clipped by a bounding box determined by the bounds of the points provided to the
+tessellator, plus a padding on all sides relative to the length (default is 4%).
 This bounding box can be extended by an additional percent. For example, to extend the padding to 8% in C++
 ```
-Quantizer<Dimension>::instance().extend(0.08);
+BoostTessellator tessellator;
+tessellator.setPadding(0.08);
 ```
 and in Python
 ```
-polytope.Quantizer2d.instance().extend(0.08)
+tessellator = polytope.BoostTessellator()
+tessellator.setPadding(0.08)
 ```
 
 Future work:

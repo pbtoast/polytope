@@ -42,7 +42,7 @@ template<typename TessellationType>
 inline
 void
 rebuildTessellationPointMetadata(TessellationType& tessellation) {
-  const auto& Q = Quantizer<2>::instance();
+  const auto& Q = tessellation.quantizer();
   tessellation.hashes.clear();
   tessellation.hashes.reserve(tessellation.points.size());
   for (unsigned i = 0; i < tessellation.points.size(); ++i) {
@@ -56,7 +56,7 @@ template<typename QPLCType>
 inline
 void
 rebuildQPLCPointMetadata(QPLCType& qplc) {
-  const auto& Q = Quantizer<2>::instance();
+  const auto& Q = qplc.quantizer();
   qplc.m_loBounds = Q.maxBound;
   qplc.m_hiBounds = -qplc.m_loBounds;
   for (unsigned i = 0; i < qplc.points.size(); ++i) {

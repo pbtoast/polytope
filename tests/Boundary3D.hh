@@ -32,13 +32,15 @@ public:
   // Boundary type
   mutable BoundaryType mType;
 
+  Quantizer<3> mQ;
   QuantPLC<3> mQPLC;
   
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
   Boundary3D():
-    mType(square){
+    mType(square),
+    mQPLC(mQ){
     this->clear();
     this->setDefaultBoundary(mType);
   }
@@ -51,7 +53,7 @@ public:
   }
   
   void finalize() {
-    auto& q = Quantizer<3>::instance();
+    auto& q = mQ;
     q.init(mPLCpoints);
     mQPLC.init(mPLC, mPLCpoints);
   }
@@ -396,7 +398,7 @@ public:
   // Computes a random point 
   //------------------------------------------------------------------------  
   void getPointInside(RealType* point) {
-    auto& Q = Quantizer<3>::instance();
+    auto& Q = mQ;
     using IntType = typename HashKey<3>::IntType;
     using IntPoint = Point<3, IntType>;
     bool inside = false;

@@ -25,7 +25,7 @@ namespace {
 
 void tests(const int tnum, Tessellator<2, double>& tessellator) {
   std::string outname = tessellator.name();
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.mDiff = 1.;
   if (!tessellator.clippingEnabled()) {
     if (tnum >= 14) return;
@@ -168,13 +168,15 @@ void tests(const int tnum, Tessellator<2, double>& tessellator) {
     }
   }
   cout << "\n=== " << outname << " Test " << tnum << ":  " << testname << " ===" << endl;
-  QuantTessellation<2> quantMesh;
+  auto& quantizer = tessellator.getQuantizer();
+  quantizer.init(boundary.mPLCpoints.empty() ? points : boundary.mPLCpoints, boundary.mPad);
+  QuantTessellation<2> quantMesh(quantizer);
   if (qpoints.size() > 0) {
     quantMesh.init(qpoints);
   } else {
     quantMesh.init(points);
   }
-  QuantPLC<2> QPLC(boundary.mPLCpoints, boundary.mPLC);
+  QuantPLC<2> QPLC(quantizer, boundary.mPLCpoints, boundary.mPLC);
   quantMesh.cullExternalPoints(QPLC);
   tessellator.tessellateQuantized(quantMesh);
   if (tessellator.clippingEnabled()) {

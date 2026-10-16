@@ -18,6 +18,7 @@
 #define __Polytope_QuantPLC__
 
 #include <type_traits>
+#include <utility>
 
 #include "PLC.hh"
 #include "QuantizedKeyTraits.hh"
@@ -40,10 +41,44 @@ public:
   using Quant = Quantizer<Dimension>;
   using QuantizedCell = Cell<Dimension, QuantizedCoordinate<Dimension>>;
 
-  QuantPLC() = default;
+  explicit QuantPLC(const Quant& Q): m_Q(Q) {}
   virtual ~QuantPLC() = default;
 
-  QuantPLC(const std::vector<RealPoint>& allpoints,
+  QuantPLC(const QuantPLC&) = default;
+  QuantPLC(QuantPLC&&) = default;
+
+  // References cannot be rebound. Assignment therefore retains this object's
+  // quantizer and is only valid between PLCs built with the same context.
+  QuantPLC& operator=(const QuantPLC& other) {
+    POLY_VERIFY2(&m_Q == &other.m_Q,
+                 "Cannot assign QuantPLCs that use different quantizers");
+    if (this != &other) {
+      PLC<Dimension>::operator=(other);
+      points = other.points;
+      m_reduced = other.m_reduced;
+      m_convex = other.m_convex;
+      m_loBounds = other.m_loBounds;
+      m_hiBounds = other.m_hiBounds;
+    }
+    return *this;
+  }
+
+  QuantPLC& operator=(QuantPLC&& other) {
+    POLY_VERIFY2(&m_Q == &other.m_Q,
+                 "Cannot assign QuantPLCs that use different quantizers");
+    if (this != &other) {
+      PLC<Dimension>::operator=(std::move(other));
+      points = std::move(other.points);
+      m_reduced = other.m_reduced;
+      m_convex = other.m_convex;
+      m_loBounds = other.m_loBounds;
+      m_hiBounds = other.m_hiBounds;
+    }
+    return *this;
+  }
+
+  QuantPLC(const Quant& Q,
+           const std::vector<RealPoint>& allpoints,
            const PLC<Dimension>& plc = PLC<Dimension>());
 
   void init(const std::vector<RealPoint>& allpoints,
@@ -57,9 +92,10 @@ public:
   void init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
 
   // Wrappers for when flattened vectors are provided
-  QuantPLC(const std::vector<RealType>& allpoints,
+  QuantPLC(const Quant& Q,
+           const std::vector<RealType>& allpoints,
            const PLC<Dimension>& plc = PLC<Dimension>()) :
-    QuantPLC(extractCoords<Dimension, RealType>(allpoints), plc) {
+    QuantPLC(Q, extractCoords<Dimension, RealType>(allpoints), plc) {
   }
 
   void init(const std::vector<RealType>& allpoints) {
@@ -97,11 +133,10 @@ public:
 
   // Returns dequantized points
   std::vector<RealPoint> getRealPoints() const {
-    const auto& Q = Quant::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
-      realPoints.push_back(Q.dequantize(p));
+      realPoints.push_back(m_Q.dequantize(p));
     }
     return realPoints;
   }
@@ -165,7 +200,10 @@ public:
   QuantizedPoint<Dimension> m_loBounds;
   QuantizedPoint<Dimension> m_hiBounds;
 
+  const Quant& quantizer() const { return m_Q; }
+
 private:
+  const Quant& m_Q;
   template<int D = Dimension>
   std::enable_if_t<D == 2, void> makeConvex2D();
 

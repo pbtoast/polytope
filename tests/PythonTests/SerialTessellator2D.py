@@ -23,8 +23,6 @@ def _assert_mesh_populated(mesh):
 def test_serial_2d_tessellators(Ngen):
     tessellator_types = _available_tessellators()
     assert tessellator_types
-    Q = polytope.Quantizer2d.instance()
-
     seed = 19001
     boundary = Boundary2d(10)
     points = ptu.generate_random_points(Ngen, seed, boundary)
@@ -35,8 +33,7 @@ def test_serial_2d_tessellators(Ngen):
         assert tess_name
 
         print(f"Testing unbounded {tess_name}")
-        mesh = polytope.Tessellation2d()
-        tessellator.tessellate(points, mesh)
+        mesh = tessellator.tessellate(points)
         _assert_mesh_populated(mesh)
         ptu.outputMesh2d(mesh=mesh,
                          filePrefix=f"PySerial{tess_name}",
@@ -46,8 +43,7 @@ def test_serial_2d_tessellators(Ngen):
 
         if (tessellator.clippingEnabled()):
             print(f"Testing clipped {tess_name}")
-            clipped_mesh = polytope.Tessellation2d()
-            tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
+            clipped_mesh = tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC)
             _assert_mesh_populated(clipped_mesh)
             ptu.outputMesh2d(mesh=clipped_mesh,
                              filePrefix=f"PySerial{tess_name}",

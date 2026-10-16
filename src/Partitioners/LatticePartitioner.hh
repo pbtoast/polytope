@@ -1,9 +1,9 @@
 //----------------------------------------------------------------------------//
 // LatticePartitioner
 //
-// The complete partitioning domain is Quantizer<Dimension>::minBound through
-// Quantizer<Dimension>::maxBound, inclusive. The Quantizer must be initialized
-// before computePartition is called. This domain is divided uniformly into
+// The complete partitioning domain is this partitioner's Quantizer<Dimension>
+// minBound through maxBound, inclusive. It is initialized from real-valued
+// inputs before partitioning. This domain is divided uniformly into
 // ranksPerAxis[d] tiles along each axis; a point on the global upper bound
 // belongs to the final tile on that axis.
 //----------------------------------------------------------------------------//
@@ -50,6 +50,12 @@ public:
     init();
   }
 
+  // Use collective bounds when this partitioner is assigning rank-local
+  // generators in a distributed workflow.
+  void setParallel(const bool value) {
+    this->m_Q.setParallel(value);
+  }
+
   void init() {
     std::size_t expectedRanks = 1;
     for (int d = 0; d < Dimension; ++d) {
@@ -65,8 +71,8 @@ public:
 
   std::vector<OwnerType>
   computeOwners(const std::vector<RealPoint>& globalPoints) const override {
-    const auto& Q = Quantizer<Dimension>::instance();
-    POLY_VERIFY2(Q.m_init, "The Quantizer must be initialized before lattice partitioning");
+    auto& Q = this->m_Q;
+    Q.init(globalPoints);
     std::vector<OwnerType> result(globalPoints.size());
     for (std::size_t i = 0; i < globalPoints.size(); ++i) {
       result[i] = owner(Q.quantize(globalPoints[i]), Q.minBound, Q.maxBound);
@@ -76,7 +82,7 @@ public:
 
   std::vector<OwnerType>
   computeOwners(const std::vector<QuantPoint>& globalPoints) const override {
-    const auto& Q = Quantizer<Dimension>::instance();
+    const auto& Q = this->m_Q;
     POLY_VERIFY2(Q.m_init, "The Quantizer must be initialized before lattice partitioning");
     std::vector<OwnerType> result(globalPoints.size());
     for (std::size_t i = 0; i < globalPoints.size(); ++i) {

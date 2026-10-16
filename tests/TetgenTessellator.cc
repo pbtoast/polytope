@@ -32,15 +32,15 @@ void testBoundary(Tessellator<3, double>& tessellator,
 
   Point3<double> pmin(0., 0., 0.);
   Point3<double> pmax(1., 1., 1.);
-  // Quantizer is initialized in Generators constructor
+  Quantizer<3> quantizer(pmin, pmax);
   Generators<3> generators(pmin, pmax);
   unsigned nPoints = 10;
   Tessellation<3,double> mesh;
   for (unsigned n = 0; n < numSweeps; ++n) {
     POLY_CHECK(mesh.empty());
     cout << nPoints << " points..." << endl;
-    generators.randomPoints(nPoints);
-    tessellator.tessellate(generators.mPoints, mesh);
+    generators.randomPoints(quantizer, nPoints);
+    mesh = tessellator.tessellate(generators.mPoints);
     outputMesh(mesh, testName, n);
     nPoints = nPoints * 10;
     mesh.clear();

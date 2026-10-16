@@ -7,12 +7,13 @@
 
 namespace polytope {
 
-//! \class Tessellator - An abstract base class for objects that generate 
-//! Voronoi and Voronoi-like tessellations for sets of points and/or 
+//! \class Tessellator - An abstract base class for objects that generate
+//! Voronoi and Voronoi-like tessellations for sets of points and/or
 //! geometries.
 template<int Dimension, typename RealType>
 class Tessellator {
 public:
+  using TessType = Tessellation<Dimension, RealType>;
 
   //! Default constructor.
   Tessellator() = default;
@@ -22,44 +23,39 @@ public:
 
   //! Generate a Voronoi tessellation for the given set of generator points.
   //! \param points A (numPoints) array containing point coordinates.
-  //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          Tessellation<Dimension, RealType>& mesh);
+  //! \return A self-contained, real-coordinate tessellation.
+  virtual TessType tessellate(const std::vector<Point<Dimension, RealType>>& points);
 
   //! Wrapper for above virtual function
-  void tessellate(const std::vector<RealType>& points,
-                  Tessellation<Dimension, RealType>& mesh) {
-    this->tessellate(extractCoords<Dimension, RealType>(points), mesh);
+  TessType tessellate(const std::vector<RealType>& points) {
+    return this->tessellate(extractCoords<Dimension, RealType>(points));
   }
 
-  //! Generate a Voronoi-like tessellation for the given set of generator 
+  //! Generate a Voronoi-like tessellation for the given set of generator
   //! points and a description of the geometry in which they exist.
   //! \param points A (numPoints) array containing point coordinates.
   //! \param PLCpoints A (n) array containing point coordinates for the PLC.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
-  //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          const std::vector<Point<Dimension, RealType>>& PLCpoints,
-                          const PLC<Dimension>& geometry,
-                          Tessellation<Dimension, RealType>& mesh);
+  //! \return A self-contained, real-coordinate tessellation.
+  virtual TessType tessellate(const std::vector<Point<Dimension, RealType>>& points,
+                              const std::vector<Point<Dimension, RealType>>& PLCpoints,
+                              const PLC<Dimension>& geometry);
 
   //! Wrapper for above virtual function
-  void tessellate(const std::vector<RealType>& points,
-                  const std::vector<RealType>& PLCpoints,
-                  const PLC<Dimension>& geometry,
-                  Tessellation<Dimension, RealType>& mesh) {
-    this->tessellate(extractCoords<Dimension, RealType>(points),
-                     extractCoords<Dimension, RealType>(PLCpoints),
-                     geometry, mesh);
+  TessType tessellate(const std::vector<RealType>& points,
+                      const std::vector<RealType>& PLCpoints,
+                      const PLC<Dimension>& geometry) {
+    return this->tessellate(extractCoords<Dimension, RealType>(points),
+                            extractCoords<Dimension, RealType>(PLCpoints),
+                            geometry);
   }
 
   //! Wrapper for above virtual function
-  void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                  const std::vector<RealType>& PLCpoints,
-                  const PLC<Dimension>& geometry,
-                  Tessellation<Dimension, RealType>& mesh) {
-    this->tessellate(points, extractCoords<Dimension, RealType>(PLCpoints),
-                     geometry, mesh);
+  TessType tessellate(const std::vector<Point<Dimension, RealType>>& points,
+                      const std::vector<RealType>& PLCpoints,
+                      const PLC<Dimension>& geometry) {
+    return this->tessellate(points, extractCoords<Dimension, RealType>(PLCpoints),
+                            geometry);
   }
 
   //! Compute the quantized tessellation.  Serial implementations inherit the
@@ -78,9 +74,28 @@ public:
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed
   //! delta in x.
   Point<Dimension, double> degeneracy() const {
-    const auto& Q = Quantizer<Dimension>::instance();
-    return Q.degeneracy();
+    return m_Q.degeneracy();
   }
+
+  //! Set the padding for quantized space. Reinitializes quantizer if necessary
+  void setPadding(const RealType& pad) {
+    m_Q.setPadding(pad);
+  }
+
+  RealType getPadding() const {
+    return m_Q.getPadding();
+  }
+
+  Quantizer<Dimension>& getQuantizer() {
+    return m_Q;
+  }
+
+  const Quantizer<Dimension>& getQuantizer() const {
+    return m_Q;
+  }
+
+  void useMortonEncoding() { m_Q.useMortonEncoding(); }
+  void usePackedEncoding() { m_Q.usePackedEncoding(); }
 
   void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh);
 
@@ -91,7 +106,8 @@ public:
     return true;
 #endif
   }
-
+protected:
+  Quantizer<Dimension> m_Q;
 private:
   // Disallowed.
   Tessellator(const Tessellator&);

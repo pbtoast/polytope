@@ -5,7 +5,7 @@
 
 #include "polytope.hh"
 
-#include "Communicator.hh" 
+#include "Communicator.hh"
 
 #include "BoostTessellator.hh"
 #include "DistributedTessellator.hh"
@@ -32,16 +32,16 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   const int Ngen = 4;
   int oseed = 1049600 + 10*btype;
   int seed = oseed + rank;
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.setDefaultBoundary(btype);
+  tessellator.setPadding(boundary.mPad);
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
 
   // Run the distributed tessellator in parallel
   DistributedTessellator<2> distributed(tessellator);
-  Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC,
-                         localMesh);
+  Tessellation<2, double> localMesh =
+    distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
 
   // Reduce the number of cells and area
   const auto localCells = static_cast<int>(localMesh.cells.size());
@@ -51,7 +51,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Run the same tessellation but in serial
   double serialArea = 0.0;
   if (rank == root) {
-    auto& Q = Quantizer<2>::instance();
+    auto& Q = boundary.mQ;
     std::map<Point<2, double>, int> finalRanks;
     std::vector<double> allPoints;
     for (int proc = 0; proc < nranks; ++proc) {
@@ -66,9 +66,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
         finalRanks[newp] = proc;
       }
     }
-    Tessellation<2, double> serialMesh;
-    tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC,
-                           serialMesh);
+    Tessellation<2, double> serialMesh =
+      tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
     serialArea = computeTessellationArea(serialMesh);
     std::vector<int> finalRanksD;
     for (auto& p : serialMesh.points) {

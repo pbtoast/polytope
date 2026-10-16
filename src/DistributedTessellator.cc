@@ -8,14 +8,38 @@
 
 namespace polytope {
 
+namespace {
+
+// All ranks must agree before an empty input can skip the collective
+// quantization and generator-exchange operations below.
+inline
+bool
+hasAnyGenerators(const bool localHasGenerators) {
+#ifdef POLYTOPE_ENABLE_MPI
+  int localValue = localHasGenerators ? 1 : 0;
+  int globalValue = 0;
+  MPI_Allreduce(&localValue, &globalValue, 1, MPI_INT, MPI_MAX,
+                Communicator::communicator());
+  return globalValue != 0;
+#else
+  return localHasGenerators;
+#endif
+}
+
+}
+
 //------------------------------------------------------------------------------
 // Constructor
 //------------------------------------------------------------------------------
 template<int Dimension>
 DistributedTessellator<Dimension>::
 DistributedTessellator(Base& serialTessellator):
-  m_serialTessellator(serialTessellator),
-  m_keyEncode(Quantizer<Dimension>::instance().keyEncoding()) {
+  Tessellator<Dimension, double>(),
+  m_serialTessellator(serialTessellator) {
+  // Apply padding from serial tessellator
+  m_Q.setPadding(m_serialTessellator.getPadding());
+  // Make quantizer parallel
+  m_Q.setParallel(true);
 }
 
 //------------------------------------------------------------------------------
@@ -45,122 +69,98 @@ name() const {
 // Unbounded tessellation
 //------------------------------------------------------------------------------
 template<int Dimension>
-void
+Tessellation<Dimension, double>
 DistributedTessellator<Dimension>::
-tessellate(const std::vector<Point<Dimension, RealType>>& points,
-           TessellationType& mesh) {
-  POLY_ASSERT(mesh.empty());
-  auto& Q = Quantizer<Dimension>::instance();
-  if (!Q.m_init) {
-    Q.init(points);
-  }
+tessellate(const std::vector<Point<Dimension, RealType>>& points) {
+  m_clipping = false;
+  TessellationType mesh;
+  if (!hasAnyGenerators(!points.empty())) return mesh;
+  m_Q.init(points);
 
-  m_keyEncode = Q.keyEncoding();
-  QuantizedTessellation quantmesh(points);
+  QuantizedTessellation quantmesh(m_Q, points);
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  checkEncoding();
+  return mesh;
 }
 
 //------------------------------------------------------------------------------
 // PLC-bounded tessellation
 //------------------------------------------------------------------------------
 template<int Dimension>
-void
+Tessellation<Dimension, double>
 DistributedTessellator<Dimension>::
 tessellate(const std::vector<Point<Dimension, RealType>>& points,
            const std::vector<Point<Dimension, RealType>>& PLCpoints,
-           const PLC<Dimension>& geometry,
-           TessellationType& mesh) {
+           const PLC<Dimension>& geometry) {
   m_clipping = true;
-  POLY_ASSERT(mesh.empty());
-  auto& Q = Quantizer<Dimension>::instance();
-  if (!Q.m_init) {
-    if (PLCpoints.empty()) {
-      Q.init(points);
-    } else {
-      Q.init(PLCpoints);
-    }
-  }
+  TessellationType mesh;
+  if (!hasAnyGenerators(!points.empty())) return mesh;
+  m_Q.init(PLCpoints.empty() ? points : PLCpoints);
 
-  m_keyEncode = Q.keyEncoding();
-  QuantizedTessellation qmesh(points);
-  m_QPLC.init(PLCpoints, geometry);
-  qmesh.cullExternalPoints(m_QPLC);
+  QuantizedTessellation qmesh(m_Q, points);
+  m_QPLC.emplace(m_Q, PLCpoints, geometry);
+  qmesh.cullExternalPoints(*m_QPLC);
   this->tessellateQuantized(qmesh);
-  qmesh.clipTessellation(m_QPLC, m_serialTessellator);
+  qmesh.clipTessellation(*m_QPLC, m_serialTessellator);
   qmesh.filterToLocalGenerators();
   qmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  checkEncoding();
+  return mesh;
 }
 
 //------------------------------------------------------------------------------
 // Partitioned unbounded tessellation
 //------------------------------------------------------------------------------
 template<int Dimension>
-void
+Tessellation<Dimension, double>
 DistributedTessellator<Dimension>::
 partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
-                       const Partitioner<Dimension>& partitioner,
-                       TessellationType& mesh) {
-  POLY_ASSERT(mesh.empty());
+                       const Partitioner<Dimension>& partitioner) {
+  m_clipping = false;
+  TessellationType mesh;
+  if (!hasAnyGenerators(!points.empty())) return mesh;
+  m_Q.init(points);
   POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
-  auto& Q = Quantizer<Dimension>::instance();
-  if (!Q.m_init) {
-    Q.init(points);
-  }
-
-  m_keyEncode = Q.keyEncoding();
   const auto localPoints = partitioner.partition(points);
-  QuantizedTessellation quantmesh(localPoints);
+  QuantizedTessellation quantmesh(m_Q, localPoints);
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  checkEncoding();
+  return mesh;
 }
 
 //------------------------------------------------------------------------------
 // Partitioned PLC-bounded tessellation
 //------------------------------------------------------------------------------
 template<int Dimension>
-void
+Tessellation<Dimension, double>
 DistributedTessellator<Dimension>::
 partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                        const std::vector<Point<Dimension, RealType>>& PLCpoints,
                        const PLC<Dimension>& geometry,
-                       const Partitioner<Dimension>& partitioner,
-                       TessellationType& mesh) {
+                       const Partitioner<Dimension>& partitioner) {
   m_clipping = true;
-  POLY_ASSERT(mesh.empty());
+  TessellationType mesh;
+  if (!hasAnyGenerators(!points.empty())) return mesh;
+  m_Q.init(PLCpoints.empty() ? points : PLCpoints);
   POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
-  auto& Q = Quantizer<Dimension>::instance();
-  if (!Q.m_init) {
-    if (PLCpoints.empty()) {
-      Q.init(points);
-    } else {
-      Q.init(PLCpoints);
-    }
-  }
-
-  m_keyEncode = Q.keyEncoding();
-  m_QPLC.init(PLCpoints, geometry);
+  m_QPLC.emplace(m_Q, PLCpoints, geometry);
   const auto localPoints = partitioner.partition(points);
-  QuantizedTessellation quantmesh(localPoints);
-  quantmesh.cullExternalPoints(m_QPLC);
+  QuantizedTessellation quantmesh(m_Q, localPoints);
+  quantmesh.cullExternalPoints(*m_QPLC);
   this->tessellateQuantized(quantmesh);
-  quantmesh.clipTessellation(m_QPLC, m_serialTessellator);
+  quantmesh.clipTessellation(*m_QPLC, m_serialTessellator);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  checkEncoding();
+  return mesh;
 }
 
 //------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ tessellateQuantized(QuantizedTessellation& qmesh) {
     neighborRanks = visibleMesh.neighboringRanks();
     // If clipping, holes can modify which ranks are neighbors
     if (m_clipping) {
-      visibleMesh.clipTessellation(m_QPLC, m_serialTessellator);
+      visibleMesh.clipTessellation(*m_QPLC, m_serialTessellator);
       std::set<int> clipped_neighbors = visibleMesh.neighboringRanks();
       neighborRanks.insert(clipped_neighbors.begin(), clipped_neighbors.end());
     }
@@ -239,7 +239,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
   if (!qmesh.points.empty()) {
     m_serialTessellator.tessellateQuantized(qmesh);
   }
-  QuantizedTessellation visibleMesh;
+  QuantizedTessellation visibleMesh(qmesh.quantizer());
   if (m_exchangePoints) {
     const auto visiblePoints = qmesh.visibleGeneratorPoints();
     auto allVisibleRecords =

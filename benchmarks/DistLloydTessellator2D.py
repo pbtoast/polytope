@@ -37,9 +37,8 @@ def test_distributed_2d_tessellators(Ngen):
         partitioner.niter = i
         with ptu.timer(f"partition_{i}_iter"):
             points = partitioner.partition(local_points)
-        mesh = polytope.Tessellation2d()
         with ptu.timer(f"tessellate_{i}_iter"):
-            tessellator.tessellate(points, mesh)
+            mesh = tessellator.tessellate(points)
         ptu.outputMesh2d(mesh=mesh,
                          filePrefix="PyDistLloyd",
                          cycle=k,

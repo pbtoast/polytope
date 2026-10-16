@@ -25,14 +25,15 @@ class Boundary2d:
     def clear(self):
         self.PLC = polytope.PLC2d()
         self.PLCpoints, self._facets, self._holes = [], [], []
-        self.QPLC = polytope.QuantPLC2d()
+        self.Q = polytope.Quantizer2d()
+        self.QPLC = polytope.QuantPLC2d(self.Q)
         self.low = self.high = None
         self.outerSet = False
 
     def finalize(self):
         if not self.PLCpoints:
             raise ValueError("Cannot finalize an empty boundary")
-        polytope.Quantizer2d.instance().init(self.PLCpoints, self.m_pad)
+        self.Q.init(self.PLCpoints, self.m_pad)
         self.QPLC.init(self.PLCpoints, self.PLC)
         self.low = [min(self.PLCpoints[0::2]), min(self.PLCpoints[1::2])]
         self.high = [max(self.PLCpoints[0::2]), max(self.PLCpoints[1::2])]

@@ -30,7 +30,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "StarBoundary_" + tessellator.name();
 
   // Set the boundary and tessellator
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.setDefaultBoundary(8);
 
   // 9 input generators points
@@ -53,7 +53,7 @@ void test(Tessellator<2,double>& tessellator) {
       points.push_back(gens[2*i+1]);
     }
     Tessellation<2,double> mesh;
-    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -72,7 +72,7 @@ void test(Tessellator<2,double>& tessellator) {
                   boundary.mPLCpoints.begin(),
                   boundary.mPLCpoints.end());
     Tessellation<2,double> mesh;
-    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC,mesh);
+    mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -85,7 +85,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(800, 10);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -99,7 +99,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(2000, 10);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());

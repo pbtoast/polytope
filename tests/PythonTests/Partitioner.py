@@ -23,9 +23,8 @@ def test_partitioner(Ngen):
     for k, i in enumerate([0, 1, 10, 100]):
         partitioner.niter = i
         rank_points = partitioner.computeLocalPartition(all_points)
-        mesh = polytope.Tessellation2d()
         with ptu.timer("Tessellate"):
-            tessellator.tessellate(rank_points, mesh)
+            mesh = tessellator.tessellate(rank_points)
         ptu.outputMesh2d(mesh=mesh,
                          filePrefix="PartitionerTest",
                          cycle = k,

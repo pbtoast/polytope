@@ -22,6 +22,9 @@ class Boundary2D {
 public:
   // -------------- Public member variables and routines ---------------- //
 
+  // The owning tessellator must outlive this boundary.
+  Quantizer<2>& mQ;
+
   // Piecewise linear construct to define the boundary facets + holes
   PLC<2> mPLC;
   // Vector of generators to define the boundary
@@ -29,9 +32,10 @@ public:
   double mDiff = 0.5;
   // Ranges of bounding box
   double mCenter[3] = {0.0, 0.0, 0.0};
-  double mArea;
+  double mArea = -1.;
   // Disable if clipping is disabled
   bool mClipping = true;
+  Point2<double> minBound, maxBound;
 
   BGPolygon<double, 2> mBGboundary;
 
@@ -55,13 +59,13 @@ public:
   mutable BoundaryType mType;
 
   double mPad = 0.1;
-  QuantPLC<2> mQPLC;
 
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
-  Boundary2D():
-    mType(square){
+  Boundary2D(Quantizer<2>& quantizer):
+    mQ(quantizer),
+    mType(square) {
     this->clear();
     this->setDefaultBoundary(mType);
   }
@@ -75,15 +79,14 @@ public:
   }
 
   void finalize() {
-    auto& Q = Quantizer<2>::instance();
-    Q.init(mPLCpoints, mPad);
-    mQPLC.init(mPLCpoints, mPLC);
+    mQ.init(mPLCpoints, mPad);
     boostMyBoundary();
     if (mClipping) {
       mArea = boost::geometry::area(mBGboundary);
     } else {
-      mArea = Q.area();
+      mArea = mQ.area();
     }
+    findBoundingElements(extractCoords<2, double>(mPLCpoints), minBound, maxBound);
   }
 
   //------------------------------------------------------------------------
@@ -561,17 +564,6 @@ public:
   //------------------------------------------------------------------------
   //-------------------- ADDITIONAL HELPER FUNCTIONS -----------------------
   //------------------------------------------------------------------------
-
-  //------------------------------------------------------------------------
-  // testInside
-  // Tests if a given point (x,y) lies in the interior of the domain.
-  // If holes are defined in mPLC, then each hole is tested separately.
-  // Returns true if the point is inside the facets but outside the holes.
-  //------------------------------------------------------------------------
-  bool testInside( double* pos ) {
-    Point<2, double> p(pos[0], pos[1]);
-    return mQPLC.within(p);
-  }
 
   //------------------------------------------------------------------------
   // inside

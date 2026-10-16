@@ -12,7 +12,7 @@ def test_siloIO(Ngen):
     # Seed for partitioning points randomly
     partseed = 19
     boundary = Boundary2d(0)
-    Q = polytope.Quantizer2d.instance()
+    Q = boundary.Q
     xlo = Q.domLo.x
     xlen = Q.domLength.x
     # Generate Ngen points per rank
@@ -23,8 +23,7 @@ def test_siloIO(Ngen):
     # Make a partitioner
     partitioner = polytope.QuasiVoronoiPartitioner2d(partseed)
     rank_points = partitioner.computeLocalPartition(all_points)
-    mesh = polytope.Tessellation2d()
-    tessellator.tessellate(rank_points, mesh)
+    mesh = tessellator.tessellate(rank_points)
     filePrefix = "SiloIOTest"
     writer = polytope.SiloWriter2d(mesh)
     # Normalized x coordinates

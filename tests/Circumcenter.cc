@@ -88,16 +88,15 @@ int main(int argc, char** argv) {
     cout << "\nTest 2D circumcenter\n";
     Point2<double> min(-0.5, -0.5);
     Point2<double> max(0.5, 0.5);
-    auto& q = Quantizer<2>::instance();
-    q.init(min, max, 0.1);
+    Quantizer<2> Q(min, max, 0.1);
     double loval = -0.375;
     double hival = -0.25;
     std::array<Point2<double>, 3> tri1, tri2;
     createTriangle(loval, hival, tri1, tri2);
     std::array<Point2<double>, 3> qtri1, qtri2;
     for (int i = 0; i < 3; ++i) {
-      qtri1[i] = q.quantize(tri1[i]).template type_cast<double>();
-      qtri2[i] = q.quantize(tri2[i]).template type_cast<double>();
+      qtri1[i] = Q.quantize(tri1[i]).template type_cast<double>();
+      qtri2[i] = Q.quantize(tri2[i]).template type_cast<double>();
     }
     auto c1 = circumcenter2d<IntType2D>(qtri1);
     auto c2 = circumcenter2d<IntType2D>(qtri2);
@@ -110,8 +109,7 @@ int main(int argc, char** argv) {
     cout << "\nTest 3D circumcenter\n";
     Point3<double> min(-0.5, -0.5, -0.5);
     Point3<double> max(0.5, 0.5, 0.5);
-    auto& q = Quantizer<3>::instance();
-    q.init(min, max, 0.1);
+    Quantizer<3> Q(min, max, 0.1);
     double loval = 0.;//-0.375;
     double hival = 0.25;//-0.25;
     double height = 0.9;
@@ -121,8 +119,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 4; ++i) {
       std::cout << tri1[i] << std::endl;
       std::cout << tri2[i] << std::endl;
-      qtri1[i] = q.quantize(tri1[i]).template type_cast<double>();
-      qtri2[i] = q.quantize(tri2[i]).template type_cast<double>();
+      qtri1[i] = Q.quantize(tri1[i]).template type_cast<double>();
+      qtri2[i] = Q.quantize(tri2[i]).template type_cast<double>();
     }
     auto c1 = circumcenter3d<IntType3D>(qtri1);
     auto c2 = circumcenter3d<IntType3D>(qtri2);

@@ -50,11 +50,11 @@ int main(int argc, char** argv) {
     Communicator::abort();
   }
   std::string inputFile = argv[1];
-  auto& q = Quantizer<2>::instance();
+  Quantizer<2> q;
   q.init(Point2<double>(0.), Point2<double>(1.));
 
-  QuantTessellation<2> quantMesh;
-  QuantPLC<2> qplc;
+  QuantTessellation<2> quantMesh(q);
+  QuantPLC<2> qplc(q);
   std::string tessellatorName;
   quantMesh.loadEscapePod(inputFile, qplc, tessellatorName);
   quantMesh.m_isEscapePod = true;

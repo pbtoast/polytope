@@ -205,9 +205,9 @@ template<typename CoordType>
 int
 clipInfiniteRay(const Point2<CoordType>& validVertex,
                 const Point2<CoordType>& normdiffg,
-                Point2<CoordType>& result) {
+                Point2<CoordType>& result,
+                const Quantizer<2>& Q) {
   BoxSide side;
-  auto& Q = Quantizer<2>::instance();
   CoordType x_lim = (normdiffg.x > 0) ? Q.maxBound.x : Q.minBound.x;
   CoordType y_lim = (normdiffg.y > 0) ? Q.maxBound.y : Q.minBound.y;
   BoxSide LR = (normdiffg.x > 0) ? BoxSide::R : BoxSide::L;

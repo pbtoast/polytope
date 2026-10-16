@@ -6,9 +6,8 @@ from PLC import PLC
 class QuantPLC(PLC):
     """A PLC with quantized coordinates and spatial-query operations.
 
-    The :class:`Quantizer2d` or :class:`Quantizer3d` singleton must be
-    initialized before constructing or initializing a QuantPLC from real
-    coordinates.
+    A QuantPLC references the supplied Quantizer, which must be initialized
+    before constructing or initializing from real coordinates.
     """
 
     PYB11typedefs = """
@@ -17,25 +16,30 @@ class QuantPLC(PLC):
   using QuantizedPoint = polytope::QuantizedPoint<%(Dimension)s>;
 """
 
-    def pyinit(self):
-        "Default constructor."
+    @PYB11keepalive(1, 2)
+    def pyinit(self, quantizer="const Quantizer<%(Dimension)s>&"):
+        "Construct an empty QuantPLC referencing quantizer."
 
-    @PYB11implementation("""[](const py::object& points,
+    @PYB11keepalive(1, 2)
+    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points,
                                const PLC<%(Dimension)s>& plc) {
                                  return QuantPLC<%(Dimension)s>(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
+                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
                                    plc);
                                }""")
     def pyinitFromPLC(self,
+                      quantizer="const Quantizer<%(Dimension)s>&",
                       points="const py::object&",
                       plc="const PLC<%(Dimension)s>&"):
         "Construct from a PLC and flattened coordinates or coordinate tuples."
 
-    @PYB11implementation("""[](const py::object& points) {
+    @PYB11keepalive(1, 2)
+    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points) {
                                  return QuantPLC<%(Dimension)s>(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
+                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
                                }""")
     def pyinitFromPoints(self,
+                         quantizer="const Quantizer<%(Dimension)s>&",
                          points="const py::object&"):
         "Construct a convex PLC from flattened coordinates or coordinate tuples."
 

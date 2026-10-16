@@ -28,10 +28,6 @@ BoostTessellator::
 tessellateQuantizedImpl(QuantizedTessellation& result) const {
   // Type aliases
   using VD = boost::polygon::voronoi_diagram<RealType>;
-  const auto& Q = Quantizer<2>::instance();
-  // First ensure that the encoding method has not changed
-  POLY_CHECK2(Q.keyEncoding() == result.keyEncoding(),
-              "Key encoding method changed during tessellation");
   // Get the quantized generators
   std::vector<QuantizedPoint<2>> generators = result.getQuantizedPoints();
 

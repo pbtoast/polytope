@@ -197,7 +197,11 @@ allGatherHulls(const bool localValid,
     serialize(localHull, localBuffer);
   }
   auto buffers = allGatherBuffers(localBuffer);
-  std::vector<std::pair<bool, QuantPLC<Dimension>>> result(size);
+  std::vector<std::pair<bool, QuantPLC<Dimension>>> result;
+  result.reserve(size);
+  for (int i = 0; i < size; ++i) {
+    result.emplace_back(false, QuantPLC<Dimension>(localHull.quantizer()));
+  }
   for (int i = 0; i < size; ++i) {
     auto itr = buffers[i].cbegin();
     deserialize(result[i].first, itr, buffers[i].end());

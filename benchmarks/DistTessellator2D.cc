@@ -44,10 +44,11 @@ timeTessellation(const std::vector<double> allPoints,
   double minTime = std::numeric_limits<double>::max();
   std::vector<std::string> run_info;
   for (unsigned encoding = 0; encoding < 2; ++encoding) {
-    if (encoding == 0) Quantizer<2>::instance().useMortonEncoding();
-    else Quantizer<2>::instance().usePackedEncoding();
+    const auto& quantizer = distributed.getQuantizer();
+    if (encoding == 0) distributed.useMortonEncoding();
+    else distributed.usePackedEncoding();
     if (rank == root) {
-      std::cout << "Encoding: " << Quantizer<2>::instance().keyName() << std::endl;
+      std::cout << "Encoding: " << quantizer.keyName() << std::endl;
     }
     for (unsigned exchangePoints = 0; exchangePoints < 2; ++exchangePoints) {
       if (exchangePoints == 0) distributed.setExchangePoints(false);
@@ -59,7 +60,7 @@ timeTessellation(const std::vector<double> allPoints,
         Tessellation<2, double> mesh;
         Communicator::Barrier();
         const auto tessellationStart = std::chrono::steady_clock::now();
-        distributed.partitionAndTessellate(allPoints, *(partitioner), mesh);
+        mesh = distributed.partitionAndTessellate(allPoints, *(partitioner));
         Communicator::Barrier();
         const auto tessellationTime = std::chrono::duration<double>(
           std::chrono::steady_clock::now() - tessellationStart).count();
@@ -70,12 +71,12 @@ timeTessellation(const std::vector<double> allPoints,
         if (tessellationTime < minTime) {
           minTime = tessellationTime;
           run_info.clear();
-          run_info.push_back(Quantizer<2>::instance().keyName());
+          run_info.push_back(quantizer.keyName());
           run_info.push_back((distributed.exchangePoints()) ? "Points" : "Hashes");
           run_info.push_back(partitioner->name());
         }
         if (encoding == 0 && exchangePoints == 0) {
-          std::string meshName = "Bench" + Quantizer<2>::instance().keyName() + "_" + partitioner->name();
+          std::string meshName = "Bench" + quantizer.keyName() + "_" + partitioner->name();
           outputMesh(mesh, meshName);
         }
       } // Partitioner loop
@@ -97,21 +98,27 @@ main(int argc, char** argv) {
   unsigned n = 1000000;
   if (argc > 1) n = std::strtoul(argv[1], nullptr, 10);
 
-  // Setup the quantizer
-  Boundary2D boundary;
-  boundary.mCenter[0] = 0.5;
-  boundary.mCenter[1] = 0.5;
-  boundary.setDefaultBoundary(Boundary2D::square);
-  Quantizer<2>::instance().init(Point<2, double>(0.0, 0.0),
-                                Point<2, double>(1.0, 1.0));
+
   const auto rank = Communicator::getRank();
   const auto root = Communicator::getRoot();
   const auto nranks = Communicator::getNRanks();
   for (int dist_type = 0; dist_type < 2; ++dist_type) {
     if (rank == root) {
-      std::cout << "Degeneracy " << Quantizer<2>::instance().degeneracy()
-                << "\nGenerating " << n << " random points over " << nranks << " ranks\n";
+      std::cout << "Generating " << n << " random points over " << nranks << " ranks\n";
     }
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+    TriangleTessellator tessellator;
+#else
+    BoostTessellator tessellator;
+#endif
+    if (rank == root) {
+      std::cout << "Using " << tessellator.name() << " tessellator\n";
+    }
+    // Setup the quantizer
+    Boundary2D boundary(tessellator.getQuantizer());
+    boundary.mCenter[0] = 0.5;
+    boundary.mCenter[1] = 0.5;
+    boundary.setDefaultBoundary(Boundary2D::square);
     const int genseed = 1049600;
     Generators<2> generators(boundary);
     std::string distType;
@@ -125,19 +132,7 @@ main(int argc, char** argv) {
     if (rank == root) {
       std::cout << distType << " point distribution\n";
     }
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-    if (rank == root) {
-      std::cout << "Using Triangle tessellator\n";
-    }
-    TriangleTessellator triangle;
-    timeTessellation(generators.mPoints, triangle, distType);
-#else
-    if (rank == root) {
-      std::cout << "Using Boost tessellator\n";
-    }
-    BoostTessellator boost;
-    timeTessellation(generators.mPoints, boost, distType);
-#endif
+    timeTessellation(generators.mPoints, tessellator, distType);
   }
   communicator.finalize();
   return 0;

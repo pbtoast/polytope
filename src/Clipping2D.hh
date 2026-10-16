@@ -40,8 +40,9 @@ public:
 template<typename CoordType>
 class Clip2D {
 public:
-  explicit Clip2D(const DirectedVoronoiEdge<CoordType>& edge):
-    mEdge(edge) {}
+  Clip2D(const DirectedVoronoiEdge<CoordType>& edge,
+         const Quantizer<2>& Q):
+    mEdge(edge), m_Q(Q) {}
 
   // Output geometry. The assembler converts these to result.nodes indices.
   Point2<CoordType> p0;
@@ -51,12 +52,11 @@ public:
 
   // Return true when the primitive intersects the quantization box.
   bool clip() {
-    const auto& Q = Quantizer<2>::instance();
     startSide = -1;
     endSide = -1;
 
-    const bool in0 = mEdge.hasStart && Q.inQBounds(mEdge.start);
-    const bool in1 = mEdge.hasEnd && Q.inQBounds(mEdge.end);
+    const bool in0 = mEdge.hasStart && m_Q.inQBounds(mEdge.start);
+    const bool in1 = mEdge.hasEnd && m_Q.inQBounds(mEdge.end);
 
     // No clipping is required for a finite edge wholly inside the box.
     if (in0 && in1) {
@@ -68,9 +68,9 @@ public:
     // Reject an out-of-box finite endpoint whose directed extension moves
     // farther away from the clipping box.
     if ((mEdge.hasStart && !in0 &&
-         isRayExternal(mEdge.start, mEdge.direction)) ||
+         isRayExternal(mEdge.start, mEdge.direction, m_Q)) ||
         (mEdge.hasEnd && !in1 &&
-         isRayExternal(mEdge.end, -mEdge.direction))) {
+         isRayExternal(mEdge.end, -mEdge.direction, m_Q))) {
       return false;
     }
 
@@ -80,14 +80,14 @@ public:
       p0 = round<2, CoordType>(mEdge.start);
     } else {
       startSide =
-        clipInfiniteRay(mEdge.bisectorPoint, -mEdge.direction, p0);
+        clipInfiniteRay(mEdge.bisectorPoint, -mEdge.direction, p0, m_Q);
     }
 
     if (in1) {
       p1 = round<2, CoordType>(mEdge.end);
     } else {
       endSide =
-        clipInfiniteRay(mEdge.bisectorPoint, mEdge.direction, p1);
+        clipInfiniteRay(mEdge.bisectorPoint, mEdge.direction, p1, m_Q);
     }
 
     return p0 != p1;
@@ -95,6 +95,7 @@ public:
 
 private:
   const DirectedVoronoiEdge<CoordType>& mEdge;
+  const Quantizer<2>& m_Q;
 };
 
 }

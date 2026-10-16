@@ -5,33 +5,38 @@ class Tessellator:
     "Abstract base class for Voronoi and Voronoi-like tessellators."
 
     @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,
-                               const py::object& points,
-                               Tessellation<%(Dimension)s, %(RealType)s>& mesh) {
+                               const py::object& points) {
                                  const auto coords = pybind11_helpers::copyCoords<%(Dimension)s, %(RealType)s>(points);
-                                 self.tessellate(coords, mesh);
+                                 return self.tessellate(coords);
                                }""")
     def tessellate(self,
-                   points="const py::object&",
-                   mesh="Tessellation<%(Dimension)s, %(RealType)s>&"):
+                   points="const py::object&"):
         "Generate a tessellation from flattened coordinates or coordinate tuples."
-        return "void"
+        return "Tessellation<%(Dimension)s, %(RealType)s>"
 
     @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,
                                const py::object& points,
                                const py::object& PLCpoints,
-                               const PLC<%(Dimension)s>& geometry,
-                               Tessellation<%(Dimension)s, %(RealType)s>& mesh) {
+                               const PLC<%(Dimension)s>& geometry) {
                                  const auto pointCoords = pybind11_helpers::copyCoords<%(Dimension)s, %(RealType)s>(points);
                                  const auto plcCoords = pybind11_helpers::copyCoords<%(Dimension)s, %(RealType)s>(PLCpoints);
-                                 self.tessellate(pointCoords, plcCoords, geometry, mesh);
+                                 return self.tessellate(pointCoords, plcCoords, geometry);
                                }""")
     @PYB11pycppname("tessellate")
     def tessellatePLC(self,
                       points="const py::object&",
                       PLCpoints="const py::object&",
-                      geometry="const PLC<%(Dimension)s>&",
-                      mesh="Tessellation<%(Dimension)s, %(RealType)s>&"):
+                      geometry="const PLC<%(Dimension)s>&"):
         "Generate a tessellation inside a PLC boundary."
+        return "Tessellation<%(Dimension)s, %(RealType)s>"
+
+    @PYB11returnpolicy("reference_internal")
+    def getQuantizer(self):
+        return "Quantizer<%(Dimension)s>&"
+
+    def setPadding(self,
+                   padding="const double&"):
+        "Set the percent to pad the quantized space relative to the points."
         return "void"
 
     @PYB11pure_virtual

@@ -109,7 +109,7 @@ QuantTessellation<2>::loadEscapePod(std::string filename,
   in >> haveQPLC;
   POLY_VERIFY2(in, "Malformed escape pod file while reading QPLC presence");
 
-  QuantPLC<2> localQPLC;
+  QuantPLC<2> localQPLC(m_Q);
   if (haveQPLC) {
     escape_pod::expectToken(in, "qplc_points");
     unsigned nqplcPoints = 0;
@@ -145,7 +145,6 @@ QuantTessellation<2>::loadEscapePod(std::string filename,
 template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
-  const auto& Q = Quantizer<2>::instance();
   auto N = points.size();
   std::vector<QuantizedPoint<2>> newPoints;
   newPoints.reserve(N);
@@ -157,7 +156,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
     if (!QPLC.within(point)) continue;
     point.index = indx++;
     newPoints.push_back(point);
-    newHashes.push_back(Q.encode(point));
+    newHashes.push_back(m_Q.encode(point));
   }
   points = std::move(newPoints);
   hashes = std::move(newHashes);
@@ -211,7 +210,6 @@ template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
                                        Tessellator<2, double>& tessellator) {
-  const auto& Q = Quantizer<2>::instance();
   const auto boundaryPoints = bp::polytopeToBoostPoints(QPLC.getCell());
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
@@ -242,7 +240,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     const auto curP = cellPolygons.size();
     // Hash and map the vertices for this polygon
     for (const auto& v : clippedPolygon) {
-      auto vertexHash = Q.encode(BoostToPolytope(v));
+      auto vertexHash = m_Q.encode(BoostToPolytope(v));
       vertexMap[vertexHash].insert(curP);
     }
     polyIndex.push_back(i);
@@ -260,7 +258,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     PolygonWithHoles orphanBound = orphan;
     // Grab any neighboring cells by looping over the vertices
     for (const auto& v : orphan) {
-      auto vertexHash = Q.encode(BoostToPolytope(v));
+      auto vertexHash = m_Q.encode(BoostToPolytope(v));
       for (const auto& pi : vertexMap[vertexHash]) {
         auto [it, added] = genIndex.insert(pi);
         if (added && validUnion(cellPolygons[pi], orphanBound)) {
@@ -278,7 +276,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       cellPolygons[smallToLarge[0]] = orphanBound;
     } else {
       // Retessellate with these select generators, convert final product into boost polygons for simplicity
-      QuantTessellation<2> newQT(genPoints);
+      QuantTessellation<2> newQT(m_Q, genPoints);
       newQT.m_isEscapePod = m_isEscapePod;
       tessellator.tessellateQuantized(newQT);
       POLY_ASSERT2(newQT.cells.size() == genPoints.size(), "Number of gen points should not change");
@@ -392,7 +390,6 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& /*QPLC*/,
 template<>
 void
 QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
-  auto& Q = Quantizer<2>::instance();
   compactUnusedNodesAndFaces();
   const unsigned numNodes = nodes.size();
   const unsigned numFaces = faces.size();
@@ -412,12 +409,12 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   }
 
   for (unsigned i = 0; i < numCells; ++i) {
-    mesh.points[i] = Q.dequantize(points[i]);
+    mesh.points[i] = m_Q.dequantize(points[i]);
   }
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
-    mesh.nodes[i] = Q.dequantize(nodes[i]);
+    mesh.nodes[i] = m_Q.dequantize(nodes[i]);
   }
 
   // Copy face topology (each face has 2 nodes in 2D)
@@ -455,7 +452,7 @@ QuantTessellation<2>::visibleGenerators(const std::vector<ExchangeType>& et) {
     auto plc_cell = convexHull.getCell();
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
-      if (convexBoundaryIntersect<QuantizedCoordinate<2>>(qcell, plc_cell)) {
+      if (convexBoundaryIntersect<QCoord>(qcell, plc_cell)) {
         result.push_back(et[i]);
       }
     }

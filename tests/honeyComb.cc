@@ -29,7 +29,6 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   std::vector<double> points;
   int cycle = 0;
   int numNodes = 0;
-  Quantizer<2>::instance().usePackedEncoding();
   if (honeyComb) {
     double dx = (xmax - xmin)/(nx + 1.);
     double dy = (ymax - ymin)/(ny + 1.);
@@ -73,10 +72,8 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   std::vector<double> plcPoints = flattenCoords(createSquarePoints(lo, hi));
   PLC<2> plc;
   plc.facets = createSquareFaces();
-  auto& Q = Quantizer<2>::instance();
-  Q.init(plcPoints);
-  Tessellation<2, double> mesh;
-  tessellator.tessellate(points, mesh);
+  tessellator.usePackedEncoding();
+  Tessellation<2, double> mesh = tessellator.tessellate(points);
   outputMesh(mesh, outname, cycle);
   testWatertight(mesh, 0);
   // Read the mesh we just wrote back in

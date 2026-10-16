@@ -19,6 +19,7 @@ public:
   using Base = Tessellator<Dimension, double>;
   using QuantizedTessellation = QuantTessellation<Dimension>;
 
+  SerialTessellator() = default;
   virtual ~SerialTessellator() = default;
 
   void tessellateQuantized(QuantizedTessellation& result) final override {

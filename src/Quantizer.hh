@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------//
 // Quantizer
 //
-// Singleton class for quantizing and dequantizing points or PLCs.
+// Value-owned class for quantizing and dequantizing points or PLCs.
 //-----------------------------------------------------------------------------//
 #ifndef __Polytope_Quantizer__
 #define __Polytope_Quantizer__
@@ -9,7 +9,6 @@
 #include "Point.hh"
 #include "KeyCodec.hh"
 #include "Communicator.hh"
-#include <mutex>
 
 namespace polytope {
 
@@ -22,14 +21,22 @@ public:
   using Key = typename Codec::Key;
   using RealPoint = Point<Dimension, RealType>;
 
-  // Delete copy constructor and assignment operator
-  Quantizer(const Quantizer&) = delete;
-  Quantizer& operator=(const Quantizer&) = delete;
+  // Constructors
+  Quantizer() = default;
+  Quantizer(const RealPoint& xlo,
+            const RealPoint& xhi,
+            const RealType& pad = -1.) {
+    _init_impl(xlo, xhi, pad);
+  }
 
-  // Get the singleton instance
-  static Quantizer& instance() {
-    static Quantizer instance;
-    return instance;
+  Quantizer(const std::vector<RealType>& points,
+            const RealType& pad = -1.) {
+    init(points, pad);
+  }
+
+  Quantizer(const std::vector<Point<Dimension, RealType>>& points,
+            const RealType& pad = -1.) {
+    init(points, pad);
   }
 
   KeyEncoding keyEncoding() const {
@@ -40,6 +47,10 @@ public:
     return m_codec.keyName();
   }
 
+  void setParallel(bool parallel) {
+    m_parallel = parallel;
+  }
+
   // Maximum possible coordinate in a single direction
   // Not necessarily the max for this instance
   constexpr static QuantizedCoordinate<Dimension> m_maxCoordinate = Traits::maxCoordinate();
@@ -48,6 +59,7 @@ public:
   QuantizedPoint<Dimension> minBound = QuantizedPoint<Dimension>();
   RealPoint rmaxBound = maxBound.template type_cast<RealType>();
   RealPoint rminBound = minBound.template type_cast<RealType>();
+  bool m_parallel = false;
   bool m_init = false;
 
   QuantizedPoint<Dimension> quantize(const RealPoint& x) const {
@@ -103,7 +115,6 @@ public:
   void init(const RealPoint& xlo,
             const RealPoint& xhi,
             const RealType& pad = -1.) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     _init_impl(xlo, xhi, pad);
   }
 
@@ -114,7 +125,6 @@ public:
 
   void init(const std::vector<Point<Dimension, RealType>>& points,
             const RealType& pad = -1.) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     RealPoint minPoint(0.99*std::numeric_limits<RealType>::max());
     RealPoint maxPoint = -minPoint;
     findBoundingElements<Dimension, RealType>(points, minPoint, maxPoint);
@@ -173,13 +183,15 @@ public:
 
   // Padding
   RealType getPadding() const {
-    POLY_ASSERT2(m_init, "Must initialize quantizer before using it");
     return m_pad;
   }
   void setPadding(const RealType& pad) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    POLY_CHECK2(m_init, "Must initialize quantizer before extending it");
-    _init_impl(m_xlo, m_xhi, pad);
+    // If initialized, reinitialize
+    if (m_init) {
+      _init_impl(m_xlo, m_xhi, pad);
+    } else {
+      m_pad = pad;
+    }
   }
 
   // Domain bounds and lengths after padding
@@ -218,9 +230,6 @@ public:
   }
 
 private:
-  // Private constructor
-  Quantizer() = default;
-
   // Shifted coordinates in physical space
   RealPoint m_lx_o, m_xlo_o, m_dx_o;
   // Original coordinate locations
@@ -238,14 +247,16 @@ private:
     m_xlo = xlo;
     m_xhi = xhi;
 #ifdef POLYTOPE_ENABLE_MPI
-    auto comm = Communicator::communicator();
-    auto localMin = xlo.toArray();
-    auto localMax = xhi.toArray();
-    std::array<RealType, Dimension> reducedMin, reducedMax;
-    MPI_Allreduce(localMin.data(), reducedMin.data(), Dimension, MPI_DOUBLE, MPI_MIN, comm);
-    MPI_Allreduce(localMax.data(), reducedMax.data(), Dimension, MPI_DOUBLE, MPI_MAX, comm);
-    m_xlo = RealPoint(reducedMin.data());
-    m_xhi = RealPoint(reducedMax.data());
+    if (m_parallel) {
+      auto comm = Communicator::communicator();
+      auto localMin = xlo.toArray();
+      auto localMax = xhi.toArray();
+      std::array<RealType, Dimension> reducedMin, reducedMax;
+      MPI_Allreduce(localMin.data(), reducedMin.data(), Dimension, MPI_DOUBLE, MPI_MIN, comm);
+      MPI_Allreduce(localMax.data(), reducedMax.data(), Dimension, MPI_DOUBLE, MPI_MAX, comm);
+      m_xlo = RealPoint(reducedMin.data());
+      m_xhi = RealPoint(reducedMax.data());
+    }
 #endif
     m_lx_o = (m_xhi - m_xlo)*(1.0 + m_pad);
     m_xlo_o = m_xlo - 0.5*(m_xhi - m_xlo)*m_pad;
@@ -253,8 +264,6 @@ private:
     m_init = true;
   }
 
-  // Mutex for thread-safe initialization
-  mutable std::mutex m_mutex;
   Codec m_codec;
 };
 

@@ -34,6 +34,7 @@
 #define __Polytope_DistributedTessellator__
 
 #include <string>
+#include <optional>
 
 #include "polytope.hh"
 #include "Partitioners/Partitioner.hh"
@@ -54,7 +55,7 @@ public:
 
   DistributedTessellator(Base& serialTessellator);
   virtual ~DistributedTessellator() {
-    m_QPLC.clear();
+    m_QPLC.reset();
     m_clipping = false;
   }
 
@@ -64,49 +65,39 @@ public:
   void setExchangePoints(const bool value) { m_exchangePoints = value; }
   bool exchangePoints() const { return m_exchangePoints; }
 
-  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          TessellationType& mesh) override;
+  virtual TessellationType tessellate(const std::vector<Point<Dimension, RealType>>& points) override;
 
-  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          const std::vector<Point<Dimension, RealType>>& PLCpoints,
-                          const PLC<Dimension>& geometry,
-                          TessellationType& mesh) override;
+  virtual TessellationType tessellate(const std::vector<Point<Dimension, RealType>>& points,
+                                      const std::vector<Point<Dimension, RealType>>& PLCpoints,
+                                      const PLC<Dimension>& geometry) override;
 
   //! Partition generators collectively, then tessellate the local result.
   //! ReplicatedPartitioner implementations require the same points in the
   //! same order on every rank; distributed implementations accept local input.
-  void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
-                              const Partitioner<Dimension>& partitioner,
-                              TessellationType& mesh);
+  TessellationType partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
+                                          const Partitioner<Dimension>& partitioner);
 
   //! Wrapper for point input routine.
-  void partitionAndTessellate(const std::vector<RealType>& points,
-                              const Partitioner<Dimension>& partitioner,
-                              TessellationType& mesh) {
-    this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
-                                 partitioner,
-                                 mesh);
+  TessellationType partitionAndTessellate(const std::vector<RealType>& points,
+                                          const Partitioner<Dimension>& partitioner) {
+    return this->partitionAndTessellate(extractCoords<Dimension, RealType>(points), partitioner);
   }
 
   //! Partition generators collectively inside a bounding PLC, then tessellate
   //! the local result.  Input requirements are defined by the partitioner.
-  void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
-                              const std::vector<Point<Dimension, RealType>>& PLCpoints,
-                              const PLC<Dimension>& geometry,
-                              const Partitioner<Dimension>& partitioner,
-                              TessellationType& mesh);
+  TessellationType partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
+                                          const std::vector<Point<Dimension, RealType>>& PLCpoints,
+                                          const PLC<Dimension>& geometry,
+                                          const Partitioner<Dimension>& partitioner);
 
   //! Wrapper for point input routine.
-  void partitionAndTessellate(const std::vector<RealType>& points,
-                              const std::vector<RealType>& PLCpoints,
-                              const PLC<Dimension>& geometry,
-                              const Partitioner<Dimension>& partitioner,
-                              TessellationType& mesh) {
-    this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
-                                 extractCoords<Dimension, RealType>(PLCpoints),
-                                 geometry,
-                                 partitioner,
-                                 mesh);
+  TessellationType partitionAndTessellate(const std::vector<RealType>& points,
+                                          const std::vector<RealType>& PLCpoints,
+                                          const PLC<Dimension>& geometry,
+                                          const Partitioner<Dimension>& partitioner) {
+    return this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
+                                        extractCoords<Dimension, RealType>(PLCpoints),
+                                        geometry, partitioner);
   }
 
   virtual void tessellateQuantized(QuantizedTessellation& qmesh) override;
@@ -115,18 +106,13 @@ public:
 
   QuantizedTessellation generateVisibleMesh(QuantizedTessellation& qmesh);
 
-  void checkEncoding() {
-    auto qkey = Quantizer<Dimension>::instance().keyEncoding();
-    POLY_CHECK2(qkey == m_keyEncode,
-                "Key encoding method has changed during tessellation");
-  }
-
   //! When clipping, we must include all visible generators for all ranks
   //! when making the final Voronoi.
   void addVisibleMesh(const QuantizedTessellation& visibleMesh,
                       const std::set<int>& neighborRanks,
                       QuantizedTessellation& qmesh);
-    
+protected:
+  using Base::m_Q;
 
 private:
   //! Broadcast the root rank's requested exchange representation.
@@ -135,9 +121,8 @@ private:
   Base& m_serialTessellator;
   // Whether to exchange points in parallel or exchange keys
   bool m_exchangePoints = false;
-  KeyEncoding m_keyEncode;
   bool m_clipping = false;
-  QuantPLC<Dimension> m_QPLC;
+  std::optional<QuantPLC<Dimension>> m_QPLC;
 
   // Forbidden methods.
   DistributedTessellator(const DistributedTessellator&);

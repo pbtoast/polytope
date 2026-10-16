@@ -32,7 +32,7 @@ void test(Tessellator<2, double>& tessellator) {
 
   const int Ngen = 32;
   // Test case is square with a star hole
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
   boundary.setDefaultBoundary(10);
   // Number of different seeds for randomizing generator points
   const int NGseed = 10;
@@ -52,7 +52,7 @@ void test(Tessellator<2, double>& tessellator) {
       double serialArea = 0.0;
       if (rank == root) {
         Tessellation<2, double> serialMesh;
-        tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
+        serialMesh = tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
         serialArea = computeTessellationArea(serialMesh);
         qvpart.assignCellRanks(serialMesh);
         std::string serialoutname = "SerialHole";
@@ -62,7 +62,7 @@ void test(Tessellator<2, double>& tessellator) {
       DistributedTessellator<2> distributed(tessellator);
       Tessellation<2, double> localMesh;
       auto localPoints = qvpart.computeLocalPartition(allPoints);
-      distributed.tessellate(localPoints, boundary.mPLCpoints, boundary.mPLC, localMesh);
+      localMesh = distributed.tessellate(localPoints, boundary.mPLCpoints, boundary.mPLC);
       std::string outname = "DistributedHole";
       outputMesh(localMesh, outname, btype, static_cast<double>(btype));
       // Uncomment this section to output the mesh for each rank

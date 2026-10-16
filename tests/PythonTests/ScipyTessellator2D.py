@@ -25,7 +25,6 @@ class ScipyVoronoi(polytope.SerialTessellator2d):
 
     def tessellateQuantizedImpl(self, quantMesh):
         from scipy.spatial import Voronoi
-        Q = polytope.Quantizer2d.instance()
         points = quantMesh.getRealQPoints()
         # Highly recommend to use at least Qbb and Qc, possibly add Qz
         voronoi = Voronoi(points, qhull_options="Qbb Qc")
@@ -53,7 +52,6 @@ class ScipyDelaunay(polytope.SerialTessellator2d):
 
     def tessellateQuantizedImpl(self, quantMesh):
         from scipy.spatial import Delaunay
-        Q = polytope.Quantizer2d.instance()
         points = quantMesh.getRealQPoints()
         delaunay = Delaunay(points, qhull_options="Qbb Qc")
         assembler = polytope.VoronoiAssembler2d(quantMesh)
@@ -61,8 +59,6 @@ class ScipyDelaunay(polytope.SerialTessellator2d):
         return assembler
 
 def test_serial_2d_tessellators(Ngen):
-    Q = polytope.Quantizer2d.instance()
-
     seed = 19001
     # Generate points around a star in the middle
     boundary = Boundary2d(10, 0.1)
@@ -72,8 +68,7 @@ def test_serial_2d_tessellators(Ngen):
     tessellator = polytope.BoostTessellator()
     tess_name = tessellator.name()
     print(f"Testing unbounded {tess_name}")
-    boost_mesh = polytope.Tessellation2d()
-    tessellator.tessellate(points, boost_mesh)
+    boost_mesh = tessellator.tessellate(points)
     ptu.outputMesh2d(mesh=boost_mesh,
                      filePrefix=f"boost",
                      cycle=0,
@@ -86,8 +81,7 @@ def test_serial_2d_tessellators(Ngen):
         tessellator = ScipyVoronoi()
         tess_name = tessellator.name()
         print(f"Testing unbounded {tess_name}")
-        scipy_mesh = polytope.Tessellation2d()
-        tessellator.tessellate(points, scipy_mesh)
+        scipy_mesh = tessellator.tessellate(points)
         ptu.outputMesh2d(mesh=scipy_mesh,
                          filePrefix=f"scipy",
                          cycle=0,
@@ -97,8 +91,7 @@ def test_serial_2d_tessellators(Ngen):
         tessellator = ScipyDelaunay()
         tess_name = tessellator.name()
         print(f"Testing unbounded {tess_name}")
-        scipyd_mesh = polytope.Tessellation2d()
-        tessellator.tessellate(points, scipyd_mesh)
+        scipyd_mesh = tessellator.tessellate(points)
         ptu.outputMesh2d(mesh=scipyd_mesh,
                          filePrefix=f"scipyd",
                          cycle=0,

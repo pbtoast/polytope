@@ -1,7 +1,7 @@
 import polytope
 
 def test_quantizer():
-    q2 = polytope.Quantizer2d.instance()
+    q2 = polytope.Quantizer2d()
     q2.init([(0.0, 0.0), (1.0, 1.0)])
     assert q2.m_init
 

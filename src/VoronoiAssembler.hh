@@ -28,7 +28,7 @@ public:
   std::vector<ClippedEdge> vps;
   VoronoiAssembler(QuantTessellation<2>& input):
     result(input) {
-    cornerIndices = addBoxPoints(node2id, result.nodes);
+    cornerIndices = addBoxPoints(node2id, result.nodes, result.quantizer());
     genVPS.resize(input.points.size());
   }
 
@@ -262,7 +262,7 @@ private:
     ClippedEdge vp(gen0, gen1);
     if (genPairs.count(vp.gp) != 0) return;
 
-    Clip2D<QuantizedCoordinate<2>> clipper(rawEdge);
+    Clip2D<QuantizedCoordinate<2>> clipper(rawEdge, result.quantizer());
     if (!clipper.clip()) return;
 
     vp.csides = std::make_pair(clipper.startSide, clipper.endSide);

@@ -20,7 +20,7 @@ int main() {
   TetgenTessellator tessellator;
   std::string testName = "Cylinder_tetgen";
   int test = 1;
-  tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+  mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
   outputMesh(mesh, testName, test);
   return 0;
 }

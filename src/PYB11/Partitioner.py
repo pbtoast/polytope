@@ -86,14 +86,14 @@ class QuasiVoronoiPartitioner(ReplicatedPartitioner):
 
 @PYB11template("int Dimension")
 class LatticePartitioner(ReplicatedPartitioner):
-    "Partition generators into a Cartesian lattice using the Quantizer bounds."
+    "Partition generators into a Cartesian lattice using its own quantizer bounds."
 
     PYB11typedefs = "using RanksPerAxis = std::array<unsigned, %(Dimension)s>;"
 
     def pyinit(self,
                ranksPerAxis="const RanksPerAxis&",
                numPartitions=("const unsigned", "Communicator::getNRanks()")):
-        "Construct from ranks per axis; bounds come from the initialized Quantizer."
+        "Construct from ranks per axis."
 
     def pyinit2(self,
                 numPartitions=("const unsigned", "Communicator::getNRanks()")):

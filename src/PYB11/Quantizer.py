@@ -1,9 +1,8 @@
 from PYB11Generator import *
 
-@PYB11singleton
 @PYB11template("int Dimension")
 class Quantizer:
-    "Singleton for quantizing and dequantizing points."
+    "Quantizes and dequantizes points for a tessellator or related object."
 
     PYB11typedefs = """
   using QuantizerType = Quantizer<%(Dimension)s>;
@@ -13,10 +12,8 @@ class Quantizer:
   using CoordType = QuantizedCoordinate<%(Dimension)s>;
 """
 
-    @PYB11static
-    @PYB11returnpolicy("reference")
-    def instance(self):
-        return "QuantizerType&"
+    def pyinit(self):
+        "Construct an uninitialized quantizer."
 
     @PYB11pycppname("init")
     def initBounds(self,

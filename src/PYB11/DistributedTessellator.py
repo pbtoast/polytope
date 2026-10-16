@@ -28,37 +28,33 @@ class DistributedTessellator(Tessellator):
 
     @PYB11implementation("""[](DistributedTessellator<%(Dimension)s>& self,
                                const py::object& points,
-                               const Partitioner<%(Dimension)s>& partitioner,
-                               Tessellation<%(Dimension)s, double>& mesh) {
+                               const Partitioner<%(Dimension)s>& partitioner) {
                                  const auto coords = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
-                                 self.partitionAndTessellate(coords, partitioner, mesh);
+                                 return self.partitionAndTessellate(coords, partitioner);
                                }""")
     def partitionAndTessellate(self,
                                points="const py::object&",
-                               partitioner="const Partitioner<%(Dimension)s>&",
-                               mesh="Tessellation<%(Dimension)s, double>&"):
+                               partitioner="const Partitioner<%(Dimension)s>&"):
         "Partition replicated generators, then generate this rank's tessellation."
-        return "void"
+        return "Tessellation<%(Dimension)s, double>"
 
     @PYB11implementation("""[](DistributedTessellator<%(Dimension)s>& self,
                                const py::object& points,
                                const py::object& PLCpoints,
                                const PLC<%(Dimension)s>& geometry,
-                               const Partitioner<%(Dimension)s>& partitioner,
-                               Tessellation<%(Dimension)s, double>& mesh) {
+                               const Partitioner<%(Dimension)s>& partitioner) {
                                  const auto pointCoords = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
                                  const auto plcCoords = pybind11_helpers::copyCoords<%(Dimension)s, double>(PLCpoints);
-                                 self.partitionAndTessellate(pointCoords, plcCoords, geometry, partitioner, mesh);
+                                 return self.partitionAndTessellate(pointCoords, plcCoords, geometry, partitioner);
                                }""")
     @PYB11pycppname("partitionAndTessellate")
     def partitionAndTessellatePLC(self,
                                   points="const py::object&",
                                   PLCpoints="const py::object&",
                                   geometry="const PLC<%(Dimension)s>&",
-                                  partitioner="const Partitioner<%(Dimension)s>&",
-                                  mesh="Tessellation<%(Dimension)s, double>&"):
+                                  partitioner="const Partitioner<%(Dimension)s>&"):
         "Partition replicated generators inside a PLC, then tessellate."
-        return "void"
+        return "Tessellation<%(Dimension)s, double>"
 
 DistributedTessellator2d = PYB11TemplateClass(DistributedTessellator, template_parameters="2")
 DistributedTessellator3d = PYB11TemplateClass(DistributedTessellator, template_parameters="3")

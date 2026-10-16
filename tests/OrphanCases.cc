@@ -79,7 +79,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "OrphanCases_" + tessellator.name();
 
   // Initialize boundary and tessellator
-  Boundary2D boundary;
+  Boundary2D boundary(tessellator.getQuantizer());
 
   // Circular region with star-shaped hole
   int bType = 5;
@@ -87,7 +87,7 @@ void test(Tessellator<2,double>& tessellator) {
 
   int i = 1;
   const double dist = 1.0e-6;
-  auto& Q = Quantizer<2>::instance();
+  auto& Q = boundary.mQ;
 
   // Test 1: Cell parents multiple orphans
   int seed = 10489593;
@@ -96,7 +96,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -111,7 +111,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -126,7 +126,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -141,7 +141,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -156,7 +156,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -191,7 +191,7 @@ void test(Tessellator<2,double>& tessellator) {
     }
     boundary.finalize();
     Tessellation<2,double> mesh;
-    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -235,7 +235,7 @@ void test(Tessellator<2,double>& tessellator) {
       boundary.mPLC.facets[j][1] = (j+1) % nSides;
     }
     Q.init(PLCpoints, 0.5);
-    tessellator.tessellate(points, PLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(points, PLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i);
     const double trueArea = 8.74;
     boundary.mArea = trueArea;
@@ -256,7 +256,7 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2> generators(boundary);
     generators.randomPoints(40, seed);
     Tessellation<2, double> mesh;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
     compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -275,7 +275,7 @@ void test(Tessellator<2,double>& tessellator) {
       Generators<2> generators(boundary);
       generators.randomPoints(50, seed);
       Tessellation<2,double> mesh;
-      tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+      mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
       outputMesh(mesh, testName, i+iter);
       cout << iter << endl;
       compareArea(boundary, mesh);

@@ -100,8 +100,8 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
 template<typename CoordType>
 inline std::map<BoxSide, unsigned>
 addBoxPoints(std::map<Point<2, CoordType>, int>& node2id,
-             std::vector<Point<2, CoordType>>& nodes) {
-  const auto& Q = Quantizer<2>::instance();
+             std::vector<Point<2, CoordType>>& nodes,
+             const Quantizer<2>& Q) {
   std::map<BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
   std::vector<Point<2, CoordType>> box = createSquarePoints(Q.minBound, Q.maxBound);
   BoxSides sides;
