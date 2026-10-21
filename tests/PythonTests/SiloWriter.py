@@ -12,12 +12,13 @@ def test_siloIO(Ngen):
     # Seed for partitioning points randomly
     partseed = 19
     boundary = Boundary2d(0)
-    Q = boundary.Q
-    xlo = Q.domLo.x
-    xlen = Q.domLength.x
+    xlo = boundary.low
+    xhi = boundary.high
+    xlen = xhi - xlo
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks
-    all_points = ptu.generate_normal_random_points(Ntotal, seed=seed, boundary2d=boundary)
+    generator = ptu.PointGenerator(2, boundary2d=boundary)
+    all_points = generator.generate_normal_random_points(Ntotal, seed=seed)
     serial_tessellator = polytope.TriangleTessellator()
     tessellator = polytope.DistributedTessellator2d(serial_tessellator)
     # Make a partitioner

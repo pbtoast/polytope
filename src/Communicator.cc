@@ -1,6 +1,44 @@
 #include "Communicator.hh"
 #include "polytope_internal.hh"
 
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+
+namespace {
+
+#ifdef POLYTOPE_ENABLE_MPI
+bool mpiIsActive() {
+  int initialized = 0;
+  if (MPI_Initialized(&initialized) != MPI_SUCCESS || !initialized) return false;
+
+  int finalized = 0;
+  return MPI_Finalized(&finalized) == MPI_SUCCESS && !finalized;
+}
+
+[[noreturn]] void handleMpiError(const char* operation, const int error) {
+  const bool mpiActive = mpiIsActive();
+  char errorString[MPI_MAX_ERROR_STRING + 1] = {};
+  int errorLength = 0;
+  if (!mpiActive || MPI_Error_string(error, errorString, &errorLength) != MPI_SUCCESS) {
+    std::cerr << operation << " failed with MPI error code " << error << std::endl;
+  } else {
+    errorString[std::min(errorLength, MPI_MAX_ERROR_STRING)] = '\0';
+    std::cerr << operation << " failed: " << errorString << std::endl;
+  }
+  std::cerr.flush();
+
+  if (mpiActive) MPI_Abort(polytope::Communicator::communicator(), error);
+  std::abort();
+}
+
+void checkMpi(const int error, const char* operation) {
+  if (error != MPI_SUCCESS) handleMpiError(operation, error);
+}
+#endif
+
+}
+
 namespace polytope {
 
 //------------------------------------------------------------------------------
@@ -36,9 +74,9 @@ Communicator& Communicator::instance() {
 void Communicator::init() {
 #ifdef POLYTOPE_ENABLE_MPI
   int isInit;
-  MPI_Initialized(&isInit);
+  checkMpi(MPI_Initialized(&isInit), "MPI_Initialized");
   if (!isInit) {
-    MPI_Init(nullptr, nullptr);
+    checkMpi(MPI_Init(nullptr, nullptr), "MPI_Init");
   }
 #endif
 }
@@ -46,9 +84,9 @@ void Communicator::init() {
 void Communicator::init(int argc, char** argv) {
 #ifdef POLYTOPE_ENABLE_MPI
   int isInit;
-  MPI_Initialized(&isInit);
+  checkMpi(MPI_Initialized(&isInit), "MPI_Initialized");
   if (!isInit) {
-    MPI_Init(&argc, &argv);
+    checkMpi(MPI_Init(&argc, &argv), "MPI_Init");
   }
 #else
   POLY_CONTRACT_VAR(argc);
@@ -66,27 +104,15 @@ MPI_Comm* Communicator::comm_ptr() {
 
 void Communicator::finalize() {
 #ifdef POLYTOPE_ENABLE_MPI
-  int finalized = 0;
-  MPI_Finalized(&finalized);
-  if (finalized == 0) {
-    int finalize = MPI_Finalize();
-    if (finalize != 0) {
-      char string[MPI_MAX_ERROR_STRING];
-      int resultlen = 0;
-      MPI_Error_string(finalize, string, &resultlen);
-      POLY_VERIFY2(finalize == 0, string);
-    }
-  }
+  if (mpiIsActive()) checkMpi(MPI_Finalize(), "MPI_Finalize");
 #endif
 }
 
 int Communicator::getRank() {
   int sRank = 0;
 #ifdef POLYTOPE_ENABLE_MPI
-  int isInit;
-  MPI_Initialized(&isInit);
-  if (isInit) {
-    MPI_Comm_rank(communicator(), &sRank);
+  if (mpiIsActive()) {
+    checkMpi(MPI_Comm_rank(communicator(), &sRank), "MPI_Comm_rank");
   }
 #endif
   return sRank;
@@ -95,10 +121,8 @@ int Communicator::getRank() {
 int Communicator::getNRanks() {
   int nRanks = 1;
 #ifdef POLYTOPE_ENABLE_MPI
-  int isInit;
-  MPI_Initialized(&isInit);
-  if (isInit) {
-    MPI_Comm_size(communicator(), &nRanks);
+  if (mpiIsActive()) {
+    checkMpi(MPI_Comm_size(communicator(), &nRanks), "MPI_Comm_size");
   }
 #endif
   return nRanks;
@@ -106,22 +130,15 @@ int Communicator::getNRanks() {
 
 void Communicator::Barrier() {
 #ifdef POLYTOPE_ENABLE_MPI
-  int isInit;
-  MPI_Initialized(&isInit);
-  if (isInit) {
-    MPI_Barrier(communicator());
+  if (mpiIsActive()) {
+    checkMpi(MPI_Barrier(communicator()), "MPI_Barrier");
   }
 #endif
 }
 
-void Communicator::abort() {
+[[noreturn]] void Communicator::abort() {
 #ifdef POLYTOPE_ENABLE_MPI
-  int isInit;
-  MPI_Initialized(&isInit);
-  if (isInit) {
-    // Uncomment this to catch an error and print out culprit generators
-    // MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-    // throw std::runtime_error("failed");
+  if (mpiIsActive()) {
     MPI_Abort(communicator(), 1);
   }
 #endif

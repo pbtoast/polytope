@@ -21,7 +21,8 @@ def test_distributed_2d_tessellators(Ngen):
     boundary = Boundary2d(10)
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks
-    all_points = ptu.generate_random_points(Ntotal, seed=seed, boundary2d=boundary)
+    generator = ptu.PointGenerator(2, boundary2d=boundary)
+    all_points = generator.generate_random_points(Ntotal, seed=seed)
     # Make a partitioner
     partitioner = polytope.QuasiVoronoiPartitioner2d(partseed)
     ptu.rootprint(f"Tessellating {Ntotal} generators")

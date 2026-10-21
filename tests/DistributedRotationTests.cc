@@ -23,92 +23,16 @@
 #include "TriangleTessellator.hh"
 #endif
 #include "Communicator.hh"
+#include "QuasiVoronoiPartitioner.hh"
 #include "DistributedTessellator.hh"
 
 using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// computeConstantVorticityFlow
-// -----------------------------------------------------------------------
-void computeConstantVorticityFlow(const vector<double>& points,
-                                  vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] = (0.5 - points[2*i+1]) * M_PI / 314;
-    velocities[2*i+1] = (points[2*i  ] - 0.5) * M_PI / 314;
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeSingleVortexFlow
-// -----------------------------------------------------------------------
-void computeSingleVortexFlow(const vector<double>& points,
-                             vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] =  sin(M_PI*points[2*i]) * cos(M_PI*points[2*i+1]);
-    velocities[2*i+1] = -cos(M_PI*points[2*i]) * sin(M_PI*points[2*i+1]);
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeTaylorGreenVortexFlow
-// -----------------------------------------------------------------------
-void computeTaylorGreenVortexFlow(const vector<double>& points,
-                                  vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] =  0.5 * (cos(2*M_PI*(points[2*i  ]-0.25)) *
-                                sin(2*M_PI*(points[2*i+1]-0.25)) );
-    velocities[2*i+1] = -0.5 * (sin(2*M_PI*(points[2*i  ]-0.25)) *
-                                cos(2*M_PI*(points[2*i+1]-0.25)) );
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeDeformationFlow
-// -----------------------------------------------------------------------
-void computeDeformationFlow(const vector<double>& points,
-                             vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  double x,y;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    x = points[2*i  ];
-    y = points[2*i+1];
-    velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y + 0.5));
-    velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y + 0.5));
-  }
-}
-
-// -----------------------------------------------------------------------
-// getVelocities
-// -----------------------------------------------------------------------
-void getVelocities(const vector<double>& points,
-                   const unsigned flowType,
-                   vector<double>& velocities) {
-  POLY_CHECK(points.size() == velocities.size());
-  switch(flowType){
-  case 1:
-    computeConstantVorticityFlow(points, velocities);
-    break;
-  case 2:
-    computeSingleVortexFlow(points, velocities);
-    break;
-  case 3:
-    computeTaylorGreenVortexFlow(points, velocities);
-    break;
-  case 4:
-    computeDeformationFlow(points, velocities);
-    break;
-  }
-}
-
-
-// -----------------------------------------------------------------------
 // runTest
 // -----------------------------------------------------------------------
-void runTest(Tessellator<2, double>& tessellator,
+void runTest(Tessellator<2, double>& serialTessellator,
              const unsigned flowType) {
   POLY_CHECK(flowType >= 1 and flowType <= 4);
 
@@ -120,96 +44,72 @@ void runTest(Tessellator<2, double>& tessellator,
   int root = Communicator::getRoot();
   const int seed = 10489592;
 
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
+  boundary.mDiff = 0.4;
   boundary.setDefaultBoundary(0);
+  serialTessellator.setPadding(boundary.mPad);
   Generators<2> generators(boundary);
   const int Ngen = nx*nx;
   generators.randomPoints(Ngen, seed);
-  //generators.cartesian2D(nx, nx);
-  auto procIndex = generators.assignRandomPointToRank();
-  auto finalRanks = generators.distributePointsAmongRanks(procIndex);
-  POLY_CONTRACT_VAR(finalRanks);
-  auto& Q = boundary.mQ;
-  auto bHigh = Q.domHiOrig();
-  auto bLow = Q.domLoOrig();
-  double dx = (bHigh[0] - bLow[0]) / nx;
+  QuasiVoronoiPartitioner<2> qvpart(0);
+  const auto bHigh = boundary.maxBound;
+  const auto bLow = boundary.minBound;
+  const auto len = bHigh - bLow;
+  double dx = len.x / nx;
 
   // Test name for output
   ostringstream os;
   os << "RotTest"
-     << tessellator.name()
+     << serialTessellator.name()
      << "_" << flowType;
   string testName = os.str();
 
   // Time stepping and point-resizing stuff
-  double dt = 2.0, Tmax = 4.0, scaleFactor = 1.0;
-  double dtfactor = 10.0;
-  switch(flowType){
-  case 1:
-    dt = 2.0;
-    Tmax = 628.0/2;
-    scaleFactor = 1.0/sqrt(2);
-    if (rank == root) cout << "\nTest 1: Solid Rotation Flow\n" << endl;
-    break;
-  case 2:
-    dt = sqrt(2)*dx;
-    Tmax = 4.0;
-    if (rank == root) cout << "\nTest 2: Single Vortex Flow\n" << endl;
-    break;
-  case 3:
-    dt = sqrt(2)*dx;
-    Tmax = 4.0;
-    if (rank == root) cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
-    break;
-  case 4:
-    dt = 0.5*dx;
-    Tmax = 2.0;
-    scaleFactor = 1.0/sqrt(2);
-    if (rank == root) cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
-    break;
-  }
-  dt *= dtfactor;
+  double dt = 1., Tmax = 1., scaleFactor = 1.;
+  std::string testString = setConfig(flowType, len, dx, dt, Tmax, scaleFactor);
+  if (rank == root) std::cout << testString << std::endl;
   // Resize the generator so we don't fling them out of the boundary
-  for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
-    generators.mPoints[i] = 0.5 + (generators.mPoints[i]-0.5)*scaleFactor;
+  for (auto& p : generators.mPoints) {
+    p = 0.5 + (p - 0.5)*scaleFactor;
   }
+  auto localPoints = qvpart.computeLocalPartition(generators.mPoints);
+  // Set constant quantized bounds for the tessellator to keep a constant domain size
+  std::vector<Point2<double>> bpoints = {Point2<double>(0.0, 0.0),
+                                         Point2<double>(1.0, 1.0)};
+  serialTessellator.setQBounds(bpoints);
+  DistributedTessellator<2> tessellator(serialTessellator);
 
   // The velocity field
-  vector<double> velocityField(generators.mPoints.size());
+  vector<Point2<double>> velocityField(localPoints.size());
 
   // The initial tessellation
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  mesh = tessellator.tessellate(generators.mPoints);
+  mesh = tessellator.tessellate(localPoints);
   outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
-  vector<double> halfTimePositions(generators.mPoints.size());
+  vector<Point2<double>> halfTimePositions(localPoints.size());
   while (time < Tmax) {
     if (step % 5 == 0 and rank == root) cout << (time/Tmax)*100 << "%" << endl;
     mesh.clear();
-    mesh.neighborDomains.clear();
-    mesh.sharedNodes.clear();
-    mesh.sharedFaces.clear();
-    getVelocities(generators.mPoints, flowType, velocityField);
-    for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
-      halfTimePositions[i] = generators.mPoints[i] + dt*velocityField[i];
+    getVelocities(localPoints, bHigh, bLow, flowType, velocityField);
+    for (unsigned i = 0; i != localPoints.size(); ++i) {
+      halfTimePositions[i] = localPoints[i] + dt*velocityField[i];
     }
-    getVelocities(halfTimePositions, flowType, velocityField);
-    for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
-      generators.mPoints[i] += dt*velocityField[i];
+    getVelocities(halfTimePositions, bHigh, bLow, flowType, velocityField);
+    for (unsigned i = 0; i != localPoints.size(); ++i) {
+      localPoints[i] += dt*velocityField[i];
     }
     time += dt;
     ++step;
-    mesh = tessellator.tessellate(generators.mPoints);
-    outputMesh(mesh, testName, step, time);
-
-    // Check the correctness of the parallel data structures
-    //const string parCheck = checkDistributedTessellation(mesh);
-    //POLY_CHECK2(parCheck == "ok", parCheck);
+    mesh = tessellator.tessellate(localPoints);
+    if (step % 5 == 0) {
+      outputMesh(mesh, testName, step, time);
+    }
     Communicator::Barrier();
   }
 }
@@ -232,16 +132,14 @@ int main(int argc, char** argv) {
   {
     if (rank == root) cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator serialTessellator;
-    DistributedTessellator<2> tessellator(serialTessellator);
-    for (int i = testBegin; i < testEnd; ++i) runTest(tessellator, i);
+    for (int i = testBegin; i < testEnd; ++i) runTest(serialTessellator, i);
   }
 #endif
 
   {
     if (rank == root) cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator serialTessellator;
-    DistributedTessellator<2> tessellator(serialTessellator);
-    for (int i = testBegin; i < testEnd; ++i) runTest(tessellator,i);
+    for (int i = testBegin; i < testEnd; ++i) runTest(serialTessellator,i);
   }
 
   comm.finalize();

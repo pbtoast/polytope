@@ -84,10 +84,15 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   if (nranks == 1) {
     numFiles = 1;
   }
+  int domainSuffix = rank;
   if (numFiles == 1) {
-    ranksWithData.push_back(rank);
+    ranksWithData.push_back(0);
     POLY_CONTRACT_VAR(comm);
     POLY_CONTRACT_VAR(numFiles);
+    // Care is taken when writing single-domain Overlink files from
+    // non-root ranks
+    domainSuffix = 0;
+    root = 0;
   }
 #ifdef POLYTOPE_ENABLE_MPI
   else if (numFiles == -1 || numFiles > 1) {
@@ -106,24 +111,27 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
 
   if (doParallel || getOvlType()) {
     masterDirname = getMasterDirname(directory, prefix, cycle);
-    if (rank == root) {
-      DIR* masterDir = opendir(masterDirname.c_str());
-      if (masterDir == 0) {
-        mkdir(masterDirname.c_str(), S_IRWXU | S_IRWXG);
-      } else {
-        closedir(masterDir);
-      }
+    // A parallel output is collective, so rank zero owns the shared
+    // directory.  A one-file Overlink output can instead be an independent
+    // diagnostic written by any rank; that rank owns its directory and
+    // writes domain0 below.
+    if (!doParallel || rank == root) {
+      std::error_code ec;
+      std::filesystem::create_directories(masterDirname, ec);
+      POLY_CHECK2(!ec, "Could not create Silo output directory " <<
+                  masterDirname << ": " << ec.message());
     }
     if (doParallel) {
       Communicator::Barrier();
     }
 
-    filename = getFilename(masterDirname, rank);
+    filename = getFilename(masterDirname, domainSuffix);
     meshname = getLocalMeshName();
     matname = getLocalMatName();
   }
   if (hasPoints) {
     DBfile* file = DBCreate(filename.c_str(), DB_CLOBBER, DB_LOCAL, 0, DB_HDF5);
+    POLY_CHECK2(file != nullptr, "Could not create Silo file " << filename);
     // Add cycle/time metadata if needed.
     DBoptlist* optlist = DBMakeOptlist(10);
     if (cycle >= 0)
@@ -226,7 +234,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   }
 
   // Finally, write the uber-master file.
-  if (rank == root && (doParallel || getOvlType())) {
+  if ((doParallel && rank == root) || (!doParallel && getOvlType())) {
     std::string masterFilename = getMasterFilename(prefix, cycle);
     writeMasterFile(masterFilename, masterDirname, ranksWithData,
                     time, cycle);

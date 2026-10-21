@@ -6,7 +6,7 @@ from Boundary2d import Boundary2d
 import polytope
 
 # Number of iterations to test with the partitioner
-part_iters = [0, 10, 50, 100]
+part_iters = [10, 50, 100]
 
 def get_tessellator():
     tessname = "TriangleTessellator"
@@ -24,7 +24,8 @@ def test_distributed_2d_tessellators(Ngen):
     # Seed for generating points in a normal distribution
     local_seed = 19001 + rank
     boundary = Boundary2d(0)
-    local_points = ptu.generate_normal_random_points(Ngen, seed=local_seed, boundary2d=boundary)
+    generator = ptu.PointGenerator(2, boundary2d=boundary)
+    local_points = generator.generate_normal_random_points(Ngen, seed=local_seed)
     # Make a partitioner
     partitioner = polytope.DistributedLloydPartitioner2d()
     ptu.rootprint(f"Tessellating {Ntotal} generators with {nranks} ranks")

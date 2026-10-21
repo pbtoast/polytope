@@ -32,7 +32,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   const int Ngen = 4;
   int oseed = 1049600 + 10*btype;
   int seed = oseed + rank;
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.setDefaultBoundary(btype);
   tessellator.setPadding(boundary.mPad);
   Generators<2> generators(boundary);
@@ -51,7 +51,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Run the same tessellation but in serial
   double serialArea = 0.0;
   if (rank == root) {
-    auto& Q = boundary.mQ;
+    Quantizer<2> Q(boundary.mPLCpoints, boundary.mPad);
     std::map<Point<2, double>, int> finalRanks;
     std::vector<double> allPoints;
     for (int proc = 0; proc < nranks; ++proc) {
@@ -87,8 +87,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Output the parallel mesh
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
-  compareArea(boundary, serialArea, "Serial area failure");
-  compareArea(boundary, localMesh, "Distributed area failure");
+  compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
+  compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
 }
 } // anonymous namespace
 

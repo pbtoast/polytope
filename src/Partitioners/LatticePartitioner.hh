@@ -25,11 +25,11 @@ public:
   using RanksPerAxis = std::array<unsigned, Dimension>;
 
   virtual std::string name() const override {
-    std::string dist = " [";
+    std::string dist = "";
     for (int d = 0; d < Dimension; ++d) {
-      dist += std::to_string(m_ranksPerAxis[d]) + ", ";
+      dist += "_" + std::to_string(m_ranksPerAxis[d]);
     }
-    return "LatticePartitioner" + dist + "]";
+    return "LatticePartitioner" + dist;
   }
 
   explicit LatticePartitioner(const unsigned numPartitions = Communicator::getNRanks()):

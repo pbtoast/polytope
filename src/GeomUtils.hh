@@ -360,7 +360,6 @@ bool SAT(const std::vector<Point<Dimension, CoordType>>& pointsA,
 // Circumcenter operations
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef POLYTOPE_ENABLE_TRIANGLE
 // Returns a point that is the circumcenter
 inline
 Point2<double> circumcenter(const Point2<double>& a,
@@ -394,7 +393,6 @@ Point2<double> circumcenter(const Point2<double>& a,
     ay + (abx * ac2 - acx * ab2) / (2.0L * cross);
   return Point2<double>(static_cast<double>(ux), static_cast<double>(uy));
 }
-#endif
 
 #ifdef POLYTOPE_ENABLE_TETGEN
 inline

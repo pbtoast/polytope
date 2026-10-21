@@ -111,6 +111,10 @@ public:
     m_codec.setEncoding(KeyEncoding::Packed);
   }
 
+  void setEncoding(KeyEncoding key) {
+    m_codec.setEncoding(key);
+  }
+
   // Initializer routines
   void init(const RealPoint& xlo,
             const RealPoint& xhi,
@@ -125,8 +129,7 @@ public:
 
   void init(const std::vector<Point<Dimension, RealType>>& points,
             const RealType& pad = -1.) {
-    RealPoint minPoint(0.99*std::numeric_limits<RealType>::max());
-    RealPoint maxPoint = -minPoint;
+    RealPoint minPoint, maxPoint;
     findBoundingElements<Dimension, RealType>(points, minPoint, maxPoint);
     _init_impl(minPoint, maxPoint, pad);
   }

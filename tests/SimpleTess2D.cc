@@ -25,7 +25,7 @@ namespace {
 
 void tests(const int tnum, Tessellator<2, double>& tessellator) {
   std::string outname = tessellator.name();
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.mDiff = 1.;
   if (!tessellator.clippingEnabled()) {
     if (tnum >= 14) return;
@@ -186,7 +186,7 @@ void tests(const int tnum, Tessellator<2, double>& tessellator) {
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
   outputMesh(mesh, outname, tnum, double(tnum));
-  compareArea(boundary, mesh);
+  compareArea(boundary, mesh, tessellator.getQuantizer());
   testWatertight(mesh, boundary.mPLC.holes.size());
   if (numNodes > 0 && tessellator.clippingEnabled()) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really

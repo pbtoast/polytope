@@ -139,7 +139,9 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
 // -----------------------------------------------------------------------
 void compareArea(Boundary2D& boundary,
                  double in_area,
+                 const Quantizer<2>& Q,
                  const std::string& test_str = "") {
+  bool clipped = boundary.mClipping;
   double area = in_area;
 #ifdef POLYTOPE_ENABLE_MPI
   const int nranks = Communicator::getNRanks();
@@ -149,23 +151,107 @@ void compareArea(Boundary2D& boundary,
     area = distributedArea;
   }
 #endif
-  const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
-  const int maxAxis = boundary.mQ.domLength().maxAxis();
-  const double tol = 2.*boundary.mQ.degeneracy()[maxAxis];
+  const double bArea = clipped ? boundary.area() : Q.area();
+  const double relErr = std::abs(bArea-area)/bArea;
+  const int maxAxis = Q.domLength().maxAxis();
+  const double tol = 2.*Q.degeneracy()[maxAxis];
   POLY_CHECK2(relErr < tol, "Error in area: error = " << relErr << " tolerance "
               << tol << " " << test_str);
 }
 
 void compareArea(Boundary2D& boundary,
                  Tessellation<2, double>& mesh,
+                 const Quantizer<2>& Q,
                  const std::string& test_str = "") {
   double area = computeTessellationArea(mesh);
-  compareArea(boundary, area, test_str);
+  compareArea(boundary, area, Q, test_str);
   // Check for CCW orientation of polygons
   for (auto i = 0u; i < mesh.cells.size(); ++i) {
     POLY_CHECK2(ccwOrient(mesh.getCell(i)), "Bad orientation at cell " << i << " " << test_str);
   }
 }
 
+//------------------------------------------------------------------------------
+// Rotational test helpers
+//------------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------
+// getVelocities
+// -----------------------------------------------------------------------
+inline
+void getVelocities(const vector<Point2<double>>& points,
+                   const Point2<double>& bhi,
+                   const Point2<double>& blo,
+                   const unsigned flowType,
+                   vector<Point2<double>>& velocities) {
+  auto center = 0.5*(bhi + blo);
+  auto len = bhi - blo;
+  double maxRadius = std::sqrt(len.x*len.x + len.y*len.y)/2.;
+  double omega = 1./maxRadius;
+  POLY_CHECK(points.size() == velocities.size());
+  for (unsigned i = 0; i < points.size(); ++i) {
+    const auto& p = points[i];
+    auto& v = velocities[i];
+    const auto u = (p - blo)/len;
+    switch(flowType) {
+    case 1:
+      v.x = -omega*(p.y - center.y);
+      v.y = omega*(p.x - center.x);
+      break;
+    case 2:
+      v.x =  len.x * sin(M_PI * u.x) * cos(M_PI * u.y);
+      v.y = -len.y * cos(M_PI * u.x) * sin(M_PI * u.y);
+      break;
+    case 3:
+      v.x =  0.5 * len.x * cos(2.0 * M_PI * (u.x - 0.25)) *
+        sin(2.0 * M_PI * (u.y - 0.25));
+      v.y = -0.5 * len.y * sin(2.0 * M_PI * (u.x - 0.25)) *
+        cos(2.0 * M_PI * (u.y - 0.25));
+      break;
+    case 4:
+      v.x = -len.x * sin(4.0 * M_PI * (u.x + 0.5)) *
+        sin(4.0 * M_PI * (u.y + 0.5));
+      v.y = -len.y * cos(4.0 * M_PI * (u.x + 0.5)) *
+        cos(4.0 * M_PI * (u.y + 0.5));
+      break;
+    }
+  }
+}
+
+// Assumes max velocity <= 1
+inline
+std::string setConfig(unsigned flowType,
+                      const Point2<double>& len,
+                      const double& dx,
+                      double& dt, double& Tmax,
+                      double& scaleFactor) {
+  double vel = 1.;
+  double cfl = std::sqrt(2.);
+  double maxRadius = std::sqrt(len.x*len.x + len.y*len.y)/2.;
+  switch(flowType) {
+  case 1:
+    scaleFactor = 1.0/std::sqrt(2.);
+    dt = cfl*dx;
+    Tmax = M_PI*maxRadius;
+    return "Test 1: Solid Rotation Flow";
+  case 2:
+    dt = cfl*dx/vel;
+    Tmax = 2.0;
+    scaleFactor = 1.0;
+    return "Test 2: Single Vortex Flow";
+  case 3:
+    dt = cfl*dx/vel;
+    Tmax = 2.0;
+    scaleFactor = 1.0;
+    return "Test 3: Taylor-Green (4-Vortex) Flow";
+  case 4:
+    cfl = 0.5;
+    dt = cfl*dx/vel;
+    Tmax = 2.0;
+    scaleFactor = 1.0/std::sqrt(2);
+    return "Test 4: Deformation (16-Vortex) Flow";
+  }
+  return "";
+}
 }
 #endif

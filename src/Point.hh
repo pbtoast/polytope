@@ -435,7 +435,7 @@ bool isApprox(const Point<Dimension, CoordType>& p0,
 template<int Dimension, typename CoordType>
 std::vector<Point<Dimension, CoordType>>
 extractCoords(const std::vector<CoordType>& allpoints) {
-  POLY_ASSERT(allpoints.size() % Dimension == 0);
+  POLY_CHECK(allpoints.size() % Dimension == 0);
   auto n = allpoints.size()/Dimension;
   std::vector<Point<Dimension, CoordType>> result(n);
   for(auto i = 0u; i < n; ++i) {
@@ -463,6 +463,10 @@ void
 findBoundingElements(const std::vector<Point<Dimension, CoordType>>& allpoints,
                      Point<Dimension, CoordType>& minPoint,
                      Point<Dimension, CoordType>& maxPoint) {
+  for (int d = 0; d < Dimension; ++d) {
+    minPoint[d] = 0.99*std::numeric_limits<CoordType>::max();
+    maxPoint[d] = -minPoint[d];
+  }
   for (const auto& p : allpoints) {
     minPoint = minPoint.minElements(p);
     maxPoint = maxPoint.maxElements(p);

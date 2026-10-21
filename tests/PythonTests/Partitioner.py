@@ -14,7 +14,8 @@ def test_partitioner(Ngen):
     boundary = Boundary2d(0)
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks
-    all_points = ptu.generate_normal_random_points(Ntotal, seed=seed, boundary2d=boundary)
+    generator = ptu.PointGenerator(2, boundary2d=boundary)
+    all_points = generator.generate_normal_random_points(Ntotal, seed=seed)
     serial_tessellator = polytope.BoostTessellator()
     tessellator = polytope.DistributedTessellator2d(serial_tessellator)
     # Make a partitioner

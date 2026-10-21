@@ -61,7 +61,7 @@ void test(Tessellator<2, double>& tessellator) {
   const auto allPoints = generatorPoints();
   const auto localPoints = rankLocalPoints(allPoints, rank, nranks);
   const auto expectedCells = static_cast<int>(allPoints.size()/2);
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.mPad = 0.04;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;

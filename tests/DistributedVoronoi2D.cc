@@ -30,7 +30,7 @@ void test(Tessellator<2, double>& tessellator) {
   const int Ngen = 100;
   int oseed = 1049600;
   int seed = oseed + rank;
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.mClipping = false;
   boundary.setDefaultBoundary(0);
   tessellator.setPadding(boundary.mPad);
@@ -41,14 +41,19 @@ void test(Tessellator<2, double>& tessellator) {
 
   Tessellation<2, double> localMesh;
   localMesh = distributed.tessellate(generators.mPoints);
+  std::string outname = "parallelVoronoi_" + tessellator.name();
+  outputMesh(localMesh, outname, 0, 0.);
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  compareArea(boundary, localMesh,
+              distributed.getQuantizer(),
+              "Distributed area failure");
 
   double serialArea = 0.0;
-  Tessellation<2, double> serialMesh;
   if (rank == root) {
+    Tessellation<2, double> serialMesh;
     std::vector<double> allPoints;
     for (int p = 0; p < nranks; ++p) {
       int cseed = oseed + p;
@@ -57,13 +62,12 @@ void test(Tessellator<2, double>& tessellator) {
     }
     serialMesh = tessellator.tessellate(allPoints);
     serialArea = computeTessellationArea(serialMesh);
+    std::string serialoutname = "serialVoronoi_" + tessellator.name();
+    outputMesh(serialMesh, serialoutname, 0, 0., 1);
   }
-  std::string outname = "parallelVoronoi_" + tessellator.name();
-  std::string serialoutname = "serialVoronoi_" + tessellator.name();
-  outputMesh(serialMesh, serialoutname, 0, 0.);
-  outputMesh(localMesh, outname, 0, 0.);
-  compareArea(boundary, serialArea, "Serial area failure");
-  compareArea(boundary, localMesh, "Distributed area failure");
+  compareArea(boundary, serialArea,
+              distributed.getQuantizer(),
+              "Serial area failure");
 }
 } // anonymous namespace
 

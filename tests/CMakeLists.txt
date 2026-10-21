@@ -27,7 +27,7 @@ blt_add_test(NAME setup_tests
   COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_WORK_DIR}"
 )
 
-set_tests_properties(setup_tests PROPERTIES FIXTURES_SETUP "polytope_fixtures")
+set_tests_properties(setup_tests PROPERTIES FIXTURES_SETUP "polytope_fixture")
 
 # Cleanup test files
 blt_add_test(NAME cleanup_tests
@@ -46,9 +46,9 @@ if(NOT POLYTOPE_ENABLE_HIBIT2D)
   polytope_add_test(OrphanCases)
   polytope_add_test(BoostTessellator)
   polytope_add_test(RandomPoints)
-  polytope_add_test(RotationTests)
   polytope_add_test(Circumcenter)
 endif()
+polytope_add_test(RotationTests)
 polytope_add_test(SimpleTess2D)
 polytope_add_test(MortonKeyTraits2D)
 polytope_add_test(MortonKeyTraits3D)

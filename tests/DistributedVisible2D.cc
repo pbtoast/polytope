@@ -28,33 +28,45 @@ using namespace polytope;
 
 namespace {
 
-void test(int testNum, Tessellator<2, double>& tessellator) {
+std::vector<std::vector<double>>
+rankPoints = {{0.0563102, 0.480787,
+               0.269074, 0.251452},
+              {0.54725, 0.532511,
+               0.631279, 0.512978,
+               0.425365, 0.542825,
+               0.643499, 0.843612},
+              {0.187156, 0.989748},
+              {0.813925, 0.024177,
+               0.945232, 0.272313,
+               0.971435, 0.214536},
+              {0.472844, 0.87031,
+               0.211005, 0.71287,
+               0.0202204, 0.814865},
+              {0.609406, 0.220088,
+               0.564849, 0.419905,
+               0.787302, 0.435326}};
+
+void test(Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
   int nranks = Communicator::getNRanks();
 
-  const int Ngen = 16;
   const int activeRanks = 6;
-  int seed = 1049609;
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
   boundary.setDefaultBoundary(0);
-  Generators<2> generators(boundary);
-  generators.randomPoints(Ngen, seed);
-  // Distribute points to specific ranks
-  const int usedRanks = std::min(nranks, activeRanks);
-  const int nperRank = Ngen/usedRanks;
-  std::vector<unsigned> procIndex(usedRanks);
-  for (int i = 0; i < usedRanks; ++i) {
-    procIndex[i] = i*nperRank;
+  boundary.mClipping = false;
+  std::vector<double> points;
+  if (rank < activeRanks) {
+    points = rankPoints[rank];
   }
-  auto finalRanks = generators.distributePointsAmongRanks(procIndex);
+  tessellator.setPadding(boundary.mPad);
 
-  // Reference values for a 6 processor test run
+  // Number of points per rank
   std::vector<unsigned> finalProcN(activeRanks, 0);
-  for (auto& fr : finalRanks) {
-    finalProcN[fr.second]++;
+  for (int i = 0; i < activeRanks; ++i) {
+    finalProcN[i] = rankPoints[i].size()/2;
   }
   // List of expected neighbor ranks for each rank
   std::vector<std::vector<int>> refNeighbors(activeRanks);
@@ -76,20 +88,20 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
   Tessellation<2, double> localMesh;
-  localMesh = distributed.tessellate(generators.mPoints);
+  localMesh = distributed.tessellate(points);
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 
   std::string outname = "DistributedVisible_" + tessellator.name();
-  outputMesh(localMesh, outname, testNum, 0.);
+  outputMesh(localMesh, outname, 0, 0.);
 
   // Now get the current mesh including all it's neighbor generators
   auto& quantizer = distributed.getQuantizer();
-  QuantTessellation<2> qmesh(quantizer, generators.mPoints);
+  QuantTessellation<2> qmesh(quantizer, points);
   distributed.tessellateQuantized(qmesh);
-  if (rank < activeRanks && nranks == 6) {
+  if (rank < activeRanks && nranks >= activeRanks) {
     Tessellation<2, double> procMesh;
     qmesh.fillTessellation(procMesh);
     SiloWriter<2, Tessellation<2, double>> writer(procMesh);
@@ -118,7 +130,7 @@ int main(int argc, char** argv) {
        cout << "\nTriangle Tessellator:\n" << endl;
      }
      TriangleTessellator tessellator;
-     test(0, tessellator);
+     test(tessellator);
    }
 #endif
 
@@ -127,7 +139,7 @@ int main(int argc, char** argv) {
        cout << "\nBoost Tessellator:\n" << endl;
      }
      BoostTessellator tessellator;
-     test(0, tessellator);
+     test(tessellator);
    }
    if (Communicator::getRank() == root) {
      std::cout << "=== DistributedVoronoi2D passed ===" << std::endl;

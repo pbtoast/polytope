@@ -14,7 +14,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points) {
   if (points.size() == 0) {
     return Tessellation<Dimension, RealType>();
   }
-  m_Q.init(points);
+  initQ(points);
 
   // Pre-conditions
   POLY_ASSERT(points.size() > 0);
@@ -45,7 +45,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
   if (points.size() == 0) {
     return Tessellation<Dimension, RealType>();
   }
-  m_Q.init(PLCpoints.empty() ? points : PLCpoints);
+  initQ(points, PLCpoints);
 
   // Pre-conditions
   POLY_ASSERT(points.size() > 0);

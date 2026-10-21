@@ -1,28 +1,32 @@
 # Performance benchmarks are intentionally separate from CTest correctness
 # tests and are not installed.
 
-blt_add_executable(NAME DistTessellator2D
-  SOURCES DistTessellator2D.cc
-  DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
-  OUTPUT_DIR ${CMAKE_BINARY_DIR}/benchmarks
-)
+macro(cxx_benchmark name input_value mpi_tasks)
+  blt_add_executable(NAME ${name}
+    SOURCES ${name}.cc
+    DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
+    OUTPUT_DIR ${CMAKE_BINARY_DIR}/benchmarks
+  )
 
-target_compile_options(DistTessellator2D PRIVATE
-  ${POLYTOPE_CXX_COMPILE_FLAGS})
-target_link_options(DistTessellator2D PUBLIC
-  ${POLYTOPE_CXX_LINK_FLAGS})
-target_include_directories(DistTessellator2D SYSTEM PRIVATE
-  ${POLYTOPE_ROOT_DIR}/tests
-  ${POLYTOPE_ROOT_DIR}/src
-  ${POLYTOPE_ROOT_DIR}/src/Partitioners
-  ${PROJECT_BINARY_DIR}/src
-)
+  target_compile_options(${name} PRIVATE
+    ${POLYTOPE_CXX_COMPILE_FLAGS})
+  target_link_options(${name} PUBLIC
+    ${POLYTOPE_CXX_LINK_FLAGS})
+  target_include_directories(${name} SYSTEM PRIVATE
+    ${POLYTOPE_ROOT_DIR}/tests
+    ${POLYTOPE_ROOT_DIR}/src
+    ${POLYTOPE_ROOT_DIR}/src/Partitioners
+    ${PROJECT_BINARY_DIR}/src
+  )
+  blt_add_benchmark(NAME ${name}CXX
+    COMMAND ${CMAKE_BINARY_DIR}/benchmarks/${name} ${input_value}
+    NUM_MPI_TASKS ${mpi_tasks}
+  )
+endmacro()
 
 # Add the CXX benchmarks
-blt_add_benchmark(NAME DistTessellator2DCXX
-  COMMAND ${CMAKE_BINARY_DIR}/benchmarks/DistTessellator2D 1000000
-  NUM_MPI_TASKS 36
-)
+cxx_benchmark(DistTessellator2D 1000000 36)
+cxx_benchmark(SerialTessellator2D 10 1)
 
 # Add the Python benchmarks
 blt_add_benchmark(NAME DistTessellator2DPY

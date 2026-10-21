@@ -26,84 +26,6 @@
 using namespace std;
 using namespace polytope;
 
-
-// -----------------------------------------------------------------------
-// computeConstantVorticityFlow
-// -----------------------------------------------------------------------
-void computeConstantVorticityFlow(const vector<double>& points,
-                                  vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] = (0.5 - points[2*i+1]) * M_PI / 314;
-    velocities[2*i+1] = (points[2*i  ] - 0.5) * M_PI / 314;
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeSingleVortexFlow
-// -----------------------------------------------------------------------
-void computeSingleVortexFlow(const vector<double>& points,
-                             vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] =  sin(M_PI*points[2*i]) * cos(M_PI*points[2*i+1]);
-    velocities[2*i+1] = -cos(M_PI*points[2*i]) * sin(M_PI*points[2*i+1]);
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeTaylorGreenVortexFlow
-// -----------------------------------------------------------------------
-void computeTaylorGreenVortexFlow(const vector<double>& points,
-                                  vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    velocities[2*i  ] =  0.5 * (cos(2*M_PI*(points[2*i  ]-0.25)) *
-                                sin(2*M_PI*(points[2*i+1]-0.25)) );
-    velocities[2*i+1] = -0.5 * (sin(2*M_PI*(points[2*i  ]-0.25)) *
-                                cos(2*M_PI*(points[2*i+1]-0.25)) );
-  }
-}
-
-// -----------------------------------------------------------------------
-// computeDeformationFlow
-// -----------------------------------------------------------------------
-void computeDeformationFlow(const vector<double>& points,
-                            vector<double>& velocities) {
-  const unsigned numGenerators = points.size()/2;
-  double x,y;
-  for (unsigned i = 0; i != numGenerators; ++i) {
-    x = points[2*i  ];
-    y = points[2*i+1];
-    velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y - 0.125));
-    velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y - 0.125));
-  }
-}
-
-// -----------------------------------------------------------------------
-// getVelocities
-// -----------------------------------------------------------------------
-void getVelocities(const vector<double>& points,
-                   const unsigned flowType,
-                   vector<double>& velocities) {
-  POLY_CHECK(points.size() == velocities.size());
-  switch(flowType){
-  case 1:
-    computeConstantVorticityFlow(points, velocities);
-    break;
-  case 2:
-    computeSingleVortexFlow(points, velocities);
-    break;
-  case 3:
-    computeTaylorGreenVortexFlow(points, velocities);
-    break;
-  case 4:
-    computeDeformationFlow(points, velocities);
-    break;
-  }
-}
-
-
 // -----------------------------------------------------------------------
 // runTest
 // -----------------------------------------------------------------------
@@ -113,9 +35,17 @@ void runTest(Tessellator<2,double>& tessellator,
   POLY_CHECK(flowType >= 1 and flowType <= 4);
 
   // Boundary size parameters
-  const double xmin = 0.0, xmax = 1.0;
-  const double ymin = 0.0, ymax = 1.0;
-  const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
+  Boundary2D boundary;
+  boundary.mCenter[0] = 0.5;
+  boundary.mCenter[1] = 0.5;
+  boundary.mDiff = 0.4;
+  boundary.setDefaultBoundary(0);
+  Generators<2> generators(boundary);
+  const auto bHigh = boundary.maxBound;
+  const auto bLow = boundary.minBound;
+  const auto len = bHigh - bLow;
+  double dx = len.x / nx;
+  generators.cartesian2D(nx, nx);
 
   // Test name for output
   ostringstream os;
@@ -123,106 +53,47 @@ void runTest(Tessellator<2,double>& tessellator,
   string testName = os.str();
 
   // Time stepping and point-resizing stuff
-  double dt = 0.5*dx;
-  double Tmax = 2.0;
-  double scaleFactor=1.0;
-  vector<double> displace(2,0.0);
-  switch(flowType){
-  case 1:
-    dt = 2.0;
-    Tmax = 628.0/2;
-    scaleFactor = 1.0/sqrt(2);
-    cout << "\nTest 1: Solid Rotation Flow\n" << endl;
-    break;
-  case 2:
-    dt = sqrt(2)*dx;
-    Tmax = 4.0;
-    cout << "\nTest 2: Single Vortex Flow\n" << endl;
-    break;
-  case 3:
-    dt = sqrt(2)*dx;
-    Tmax = 4.0;
-    cout << "\nTest 3: Taylor-Green (4-Vortex) Flow\n" << endl;
-    break;
-  case 4:
-    dt = 0.5*dx;
-    Tmax = 2.0;
-    scaleFactor = 1.0/sqrt(2);
-    cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
-    break;
+  double dt = 1.0, Tmax = 1.0, scaleFactor = 1.0;
+  std::string testString = setConfig(flowType, len, dx, dt, Tmax, scaleFactor);
+  std::cout << testString << std::endl;
+  // Resize the generator so we don't fling them out of the boundary
+  for (auto& p : generators.mPoints) {
+    p = 0.5 + (p - 0.5)*scaleFactor;
   }
-
-  // The PLC points for a unit square
-  vector<double> PLCpoints;
-  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymin);
-  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymin);
-  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymax);
-  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymax);
-
-  // The unit square PLC facets
-  PLC<2> boundary;
-  boundary.facets.resize(4, vector<unsigned>(2));
-  for (int i = 0; i != 4; ++i) {
-    boundary.facets[i][0] = i;
-    boundary.facets[i][1] = (i+1)%4;
-  }
-
-  // The generator set
-  vector<double> points;
-  unsigned ix, iy;
-  double xi, yi;
-  for (iy = 0; iy != nx; ++iy) {
-    yi = ymin + (iy + 0.5)*dy;
-    for (ix = 0; ix != nx; ++ix) {
-      xi = xmin + (ix + 0.5)*dx;
-      points.push_back(xi);
-      points.push_back(yi);
-    }
-  }
-
-  // Resize the generator so we dont' fling them out of the boundary
-  if (scaleFactor != 1.0) {
-    for (unsigned i = 0; i != points.size(); ++i) {
-      points[i] = 0.5 + (points[i]-0.5)*scaleFactor;
-    }
-  }
-
-  // Adjust the scaled point positions, if specified
-  if (displace[0] != 0 or displace[1] != 0) {
-    for (unsigned i = 0; i != points.size()/2; ++i) {
-      points[2*i  ] += displace[0];
-      points[2*i+1] += displace[1];
-    }
-  }
-
+  // Set constant quantized bounds for the tessellator to keep a constant domain size
+  std::vector<Point2<double>> bpoints = {Point2<double>(0.0, 0.0),
+                                         Point2<double>(1.0, 1.0)};
+  tessellator.setQBounds(bpoints);
   // The velocity field
-  vector<double> velocityField(points.size());
+  auto points = extractCoords<2, double>(generators.mPoints);
+  vector<Point2<double>> velocityField(points.size());
 
   // The initial tessellation
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  mesh = tessellator.tessellate(points, PLCpoints, boundary);
+  mesh = tessellator.tessellate(points);
   outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
-  vector<double> halfTimePositions(points.size());
+  vector<Point2<double>> halfTimePositions(points.size());
   while (time < Tmax) {
     if (step % 5 == 0) cout << (time/Tmax)*100 << "%" << endl;
     mesh.clear();
-    getVelocities(points, flowType, velocityField);
+    getVelocities(points, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       halfTimePositions[i] = points[i] + dt*velocityField[i];
     }
-    getVelocities(halfTimePositions, flowType, velocityField);
+    getVelocities(halfTimePositions, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       points[i] += dt*velocityField[i];
-      POLY_CHECK(xmin <= points[i] and points[i] <= xmax);
     }
     time += dt;
     ++step;
-    mesh = tessellator.tessellate(points, PLCpoints, boundary);
-    outputMesh(mesh, testName, step, time);
+    mesh = tessellator.tessellate(points);
+    if (step % 2 == 0) {
+      outputMesh(mesh, testName, step, time);
+    }
   }
 }
 
@@ -235,7 +106,7 @@ int main(int argc, char** argv) {
   comm.init(argc, argv);
   const int testBegin = 1;
   const int testEnd = 5;
-  int nx = 20;
+  int nx = 50;
 
   if(argc >= 2) {
     nx = std::stoi(argv[1]);
@@ -251,7 +122,6 @@ int main(int argc, char** argv) {
     }
   }
 #endif
-
 
   {
     cout << "\nBoost Tessellator:\n" << endl;

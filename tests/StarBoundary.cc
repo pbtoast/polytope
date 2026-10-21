@@ -30,7 +30,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "StarBoundary_" + tessellator.name();
 
   // Set the boundary and tessellator
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.setDefaultBoundary(8);
 
   // 9 input generators points
@@ -55,7 +55,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
-    compareArea(boundary, mesh);
+    compareArea(boundary, mesh, tessellator.getQuantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -74,7 +74,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
-    compareArea(boundary, mesh);
+    compareArea(boundary, mesh, tessellator.getQuantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -87,7 +87,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
-    compareArea(boundary, mesh);
+    compareArea(boundary, mesh, tessellator.getQuantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -101,7 +101,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh,testName,test);
-    compareArea(boundary, mesh);
+    compareArea(boundary, mesh, tessellator.getQuantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }

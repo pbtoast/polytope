@@ -23,10 +23,13 @@ public:
   Point2<CoordType> direction;
 
   void flipEdge() {
-    if (hasStart) {
+    if (hasStart && hasEnd) {
+      Point2<double> temp = end;
       end = start;
-    }
-    if (hasEnd) {
+      start = temp;
+    } else if (hasStart) {
+      end = start;
+    } else if (hasEnd) {
       start = end;
     }
     hasStart = !hasStart;
@@ -54,6 +57,11 @@ public:
   bool clip() {
     startSide = -1;
     endSide = -1;
+
+    // Check if direction is zero, implying degenerate point
+    if (mEdge.direction.iszero()) {
+      return false;
+    }
 
     const bool in0 = mEdge.hasStart && m_Q.inQBounds(mEdge.start);
     const bool in1 = mEdge.hasEnd && m_Q.inQBounds(mEdge.end);

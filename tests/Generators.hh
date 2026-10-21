@@ -189,34 +189,6 @@ public:
   }
 
   //------------------------------------------------------------------------
-  // for 3D problems
-  //------------------------------------------------------------------------
-  // void cartesian3D(const Quantizer<3>& Q,
-  //                  const unsigned nx,
-  //                  const unsigned ny,
-  //                  const unsigned nz) {
-  //   auto bHigh = Q.domHiOrig();
-  //   auto bLow = Q.domLoOrig();
-  //   double x, y, z;
-  //   double dx = (bHigh[0] - bLow[0]) / nx;
-  //   double dy = (bHigh[1] - bLow[1]) / ny;
-  //   double dz = (bHigh[2] - bLow[2]) / nz;
-  //   for (unsigned iz = 0; iz != nz; ++iz) {
-  //     z = bLow[2] + (iz + 0.5)*dz;
-  //     for (unsigned iy = 0; iy != ny; ++iy) {
-  //       y = bLow[1] + (iy + 0.5)*dy;
-  //       for (unsigned ix = 0; ix != nx; ++ix) {
-  //         x = bLow[0] + (ix + 0.5)*dx;
-  //         mPoints.push_back( x );
-  //         mPoints.push_back( y );
-  //         mPoints.push_back( z );
-  //       }
-  //     }
-  //   }
-  //   nPoints = mPoints.size()/Dimension;
-  // }
-
-  //------------------------------------------------------------------------
   // perturb the locations of the generators by +/- epsilon/2 in each direction
   //------------------------------------------------------------------------
   void perturb(double epsilon) {
@@ -237,93 +209,6 @@ public:
     } else if constexpr (Dimension == 3) {
       return BGPoint<double, 3>(pointIn[0], pointIn[1], pointIn[2]);
     }
-  }
-
-  //------------------------------------------------------------------------
-  // Parallel utilities
-  //------------------------------------------------------------------------
-
-  //------------------------------------------------------------------------
-  // Assigns a random index from 0 to nPoints for each proc between 0 and maxProc.
-  // maxProc can cap which processors are provided points. Defaults to all procs
-  //------------------------------------------------------------------------
-  std::vector<unsigned> assignRandomPointToRank(unsigned seed = 0, int maxProc = -1) {
-    srand(seed);
-    nPoints = mPoints.size()/Dimension;
-    // Figure out parallel configuration
-    int numProcs = Communicator::getNRanks();
-
-    if (maxProc >= 0) {
-      numProcs = maxProc;
-    }
-    numProcs = std::min(int(nPoints), numProcs);
-    std::vector<unsigned> pointIndices(nPoints);
-    for (unsigned i = 0; i < nPoints; ++i) pointIndices[i] = i;
-
-    // For each proc, grab a random index from 0 to nPoints.
-    // That proc gets that point as it's centralized location.
-    std::vector<unsigned> procIndex(numProcs);
-    for (unsigned iproc = 0; iproc < static_cast<unsigned>(numProcs); ++iproc) {
-      const auto remaining = nPoints - iproc;
-      auto offset = static_cast<unsigned>(random01()*remaining);
-      offset = std::min(offset, remaining - 1);
-      std::swap(pointIndices[iproc], pointIndices[iproc + offset]);
-      procIndex[iproc] = pointIndices[iproc];
-    }
-    return procIndex;
-  }
-
-  //------------------------------------------------------------------------
-  // Assign points based on processor by removing non-local points
-  // Returns a map from each original point to its assigned rank
-  //------------------------------------------------------------------------
-  std::map<Point<Dimension, double>, int>
-  distributePointsAmongRanks(const std::vector<unsigned>& procIndex) {
-    const auto& Q = mBoundary->mQ;
-    std::map<Point<Dimension, double>, int> finalRanks;
-    // Figure out parallel configuration
-    int rank = Communicator::getRank();
-    int numProcs = procIndex.size();
-
-    std::vector<Point<Dimension, double>> procPoint(numProcs);
-    for (int iproc = 0; iproc < numProcs; ++iproc) {
-      const auto pin = procIndex[iproc];
-      for (int d = 0; d < Dimension; ++d) {
-        procPoint[iproc][d] = mPoints[Dimension*pin+d];
-      }
-    }
-
-    std::vector<double> newPoints;
-    newPoints.reserve(mPoints.size());
-    for (int i = 0; i < nPoints; ++i) {
-      int owner = 0;
-      Point<Dimension, double> point;
-      for (int d = 0; d < Dimension; ++d) {
-        point[d] = mPoints[Dimension*i+d];
-      }
-      auto diff = point - procPoint[0];
-      double minDist = magnitude<Dimension>(diff);
-      for (int ip = 1; ip < numProcs; ++ip) {
-        diff = point - procPoint[ip];
-        double dis = magnitude<Dimension>(diff);
-        if (dis < minDist) {
-          owner = ip;
-          minDist = dis;
-        }
-      }
-      // Do a round-trip quant/dequant on the point to ensure it matches
-      // the point in the tessellated mesh.
-      Point<Dimension, double> qpoint = Q.dequantize(Q.quantize(point));
-      finalRanks[qpoint] = owner;
-      if (owner == rank) {
-        for (int d = 0; d < Dimension; ++d) {
-          newPoints.push_back(point[d]);
-        }
-      }
-    }
-    mPoints = std::move(newPoints);
-    nPoints = mPoints.size()/Dimension;
-    return finalRanks;
   }
 };
 }

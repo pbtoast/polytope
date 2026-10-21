@@ -257,6 +257,8 @@ writeMasterFile(const std::string& masterFilename,
   } else {
     file = DBCreate(masterFilename.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
   }
+  POLY_CHECK2(file != nullptr, "Could not create Silo master file " <<
+              (m_overlinkType ? ovlMFile : masterFilename));
 
   // Build mesh names
   std::vector<std::string> procPaths = getProcPaths(masterDirname, ranksWithData);

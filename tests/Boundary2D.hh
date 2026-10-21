@@ -22,9 +22,6 @@ class Boundary2D {
 public:
   // -------------- Public member variables and routines ---------------- //
 
-  // The owning tessellator must outlive this boundary.
-  Quantizer<2>& mQ;
-
   // Piecewise linear construct to define the boundary facets + holes
   PLC<2> mPLC;
   // Vector of generators to define the boundary
@@ -58,17 +55,13 @@ public:
   // Boundary type
   mutable BoundaryType mType;
 
+  // Padding for the quantizer
   double mPad = 0.1;
 
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
-  Boundary2D(Quantizer<2>& quantizer):
-    mQ(quantizer),
-    mType(square) {
-    this->clear();
-    this->setDefaultBoundary(mType);
-  }
+  Boundary2D() = default;
 
   ~Boundary2D() {};
 
@@ -79,14 +72,12 @@ public:
   }
 
   void finalize() {
-    mQ.init(mPLCpoints, mPad);
     boostMyBoundary();
-    if (mClipping) {
-      mArea = boost::geometry::area(mBGboundary);
-    } else {
-      mArea = mQ.area();
-    }
     findBoundingElements(extractCoords<2, double>(mPLCpoints), minBound, maxBound);
+  }
+
+  double area() {
+    return boost::geometry::area(mBGboundary);
   }
 
   //------------------------------------------------------------------------

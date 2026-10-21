@@ -16,55 +16,68 @@
 namespace polytope {
 
 // Forward declare our helper abort method.
-void internal_abort();
+[[noreturn]] void internal_abort();
 
 #ifdef POLYTOPE_ENABLE_DEBUG
 #define POLY_ASSERT(x) \
-  if (!(x)) \
-  { \
-    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    internal_abort(); \
-  }
+  do { \
+    if (!(x)) { \
+      std::cerr << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
 #define POLY_ASSERT2(x, msg) \
-  if (!(x)) \
-  { \
-    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    internal_abort(); \
-  }
+  do { \
+    if (!(x)) { \
+      std::cerr << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
 #define POLY_BEGIN_CONTRACT_SCOPE { 
 #define POLY_END_CONTRACT_SCOPE }
 #else
-#define POLY_ASSERT(x)
-#define POLY_ASSERT2(x, msg)
+#define POLY_ASSERT(x) do { } while (false)
+#define POLY_ASSERT2(x, msg) do { } while (false)
 #define POLY_BEGIN_CONTRACT_SCOPE if (false) {
 #define POLY_END_CONTRACT_SCOPE }
 #endif
 
-#define POLY_CONTRACT_VAR(x) if (0 && &x == &x){}
+#define POLY_CONTRACT_VAR(x) \
+  do { \
+    if (false) (void)&(x); \
+  } while (false)
 
 // A requirement contract that is always on to check user input.
-#define POLY_VERIFY(x)                                     \
-  if (!(x)) {                                              \
-    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    internal_abort();                                         \
-  }
-#define POLY_VERIFY2(x, msg)                                            \
-  if (!(x)) {                                                           \
-    std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    internal_abort();                                                   \
-  }
+#define POLY_VERIFY(x) \
+  do { \
+    if (!(x)) { \
+      std::cerr << "Requirement " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
+#define POLY_VERIFY2(x, msg) \
+  do { \
+    if (!(x)) { \
+      std::cerr << "Requirement " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
 
-#define POLY_CHECK(x)                                                   \
-  if (!(x)) {                                                           \
-    std::cout << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl; \
-    internal_abort();                                                   \
-  }
+#define POLY_CHECK(x) \
+  do { \
+    if (!(x)) { \
+      std::cerr << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
 
-#define POLY_CHECK2(x, msg)                                             \
-  if (!(x)) {                                                           \
-    std::cout << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    internal_abort();                                                   \
-  }
+#define POLY_CHECK2(x, msg) \
+  do { \
+    if (!(x)) { \
+      std::cerr << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+      internal_abort(); \
+    } \
+  } while (false)
 
 } //end namespace polytope
 

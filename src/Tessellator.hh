@@ -5,6 +5,8 @@
 #include "polytope_internal.hh"
 #include "Tessellation.hh"
 
+#include <optional>
+
 namespace polytope {
 
 //! \class Tessellator - An abstract base class for objects that generate
@@ -14,6 +16,8 @@ template<int Dimension, typename RealType>
 class Tessellator {
 public:
   using TessType = Tessellation<Dimension, RealType>;
+  using RealPoint = Point<Dimension, RealType>;
+  using RealPointVec = std::vector<RealPoint>;
 
   //! Default constructor.
   Tessellator() = default;
@@ -106,12 +110,32 @@ public:
     return true;
 #endif
   }
+
+  void setQBounds(const RealPointVec& qbounds) {
+    m_QBounds.emplace(qbounds);
+  }
+
 protected:
   Quantizer<Dimension> m_Q;
+
+  // Initialize the Q. Check if QBounds has been provided.
+  void initQ(RealPointVec points,
+             const RealPointVec& PLCpoints) {
+    points.insert(points.end(), PLCpoints.begin(), PLCpoints.end());
+    initQ(points);
+  }
+
+  void initQ(RealPointVec points) {
+    if (m_QBounds.has_value()) {
+      points.insert(points.end(), m_QBounds->begin(), m_QBounds->end());
+    }
+    m_Q.init(points);
+  }
+
 private:
-  // Disallowed.
-  Tessellator(const Tessellator&);
-  Tessellator& operator=(const Tessellator&);
+  // Optional set of bounding points to give to quantizer
+  // These are not used as generators
+  std::optional<RealPointVec> m_QBounds;
 };
 
 }

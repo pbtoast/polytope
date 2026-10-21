@@ -63,7 +63,8 @@ def test_serial_2d_tessellators(Ngen):
     # Generate points around a star in the middle
     boundary = Boundary2d(10, 0.1)
     # Generate random points
-    points = ptu.generate_random_points(Ngen, seed, boundary)
+    generator = ptu.PointGenerator(2, boundary2d=boundary)
+    points = generator.generate_random_points(Ngen, seed)
     # Generate a Voronoi using Boost
     tessellator = polytope.BoostTessellator()
     tess_name = tessellator.name()

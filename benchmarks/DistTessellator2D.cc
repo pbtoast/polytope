@@ -36,7 +36,6 @@ timeTessellation(const std::vector<double> allPoints,
   const auto root = Communicator::getRoot();
   const int partseed = 1042390;
 
-  DistributedTessellator<2> distributed(serialTessellator);
   // Add other partitioners as they are implemented
   std::vector<std::unique_ptr<Partitioner<2>>> partitioners;
   partitioners.push_back(std::make_unique<LatticePartitioner<2>>());
@@ -44,9 +43,10 @@ timeTessellation(const std::vector<double> allPoints,
   double minTime = std::numeric_limits<double>::max();
   std::vector<std::string> run_info;
   for (unsigned encoding = 0; encoding < 2; ++encoding) {
+    if (encoding == 0) serialTessellator.useMortonEncoding();
+    else serialTessellator.usePackedEncoding();
+    DistributedTessellator<2> distributed(serialTessellator);    
     const auto& quantizer = distributed.getQuantizer();
-    if (encoding == 0) distributed.useMortonEncoding();
-    else distributed.usePackedEncoding();
     if (rank == root) {
       std::cout << "Encoding: " << quantizer.keyName() << std::endl;
     }
@@ -115,7 +115,7 @@ main(int argc, char** argv) {
       std::cout << "Using " << tessellator.name() << " tessellator\n";
     }
     // Setup the quantizer
-    Boundary2D boundary(tessellator.getQuantizer());
+    Boundary2D boundary;
     boundary.mCenter[0] = 0.5;
     boundary.mCenter[1] = 0.5;
     boundary.setDefaultBoundary(Boundary2D::square);

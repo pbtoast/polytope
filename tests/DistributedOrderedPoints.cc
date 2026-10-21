@@ -21,6 +21,7 @@
 #include "Tessellation.hh"
 #include "polytope_test_utilities.hh"
 #include "Generators.hh"
+#include "QuasiVoronoiPartitioner.hh"
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -37,14 +38,12 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
 
   const int Ngen = 4*nranks;
   int seed = 1049600;
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.setDefaultBoundary(btype);
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
-  std::vector<double> allPoints = generators.mPoints;
-  // Distribute points to specific ranks
-  auto procIndex = generators.assignRandomPointToRank(seed);
-  auto finalRanks = generators.distributePointsAmongRanks(procIndex);
+  std::vector<double>& allPoints = generators.mPoints;
+  QuasiVoronoiPartitioner<2> qvpart(seed);
 
   double serialArea = 0.0;
   if (rank == root) {
@@ -52,24 +51,18 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
       tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
     serialArea = computeTessellationArea(serialMesh);
     std::string serialoutname = "SerialOrdered_" + tessellator.name();
-    std::vector<int> finalRanksD;
-    for (auto& p : serialMesh.points) {
-      auto rankItr = finalRanks.find(p);
-      POLY_CHECK2(rankItr != finalRanks.end(),
-                  "Could not find final rank for serial generator " << p);
-      finalRanksD.push_back(rankItr->second);
-    }
+    qvpart.assignCellRanks(serialMesh);
     SiloWriter<2, Tessellation<2, double>> serial_writer(serialMesh);
     // Output the serial mesh with a rank variable showing the ranks for the
     // distributed test
-    serial_writer.addField(FieldCentering::Cell, "ranks", finalRanksD);
     serial_writer.write(serialoutname, btype, 0., 1);
   }
 
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
+  auto localPoints = qvpart.computeLocalPartition(allPoints);
   Tessellation<2, double> localMesh =
-    distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
+    distributed.tessellate(localPoints, boundary.mPLCpoints, boundary.mPLC);
   std::string outname = "DistributedOrdered_" + tessellator.name();
   outputMesh(localMesh, outname, btype, static_cast<double>(btype));
 
@@ -81,8 +74,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
               "Total number of cells " << totalCells
               << " is incorrect; expected " << allPoints.size()/2);
 
-  compareArea(boundary, serialArea, "Serial area failure");
-  compareArea(boundary, localMesh, "Distributed area failure");
+  compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
+  compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
   if (rank == root) {
     cout << "\nTest " << btype << " passed." << endl;
   }

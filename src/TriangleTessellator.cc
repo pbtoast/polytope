@@ -55,6 +55,14 @@ void initTriangleData(triangulateio& in) {
   in.numberofsegments = 0;
   in.numberofedges = 0;
 }
+
+void clearTriangleData(triangulateio& in, triangulateio& out) {
+  delete[] in.pointlist;
+  trifree(out.pointlist);
+  trifree(out.pointmarkerlist);
+  trifree(out.trianglelist);
+  trifree(out.neighborlist);
+}
 }
 
 //------------------------------------------------------------------------------
@@ -89,7 +97,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   //-------------------------------------------------------------------
   if (ntri == 0u) {
     assembler.degenerateAssembly();
-    delete[] in.pointlist;
+    clearTriangleData(in, out);
     return assembler;
   }
   std::vector<std::array<int, 3>> triangles;
@@ -113,8 +121,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   }
   assembler.assembleDelaunay(triangles, neighbors);
   // Clean up Triangle memory
-  delete[] in.pointlist;
-  // Note: Triangle allocates out.* arrays, but they're cleaned up by Triangle internally
+  clearTriangleData(in, out);
   return assembler;
 }
 

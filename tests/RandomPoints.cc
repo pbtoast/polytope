@@ -50,7 +50,7 @@ void testBoundary(Boundary2D& boundary,
     generators.randomPoints(nPoints, seed);
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, plotIndex);
-    compareArea(boundary, mesh);
+    compareArea(boundary, mesh, tessellator.getQuantizer());
     mesh.clear();
     plotIndex++;
   }
@@ -62,7 +62,7 @@ void testBoundary(Boundary2D& boundary,
 void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
   for (int bid = 0; bid < 11; ++bid) {
     cout << "Testing boundary type " << bid << endl;
-    Boundary2D boundary(tessellator.getQuantizer());
+    Boundary2D boundary;
     boundary.mDiff = 0.5;
     boundary.setDefaultBoundary(bid);
     tessellator.setPadding(boundary.mPad);

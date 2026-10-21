@@ -34,6 +34,16 @@ class Tessellator:
     def getQuantizer(self):
         return "Quantizer<%(Dimension)s>&"
 
+    @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,
+                               const py::object& points) {
+                                 const auto coords = pybind11_helpers::copyCoords<%(Dimension)s, %(RealType)s>(points);
+                                 return self.setQBounds(coords);
+                               }""")
+    def setQBounds(self,
+                   points="const py::object&"):
+        "Include these points when determining quantizer bounds, without using them as generators"
+        return "void"
+
     def setPadding(self,
                    padding="const double&"):
         "Set the percent to pad the quantized space relative to the points."

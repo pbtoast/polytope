@@ -65,7 +65,7 @@ macro(polytope_add_python_test target)
     set(arg_NUMTASKS 1)
     message("--- Creating test ${target}")
   else()
-    set(test_name "${target}_{arg_NUMTASKS}_test")
+    set(test_name "${target}_${arg_NUMTASKS}_test")
     message("--- Creating test ${target}: N=${arg_NUMTASKS}")
   endif()
 

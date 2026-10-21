@@ -113,6 +113,7 @@ public:
                       QuantizedTessellation& qmesh);
 protected:
   using Base::m_Q;
+  using Base::initQ;
 
 private:
   //! Broadcast the root rank's requested exchange representation.
@@ -121,6 +122,7 @@ private:
   Base& m_serialTessellator;
   // Whether to exchange points in parallel or exchange keys
   bool m_exchangePoints = false;
+  // Whether the Voronoi is clipped by a PLC
   bool m_clipping = false;
   std::optional<QuantPLC<Dimension>> m_QPLC;
 

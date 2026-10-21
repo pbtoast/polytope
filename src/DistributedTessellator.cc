@@ -34,10 +34,8 @@ hasAnyGenerators(const bool localHasGenerators) {
 template<int Dimension>
 DistributedTessellator<Dimension>::
 DistributedTessellator(Base& serialTessellator):
-  Tessellator<Dimension, double>(),
+  Tessellator<Dimension, double>(serialTessellator),
   m_serialTessellator(serialTessellator) {
-  // Apply padding from serial tessellator
-  m_Q.setPadding(m_serialTessellator.getPadding());
   // Make quantizer parallel
   m_Q.setParallel(true);
 }
@@ -62,7 +60,7 @@ template<int Dimension>
 std::string
 DistributedTessellator<Dimension>::
 name() const {
-  return "DistributedTessellator_" + m_serialTessellator.name();
+  return "Distributed" + m_serialTessellator.name();
 }
 
 //------------------------------------------------------------------------------
@@ -75,7 +73,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points) {
   m_clipping = false;
   TessellationType mesh;
   if (!hasAnyGenerators(!points.empty())) return mesh;
-  m_Q.init(points);
+  initQ(points);
 
   QuantizedTessellation quantmesh(m_Q, points);
   this->tessellateQuantized(quantmesh);
@@ -97,7 +95,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
   m_clipping = true;
   TessellationType mesh;
   if (!hasAnyGenerators(!points.empty())) return mesh;
-  m_Q.init(PLCpoints.empty() ? points : PLCpoints);
+  initQ(points, PLCpoints);
 
   QuantizedTessellation qmesh(m_Q, points);
   m_QPLC.emplace(m_Q, PLCpoints, geometry);
@@ -121,7 +119,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   m_clipping = false;
   TessellationType mesh;
   if (!hasAnyGenerators(!points.empty())) return mesh;
-  m_Q.init(points);
+  initQ(points);
   POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
@@ -147,7 +145,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   m_clipping = true;
   TessellationType mesh;
   if (!hasAnyGenerators(!points.empty())) return mesh;
-  m_Q.init(PLCpoints.empty() ? points : PLCpoints);
+  initQ(points, PLCpoints);
   POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 

@@ -32,7 +32,7 @@ void test(Tessellator<2, double>& tessellator) {
 
   const int Ngen = 32;
   // Test case is square with a star hole
-  Boundary2D boundary(tessellator.getQuantizer());
+  Boundary2D boundary;
   boundary.setDefaultBoundary(10);
   // Number of different seeds for randomizing generator points
   const int NGseed = 10;
@@ -76,8 +76,8 @@ void test(Tessellator<2, double>& tessellator) {
       //   SiloWriter<2, Tessellation<2, double>> writer(procMesh);
       //   writer.write("ProcMesh", "", rank, 0., 1);
       // }
-      compareArea(boundary, serialArea, "Serial area failure");
-      compareArea(boundary, localMesh, "Distributed area failure");
+      compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
+      compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
 
       if (rank == root) {
         std::cout << btype << " test: gen seed " << Gseed << " partition seed " << Dseed << std::endl;
