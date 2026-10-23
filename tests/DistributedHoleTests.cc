@@ -49,15 +49,14 @@ void test(Tessellator<2, double>& tessellator) {
       // Distribute points to specific ranks
       QuasiVoronoiPartitioner<2> qvpart(Dseed);
       // Solve the Voronoi in serial
-      double serialArea = 0.0;
+      Tessellation<2, double> serialMesh;
       if (rank == root) {
-        Tessellation<2, double> serialMesh;
         serialMesh = tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
-        serialArea = computeTessellationArea(serialMesh);
         qvpart.assignCellRanks(serialMesh);
         std::string serialoutname = "SerialHole";
         outputMesh(serialMesh, serialoutname, btype, double(btype), 1);
       }
+      compareArea(boundary, serialMesh, tessellator.getQuantizer(), "Serial area failure");
       Communicator::Barrier();
       DistributedTessellator<2> distributed(tessellator);
       Tessellation<2, double> localMesh;
@@ -76,7 +75,6 @@ void test(Tessellator<2, double>& tessellator) {
       //   SiloWriter<2, Tessellation<2, double>> writer(procMesh);
       //   writer.write("ProcMesh", "", rank, 0., 1);
       // }
-      compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
       compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
 
       if (rank == root) {

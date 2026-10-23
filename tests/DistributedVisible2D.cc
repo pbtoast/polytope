@@ -64,9 +64,11 @@ void test(Tessellator<2, double>& tessellator) {
   tessellator.setPadding(boundary.mPad);
 
   // Number of points per rank
+  unsigned refCellCount = 0;
   std::vector<unsigned> finalProcN(activeRanks, 0);
   for (int i = 0; i < activeRanks; ++i) {
     finalProcN[i] = rankPoints[i].size()/2;
+    refCellCount += finalProcN[i];
   }
   // List of expected neighbor ranks for each rank
   std::vector<std::vector<int>> refNeighbors(activeRanks);
@@ -90,9 +92,8 @@ void test(Tessellator<2, double>& tessellator) {
   Tessellation<2, double> localMesh;
   localMesh = distributed.tessellate(points);
 
-  const auto localCells = static_cast<int>(localMesh.cells.size());
-  int totalCells = 0;
-  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  unsigned totalCells = localMesh.totalPointCount(true);
+  POLY_CHECK2(totalCells == refCellCount, "Incorrect total number of points");
 
   std::string outname = "DistributedVisible_" + tessellator.name();
   outputMesh(localMesh, outname, 0, 0.);

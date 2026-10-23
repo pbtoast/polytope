@@ -44,12 +44,12 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
 
   // Reduce the number of cells and area
-  const auto localCells = static_cast<int>(localMesh.cells.size());
-  int totalCells = 0;
-  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  auto totalCells = localMesh.totalPointCount(true);
+  POLY_CHECK2(totalCells == static_cast<unsigned>(nranks*Ngen),
+              "Incorrect total number of points");
 
   // Run the same tessellation but in serial
-  double serialArea = 0.0;
+  Tessellation<2, double> serialMesh;
   if (rank == root) {
     Quantizer<2> Q(boundary.mPLCpoints, boundary.mPad);
     std::map<Point<2, double>, int> finalRanks;
@@ -57,7 +57,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     for (int proc = 0; proc < nranks; ++proc) {
       int cseed = oseed + proc;
       generators.randomPoints(Ngen, cseed);
-      std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
+      std::copy(generators.mPoints.begin(), generators.mPoints.end(),
+                std::back_inserter(allPoints));
       for (auto i = 0u; i < generators.nPoints; ++i) {
         Point2<double> p;
         p.x = generators.mPoints[2*i];
@@ -66,9 +67,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
         finalRanks[newp] = proc;
       }
     }
-    Tessellation<2, double> serialMesh =
+    serialMesh =
       tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
-    serialArea = computeTessellationArea(serialMesh);
     std::vector<int> finalRanksD;
     for (auto& p : serialMesh.points) {
       auto rankItr = finalRanks.find(p);
@@ -87,7 +87,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Output the parallel mesh
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
-  compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
+  compareArea(boundary, serialMesh, distributed.getQuantizer(), "Serial area failure");
   compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
 }
 } // anonymous namespace

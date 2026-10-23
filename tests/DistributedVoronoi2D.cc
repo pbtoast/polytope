@@ -44,16 +44,15 @@ void test(Tessellator<2, double>& tessellator) {
   std::string outname = "parallelVoronoi_" + tessellator.name();
   outputMesh(localMesh, outname, 0, 0.);
 
-  const auto localCells = static_cast<int>(localMesh.cells.size());
-  int totalCells = 0;
-  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  auto totalCells = localMesh.totalPointCount(true);
+  POLY_CHECK2(totalCells = static_cast<unsigned>(Ngen*nranks),
+              "Incorrect number of total cells");
   compareArea(boundary, localMesh,
               distributed.getQuantizer(),
               "Distributed area failure");
 
-  double serialArea = 0.0;
+  Tessellation<2, double> serialMesh;
   if (rank == root) {
-    Tessellation<2, double> serialMesh;
     std::vector<double> allPoints;
     for (int p = 0; p < nranks; ++p) {
       int cseed = oseed + p;
@@ -61,11 +60,10 @@ void test(Tessellator<2, double>& tessellator) {
       std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
     }
     serialMesh = tessellator.tessellate(allPoints);
-    serialArea = computeTessellationArea(serialMesh);
     std::string serialoutname = "serialVoronoi_" + tessellator.name();
     outputMesh(serialMesh, serialoutname, 0, 0., 1);
   }
-  compareArea(boundary, serialArea,
+  compareArea(boundary, serialMesh,
               distributed.getQuantizer(),
               "Serial area failure");
 }

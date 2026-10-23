@@ -45,11 +45,9 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   std::vector<double>& allPoints = generators.mPoints;
   QuasiVoronoiPartitioner<2> qvpart(seed);
 
-  double serialArea = 0.0;
+  Tessellation<2, double> serialMesh;
   if (rank == root) {
-    Tessellation<2, double> serialMesh =
-      tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
-    serialArea = computeTessellationArea(serialMesh);
+    serialMesh = tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC);
     std::string serialoutname = "SerialOrdered_" + tessellator.name();
     qvpart.assignCellRanks(serialMesh);
     SiloWriter<2, Tessellation<2, double>> serial_writer(serialMesh);
@@ -57,6 +55,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     // distributed test
     serial_writer.write(serialoutname, btype, 0., 1);
   }
+  compareArea(boundary, serialMesh, tessellator.getQuantizer(), "Serial area failure");
 
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
@@ -66,15 +65,11 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   std::string outname = "DistributedOrdered_" + tessellator.name();
   outputMesh(localMesh, outname, btype, static_cast<double>(btype));
 
-  const auto localCells = static_cast<int>(localMesh.cells.size());
-  int totalCells = 0;
-  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
-
-  POLY_CHECK2(totalCells == static_cast<int>(allPoints.size()/2),
+  auto totalCells = localMesh.totalPointCount(true);
+  POLY_CHECK2(totalCells == allPoints.size()/2,
               "Total number of cells " << totalCells
               << " is incorrect; expected " << allPoints.size()/2);
 
-  compareArea(boundary, serialArea, distributed.getQuantizer(), "Serial area failure");
   compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
   if (rank == root) {
     cout << "\nTest " << btype << " passed." << endl;

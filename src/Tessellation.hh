@@ -8,6 +8,7 @@
 #include "polytope_internal.hh"
 #include "Cell.hh"
 #include "Point.hh"
+#include "Communicator.hh"
 namespace polytope {
 
 //! \class Tessellation - A basic descriptor class for a topologically-consistent
@@ -104,6 +105,23 @@ public:
   //!       to.
   // UNUSED
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
+
+  //! Get the total point count for a tessellation. Provide with true
+  //! to reduce over all ranks
+  unsigned totalPointCount(bool parallel = false) {
+    auto localCells = points.size();
+#ifdef POLYTOPE_ENABLE_MPI
+    if (parallel) {
+      auto totalCells = 0;
+      MPI_Allreduce(&localCells, &totalCells, 1,
+                    MPI_UNSIGNED, MPI_SUM,
+                    Communicator::communicator());
+      return totalCells;
+    }
+#endif
+    POLY_CONTRACT_VAR(parallel);
+    return localCells;
+  }
 
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {

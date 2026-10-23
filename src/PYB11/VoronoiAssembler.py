@@ -39,7 +39,8 @@ class VoronoiAssembler:
                       gen0="const int",
                       gen1="const int",
                       vertex0="const int",
-                      vertex1="const int"):
+                      vertex1="const int",
+                      gen2=("const int", "-1")):
         "Add a finite edge given the generator points and start and stop vertices"
         return "void"
 
@@ -63,6 +64,16 @@ class VoronoiAssembler:
                          vertex0="const int",
                          gen2="const int"):
         "Add a ray with third generator to determine direction."
+        return "void"
+
+    @PYB11pycppname("addRay")
+    def addAmbiguousRay(self,
+                        gen0="const int",
+                        gen1="const int",
+                        vertex0="const int"):
+        """
+        Add a ray and determine the direction using the mean generator location
+        """
         return "void"
 
     def addStartRay(self,

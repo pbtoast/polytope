@@ -80,7 +80,7 @@ void outputMesh(const Tessellation<nDim, double>& mesh,
 //------------------------------------------------------------------------------
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
 //------------------------------------------------------------------------------
-double computeTessellationArea(Tessellation<2, double>& mesh) {
+double computeTessellationArea(Tessellation<2, double>& mesh, bool parallel = true) {
   double area = 0;
   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
     std::vector<double> nodeCell;
@@ -94,9 +94,16 @@ double computeTessellationArea(Tessellation<2, double>& mesh) {
       nodeCell.push_back( mesh.nodes[inode].y );
     }
     BGPolygon<double,2> cellPolygon = makeBGPolygon<double>( nodeCell );
-    area += boost::geometry::area( cellPolygon );
+    area += boost::geometry::area(cellPolygon);
     nodeCell.clear();
   }
+#ifdef POLYTOPE_ENABLE_MPI
+  if (parallel) {
+    double distributedArea = 0.0;
+    MPI_Allreduce(&area, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
+    area = distributedArea;
+  }
+#endif
   return area;
 }
 
@@ -135,36 +142,36 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
 }
 
 // -----------------------------------------------------------------------
-// compareArea
+// Estimate the error tolerance for the 2D area
 // -----------------------------------------------------------------------
-void compareArea(Boundary2D& boundary,
-                 double in_area,
-                 const Quantizer<2>& Q,
-                 const std::string& test_str = "") {
-  bool clipped = boundary.mClipping;
-  double area = in_area;
-#ifdef POLYTOPE_ENABLE_MPI
-  const int nranks = Communicator::getNRanks();
-  if (nranks > 1) {
-    double distributedArea = 0.0;
-    MPI_Allreduce(&in_area, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
-    area = distributedArea;
-  }
-#endif
-  const double bArea = clipped ? boundary.area() : Q.area();
-  const double relErr = std::abs(bArea-area)/bArea;
-  const int maxAxis = Q.domLength().maxAxis();
-  const double tol = 2.*Q.degeneracy()[maxAxis];
-  POLY_CHECK2(relErr < tol, "Error in area: error = " << relErr << " tolerance "
-              << tol << " " << test_str);
+double errorTolerance(const Quantizer<2>& Q,
+                      const unsigned Ncells) {
+  const double eps = std::numeric_limits<double>::epsilon();
+  const double u = 0.5 * eps;
+  const double nAdds = double(Ncells - 1);
+  const double gamma = (nAdds * u) / (1.0 - nAdds * u);
+  // Dimensionless allowance for box-scale quantization.
+  const double quantTol = 2.0*(Q.degeneracy().x + Q.degeneracy().y);
+  // Practical margin for cell-area arithmetic and accumulation.
+  const double roundoffTol = 4.0 * gamma + 32.0 * eps;
+  return quantTol + roundoffTol;
 }
 
+// -----------------------------------------------------------------------
+// compareArea
+// -----------------------------------------------------------------------
 void compareArea(Boundary2D& boundary,
                  Tessellation<2, double>& mesh,
                  const Quantizer<2>& Q,
                  const std::string& test_str = "") {
   double area = computeTessellationArea(mesh);
-  compareArea(boundary, area, Q, test_str);
+  bool clipped = boundary.mClipping;
+  const auto Ncells = mesh.totalPointCount(true);
+  const double tol = errorTolerance(Q, Ncells);
+  const double bArea = clipped ? boundary.area() : Q.area();
+  const double relErr = std::abs(bArea-area)/bArea;
+  POLY_CHECK2(relErr < tol, "Error in area: error = " << relErr << " tolerance "
+              << tol << " " << test_str);
   // Check for CCW orientation of polygons
   for (auto i = 0u; i < mesh.cells.size(); ++i) {
     POLY_CHECK2(ccwOrient(mesh.getCell(i)), "Bad orientation at cell " << i << " " << test_str);

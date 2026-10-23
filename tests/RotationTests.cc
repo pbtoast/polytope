@@ -40,6 +40,7 @@ void runTest(Tessellator<2,double>& tessellator,
   boundary.mCenter[1] = 0.5;
   boundary.mDiff = 0.4;
   boundary.setDefaultBoundary(0);
+  boundary.mClipping = false;
   Generators<2> generators(boundary);
   const auto bHigh = boundary.maxBound;
   const auto bLow = boundary.minBound;
@@ -91,9 +92,10 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     mesh = tessellator.tessellate(points);
-    if (step % 2 == 0) {
+    if (step % 5 == 0) {
       outputMesh(mesh, testName, step, time);
     }
+    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
   }
 }
 
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
   comm.init(argc, argv);
   const int testBegin = 1;
   const int testEnd = 5;
-  int nx = 50;
+  int nx = 20;
 
   if(argc >= 2) {
     nx = std::stoi(argv[1]);

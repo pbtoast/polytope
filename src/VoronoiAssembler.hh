@@ -30,6 +30,12 @@ public:
     result(input) {
     cornerIndices = addBoxPoints(node2id, result.nodes, result.quantizer());
     genVPS.resize(input.points.size());
+    auto N = static_cast<long double>(input.points.size());
+    // Determine the mean location of the generator points
+    for (auto& p : input.points) {
+      auto rp = p.template type_cast<long double>();
+      centerPoint += rp/N;
+    }
   }
 
   //-----------------------------------------------------------------------------//
@@ -39,6 +45,7 @@ public:
   // List of indices into vps for each generator index
   std::vector<std::vector<unsigned>> genVPS;
   std::vector<Point<2, double>> tessNodes; // Nodes provided by tessellator
+  Point<2, long double> centerPoint; // Mean location of all generators
 
   //-----------------------------------------------------------------------------//
   // Handle special cases like 2 generators or collinear generators
@@ -91,7 +98,7 @@ public:
           POLY_ASSERT(neighbor >= 0 &&
                       static_cast<size_t>(neighbor) < ntri);
           if (triIndex < static_cast<size_t>(neighbor)) {
-            addFiniteEdge(gen0, gen1, triIndex, neighbor);
+            addFiniteEdge(gen0, gen1, triIndex, neighbor, tri[side]);
           }
         }
       }
@@ -118,8 +125,9 @@ public:
   void addFiniteEdge(const int gen0,
                      const int gen1,
                      const int vertex0,
-                     const int vertex1) {
-    addFiniteEdge(gen0, gen1, tessNodes[vertex0], tessNodes[vertex1]);
+                     const int vertex1,
+                     const int gen2 = -1) {
+    addFiniteEdge(gen0, gen1, tessNodes[vertex0], tessNodes[vertex1], gen2);
   }
 
   // Insert ray with a vertex and direction
@@ -136,6 +144,13 @@ public:
               const int vertex,
               const int gen2) {
     addRay(gen0, gen1, tessNodes[vertex], gen2);
+  }
+
+  // Insert ray and use mean generator location to determine direction
+  void addRay(const int gen0,
+              const int gen1,
+              const int vertex) {
+    addRay(gen0, gen1, tessNodes[vertex]);
   }
 
   // Insert ray that goes to infinity
@@ -158,9 +173,16 @@ public:
   void addFiniteEdge(const int gen0,
                      const int gen1,
                      const Point<2, double>& node0,
-                     const Point<2, double>& node1) {
-    RawEdge edge = makeRawEdge(gen0, gen1,
-                               pointDirection<QuantizedCoordinate<2>>(node0, node1));
+                     const Point<2, double>& node1,
+                     const int gen2 = -1) {
+    RawEdge edge;
+    if (gen2 >= 0) {
+      edge = makeRawEdge(gen0, gen1, rayDirThirdPoint(gen0, gen1, gen2));
+      edge.leftGen = getLeftGen(gen0, gen1, gen2);
+    } else {
+      auto dir = node1 - node0;
+      edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
+    }
     edge.hasStart = true;
     edge.start = node0;
     edge.hasEnd = true;
@@ -175,11 +197,18 @@ public:
               const Point<2, double>& dir) {
     // For consistency, recompute the direction using the generators
     // Only use the provided direction to determine generator order
-    auto ray = rayDirection(gen0, gen1);
-    if (dot(dir, ray.template type_cast<double>()) < 0.) {
-      ray = -ray;
-    }
-    RawEdge edge = makeRawEdge(gen0, gen1, ray);
+    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
+    edge.hasStart = true;
+    edge.start = node0;
+    addVP(gen0, gen1, edge);
+  }
+
+  // Insert ray with a vertex and use the generator mean location to
+  // determine the direction
+  void addRay(const int gen0,
+              const int gen1,
+              const Point<2, double>& node0) {
+    RawEdge edge = makeRawEdge(gen0, gen1, rayDirMean(gen0, gen1));
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -192,7 +221,8 @@ public:
               const Point<2, double>& node0,
               const int gen2) {
     RawEdge edge = makeRawEdge(gen0, gen1,
-                               rayDirection(gen0, gen1, gen2));
+                               rayDirThirdPoint(gen0, gen1, gen2));
+    edge.leftGen = getLeftGen(gen0, gen1, gen2);
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -202,7 +232,7 @@ public:
   void addStartRay(const int gen0,
                    const int gen1,
                    const Point<2, double>& node0) {
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDirection(gen0, gen1));
+    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -212,7 +242,7 @@ public:
   void addEndRay(const int gen0,
                  const int gen1,
                  const Point<2, double>& node1) {
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDirection(gen0, gen1));
+    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
     edge.hasEnd = true;
     edge.end = node1;
     addVP(gen0, gen1, edge);
@@ -245,14 +275,63 @@ private:
     return edge;
   }
 
-  QuantizedPoint<2> rayDirection(const int gen0,
-                                 const int gen1,
-                                 const int gen2 = -1) const {
-    if (gen2 >= 0) {
-      return outwardRay(result.points[gen0], result.points[gen1],
-                        result.points[gen2]);
+  // Determine ray direction using the mean point
+  QuantizedPoint<2> rayDirMean(const int gen0,
+                               const int gen1) const {
+    const auto& qa = result.points[gen0];
+    const auto& qb = result.points[gen1];
+
+    const auto a = qa.template type_cast<long double>();
+    const auto b = qb.template type_cast<long double>();
+    const auto midpoint = (a + b) * 0.5;
+
+    auto direction = outwardRay(qa, qb);
+    const auto directionD = direction.template type_cast<long double>();
+    const long double side = dot(directionD, midpoint - centerPoint);
+    POLY_CHECK2(std::abs(side) > 1.E-12,
+                "Cannot determine hull-ray direction from center");
+    if (side < 0.0) {
+      direction = -direction;
     }
+    return direction;
+  }
+
+  // Determine the get outward direction
+  QuantizedPoint<2> rayDir(const int gen0,
+                           const int gen1) {
     return outwardRay(result.points[gen0], result.points[gen1]);
+  }
+
+  // Determine the ray direction using floating point direction
+  QuantizedPoint<2> rayDir(const int gen0,
+                           const int gen1,
+                           const Point<2, double>& dir) {
+    auto ray = outwardRay(result.points[gen0], result.points[gen1]);
+    if (dot(dir, ray.template type_cast<double>()) < 0.) {
+      ray = -ray;
+    }
+    return ray;
+  }
+
+  // Determine the ray direction using a third generator point
+  QuantizedPoint<2> rayDirThirdPoint(const int gen0,
+                                     const int gen1,
+                                     const int gen2) const {
+    return outwardRay(result.points[gen0],
+                      result.points[gen1],
+                      result.points[gen2]);
+  }
+
+  // Determine which generator is to the left of the current edge
+  int getLeftGen(const int gen0,
+                 const int gen1,
+                 const int gen2) {
+    const auto& a = result.points[gen0];
+    const auto& b = result.points[gen1];
+    const auto& c = result.points[gen2];
+    const auto winding = qcross(b - a, c - a);
+    POLY_ASSERT(winding != 0);
+    return winding > 0 ? gen1 : gen0;
   }
 
   // Clip once, then store a canonical edge directed with gp.first on its left.
@@ -267,7 +346,13 @@ private:
 
     vp.csides = std::make_pair(clipper.startSide, clipper.endSide);
     vp.edge = updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
-    orientClippedEdge(vp, clipper.p0, clipper.p1, result.points[vp.gp.first]);
+    if (rawEdge.leftGen >= 0) {
+      if (rawEdge.leftGen != vp.gp.first) {
+        vp.flipEdge();
+      }
+    } else {
+      orientClippedEdge(vp, clipper.p0, clipper.p1, result.points[vp.gp.first]);
+    }
 
     const auto edgeIndex = vps.size();
     genPairs.insert(vp.gp);

@@ -198,11 +198,8 @@ Point2<CoordType> outwardRay(const Point2<CoordType>& a,
                              const Point2<CoordType>& b,
                              const Point2<CoordType>& c) {
   auto diff = a - b;
-  auto ad = a.template type_cast<double>();
-  auto bd = b.template type_cast<double>();
-  auto cd = c.template type_cast<double>();
-  auto delta = (bd.x - ad.x)*(cd.y - ad.y) - (bd.y - ad.y)*(cd.x - ad.x);
-  if (delta > 0.) {
+  auto cross = qcross(b - a, c - a);
+  if (cross > 0) {
     return Point2<CoordType>(-diff.y, diff.x);
   } else {
     return Point2<CoordType>(diff.y, -diff.x);
@@ -496,10 +493,10 @@ pointCentroid(const std::vector<Point<Dimension, CoordType>>& points) {
 // Double and pointer operations
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-template<int Dimension>
-double dot(const Point<Dimension, double>& a,
-           const Point<Dimension, double>& b) {
-  double sum = 0.;
+template<int Dimension, typename RealType>
+RealType dot(const Point<Dimension, RealType>& a,
+             const Point<Dimension, RealType>& b) {
+  RealType sum = 0.;
   for (int i = 0; i < Dimension; ++i) {
     sum += a[i]*b[i];
   }

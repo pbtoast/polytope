@@ -8,6 +8,8 @@
 #include "EdgeUtils.hh"
 #include "Intersections.hh"
 
+#include <iostream>
+
 namespace polytope {
 
 // Raw geometry for a directed Voronoi primitive. The primitive is directed
@@ -15,6 +17,8 @@ namespace polytope {
 template<typename CoordType>
 struct DirectedVoronoiEdge {
 public:
+  // Which generator is to the left of edge
+  int leftGen = -1;
   bool hasStart = false;
   bool hasEnd = false;
   Point2<double> start;
@@ -37,6 +41,23 @@ public:
     direction = -direction;
   }
 };
+
+template<typename CoordType>
+std::ostream&
+operator<<(std::ostream& os,
+           const DirectedVoronoiEdge<CoordType>& edge) {
+  if (edge.hasStart) {
+    os << "start " << edge.start << " ";
+  }
+  if (edge.hasEnd) {
+    os << "end " << edge.end << " ";
+  }
+  if (edge.leftGen >= 0) {
+    os << "leftgen " << edge.leftGen << " ";
+  }
+  os << "bisector " << edge.bisectorPoint << " dir " << edge.direction << std::endl;
+  return os;
+}
 
 // Clip directed Voronoi geometry to the quantization box. The assembler
 // converts p0 and p1 to result.nodes indices after a successful clip.

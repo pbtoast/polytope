@@ -100,7 +100,7 @@ public:
 
   RealPoint degeneracy() const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return m_dx_o*m_lx_o;
+    return m_dx_o/m_lx_o;
   }
 
   void useMortonEncoding() {

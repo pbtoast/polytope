@@ -475,8 +475,8 @@ findBoundingElements(const std::vector<Point<Dimension, CoordType>>& allpoints,
 
 // This round should only be used when converting quantized coordinates
 // as doubles to quantized coordinates as int types
-template<int Dimension, typename CoordType>
-Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
+template<int Dimension, typename CoordType, typename RealType>
+Point<Dimension, CoordType> round(const Point<Dimension, RealType>& point) {
   Point<Dimension, CoordType> out;
   for (int d = 0; d < Dimension; ++d) {
     out[d] = static_cast<CoordType>(std::round(point[d]));
